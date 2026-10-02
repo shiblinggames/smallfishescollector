@@ -1,9 +1,10 @@
 class_name SquallFx
 extends CanvasLayer
-## IN A SQUALL (Godot over the web baseline, 2026-10-01): rain driven across
-## the screen on the wind, and in the heaviest squalls lightning that lights
-## the whole sea for an instant (the web only paled the storm's shadow, and
-## only in the north). Above the world, below the HUD.
+## UNDER A FRONT (Godot over the web baseline, 2026-10-01; fronts 2026-10-02):
+## rain driven across the screen, and in a Tempest lightning that lights the
+## whole sea for an instant; Fog, a pale veil thick toward the edges; a Fair
+## Wind, faint streaks of spray running the way it blows. Above the world,
+## below the HUD.
 
 signal struck(strength: float)
 
@@ -14,6 +15,32 @@ var _sheet: ColorRect
 var _next: float = 6.0
 var _strike: float = -1.0
 var _power: float = 0.0
+var _fog: ColorRect
+var _gusts: GPUParticles2D
+var fog: float = 0.0
+var _drift: Vector2 = Vector2.ZERO
+
+
+## Fog and wind: the veil's thickness round her, and the spray's way.
+func step_air(delta: float, fog_amt: float, focus: Vector2, wind: float, wind_dir: Vector2, screen: Vector2) -> void:
+	fog = lerpf(fog, fog_amt, 1.0 - exp(-delta * 0.6))
+	_fog.visible = fog > 0.01
+	if _fog.visible:
+		_drift += Vector2(0.05, 0.02) * delta
+		var m: ShaderMaterial = _fog.material
+		m.set_shader_parameter("u_amt", fog)
+		m.set_shader_parameter("u_focus", focus)
+		m.set_shader_parameter("u_res", screen)
+		m.set_shader_parameter("u_drift", _drift)
+	_gusts.emitting = wind > 0.15
+	if _gusts.emitting:
+		# On screen the sea is foreshortened: north-south runs shorter.
+		var d: Vector2 = Vector2(wind_dir.x, wind_dir.y * 0.6).normalized()
+		var gm: ParticleProcessMaterial = _gusts.process_material
+		gm.direction = Vector3(d.x, d.y, 0)
+		gm.emission_box_extents = Vector3(screen.x * 0.6, screen.y * 0.6, 0)
+		_gusts.position = screen / 2.0 - d * screen.length() * 0.25
+		_gusts.amount_ratio = clampf(wind, 0.0, 1.0)
 
 
 func _ready() -> void:
@@ -53,6 +80,38 @@ func _ready() -> void:
 	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	_sheet.material = add
 	add_child(_sheet)
+	_fog = ColorRect.new()
+	_fog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fog.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fm: ShaderMaterial = ShaderMaterial.new()
+	fm.shader = load("res://game/fx/fog_veil.gdshader")
+	_fog.material = fm
+	_fog.visible = false
+	add_child(_fog)
+	_gusts = GPUParticles2D.new()
+	_gusts.amount = 90
+	_gusts.lifetime = 1.6
+	_gusts.local_coords = false
+	_gusts.texture = _streak()
+	var gm: ParticleProcessMaterial = ParticleProcessMaterial.new()
+	gm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	gm.spread = 2.0
+	gm.initial_velocity_min = 700.0
+	gm.initial_velocity_max = 950.0
+	gm.gravity = Vector3.ZERO
+	gm.scale_min = 0.4
+	gm.scale_max = 0.8
+	gm.particle_flag_align_y = true
+	var gg: Gradient = Gradient.new()
+	gg.set_color(0, Color(0.95, 0.97, 1.0, 0.0))
+	gg.add_point(0.4, Color(0.95, 0.97, 1.0, 0.16))
+	gg.set_color(gg.get_point_count() - 1, Color(0.95, 0.97, 1.0, 0.0))
+	var gr: GradientTexture1D = GradientTexture1D.new()
+	gr.gradient = gg
+	gm.color_ramp = gr
+	_gusts.process_material = gm
+	_gusts.emitting = false
+	add_child(_gusts)
 
 
 static func _streak() -> Texture2D:

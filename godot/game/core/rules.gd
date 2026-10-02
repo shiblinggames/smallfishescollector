@@ -26,6 +26,43 @@ static func gate_block(kind: String, key: String, fishing_xp: float) -> String:
 	return ""
 
 
+## THE SKILLS (port rules, Kong 2026-10-02): free, permanent, by Fishing
+## level; each saves time or shows something, none touches catching. Under
+## the web's tables alone there are none, and nothing is locked.
+static func skills() -> Array:
+	return Js.list(data().get("skills"))
+
+
+static func skill(id: String) -> Dictionary:
+	for s: Dictionary in skills():
+		if s["id"] == id:
+			return s
+	return {}
+
+
+static func has_skill(fishing_xp: float, id: String) -> bool:
+	var s: Dictionary = skill(id)
+	return not s.is_empty() and level_from_xp(fishing_xp) >= int(s["level"])
+
+
+## Why a thing a skill brings is not hers yet ("Set Course, a Fishing 14
+## skill"), or "" when it is (or no skill guards it).
+static func skill_block(fishing_xp: float, id: String) -> String:
+	var s: Dictionary = skill(id)
+	if s.is_empty() or level_from_xp(fishing_xp) >= int(s["level"]):
+		return ""
+	return "%s comes at Fishing %d" % [s["name"], int(s["level"])]
+
+
+## The best Quick Sell share she has of the Market's price (0: none).
+static func quick_sell_rate(fishing_xp: float) -> float:
+	var best: float = 0.0
+	for s: Dictionary in skills():
+		if s.has("rate") and level_from_xp(fishing_xp) >= int(s["level"]):
+			best = maxf(best, float(s["rate"]))
+	return best
+
+
 static func data() -> Dictionary:
 	if _d.is_empty():
 		_d = JsJson.parse(FileAccess.get_file_as_string("res://content/rules.json"))

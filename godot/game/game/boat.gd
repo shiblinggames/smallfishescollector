@@ -40,6 +40,12 @@ var lantern_glow: float = 0.34
 var heading: float = PI / 2.0
 var _straight_t: float = 0.0
 var _full: bool = false
+## The weather on her (core/weather.gd, set by the Sea each frame): her top
+## speed and her turning as multipliers, and its cue in words.
+var weather_speed: float = 1.0
+var weather_turn: float = 1.0
+var weather_cue: String = ""
+var full_sail: float = FULL_SAIL
 var _sail_mom: float = 1.0
 var _last_heading: float = PI / 2.0
 var _sway_heading: float = PI / 2.0
@@ -51,7 +57,7 @@ var velocity: Vector2 = Vector2.ZERO
 ## the kelp's hold on her, and what to tell the captain about it (the HUD's
 ## cue chips). hush: the rod is out or a panel is up, so none of it applies.
 var hush: bool = false
-var cue: Dictionary = { "current": "", "full": false, "kelp": false }
+var cue: Dictionary = { "current": "", "full": false, "kelp": false, "weather": "" }
 signal cue_changed(cue: Dictionary)
 ## She caught a lane or her sails filled: a splash, a buzz.
 signal surged
@@ -116,6 +122,8 @@ func _ready() -> void:
 
 ## The Shipyard's refits and the boat's trim, from a profile.
 func set_fit(p: Dictionary) -> void:
+	# The Full Sail skill (port rules) lifts the long-run speed.
+	full_sail = float(Rules.skill("full_sail").get("value", FULL_SAIL)) if Rules.has_skill(Js.num(p.get("fishing_xp")), "full_sail") else FULL_SAIL
 	hull = Shipyard.effect("hull_speed_tier", Js.num(p.get("hull_speed_tier")))
 	rudder = Shipyard.effect("hull_handling_tier", Js.num(p.get("hull_handling_tier")))
 	rig = Shipyard.effect("hull_accel_tier", Js.num(p.get("hull_accel_tier")))
@@ -128,7 +136,7 @@ func set_fit(p: Dictionary) -> void:
 
 
 func steer(input: Vector2, delta: float) -> void:
-	var top: float = SPEED * hull * boat_speed
+	var top: float = SPEED * hull * boat_speed * weather_speed
 	var order: Variant = null
 	var want: float = 0.0
 	if not locked:
@@ -149,7 +157,7 @@ func steer(input: Vector2, delta: float) -> void:
 	var spd: float = velocity.length()
 	if order != null:
 		var stopped: float = 1.0 - minf(1.0, spd / (SPEED * 0.35))
-		var max_turn: float = TURN * rudder * agility * (1.0 + stopped * 2.5) * delta
+		var max_turn: float = TURN * rudder * agility * weather_turn * (1.0 + stopped * 2.5) * delta
 		heading += clampf(wrapf(float(order) - heading, -PI, PI), -max_turn, max_turn)
 	# Along the heading she picks up toward the speed she wants; across it the
 	# drift bleeds off.
@@ -266,7 +274,7 @@ func _flow(delta: float, top: float, steering: bool) -> void:
 		if full and not _full:
 			surged.emit()
 		_full = full
-		_sail_mom += ((FULL_SAIL if full else 1.0) - _sail_mom) * (1.0 - exp(-3.0 * delta))
+		_sail_mom += ((full_sail if full else 1.0) - _sail_mom) * (1.0 - exp(-3.0 * delta))
 	else:
 		_kelp_keep += (1.0 - _kelp_keep) * (1.0 - exp(-4.0 * delta))
 		_sail_mom += (1.0 - _sail_mom) * (1.0 - exp(-3.0 * delta))
@@ -276,9 +284,9 @@ func _flow(delta: float, top: float, steering: bool) -> void:
 		_lane = ""
 	var kelp_now: bool = _kelp_keep < 0.9
 	_cue_t += delta
-	if (cue["current"] != way or cue["full"] != full or cue["kelp"] != kelp_now) and _cue_t > 0.3:
+	if (cue["current"] != way or cue["full"] != full or cue["kelp"] != kelp_now or cue.get("weather", "") != weather_cue) and _cue_t > 0.3:
 		_cue_t = 0.0
-		cue = { "current": way, "full": full, "kelp": kelp_now }
+		cue = { "current": way, "full": full, "kelp": kelp_now, "weather": weather_cue }
 		cue_changed.emit(cue)
 
 

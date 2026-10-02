@@ -53,7 +53,12 @@ uniform int u_lamp_n = 0;
 // BLOOMS (lib/seaBlooms.ts): bioluminescent water, (x, y, r, on) in world px.
 uniform vec4 u_blooms[4];
 // SQUALLS (core/weather.gd): (x, y, r, power) in world px.
-uniform vec4 u_storms[2];
+// The front over the sea (core/weather.gd): its direction, and where its
+// leading and trailing edges are along it from u_front_c; u_front_w is how
+// dark its cloud (0 for fog and wind).
+uniform vec4 u_front = vec4(1.0, 0.0, -1e6, -1e6);
+uniform vec2 u_front_c = vec2(0.0);
+uniform float u_front_w = 0.0;
 // MOORINGS (game/berth.gd): (x, y, r, lit) in world px.
 uniform vec4 u_berths[4];
 // A lightning flash, 0 to 1.
@@ -132,16 +137,16 @@ void fragment() {
 	float fine = min(0.62, 0.16 * (1.0 - 0.85 * u_rush));
 	float swell = (d1 * (1.0 - fine) + d2 * fine) - 0.5;
 
-	// How deep in a squall this water is (lib/seaWeather squallAt).
+	// How deep under the front's cloud this water is: between its edges, built
+	// up over 1,600px, the edges frayed by noise so they read as weather and
+	// not a ruled line; heavier and lighter in patches across it.
 	float storm = 0.0;
-	for (int q = 0; q < 2; q++) {
-		vec4 S = u_storms[q];
-		if (S.z < 1.0) continue;
-		float sdist = length(world - S.xy);
-		float kq = 1.0 - max(0.0, (sdist - S.z * 0.35) / (S.z * 0.65));
-		storm = max(storm, clamp(kq, 0.0, 1.0) * S.w);
+	if (u_front_w > 0.0) {
+		float fs = dot(world - u_front_c, u_front.xy) + (vnoise(world * 0.0007 + vec2(TIME * 0.008, 0.0)) - 0.5) * 1800.0;
+		storm = clamp((u_front.z - fs) / 1600.0, 0.0, 1.0) * clamp((fs - u_front.w) / 1600.0, 0.0, 1.0);
+		storm *= u_front_w * (0.72 + 0.28 * vnoise(world * 0.00035 - vec2(0.0, TIME * 0.006)));
 	}
-	// The squall's ragged edge, so it reads as weather and not a circle.
+	// The cloud's ragged texture.
 	storm *= smoothstep(0.15, 0.6, vnoise(world * 0.0012 + vec2(TIME * 0.01, 0.0)) * 0.5 + storm * 0.9);
 	swell *= 1.0 + storm * 1.6;
 

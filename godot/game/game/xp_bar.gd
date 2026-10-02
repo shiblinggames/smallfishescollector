@@ -14,6 +14,9 @@ extends Control
 ## fishing, the perfect streak by a flame. The line eases to its new length
 ## over 0.7s and starts again from empty on a new level.
 
+## Pressed: the Fishing guide (every level and what it brings).
+signal pressed
+
 var skill: String = "fishing"
 var level: int = 1
 var fill: float = 0.0
@@ -29,7 +32,15 @@ var _swap: Tween
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(560, 40)
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	tooltip_text = "Every Fishing level and what it brings"
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT and skill == "fishing":
+		accept_event()
+		pressed.emit()
 
 
 ## streak is -1 where there is none to show (navigation).
@@ -156,7 +167,7 @@ func _draw() -> void:
 	var togo: String = ("%s xp to go" % Js.thousands(to_go)) if not top else "Top of the ladder"
 	var rw: String = ""
 	if not top and next_reward != "":
-		rw = ("★ " if milestone else "then ") + next_reward
+		rw = next_reward
 	# Measure it all, so it sits centred whatever it says.
 	var w_name: float = small.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 	var w_num: float = title.get_string_size(ls, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x

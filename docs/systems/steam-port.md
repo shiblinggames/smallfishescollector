@@ -503,6 +503,39 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   and Rules.streak_level_scale reads the last milestone, so the full-streak ceiling steps
   (x1.37 at 10 ... x1.80 at 100). Totals at 100 unchanged; a captain between milestones
   holds the last one's value. The level-up's Stronger lines follow.
+- SKILLS (Kong, 2026-10-02; port_rules "skills"): free, permanent, by Fishing level. THE
+  RULE: a skill saves time or shows information. It NEVER touches catching (bites, rarity,
+  catch zone, crates, size); that stays with gear and items. Kong rejected bottle/dig
+  spotting, wider fog reveal, open-all crates, an extra trader deal and a teleport to any
+  port (weak, and the last clashes with the Homestead portal). The list: Merchant's Eye 2
+  (the Hold shows today's Market price and its hourly direction), Set Course 14 (GPS on the
+  chart; locked below it), Storm Glass 22 (the forecast), Full Sail 33 (full sail 1.25 not
+  1.15; boat.set_fit), Autopilot 41, Quick Sell 45 / 70 / 95 (the whole hold from anywhere
+  at 65 / 90 / 100% of today's Market price, port action quickSellHold; Kong's call that at
+  70+ it beats the zone buyer), Market Sense 49 (every salter buying today marked on the chart,
+  with its rate; WorldMap._salters),
+  Sky Reader 55 (two fronts ahead, drawn as roads), Second Recall 58 and Quick Recall 75
+  (Portal.recall_plan: two recalls per period; the period halved; the port keeps the earlier
+  stamps in <col>_log). Levels 76-94 and 96-100 are open for more. Rules.has_skill /
+  skill_block / quick_sell_rate; with no skills table (web_only) nothing is locked.
+- THE LEVEL SCHEDULE (Kong, 2026-10-02: "an unlock every few levels keeps the dopamine
+  going"): something on every level 2-60. Free hold tiers moved to 13/23/33/43/53 (holdFloor
+  null at 10/20/30/45/60); free ship tiers to 8 hull, 17 rudder, 27 rig, 38 hull 2, 47 rudder
+  2, 57 rig 2; bait bundles added at 31, 39, 46, 51, 59 (21 already had one).
+- THE FISHING GUIDE: Locker tab Levels (pressing the level bar opens it): every level and
+  LevelUp.level_lines(n) for it, passed ticked, the next in red, the rest grey; or the
+  skills alone. The level bar reads "Next at N: X" (LevelUp.next_unlock) and the level-up
+  slip ends with it. Skills show on the level-up as "Learned".
+- WEATHER IS FRONTS (Kong, 2026-10-02; the web's squalls are GONE from the port, and their
+  parity check with them). core/weather.gd: 36-minute slots, each maybe one front, hashed
+  from the slot (every captain and Charter sees the same sky). A front sweeps across the
+  whole chart in 4 minutes and sits on any water 12-24 minutes. Kinds: Rain Squall (-10%
+  speed), Gale (-18%, heavier turning), Tempest (-25%, lightning), Fog (a veil, thick toward
+  the screen's edges; fx/fog_veil), Fair Wind (+/-12% with or against it). It changes the
+  look and the sailing ONLY, for now: Kong wants weather and day/night to nudge which fish
+  bite, to be discussed. The water shader's cloud reads u_front (direction, lead and trail
+  edges). The chart shades the front and lists it (Storm Glass), and draws the next two as
+  dashed roads (Sky Reader); without Storm Glass it tells only the sky over you.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

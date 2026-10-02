@@ -360,7 +360,7 @@ func _process(delta: float) -> void:
 	# it: lit faces come up to full, the far sides stay soft.
 	_night.color = Color(0.88, 0.88, 0.88).lerp(Color(0.40, 0.46, 0.64), dark)
 	# Under a squall the light goes grey; a strike lights it all.
-	_night.color = _night.color.lerp(Color(0.6, 0.64, 0.7), _storm * 0.55).lerp(Color(1.0, 1.0, 1.0), _squall.flash * 0.6)
+	_night.color = _night.color.lerp(Color(0.6, 0.64, 0.7), _storm * 0.55).lerp(Color(0.84, 0.86, 0.88), _squall.fog * 0.5).lerp(Color(1.0, 1.0, 1.0), _squall.flash * 0.6)
 	var warm: float = float(clock["warmth"])
 	var toward: Vector2 = Vector2.from_angle(SeaClock.sun_angle(now))
 	_sun.rotation = (-toward).angle() - PI / 2.0
@@ -687,23 +687,31 @@ func _night_water(dark: float, at: Vector2) -> void:
 	_water.set_shader_parameter("u_blooms", blooms)
 
 
-## The squalls: on the water, in the air, under the hulls.
+## The weather (core/weather.gd's fronts): on the water, in the air, on the
+## hull and in how she sails.
 func _weather(delta: float, now: float, at: Vector2) -> void:
-	var storms: Array[Vector4] = []
-	var power: float = 0.0
-	for s: Dictionary in Weather.squalls(now):
-		var p: Vector2 = Weather.pos(s, now)
-		storms.append(Vector4(p.x, p.y, float(s["r"]), float(s["power"])))
-		if p.distance_to(at) < float(s["r"]):
-			power = maxf(power, float(s["power"]))
-	while storms.size() < 2:
-		storms.append(Vector4(0, 0, 0, 0))
-	_water.set_shader_parameter("u_storms", storms)
-	var deep: float = Weather.deep_at(at.x, at.y, now)
-	_storm = lerpf(_storm, deep, 1.0 - exp(-delta * 0.55))
-	_squall.step(delta, deep, power, get_viewport_rect().size)
+	var fx: Dictionary = Weather.effect(at, now, _boat.heading)
+	var f: Dictionary = fx["front"]
+	if not f.is_empty():
+		var e: Vector2 = Weather.edges(f, now)
+		var dir: Vector2 = f["dir"]
+		_water.set_shader_parameter("u_front", Vector4(dir.x, dir.y, e.x, e.y))
+		_water.set_shader_parameter("u_front_c", Weather.centre())
+		_water.set_shader_parameter("u_front_w", float(Weather.KINDS[f["kind"]].get("cloud", 0.0)))
+	else:
+		_water.set_shader_parameter("u_front_w", 0.0)
+	var cloud: float = float(fx["cloud"])
+	_storm = lerpf(_storm, cloud, 1.0 - exp(-delta * 0.55))
+	_squall.step(delta, float(fx["rain"]), 1.0 if fx["lightning"] else 0.5, get_viewport_rect().size)
+	var wind: float = float(fx["k"]) if not f.is_empty() and f["kind"] == "wind" else 0.0
+	_squall.step_air(delta, float(fx["fog"]), _boat.get_global_transform_with_canvas().origin, wind, f.get("dir", Vector2.RIGHT), get_viewport_rect().size)
 	_water.set_shader_parameter("u_flash", _squall.flash)
+	# The chart is paper over the sea: no rain or fog on it.
+	_squall.visible = _chart == null
 	_boat.storm = _storm
+	_boat.weather_speed = float(fx["speed"])
+	_boat.weather_turn = float(fx["turn"])
+	_boat.weather_cue = str(fx["cue"])
 	# The sea's sound: her way, a hard turn, how far out, the nearest shore.
 	var spd: float = clampf(_boat.velocity.length() / (300.0 * 1.4), 0.0, 1.0)
 	var turn: float = 0.0

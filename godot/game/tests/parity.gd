@@ -26,7 +26,8 @@ func _init() -> void:
 	_hotspots()
 	_bottles()
 	_traders()
-	_squalls()
+	# (No squalls: the port replaced them with fronts over the whole sea, a
+	# port rule, Kong 2026-10-02; core/weather.gd.)
 	_fishing(species, "res://tests/parity/fishing.json", "fishing")
 	_fishing(species, "res://tests/parity/fishing_rest.json", "the rest of fishing and the loadout")
 	_fishing(species, "res://tests/parity/shop.json", "selling and the tackle shop")
@@ -158,27 +159,6 @@ func _bottles() -> void:
 				return
 			n += 1
 	print("  bottles: %d bottles in %d moments float in the same places" % [n, cases["cases"].size()])
-
-
-func _squalls() -> void:
-	var cases: Dictionary = _json("res://tests/parity/squalls.json")
-	var n: int = 0
-	for c: Dictionary in cases["cases"]:
-		var now: float = float(c["now"])
-		var got: Array = Weather.squalls(now)
-		var want: Array = c["squalls"]
-		if got.size() != want.size():
-			_fail("squalls at %s: %d, the TS has %d" % [str(c["now"]), got.size(), want.size()])
-			return
-		for k: int in got.size():
-			var g: Dictionary = got[k]
-			var w: Dictionary = want[k]
-			var at: Vector2 = Weather.pos(g, now)
-			if g["key"] != w["key"] or not _near(float(g["r"]), float(w["r"])) or not _near(float(g["power"]), float(w["power"])) or absf(at.x - float(w["at"]["x"])) > 0.01 or absf(at.y - float(w["at"]["y"])) > 0.01:
-				_fail("squall %s differs: %s at %s against %s" % [w["key"], str(g), str(at), str(w)])
-				return
-			n += 1
-	print("  squalls: %d squalls in %d moments blow the same way" % [n, cases["cases"].size()])
 
 
 func _traders() -> void:

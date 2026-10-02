@@ -93,3 +93,29 @@ static func sell_to_resident(db: CaptainStore, uid: String, zone_id: String) -> 
 	var now: float = db.grant(uid, "doubloons", sold)
 	db.ledger(uid, sold, "Sold the hold to %s in %s" % [res["name"], zone["name"]])
 	return { "ok": true, "earned": sold, "rate": rate, "doubloons": now }
+
+
+## QUICK SELL (port skill, Kong 2026-10-02): the whole hold, sold from
+## anywhere at sea, at her Quick Sell share (65%, 90%, then 100%) of what the
+## Market pays for each fish today.
+static func quick_sell_hold(db: CaptainStore, uid: String) -> Dictionary:
+	var rate: float = Rules.quick_sell_rate(Js.num(db.me(uid).get("fishing_xp")))
+	if rate <= 0.0:
+		return { "error": Rules.skill_block(Js.num(db.me(uid).get("fishing_xp")), "quick_sell") }
+	var rows: Array = db.hold_stacks(uid)
+	if rows.is_empty():
+		return { "error": "Your hold is empty." }
+	var taken: Array = db.take_whole_hold(uid)
+	var earned: float = 0.0
+	var sold: float = 0.0
+	for r: Dictionary in taken:
+		var each: float = Market.price_each(Js.num(db.species_value(float(r["fish_id"]))), Market.multiplier(db.save, float(r["fish_id"])))
+		earned += each * float(r["quantity"])
+		sold += float(r["quantity"])
+	earned = floor(earned * rate)
+	if earned <= 0:
+		return { "error": "Your hold is empty." }
+	var now: float = db.grant(uid, "doubloons", earned)
+	db.ledger(uid, earned, "Quick sold %d fish (%d%% of market)" % [int(sold), int(round(rate * 100.0))])
+	db.bump_stat(uid, "fish_sold_doubloons", earned)
+	return { "ok": true, "earned": earned, "fishSold": sold, "rate": rate, "doubloons": now }

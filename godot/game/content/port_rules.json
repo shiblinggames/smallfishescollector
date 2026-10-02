@@ -354,7 +354,8 @@
     },
     "10": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "holdFloor": null
     },
     "11": {
       "doubloons": 0,
@@ -369,7 +370,8 @@
       "gems": 0,
       "bait": {
         "night_crawler": 0
-      }
+      },
+      "holdFloor": 1
     },
     "14": {
       "doubloons": 0,
@@ -404,7 +406,8 @@
     },
     "20": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "holdFloor": null
     },
     "21": {
       "doubloons": 0,
@@ -419,7 +422,8 @@
       "gems": 0,
       "bait": {
         "chum": 0
-      }
+      },
+      "holdFloor": 2
     },
     "24": {
       "doubloons": 0,
@@ -451,14 +455,17 @@
     "30": {
       "doubloons": 0,
       "gems": 0,
-      "holdFloor": 3,
+      "holdFloor": null,
       "bait": {
         "chum": 15
       }
     },
     "31": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "chum": 10
+      }
     },
     "32": {
       "doubloons": 0,
@@ -466,7 +473,8 @@
     },
     "33": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "holdFloor": 3
     },
     "34": {
       "doubloons": 0,
@@ -490,7 +498,10 @@
     },
     "39": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "chum": 15
+      }
     },
     "40": {
       "doubloons": 0,
@@ -506,7 +517,8 @@
     },
     "43": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "holdFloor": 4
     },
     "44": {
       "doubloons": 0,
@@ -515,14 +527,17 @@
     "45": {
       "doubloons": 0,
       "gems": 0,
-      "holdFloor": 4,
+      "holdFloor": null,
       "bait": {
         "anglers_formula": 3
       }
     },
     "46": {
       "doubloons": 0,
-      "gems": 0
+      "gems": 0,
+      "bait": {
+        "anglers_formula": 4
+      }
     },
     "47": {
       "doubloons": 0,
@@ -540,10 +555,29 @@
       "doubloons": 0,
       "gems": 0
     },
+    "51": {
+      "doubloons": 0,
+      "gems": 0,
+      "bait": {
+        "anglers_formula": 5
+      }
+    },
+    "53": {
+      "doubloons": 0,
+      "gems": 0,
+      "holdFloor": 5
+    },
+    "59": {
+      "doubloons": 0,
+      "gems": 0,
+      "bait": {
+        "anglers_formula": 6
+      }
+    },
     "60": {
       "doubloons": 0,
       "gems": 0,
-      "holdFloor": 5,
+      "holdFloor": null,
       "milestone": true
     }
   },
@@ -1143,19 +1177,104 @@
     }
   ],
   "shipUpgrades": {
-    "10": {
+    "8": {
       "hull_speed_tier": 1
     },
-    "15": {
+    "17": {
       "hull_handling_tier": 1
     },
-    "20": {
+    "27": {
       "hull_accel_tier": 1
     },
-    "25": {
+    "38": {
       "hull_speed_tier": 2
+    },
+    "47": {
+      "hull_handling_tier": 2
+    },
+    "57": {
+      "hull_accel_tier": 2
     }
   },
   "statMilestone": 10,
-  "_milestones": "Fishing's stat gains land at milestones (Kong, 2026-10-01): every 10 levels the catch zone grows 2 degrees and the perfect streak's ceiling takes one step, instead of a degree every 5 levels and a hair every level. The totals at 100 are the web's."
+  "_milestones": "Fishing's stat gains land at milestones (Kong, 2026-10-01): every 10 levels the catch zone grows 2 degrees and the perfect streak's ceiling takes one step, instead of a degree every 5 levels and a hair every level. The totals at 100 are the web's.",
+  "_skills": "SKILLS (Kong, 2026-10-02): unlocked by Fishing level, free and permanent. They save time or show information; NONE touches catching (bites, rarity, zones, crates, size): that stays with gear. Quick sell sells the whole hold from anywhere at a share of today's Market price; the best owned rate applies. Recall: second_recall gives two recalls per period, quick_recall halves the period.",
+  "skills": [
+    {
+      "id": "merchants_eye",
+      "level": 2,
+      "name": "Merchant's Eye",
+      "text": "The Hold shows each fish's price at the Market today, and whether it is up or down."
+    },
+    {
+      "id": "set_course",
+      "level": 14,
+      "name": "Set Course",
+      "text": "Click the World Chart to plot a course there, drawn on the water ahead of you."
+    },
+    {
+      "id": "storm_glass",
+      "level": 22,
+      "name": "Storm Glass",
+      "text": "The chart shows the weather across the sea, and when the next front arrives and what kind it is."
+    },
+    {
+      "id": "full_sail",
+      "level": 33,
+      "name": "Full Sail",
+      "value": 1.25,
+      "text": "Full sail is 25% faster than your cruising speed, up from 15%."
+    },
+    {
+      "id": "autopilot",
+      "level": 41,
+      "name": "Autopilot",
+      "text": "Your boat sails a set course on its own until you take the helm."
+    },
+    {
+      "id": "quick_sell",
+      "level": 45,
+      "name": "Quick Sell",
+      "rate": 0.65,
+      "text": "Sell the whole hold from anywhere at 65% of today's Market price."
+    },
+    {
+      "id": "market_sense",
+      "level": 49,
+      "name": "Market Sense",
+      "text": "The chart marks every salter buying today, and what they pay."
+    },
+    {
+      "id": "sky_reader",
+      "level": 55,
+      "name": "Sky Reader",
+      "text": "The forecast looks two fronts ahead and draws their path across the chart."
+    },
+    {
+      "id": "second_recall",
+      "level": 58,
+      "name": "Second Recall",
+      "text": "Two free recalls home per sea day instead of one."
+    },
+    {
+      "id": "quick_sell_2",
+      "level": 70,
+      "name": "Quick Sell II",
+      "rate": 0.9,
+      "text": "Quick Sell pays 90% of today's Market price."
+    },
+    {
+      "id": "quick_recall",
+      "level": 75,
+      "name": "Quick Recall",
+      "text": "Your recalls come back in half the time."
+    },
+    {
+      "id": "quick_sell_3",
+      "level": 95,
+      "name": "Quick Sell III",
+      "rate": 1.0,
+      "text": "Quick Sell pays the full Market price."
+    }
+  ]
 }

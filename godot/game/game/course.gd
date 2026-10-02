@@ -31,6 +31,15 @@ func active() -> bool:
 
 
 func set_to(at: Vector2, name: String, sail: bool = false) -> bool:
+	# Plotting a course and sailing it are Fishing skills (port rules).
+	var xp: float = Js.num((sea as Sea).session.profile().get("fishing_xp"))
+	var no_gps: String = Rules.skill_block(xp, "set_course")
+	if no_gps != "":
+		hud.toast(no_gps)
+		return false
+	if sail and Rules.skill_block(xp, "autopilot") != "":
+		hud.toast(Rules.skill_block(xp, "autopilot") + ". The course is set; sail it by hand.")
+		sail = false
 	var p: PackedVector2Array = SeaRoute.plan(boat.position, at)
 	if p.size() < 2:
 		hud.toast("There is no way through to there")
@@ -53,6 +62,10 @@ func clear() -> void:
 
 
 func toggle_autopilot() -> void:
+	var no_auto: String = Rules.skill_block(Js.num((sea as Sea).session.profile().get("fishing_xp")), "autopilot")
+	if no_auto != "" and not autopilot:
+		hud.toast(no_auto)
+		return
 	autopilot = not autopilot and active()
 	if not autopilot:
 		boat.target = null

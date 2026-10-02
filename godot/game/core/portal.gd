@@ -69,24 +69,74 @@ static func buy_tier(db: CaptainStore, uid: String) -> Dictionary:
 	return { "ok": true, "tier": next["tier"], "doubloons": float(bal) }
 
 
+## How many recalls she may make in how long: one a sea day, two with Second
+## Recall, the day halved with Quick Recall (port skills).
+static func recall_plan(prof: Dictionary) -> Dictionary:
+	var xp: float = Js.num(prof.get("fishing_xp"))
+	return {
+		"n": 2 if Rules.has_skill(xp, "second_recall") else 1,
+		"ms": RECALL_MS * (0.5 if Rules.has_skill(xp, "quick_recall") else 1.0),
+	}
+
+
+## The recalls she made inside the window ending now (ms, oldest first). The
+## column holds the last; the port keeps the ones before it alongside.
+static func _recent(prof: Dictionary, col: String, ms: float, now: float) -> Array:
+	var out: Array = []
+	for v: Variant in Js.list(prof.get(col + "_log")) + [prof.get(col)]:
+		if v == null:
+			continue
+		var t: float = Js.parse_ms(v)
+		if now - t < ms and not out.has(t):
+			out.append(t)
+	out.sort()
+	return out
+
+
 static func spend_recall(db: CaptainStore, uid: String, side: String) -> Dictionary:
 	if not RECALL_COL.has(side):
 		return { "ok": false, "readyAt": null }
 	var col: String = RECALL_COL[side]
 	var now: float = Clock.now_ms()
 	var at: String = Js.iso(now)
-	var cutoff: String = Js.iso(now - RECALL_MS)
 	var prof: Dictionary = db.me(uid)
-	var last: Variant = prof.get(col)
-	if last == null or str(last) < cutoff:
-		prof[col] = at
-		return { "ok": true, "at": at }
-	return { "ok": false, "readyAt": Js.iso(Js.parse_ms(last) + RECALL_MS) }
+	if Rules.skills().is_empty():
+		var cutoff: String = Js.iso(now - RECALL_MS)
+		var last: Variant = prof.get(col)
+		if last == null or str(last) < cutoff:
+			prof[col] = at
+			return { "ok": true, "at": at }
+		return { "ok": false, "readyAt": Js.iso(Js.parse_ms(last) + RECALL_MS) }
+	var plan: Dictionary = recall_plan(prof)
+	var recent: Array = _recent(prof, col, float(plan["ms"]), now)
+	if recent.size() >= int(plan["n"]):
+		return { "ok": false, "readyAt": Js.iso(float(recent[recent.size() - int(plan["n"])]) + float(plan["ms"])) }
+	var log: Array = []
+	for t: float in recent:
+		log.append(Js.iso(t))
+	prof[col + "_log"] = log
+	prof[col] = at
+	return { "ok": true, "at": at }
 
 
 ## Minutes until this side's recall is back (0 when ready).
 static func recall_left_ms(prof: Dictionary, side: String) -> float:
-	var last: Variant = prof.get(RECALL_COL[side])
-	if last == null:
+	if Rules.skills().is_empty():
+		var last: Variant = prof.get(RECALL_COL[side])
+		if last == null:
+			return 0.0
+		return maxf(0.0, Js.parse_ms(last) + RECALL_MS - Clock.now_ms())
+	var plan: Dictionary = recall_plan(prof)
+	var now: float = Clock.now_ms()
+	var recent: Array = _recent(prof, RECALL_COL[side], float(plan["ms"]), now)
+	if recent.size() < int(plan["n"]):
 		return 0.0
-	return maxf(0.0, Js.parse_ms(last) + RECALL_MS - Clock.now_ms())
+	return maxf(0.0, float(recent[recent.size() - int(plan["n"])]) + float(plan["ms"]) - now)
+
+
+## How many recalls she has to hand now (port skills; 0 or 1 without them).
+static func recalls_ready(prof: Dictionary, side: String) -> int:
+	if Rules.skills().is_empty():
+		return 1 if recall_left_ms(prof, side) <= 0.0 else 0
+	var plan: Dictionary = recall_plan(prof)
+	return maxi(0, int(plan["n"]) - _recent(prof, RECALL_COL[side], float(plan["ms"]), Clock.now_ms()).size())

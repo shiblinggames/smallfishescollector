@@ -144,7 +144,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_TAB:
 		get_viewport().set_input_as_handled()
-		var order: Array = ["loadout", "boat", "hold", "crates", "log"]
+		var order: Array = ["loadout", "boat", "hold", "crates", "log", "levels"]
 		_show_tab(order[(order.find(tab) + 1) % order.size()])
 
 
@@ -165,15 +165,12 @@ func _show_tab(t: String) -> void:
 	tab = t
 	for c: Node in _tabs.get_children():
 		c.queue_free()
-	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"]]:
+	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"], ["levels", "Levels"]]:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == t)
-		b.custom_minimum_size = Vector2(92, 34)
+		b.custom_minimum_size = Vector2(76, 34)
+		b.tooltip_text = "Tab to switch"
 		b.pressed.connect(func() -> void: _show_tab(o[0]))
 		_tabs.add_child(b)
-	var hint: Label = Paper.text(_tabs, "Tab to switch", "note", Paper.INK_FAINT)
-	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if _almanac != null and is_instance_valid(_almanac) and t != "log":
 		_almanac.mark_read()
 	_almanac = null
@@ -196,6 +193,8 @@ func _show_tab(t: String) -> void:
 		_build_hold()
 	elif t == "crates":
 		_build_crates()
+	elif t == "levels":
+		_build_levels()
 	else:
 		_build_log()
 
@@ -550,6 +549,77 @@ func _build_log() -> void:
 	_body.add_child(_almanac)
 
 
+# ── Levels ─────────────────────────────────────────────────────────────────────
+
+var _levels_only_skills: bool = false
+
+
+## THE FISHING GUIDE (Kong, 2026-10-02: "show these level unlocks somewhere,
+## so players can see what's upcoming"): every level to 100 and what it
+## brings, the way the level-up tells it. Levels passed are ticked; the next
+## one is marked in red; the rest are in grey pencil. Or the skills alone.
+func _build_levels() -> void:
+	var lv: int = session.level()
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
+	_body.add_child(head)
+	var ht: Label = Paper.text(head, "Fishing %d" % lv, "heading", Paper.INK)
+	ht.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for o: Array in [[false, "Every level"], [true, "Skills"]]:
+		var b: Pane.PaneButton = Paper.button(o[1], o[0] == _levels_only_skills)
+		b.pressed.connect(func() -> void:
+			_levels_only_skills = o[0]
+			_show_tab("levels"))
+		head.add_child(b)
+	Paper.text(_body, "Skills are free and yours for good. They save you time or show you more; catching is down to your gear." if _levels_only_skills else "Every level and what it brings. Gear unlocks are for sale at the shops from that level; skills, upgrades and gifts are free.", "note", Paper.INK_SOFT, true)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(scroll)
+	var list: VBoxContainer = VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	scroll.add_child(list)
+	var next_row: Control = null
+	var rows: Array = []
+	if _levels_only_skills:
+		for s: Dictionary in Rules.skills():
+			rows.append([int(s["level"]), [["Learned", "%s: %s" % [s["name"], s["text"]]]]])
+	else:
+		for n: int in range(2, 101):
+			var lines: Array = LevelUp.level_lines(n)
+			if not lines.is_empty():
+				rows.append([n, lines])
+	for r: Array in rows:
+		var n: int = r[0]
+		var done: bool = n <= lv
+		var is_next: bool = not done and next_row == null
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		list.add_child(row)
+		if is_next:
+			next_row = row
+		var num: Label = Paper.text(row, str(n), "heading", Paper.RED if is_next else (Paper.INK if done else Paper.INK_FAINT))
+		num.custom_minimum_size = Vector2(40, 0)
+		num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		var col: VBoxContainer = VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", 1)
+		row.add_child(col)
+		for l: Array in r[1]:
+			var skill: bool = l[0] == "Learned"
+			var ink: Color = LevelUp.SECTION_INK[l[0]] if (done or is_next) else Paper.INK_FAINT
+			var t: Label = Paper.text(col, ("✓ " if done else "") + ("Skill · " if skill else "") + str(l[1]), "body_strong" if skill else "small", ink, true)
+			if not done and not is_next:
+				t.modulate.a = 0.75
+		Paper.rule(list)
+	if next_row != null:
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if is_instance_valid(scroll) and is_instance_valid(next_row):
+			scroll.scroll_vertical = int(maxf(0.0, next_row.position.y - 120.0))
+
+
 # ── Loadout ────────────────────────────────────────────────────────────────────
 
 func _build_loadout() -> void:
@@ -889,12 +959,19 @@ func _build_hold() -> void:
 	var cap: int = int(Rules.fish_hold(Js.num(p.get("fish_hold_tier")))["capacity"])
 	var rows: Array = []
 	var hold: Dictionary = session.save["hold"]
+	# Merchant's Eye (a skill): today's Market price, and which way it went.
+	var eye: bool = Rules.has_skill(Js.num(p.get("fishing_xp")), "merchants_eye")
+	var mkt: Dictionary = Js.obj(Market.current(session.save).get("fish")) if eye else {}
 	for k: Variant in hold:
 		var f: Variant = session.store.species(float(str(k)))
 		if f == null or float(hold[k]) <= 0:
 			continue
 		var fd: Dictionary = f
-		rows.append({ "id": float(str(k)), "name": fd["name"], "qty": float(hold[k]), "each": Js.num(session.store.species_value(float(str(k)))), "rarity": Js.num(fd.get("bite_rarity")) })
+		var base: float = Js.num(session.store.species_value(float(str(k))))
+		var mf: Dictionary = Js.obj(mkt.get(Js.key(float(str(k)))))
+		var m: float = float(mf.get("m", 1.0))
+		rows.append({ "id": float(str(k)), "name": fd["name"], "qty": float(hold[k]), "each": Market.price_each(base, m) if eye else base, "base": base,
+			"trend": signf(m - float(mf.get("prev", m))) if eye else 0.0, "rarity": Js.num(fd.get("bite_rarity")) })
 	var count: int = 0
 	for r: Dictionary in rows:
 		count += int(r["qty"])
@@ -951,6 +1028,8 @@ func _build_hold() -> void:
 		t.art = Skipper.tex("fish/%s" % ResultCard.fish_art_path(r["name"]).get_file())
 		t.pigment = Paper.rarity(float(r["rarity"]))
 		t.corner = "×%d" % int(r["qty"])
+		if eye and float(r["trend"]) != 0.0:
+			t.corner += "  ▲" if float(r["trend"]) > 0.0 else "  ▼"
 		t.custom_minimum_size = Vector2(124, 120)
 		t.mouse_entered.connect(func() -> void: _hold_detail.text = _fish_line(r, res))
 		t.focus_entered.connect(func() -> void: _hold_detail.text = _fish_line(r, res))
@@ -964,7 +1043,7 @@ func _build_hold() -> void:
 	if not res.is_empty():
 		var stacks: Array = []
 		for r: Dictionary in rows:
-			stacks.append(float(r["each"]) * float(r["qty"]))
+			stacks.append(float(r["base"]) * float(r["qty"]))
 		var sum: float = 0.0
 		for v: float in stacks:
 			sum += v
@@ -972,7 +1051,27 @@ func _build_hold() -> void:
 	var money: VBoxContainer = VBoxContainer.new()
 	money.add_theme_constant_override("separation", 2)
 	_body.add_child(money)
-	Paper.stat(money, "At the Market on the Mainland, full price", "%s ⟡" % Js.thousands(total), Paper.GREEN)
+	Paper.stat(money, "At the Market on the Mainland, today" if eye else "At the Market on the Mainland, about", "%s ⟡" % Js.thousands(total), Paper.GREEN)
+	# Quick Sell (a skill): the whole hold, from right here.
+	var qs: float = Rules.quick_sell_rate(Js.num(p.get("fishing_xp")))
+	if qs > 0.0 and not rows.is_empty():
+		var today: float = 0.0
+		for r: Dictionary in rows:
+			today += Market.price_each(float(r["base"]), Market.multiplier(session.save, float(r["id"]))) * float(r["qty"])
+		var qb: Pane.PaneButton = Paper.button("Quick sell the hold here, %d%% of market:  %s ⟡" % [int(round(qs * 100.0)), Js.thousands(floor(today * qs))], true)
+		qb.disabled = line_out()
+		qb.pressed.connect(func() -> void:
+			qb.disabled = true
+			var r: Dictionary = await session.act("quickSellHold")
+			if r.has("error"):
+				hud.toast(str(r["error"]))
+			else:
+				session.persist()
+				Rumble.buzz([0, 30, 40, 60])
+				hud.toast("Sold %d fish for %s ⟡" % [int(r["fishSold"]), Js.thousands(float(r["earned"]))])
+				hud.refresh()
+			_show_tab("hold"))
+		money.add_child(qb)
 	if res.is_empty():
 		Paper.stat(money, "Out here", "Nobody buys in this water", Paper.INK_SOFT)
 	else:
@@ -986,9 +1085,9 @@ func _build_hold() -> void:
 
 func _fish_line(r: Dictionary, res: Dictionary) -> String:
 	var each: float = float(r["each"])
-	var t: String = "%s, %s.  ⟡ %s each at the Market, ⟡ %s for all %d" % [r["name"], Almanac.RARITY_NAMES[clampi(int(r["rarity"]) - 1, 0, 4)], Js.thousands(each), Js.thousands(each * float(r["qty"])), int(r["qty"])]
+	var t: String = "%s, %s.  ⟡ %s each at the Market%s, ⟡ %s for all %d" % [r["name"], Almanac.RARITY_NAMES[clampi(int(r["rarity"]) - 1, 0, 4)], Js.thousands(each), "" if float(r["trend"]) == 0.0 else (" (up this hour)" if float(r["trend"]) > 0.0 else " (down this hour)"), Js.thousands(each * float(r["qty"])), int(r["qty"])]
 	if not res.is_empty():
-		t += ";  about ⟡ %s each to %s." % [Js.thousands(floor(each * float(res["rate"]))), res["name"]]
+		t += ";  about ⟡ %s each to %s." % [Js.thousands(floor(float(r["base"]) * float(res["rate"]))), res["name"]]
 	else:
 		t += "."
 	return t

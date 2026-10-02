@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -55,8 +55,13 @@ func _init() -> void:
 	sea._boat.position = Vector2(-120, 2300)
 	var hud: FishingHud = sea._hud
 	var p: Dictionary = sea.session.profile()
+	if OS.get_environment("FRONT_KIND") != "" and what != "front" and what != "frontedge":
+		_to_front(sea, OS.get_environment("FRONT_KIND"), 0.5)
 	p["current_perfect_streak"] = 8.0
 	p["fishing_xp"] = 2400.0
+	if OS.get_environment("SHOT_XP") != "":
+		p["fishing_xp"] = float(OS.get_environment("SHOT_XP"))
+		sea.session.changed.emit()
 	hud._level_seen = sea.session.level()
 	hud.refresh()
 	hud._shot = { "fishId": 1.0, "catchDifficulty": 2.0, "biteRarity": 1.0, "waitMs": 9000.0, "jackpotMult": 1.0 }
@@ -211,16 +216,10 @@ func _init() -> void:
 				var sh: PortalSheet = sea._hud_layer.get_child(sea._hud_layer.get_child_count() - 1)
 				sh._sel = Portal.tier_def(4)
 				sh._draw()
-		"squall", "squalledge":
-			var t0: float = Clock.now_ms()
-			for k: int in 300:
-				var tk: float = t0 + k * Weather.WINDOW_MS
-				var found: Array = Weather.squalls(tk).filter(func(q: Dictionary) -> bool: return float(q["power"]) > 0.85)
-				if not found.is_empty():
-					Clock.install(func() -> float: return tk)
-					var sp: Vector2 = Weather.pos(found[0], tk)
-					sea._boat.position = sp if what == "squall" else sp + Vector2(float(found[0]["r"]) * 0.95, 0)
-					break
+		"front", "frontedge":
+			# A front of the kind FRONT_KIND (default tempest), the view at its
+			# heart or (frontedge) on its leading edge.
+			_to_front(sea, OS.get_environment("FRONT_KIND") if OS.get_environment("FRONT_KIND") != "" else "tempest", 0.5 if what == "front" else -1.0)
 			for f: int in 160:
 				await process_frame
 		"current":
@@ -431,6 +430,13 @@ func _init() -> void:
 			hud._toggle_bait_picker()
 			for f: int in 20:
 				await process_frame
+		"levels":
+			hud._open_loadout()
+			for f: int in 30:
+				await process_frame
+			sea._locker._show_tab("levels")
+			for f: int in 40:
+				await process_frame
 		"boattab":
 			p["unlocked_boats"] = ["oak", "fire", "golden"]
 			hud._open_loadout()
@@ -489,3 +495,18 @@ func _init() -> void:
 	img.save_png(out)
 	print("  saved ", out)
 	quit()
+
+
+## Set the clock inside a front of this kind over (0, 2600): at u of its
+## stay there (0.5 the middle), or (u < 0) just after its edge arrives.
+func _to_front(sea: Sea, kind: String, u: float) -> void:
+	var k0: int = int(floor(Clock.now_ms() / Weather.SLOT_MS))
+	for k: int in 400:
+		var fr: Dictionary = Weather.front(k0 + k)
+		if not fr.is_empty() and fr["kind"] == kind:
+			var spot: Vector2 = Vector2(0, 2600)
+			var pass_t: Vector2 = Weather.passage(fr, spot)
+			var tk: float = lerpf(pass_t.x, pass_t.y, u) if u >= 0.0 else pass_t.x + 2000.0
+			Clock.install(func() -> float: return tk)
+			sea._boat.position = spot
+			return

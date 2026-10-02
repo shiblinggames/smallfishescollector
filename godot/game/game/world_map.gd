@@ -123,6 +123,22 @@ func _build_chrome() -> void:
 	Kit.text(top, "The Chart", "display", Color(0.22, 0.17, 0.13))
 	var water: Dictionary = Chart.water_at(sea._boat.position)
 	Kit.text(top, "You are in %s" % water.get("name", "the harbour approach"), "small", Color(0.32, 0.26, 0.2))
+	# The weather, on its own sheet under the title.
+	var wsheet: Panel = Panel.new()
+	wsheet.add_theme_stylebox_override("panel", sb)
+	wsheet.position = Vector2(14, 248)
+	wsheet.size = Vector2(318, 128)
+	wsheet.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(wsheet)
+	var wcol: VBoxContainer = VBoxContainer.new()
+	wcol.position = Vector2(14, 10)
+	wcol.custom_minimum_size = Vector2(290, 0)
+	wcol.add_theme_constant_override("separation", 3)
+	wsheet.add_child(wcol)
+	Kit.text(wcol, "Weather", "eyebrow", Color(0.6, 0.35, 0.18))
+	for line: String in _weather_lines(Clock.now_ms()):
+		Kit.text(wcol, line, "small", Color(0.25, 0.2, 0.16), true).custom_minimum_size = Vector2(290, 0)
+	wcol.resized.connect(func() -> void: wsheet.size.y = wcol.size.y + 20.0)
 	_progress = VBoxContainer.new()
 	_progress.add_theme_constant_override("separation", 3)
 	_progress.position = Vector2(28, 104)
@@ -156,7 +172,8 @@ func _build_chrome() -> void:
 	me.pressed.connect(func() -> void: _center = sea._boat.position)
 	right.add_child(me)
 	var left_ms: float = Portal.recall_left_ms(sea.session.profile(), "fishing")
-	var rc: Button = ink_button("Recall home" if left_ms <= 0.0 else "Recall in %dm" % int(ceil(left_ms / 60000.0)), left_ms <= 0.0)
+	var ready_n: int = Portal.recalls_ready(sea.session.profile(), "fishing")
+	var rc: Button = ink_button(("Recall home  ·  %d ready" % ready_n if ready_n > 1 else "Recall home") if left_ms <= 0.0 else "Recall in %dm" % int(ceil(left_ms / 60000.0)), left_ms <= 0.0)
 	rc.disabled = left_ms > 0.0
 	rc.pressed.connect(func() -> void:
 		close()
@@ -172,7 +189,8 @@ func _build_chrome() -> void:
 	xh.offset_top = 22
 	add_child(xh)
 	xh.add_child(x)
-	var hint: Label = Kit.text(self, "Click the water to set a course  ·  click a mark for more  ·  wheel to zoom, drag to move  ·  M to close", "small", Color(0.3, 0.25, 0.2))
+	var gps_block: String = Rules.skill_block(_xp(), "set_course")
+	var hint: Label = Kit.text(self, ("Click the water to set a course" if gps_block == "" else gps_block) + "  ·  click a mark for more  ·  wheel to zoom, drag to move  ·  M to close", "small", Color(0.3, 0.25, 0.2))
 	hint.anchor_left = 0.5
 	hint.anchor_right = 0.5
 	hint.offset_left = -400
@@ -191,6 +209,99 @@ func _rebuild_layers(row: HBoxContainer) -> void:
 			_layers[k] = not _layers[k]
 			_rebuild_layers(row))
 		row.add_child(b)
+
+
+var _salters_day: int = -1
+var _salters_list: Array = []
+
+
+## Today's salters across the whole sea (hashed from the cell and the day,
+## the same people the sea puts out there).
+func _salters(now: float) -> Array:
+	var day: int = Traders.sea_day(now)
+	if day != _salters_day:
+		_salters_day = day
+		var outer: float = Explore._outer()
+		_salters_list = Traders.around(0.0, outer / 2.0, outer * 0.75, day, now).filter(func(w: Dictionary) -> bool: return w.get("kind", "") == "salter")
+	return _salters_list
+
+
+# ── Weather ────────────────────────────────────────────────────────────────────
+
+const FRONT_INK: Dictionary = { "squall": Color(0.3, 0.34, 0.42), "gale": Color(0.24, 0.27, 0.36), "tempest": Color(0.2, 0.18, 0.3), "fog": Color(0.62, 0.66, 0.7), "wind": Color(0.32, 0.5, 0.36) }
+
+
+## THE FORECAST on the chart (the Storm Glass and Sky Reader skills): the
+## front over the sea now, shaded across the water it covers, its edges
+## inked; with Sky Reader, the next two drawn as the road each will take.
+func _draw_weather(now: float, small: Font) -> void:
+	var xp: float = _xp()
+	if not Rules.has_skill(xp, "storm_glass") and Rules.skill("storm_glass").size() > 0:
+		return
+	var f: Dictionary = Weather.current(now)
+	if not f.is_empty():
+		var e: Vector2 = Weather.edges(f, now)
+		var r: float = Weather.reach()
+		var s0: float = maxf(e.y, -r)
+		var s1: float = minf(e.x, r)
+		if s1 > s0:
+			var d: Vector2 = f["dir"]
+			var n: Vector2 = d.orthogonal() * r * 2.0
+			var c: Vector2 = Weather.centre()
+			var col: Color = FRONT_INK[f["kind"]]
+			var pts: PackedVector2Array = PackedVector2Array([to_screen(c + d * s0 - n), to_screen(c + d * s0 + n), to_screen(c + d * s1 + n), to_screen(c + d * s1 - n)])
+			_marks.draw_colored_polygon(pts, Color(col, 0.16 + 0.03 * sin(_t * 1.5)))
+			if e.x < r:
+				_marks.draw_line(pts[2], pts[3], Color(col, 0.7), 2.5, true)
+			if e.y > -r:
+				_marks.draw_line(pts[0], pts[1], Color(col, 0.5), 1.5, true)
+			var mid: Vector2 = c + d * ((s0 + s1) / 2.0)
+			_name(small, to_screen(mid), str(f["name"]), 13, col.darkened(0.3), true, true)
+	if Rules.has_skill(xp, "sky_reader"):
+		for nf: Dictionary in Weather.ahead(now, 2):
+			var d2: Vector2 = nf["dir"]
+			var c2: Vector2 = Weather.centre()
+			var col2: Color = FRONT_INK[nf["kind"]]
+			var a: Vector2 = to_screen(c2 - d2 * Weather.reach() * 0.7)
+			var b: Vector2 = to_screen(c2 + d2 * Weather.reach() * 0.7)
+			var steps: int = 22
+			for k: int in steps:
+				if k % 2 == 0:
+					_marks.draw_line(a.lerp(b, float(k) / steps), a.lerp(b, float(k + 1) / steps), Color(col2, 0.55), 2.0, true)
+			var head: Vector2 = (b - a).normalized()
+			_marks.draw_colored_polygon(PackedVector2Array([b, b - head * 16.0 + head.orthogonal() * 8.0, b - head * 16.0 - head.orthogonal() * 8.0]), Color(col2, 0.7))
+			_name(small, a + Vector2(8, -8), "%s in %s" % [nf["name"], Weather.mins(float(nf["start"]) - now)], 12, col2.darkened(0.3), false, true)
+
+
+## The forecast in words, under the chart's title sheet.
+func _weather_lines(now: float) -> Array:
+	var xp: float = _xp()
+	var at: Vector2 = sea._boat.position
+	var out: Array = []
+	var f: Dictionary = Weather.current(now)
+	var here: float = Weather.depth(f, at, now)
+	var glass: bool = Rules.has_skill(xp, "storm_glass") or Rules.skill("storm_glass").is_empty()
+	if f.is_empty():
+		out.append("Fair weather over the sea.")
+	elif not glass:
+		out.append("%s over you." % f["name"] if here > 0.0 else "Fair weather where you are.")
+	else:
+		var pass_t: Vector2 = Weather.passage(f, at)
+		if now < pass_t.x:
+			out.append("%s coming in from %s; reaches you in %s." % [f["name"], f["from"], Weather.mins(pass_t.x - now)])
+		elif now < pass_t.y:
+			out.append("%s over you; clears here in %s." % [f["name"], Weather.mins(pass_t.y - now)])
+		else:
+			out.append("%s has passed you, still out over the sea." % f["name"])
+	if glass:
+		var n: int = 2 if Rules.has_skill(xp, "sky_reader") else 1
+		for nf: Dictionary in Weather.ahead(now, n):
+			out.append("Next: %s in %s, from %s, about %s." % [nf["name"], Weather.mins(float(nf["start"]) - now), nf["from"], Weather.mins(float(nf["dur"]))])
+		if n == 1 and Rules.skill("sky_reader").size() > 0:
+			out.append("Sky Reader at Fishing %d looks further ahead." % int(Rules.skill("sky_reader")["level"]))
+	else:
+		out.append("Storm Glass at Fishing %d shows what is coming." % int(Rules.skill("storm_glass")["level"]))
+	return out
 
 
 ## Each water: how much of it she has sailed, isles landed, sites dug.
@@ -382,15 +493,17 @@ func _all_marks() -> Array:
 		for k: String in sea._strangers:
 			var w: Wanderer = sea._strangers[k]
 			out.append({ "kind": "stranger", "at": w.position, "name": str(w.info["name"]), "color": Color(0.5, 0.45, 0.42), "data": w.info })
+		# Market Sense (a skill): every salter buying today, out of sight too.
+		if Rules.has_skill(_xp(), "market_sense"):
+			for s: Dictionary in _salters(now):
+				if not sea._strangers.has(str(s["key"])):
+					out.append({ "kind": "salter", "at": Vector2(float(s["x"]), float(s["y"])), "name": "%s  ·  %d%%" % [s["name"], int(round(float(s["rate"]) * 100.0))], "color": Color(0.85, 0.62, 0.2), "data": s })
 		for k: String in sea._mates:
 			var m: Shipmate = sea._mates[k]
 			out.append({ "kind": "mate", "at": m.position, "name": m.mate_name, "color": Color(0.25, 0.45, 0.75), "data": {} })
 	if _layers["hotspots"]:
 		for h: Dictionary in Hotspots.at_time(now):
 			out.append({ "kind": "hotspot", "at": Vector2(float(h["x"]), float(h["y"])), "name": _hotspot_name(h), "color": _hotspot_color(h), "data": h })
-	if _layers["weather"]:
-		for s: Dictionary in Weather.squalls(now):
-			out.append({ "kind": "squall", "at": Weather.pos(s, now), "name": "A squall", "color": Color(0.3, 0.32, 0.38), "data": s })
 	if _layers["finds"]:
 		var digs: Dictionary = Explore.get_dig_state(sea.session.store, sea.session.uid)
 		for d: Dictionary in Rules.data()["digSites"]:
@@ -435,6 +548,8 @@ func _draw_marks() -> void:
 	var small: Font = Kit.font("karla", 700)
 	var ink: Color = Color(0.2, 0.16, 0.13)
 	var now: float = Clock.now_ms()
+	if _layers["weather"]:
+		_draw_weather(now, small)
 	# The currents: flowing dashes down each lane.
 	if _layers["currents"]:
 		for lane: Dictionary in SeaFlow.flow()["currents"]:
@@ -503,6 +618,12 @@ func _draw_marks() -> void:
 			"portal":
 				_marks.draw_arc(at, 9.0, 0.0, TAU, 32, c, 2.5, true)
 				_marks.draw_arc(at, 5.0, _t * 2.0, _t * 2.0 + 4.0, 16, c, 2.0, true)
+			"salter":
+				_marks.draw_circle(at + Vector2(1, 1.5), 5.0, Color(0, 0, 0, 0.25))
+				_marks.draw_circle(at, 5.0, Color(c, 0.85))
+				_marks.draw_arc(at, 8.0, 0.0, TAU, 20, Color(c.darkened(0.3), 0.8), 1.4, true)
+				if _scale > 0.035 or hot:
+					_name(small, at + Vector2(10, 4), str(m["name"]), 11, c.darkened(0.45), false, hot)
 			"regular", "buyer", "stranger", "mate":
 				var rr: float = 6.0 if m["kind"] != "stranger" else 4.0
 				_marks.draw_circle(at + Vector2(1, 1.5), rr, Color(0, 0, 0, 0.25))
@@ -517,13 +638,6 @@ func _draw_marks() -> void:
 				_marks.draw_arc(at, hr, 0.0, TAU, 40, Color(c, 0.85), 2.0, true)
 				var left: float = maxf(0.0, (float(m["data"]["endsAt"]) - now) / 60000.0)
 				_name(small, at + Vector2(hr + 4, 4), "%s  \u00b7  %dm" % [m["name"], int(ceil(left))], 11, Color(c.darkened(0.35), 1.0), false, hot)
-			"squall":
-				var sr: float = float(m["data"]["r"]) * _scale
-				for j: int in 3:
-					_marks.draw_circle(at + Vector2.from_angle(_t * 0.2 + j * 2.1) * sr * 0.18, sr * (0.75 - j * 0.12), Color(0.18, 0.2, 0.26, 0.10))
-				_marks.draw_arc(at, sr * 0.45, _t * 0.6, _t * 0.6 + 4.2, 40, Color(0.2, 0.22, 0.28, 0.5), 2.0, true)
-				var v: Vector2 = Vector2(float(m["data"]["vx"]), float(m["data"]["vy"])).normalized()
-				_marks.draw_line(at, at + v * sr * 0.6, Color(0.2, 0.22, 0.28, 0.6), 2.0, true)
 			"dig":
 				var dug: bool = m["data"]["dug"]
 				var xc: Color = Color(0.4, 0.4, 0.38) if dug else c
@@ -603,6 +717,10 @@ func _click(s: Vector2) -> void:
 	_open_card(m)
 
 
+func _xp() -> float:
+	return Js.num(sea.session.profile().get("fishing_xp"))
+
+
 func _set_course(w: Vector2, name: String, sail: bool) -> void:
 	if sea._course.set_to(w, name, sail):
 		Sound.bell()
@@ -624,7 +742,7 @@ func _open_card(m: Dictionary) -> void:
 	var dist: float = SeaRoute.length_of(SeaRoute.plan(sea._boat.position, m["at"]))
 	var secs: float = dist / maxf(1.0, Boat.SPEED * sea._boat.hull * sea._boat.boat_speed * 0.92)
 	var eyebrow: String = { "port": "Port", "isle": "Isle", "portal": "The Homestead Portal", "regular": "One of the regulars", "buyer": "Buyer",
-		"stranger": "Wanderer", "mate": "Crewmate", "hotspot": "Hotspot", "squall": "Weather", "dig": "Buried", "pin": "Your pin" }.get(m["kind"], "")
+		"stranger": "Wanderer", "mate": "Crewmate", "hotspot": "Hotspot", "salter": "Salter", "dig": "Buried", "pin": "Your pin" }.get(m["kind"], "")
 	var ink: Color = Color(0.22, 0.17, 0.13)
 	Kit.text(v, eyebrow, "eyebrow", Color(0.6, 0.35, 0.18))
 	Kit.text(v, str(m["name"]), "title", ink)
@@ -636,12 +754,14 @@ func _open_card(m: Dictionary) -> void:
 	row.add_theme_constant_override("separation", 8)
 	v.add_child(row)
 	var go: Button = ink_button("Set course")
+	go.visible = Rules.skill_block(_xp(), "set_course") == ""
 	go.pressed.connect(func() -> void:
 		_set_course(m["at"], str(m["name"]), false)
 		_card.queue_free()
 		_card = null)
 	row.add_child(go)
 	var sail: Button = ink_button("Set course & sail", true)
+	sail.visible = go.visible and Rules.skill_block(_xp(), "autopilot") == ""
 	sail.pressed.connect(func() -> void:
 		_set_course(m["at"], str(m["name"]), true)
 		close())
@@ -683,14 +803,14 @@ func _card_lines(m: Dictionary) -> Array:
 			return ["Takes the whole hold at %d%% of market value." % int(round(float(d.get("rate", 0.8)) * 100.0))]
 		"stranger":
 			return [str(Rules.data()["traders"]["kindLabel"].get(d.get("kind", ""), "")), "They will have moved on by tomorrow."]
+		"salter":
+			return ["Buys the whole hold at %d%% of market value." % int(round(float(d["rate"]) * 100.0)), "Here today; moved on by tomorrow."]
 		"mate":
 			return ["Sailing in your Charter."]
 		"hotspot":
 			var left: float = maxf(0.0, (float(d["endsAt"]) - Clock.now_ms()) / 60000.0)
 			var tier: Array = Hotspots.DEFS[d["kind"]]["tiers"][int(d["tier"]) - 1]
 			return [str(tier[1]), "Gone in %d minutes." % int(ceil(left))]
-		"squall":
-			return ["Rain, rough water and a dark sky, drifting at %d px a second. Pays nothing; rides hard." % int(Vector2(float(d["vx"]), float(d["vy"])).length())]
 		"dig":
 			return ["Dug." if d["dug"] else "Something lies on the bottom here. Sail over it and drop the grapple."]
 		"pin":

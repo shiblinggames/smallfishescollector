@@ -9,7 +9,8 @@ extends RefCounted
 ## A few names exist only for the port: "setSeaPos" (where the boat is moored),
 ## "marketRefresh" (catch the market up, so a crewmate's copy of it never
 ## rolls dice of its own), and "stowCrate"/"openCrate" (a reeled crate goes
-## into the stash and is opened when the captain chooses).
+## into the stash and is opened when the captain chooses), and "quickSellHold"
+## (the Quick Sell skill).
 
 
 ## Run one call. Returns the result (a dictionary, or null where the TS returned
@@ -50,6 +51,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 		"marketSellFish": return Selling.market_sell_fish(db, uid, float(a[0]), float(a[1]))
 		"sellEntireHold": return Selling.sell_entire_hold(db, uid)
 		"sellToResident": return Selling.sell_to_resident(db, uid, a[0])
+		"quickSellHold": return Selling.quick_sell_hold(db, uid)
 		"buyBait": return Harbour.buy_bait(db, uid, a[0], float(a[1]))
 		"purchaseRod": return Harbour.purchase_rod(db, uid, float(a[0]))
 		"sellRod": return Harbour.sell_rod(db, uid, float(a[0]))

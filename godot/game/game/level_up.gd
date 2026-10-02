@@ -23,6 +23,8 @@ var _hint: Label
 var _motes: Array = []
 
 const CREAM: Color = Color(0.98, 0.94, 0.85)
+## Learned is a skill: free and for good.
+const SECTION_INK: Dictionary = { "Learned": Color(0.42, 0.27, 0.58), "Stronger": Color(0.55, 0.3, 0.15), "Unlocked": Color(0.2, 0.42, 0.4), "Earned": Color(0.55, 0.42, 0.1) }
 const WARM: Color = Color(1.0, 0.78, 0.38)
 
 
@@ -172,7 +174,34 @@ static func gains(from: int, to: int) -> Array:
 	var mm: int = int(Js.num(d["daily"].get("masterMinLevel")))
 	if mm > from and mm <= to:
 		out.append(["Unlocked", "A fourth daily challenge, the Master"])
+	for s: Dictionary in Rules.skills():
+		if int(s["level"]) > from and int(s["level"]) <= to:
+			out.append(["Learned", "%s: %s" % [s["name"], s["text"]]])
 	return out
+
+
+## Everything one level brings, gifts included (the Fishing guide).
+static func level_lines(lv: int) -> Array:
+	var out: Array = gains(lv - 1, lv)
+	if lv <= int(Js.num(Rules.data().get("levelRewardMax", 100))):
+		var lab: String = reward_label(Js.obj((Rules.data()["levelRewards"] as Dictionary).get(str(lv))))
+		if lab != "":
+			out.append(["Earned", lab])
+	return out
+
+
+## The next level after this one that brings anything, and the headline of
+## it: a skill first, then an unlock, a free upgrade, a gift. [level, text],
+## or [] at the top.
+static func next_unlock(lv: int) -> Array:
+	for n: int in range(lv + 1, 101):
+		var lines: Array = level_lines(n)
+		for sec: String in ["Learned", "Unlocked", "Stronger", "Earned"]:
+			for l: Array in lines:
+				if l[0] == sec:
+					var t: String = str(l[1]).split(":")[0] if sec == "Learned" else str(l[1])
+					return [n, t.replace(" at the Tackle Shop", "").replace(" is open to you, and the portal to it", " opens")]
+	return []
 
 
 var _tiles: Dictionary = {}
@@ -188,7 +217,7 @@ func _build_slip(parent: Control, from: int, to: int) -> Control:
 	if lines.is_empty():
 		return null
 	# In order: Stronger, Unlocked, Earned.
-	var order: Array = ["Stronger", "Unlocked", "Earned"]
+	var order: Array = ["Learned", "Stronger", "Unlocked", "Earned"]
 	var sorted: Array = []
 	for sec: String in order:
 		for l: Array in lines:
@@ -206,7 +235,7 @@ func _build_slip(parent: Control, from: int, to: int) -> Control:
 	for l: Array in lines:
 		if l[0] != last:
 			last = l[0]
-			var head: Label = Kit.text(v, l[0], "eyebrow", { "Stronger": Color(0.55, 0.3, 0.15), "Unlocked": Kit.ink(Color(0.36, 0.6, 0.58)), "Earned": Color(0.55, 0.42, 0.1) }[l[0]])
+			var head: Label = Kit.text(v, l[0], "eyebrow", SECTION_INK[l[0]])
 			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			if v.get_child_count() > 1:
 				head.custom_minimum_size = Vector2(0, 22)
@@ -252,6 +281,14 @@ func _build_slip(parent: Control, from: int, to: int) -> Control:
 		_tiles.erase(v)
 		var t: Label = Kit.text(v, l[1], "body_strong", Kit.PAPER_INK)
 		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		t.custom_minimum_size = Vector2(380, 0)
+	var nx: Array = next_unlock(to)
+	if not nx.is_empty():
+		var nl: Label = Kit.text(v, "Next, at Fishing %d: %s" % [int(nx[0]), nx[1]], "note", Kit.PAPER_INK_SOFT, true)
+		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nl.custom_minimum_size = Vector2(0, 26)
+		nl.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	if to - from > 1:
 		var n: Label = Kit.text(v, "These were waiting for you. Everything you earn is held until you are back at the chart.", "note", Kit.PAPER_INK_SOFT, true)
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

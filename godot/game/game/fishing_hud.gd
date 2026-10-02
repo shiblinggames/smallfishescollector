@@ -57,6 +57,8 @@ var _gen: int = 0
 
 var _name: Label
 var _xp: XpBar
+var _next_for: int = -1
+var _next_text: String = ""
 var _purse: Label
 var _spot_badge: Pane
 var _spot_family: Label
@@ -126,6 +128,7 @@ func _ready() -> void:
 	_xp = XpBar.new()
 	_place(_xp, Vector2(0.5, 0.0), Vector2(-320, 12), Vector2(640, 40))
 	add_child(_xp)
+	_xp.pressed.connect(func() -> void: locker_wanted.emit("levels", ""))
 	var purse_row: HBoxContainer = HBoxContainer.new()
 	purse_row.add_theme_constant_override("separation", 10)
 	purse_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -441,7 +444,6 @@ func refresh() -> void:
 		var hi: float = float(table[lvl])
 		frac = (xp - lo) / maxf(1.0, hi - lo)
 		left = hi - xp
-	var next: Dictionary = (Rules.data()["levelRewards"] as Dictionary).get(str(lvl + 1), {})
 	if water.is_empty():
 		# North of the reef, in the harbour waters: the Navigation level.
 		var nxp: float = Js.num(p.get("expedition_xp"))
@@ -456,7 +458,12 @@ func refresh() -> void:
 			nleft = nhi - nxp
 		_xp.set_values(nlv, nfrac, nleft, "", false, -1, "nav")
 	else:
-		_xp.set_values(lvl, frac, left, LevelUp.reward_label(next) if not next.is_empty() else "", next.get("milestone", false), _streak(), "fishing")
+		# What the next level that brings anything brings (the Fishing guide).
+		if _next_for != lvl:
+			_next_for = lvl
+			var nx: Array = LevelUp.next_unlock(lvl)
+			_next_text = "Next at %d: %s" % [int(nx[0]), nx[1]] if not nx.is_empty() else ""
+		_xp.set_values(lvl, frac, left, _next_text, false, _streak(), "fishing")
 	_dial.streak = _streak()
 	_purse.text = "%s ⟡" % _thousands(Js.num(p.get("doubloons")))
 	# The bait on the line: the one chosen while any is left, else the first held.
@@ -552,6 +559,9 @@ func set_cues(c: Dictionary) -> void:
 		_cue_chip("Full sail", Color("#f0d58a"))
 	if c.get("kelp", false):
 		_cue_chip("In the kelp", Color("#a8c483"))
+	var w: String = str(c.get("weather", ""))
+	if w != "":
+		_cue_chip(w, Color("#bcd0e8") if not w.begins_with("Fair wind") else Color("#d8f0c8"))
 
 
 ## A cue is lettering on the water, not a panel (Kong, 2026-10-01): the words
