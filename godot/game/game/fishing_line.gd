@@ -43,33 +43,59 @@ func _draw() -> void:
 		return
 	var tip: Vector2 = _sheet(PTS[frame][0])
 	var end: Vector2 = _sheet(PTS[frame][1])
-	var now: float = Time.get_ticks_msec() / 1000.0
+	var now: float = skipper.line_clock
 	var t: float = now - skipper.frame_at
 	if skipper.line_snap_t >= 0.0:
 		_snapped(tip, end, now - skipper.line_snap_t)
 		return
+	# Coming into a pose, the end eases from wherever it was (a fight, a
+	# cast, the water) to the pose's own place, so the line never jumps.
+	var from: Variant = skipper.line_from
+	var ease_in: float = clampf(t / 0.32, 0.0, 1.0)
+	ease_in = ease_in * ease_in * (3.0 - 2.0 * ease_in)
 	match frame:
 		"rest":
 			end += Vector2(sin(now * 1.3 + skipper._phase) * 2.2, 0.0)
+			if from != null and ease_in < 1.0:
+				end = (from as Vector2).lerp(end, ease_in)
 			_curve(tip, end, 3.0, 0.0, 0.0)
 			_hook(end, _last_dir)
+			_remember(end)
 		"cast":
-			# Flying out from the tip, whipping, and settling into its arc.
-			var u: float = clampf(t / 0.45, 0.0, 1.0)
-			var e: float = 1.0 - pow(1.0 - u, 3.0)
-			var at: Vector2 = tip.lerp(end, e)
-			_curve(tip, at, 10.0 * e, 9.0 * (1.0 - u), now * 26.0)
+			# THE CAST: the hook flies out from where it hung in a high arc
+			# and comes down exactly where the line will run into the water
+			# once she is waiting, so the cast and the wait are one movement.
+			var water: Vector2 = skipper.sheet_point("wait", PTS["wait"][1])
+			var start: Vector2 = from if from != null else tip
+			var u: float = clampf(t / 0.55, 0.0, 1.0)
+			# Thrown: quick off the rod, slowing as it falls (ease out), up
+			# over the tip and out, along a curve through a point high above
+			# and beyond the tip.
+			var e: float = 1.0 - pow(1.0 - u, 2.2)
+			var high: Vector2 = tip + Vector2((water.x - tip.x) * 0.9, -95.0)
+			var at: Vector2 = start.lerp(high, e).lerp(high.lerp(water, e), e)
+			_curve(tip, at, 4.0 + 10.0 * u, 8.0 * (1.0 - u), now * 24.0)
 			_hook(at, _last_dir)
+			_remember(at)
 		_:
 			if skipper.line_target != null:
 				var to: Vector2 = to_local(skipper.line_target)
+				_remember(to)
 				var slack: float = skipper.line_slack
 				# Taut, it hums; slack, it hangs.
 				var hum: float = sin(now * 46.0) * 1.3 * (1.0 - slack)
 				# Slack, it bows out sideways in a lazy loop as well as sagging.
 				_curve(tip, to, 3.0 + slack * 22.0, hum + slack * 16.0 * sin(now * 3.0 + 1.0), slack * 2.0)
 			else:
+				if from != null and ease_in < 1.0:
+					end = (from as Vector2).lerp(end, ease_in)
 				_curve(tip, end, 5.0, 0.0, 0.0)
+				_remember(end)
+
+
+func _remember(at: Vector2) -> void:
+	skipper.line_end_prev = at
+	skipper.line_end_ok = true
 
 
 ## A line from a to b, sagging by sag (down the screen), with a wave along it

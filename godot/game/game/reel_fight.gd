@@ -57,7 +57,7 @@ func _ready() -> void:
 	match result:
 		"penalty":
 			Sound.snap()
-			sk.line_snap_t = Time.get_ticks_msec() / 1000.0
+			sk.line_snap_t = sk.line_clock
 			if boat.field != null:
 				boat.field.ring(_at, 90.0, 0.8, 0.8)
 		"miss":

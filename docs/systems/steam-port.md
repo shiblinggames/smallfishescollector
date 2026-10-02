@@ -410,6 +410,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the water; in a fight it runs to Skipper.line_target (a global point), taut and humming,
   or bows slack (line_slack), or snaps (line_snap_t). ReelFight now draws the fish in
   toward the hull on the line again, and the leap carries the line up with it.
+  THE LINE FLOWS (same day, Kong: "as natural as possible"): the hook rides the line's end
+  (the worn hook's art cut from its sheet, region 244,366 37x75, turned along the line;
+  Skipper no longer places it). On every pose change the line's end eases from where it
+  was (Skipper.line_from / line_end_prev) to the pose's own place. THE CAST throws the
+  hook up over the tip and out along a curve through a point high beyond it, landing
+  exactly where the waiting line enters the water (Skipper.sheet_point("wait", ...) with
+  shift_for, the hull-holding shift each pose gets), so cast and wait are one movement.
+  The line runs on Skipper.line_clock (game time), not the wall clock.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

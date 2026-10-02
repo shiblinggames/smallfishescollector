@@ -109,7 +109,9 @@ func set_frame(f: String) -> void:
 	if f == frame:
 		return
 	frame = f
-	frame_at = Time.get_ticks_msec() / 1000.0
+	frame_at = line_clock
+	# The line carries on from where its end was, so nothing jumps.
+	line_from = line_end_prev if line_end_ok else null
 	if f != "wait":
 		line_target = null
 		line_slack = 0.0
@@ -124,6 +126,42 @@ var line_target: Variant = null
 var line_slack: float = 0.0
 var line_snap_t: float = -1.0
 var frame_at: float = 0.0
+## The line's own clock: game time (process deltas), so its motion keeps pace
+## with the game and not the wall.
+var line_clock: float = 0.0
+## Where the line's end was last drawn (this node's space), and where it
+## starts from in a new pose (eased from there to the pose's own end).
+var line_end_prev: Vector2 = Vector2.ZERO
+var line_end_ok: bool = false
+var line_from: Variant = null
+
+
+## How far a pose's sheet is moved to hold the hull still (as _build does).
+func shift_for(f: String) -> Vector2:
+	if f == "rest":
+		return Vector2.ZERO
+	var w: float = W * box_scale
+	var h: float = H * box_scale
+	var color0: String = look.get("color", "default")
+	var known0: bool = false
+	for c: Dictionary in Rules.data()["characterColors"]:
+		if c["id"] == color0:
+			known0 = true
+	var stem: String = "fishing_%s.png" if (color0 == "default" or not known0) else "fishing_" + color0 + "_%s.png"
+	var a: Vector2 = _hull_mark(tex(stem % "rest"))
+	var b: Vector2 = _hull_mark(tex(stem % f))
+	if a == Vector2.INF or b == Vector2.INF:
+		return Vector2.ZERO
+	return Vector2((a.x - b.x) * w, (a.y - b.y) * h)
+
+
+## A point on a pose's sheet (in its pixels), in this node's space, whatever
+## pose is showing.
+func sheet_point(f: String, p: Vector2) -> Vector2:
+	var w: float = W * box_scale
+	var h: float = H * box_scale
+	var origin: Vector2 = Vector2(-w / 2.0 - 0.08 * w, -h / 2.0 - 0.26 * h) + shift_for(f)
+	return origin + p * (w / 900.0)
 
 
 static func _find(list_key: String, id: Variant) -> Dictionary:
@@ -442,6 +480,7 @@ func sway(delta: float, rough: float, heel: float = 0.0, pitch: float = 0.0) -> 
 
 
 func _process(delta: float) -> void:
+	line_clock += delta
 	if _mirror == null or not is_instance_valid(_mirror):
 		return
 	_wob += delta
