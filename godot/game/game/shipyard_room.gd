@@ -222,7 +222,14 @@ func _free_at(l: Array, i: int) -> String:
 				return "Fishing %s" % str(k)
 		return ""
 	var nl: int = Shipyard.free_at(str(l[5]), float(i))
-	return ("Navigation %d" % nl) if nl > 0 else ""
+	return ("Fishing %d" % nl) if nl > 0 else ""
+
+
+## The Fishing level a bought tier needs, or 0.
+func _gate_at(l: Array, i: int) -> int:
+	if l[0] == "hold":
+		return Rules.gate("hold", str(i))
+	return int(Js.num(Js.obj(Js.obj(Js.obj(Rules.data().get("levelGates")).get("ship")).get(str(l[5]))).get(str(i))))
 
 
 func _detail(parent: Control) -> void:
@@ -261,8 +268,8 @@ func _detail(parent: Control) -> void:
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var free: String = _free_at(l, i)
 		var price: String = "%s ⟡" % Js.thousands(_cost(_ladder, i))
-		if l[0] == "hold" and Rules.gate("hold", str(i)) > 0:
-			price = "Fishing %d  ·  %s" % [Rules.gate("hold", str(i)), price]
+		if free == "" and _gate_at(l, i) > 0:
+			price = "Fishing %d  ·  %s" % [_gate_at(l, i), price]
 		if free != "":
 			price = "Free at %s  ·  or %s" % [free, price]
 		Kit.text(h, "Standard" if i == 0 else ("Owned" if i <= t else price), "value", Kit.GOOD if (i <= t and i > 0) else (Kit.GOLD if i > t else Kit.DIM))
@@ -273,7 +280,8 @@ func _detail(parent: Control) -> void:
 	var purse: float = Js.num(session.profile().get("doubloons"))
 	Kit.text(v, "Next: %s (%s)" % [_value(_ladder, t + 1), _gain(_ladder, t)], "body_strong", Kit.INK)
 	var go: Button
-	var lock: String = Rules.gate_block("hold", str(t + 1), Js.num(session.profile().get("fishing_xp"))) if l[0] == "hold" else ""
+	var gneed: int = _gate_at(l, t + 1)
+	var lock: String = ("Needs Fishing %d" % gneed) if gneed > 0 and session.level() < gneed else ""
 	if _busy:
 		go = Kit.button("Working…", "primary")
 		go.disabled = true

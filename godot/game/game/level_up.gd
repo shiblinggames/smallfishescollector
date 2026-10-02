@@ -157,6 +157,18 @@ static func gains(from: int, to: int) -> Array:
 			for sp: Dictionary in d["specialItems"]:
 				if sp["id"] == sk:
 					out.append(["Unlocked", "The %s" % sp["name"]])
+	var names: Dictionary = { "hull_speed_tier": "Hull speed", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig", "lantern_tier": "Lantern" }
+	var su: Dictionary = Js.obj(d.get("shipUpgrades"))
+	for lvk: Variant in su:
+		if int(lvk) > from and int(lvk) <= to:
+			for c: Variant in su[lvk]:
+				out.append(["Stronger", "%s upgraded to tier %d (free)" % [names.get(c, c), int(su[lvk][c]) + 1]])
+	var sg: Dictionary = Js.obj(lg.get("ship"))
+	for c2: Variant in sg:
+		for tk: Variant in sg[c2]:
+			var tl: int = int(sg[c2][tk])
+			if tl > from and tl <= to:
+				out.append(["Unlocked", "%s tier %d at the Shipyard" % [names.get(c2, c2), int(tk) + 1]])
 	var mm: int = int(Js.num(d["daily"].get("masterMinLevel")))
 	if mm > from and mm <= to:
 		out.append(["Unlocked", "A fourth daily challenge, the Master"])

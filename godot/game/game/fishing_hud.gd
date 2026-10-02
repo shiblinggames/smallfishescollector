@@ -1202,7 +1202,7 @@ func _after_catch(from_catch: bool) -> void:
 		var floors: Variant = await session.act("levelFloors")
 		if floors is Array and not (floors as Array).is_empty():
 			for f: Array in floors:
-				toast("Navigation %d: %s upgraded for free" % [int(f[2]), { "hull_speed_tier": "Hull", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig" }.get(f[0], f[0])])
+				toast("Fishing %d: %s upgraded for free" % [int(f[2]), { "hull_speed_tier": "Hull", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig" }.get(f[0], f[0])])
 		session.persist()
 		_level_seen = session.level()
 		if float(claim["to"]) > float(claim["from"]):

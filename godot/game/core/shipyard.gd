@@ -31,21 +31,21 @@ static func effect(col: String, tier: float) -> float:
 	return float(e[clampi(int(tier), 0, e.size() - 1)])
 
 
-## NAVIGATION RAISES THE SHIP (the port's rules, content/port_rules.json
-## navUpgrades): each Navigation level that carries an upgrade lifts that
-## column to at least its tier, free. State-based, so it is right whenever it
-## runs. Returns what it raised: [[column, tier, nav level], ...].
+## LEVELS RAISE THE SHIP (the port's rules, content/port_rules.json
+## shipUpgrades, by Fishing level for now): each level that carries an upgrade
+## lifts that column to at least its tier, free. State-based, so it is right
+## whenever it runs. Returns what it raised: [[column, tier, level], ...].
 static func level_floors(db: CaptainStore, uid: String) -> Array:
-	var ups: Dictionary = Js.obj(Rules.data().get("navUpgrades"))
+	var ups: Dictionary = Js.obj(Rules.data().get("shipUpgrades"))
 	if ups.is_empty():
 		return []
-	var cols: Array = ["expedition_xp"]
+	var cols: Array = ["fishing_xp"]
 	for lv: Variant in ups:
 		for c: Variant in ups[lv]:
 			if not cols.has(c):
 				cols.append(c)
 	var p: Dictionary = db.profile(uid, ", ".join(PackedStringArray(cols)))
-	var nav: int = Loadout.nav_level_from_xp(Js.num(p.get("expedition_xp")))
+	var nav: int = Rules.level_from_xp(Js.num(p.get("fishing_xp")))
 	var patch: Dictionary = {}
 	var raised: Array = []
 	for lv: Variant in ups:
@@ -64,7 +64,7 @@ static func level_floors(db: CaptainStore, uid: String) -> Array:
 
 ## The Navigation level that gives a tier for free, or 0.
 static func free_at(col: String, tier: float) -> int:
-	var ups: Dictionary = Js.obj(Rules.data().get("navUpgrades"))
+	var ups: Dictionary = Js.obj(Rules.data().get("shipUpgrades"))
 	for lv: Variant in ups:
 		if float(Js.obj(ups[lv]).get(col, -1.0)) == tier:
 			return int(lv)
@@ -72,6 +72,11 @@ static func free_at(col: String, tier: float) -> int:
 
 
 static func buy_tier(db: CaptainStore, uid: String, col: String) -> Dictionary:
+	# The port's rule: each bought tier is behind a Fishing level.
+	var cur_t: float = Js.num(db.profile(uid, col).get(col))
+	var gate_need: int = int(Js.num(Js.obj(Js.obj(Js.obj(Rules.data().get("levelGates")).get("ship")).get(col)).get(str(int(cur_t + 1.0)))))
+	if gate_need > 0 and Rules.level_from_xp(Js.num(db.profile(uid, "fishing_xp").get("fishing_xp"))) < gate_need:
+		return { "error": "Needs Fishing %d" % gate_need }
 	var l: Dictionary = ladder(col)
 	var p: Dictionary = db.profile(uid, col)
 	var tier: float = Js.num(p.get(col))

@@ -457,6 +457,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   cosmetic pool with bands (oak, cherry, desert, mahogany common; pistachio, taupe,
   periwinkle uncommon; golden rare; ethereal, chromium epic). The shops show locks; the
   level-up lists what each level opens.
+  THE SHIP ON FISHING TOO (Kong): shipUpgrades (replaces navUpgrades, Navigation cannot grow
+  in the port) gives the hull's 2nd tier at Fishing 10 and 3rd at 25, the rudder's 2nd at
+  15, the rig's 2nd at 20, free; levelGates.ship gates the bought tiers (hull 4th 45, 5th
+  60, 6th 75; rudder 3rd 35, 4th 55; rig 3rd 40, 4th 60; lantern 2nd-5th at 10, 25, 45, 65),
+  checked in Shipyard.buy_tier; the Shipyard shows "Fishing 45 · 20,000 ⟡" and locks.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules
