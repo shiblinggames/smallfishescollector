@@ -1132,6 +1132,14 @@ func _dock(id: String) -> void:
 			Rumble.buzz([18, 40, 24])
 			Sound.bell()
 			_enter_room("shipyard")
+		"crew_hall":
+			Rumble.buzz([18, 40, 24])
+			Sound.bell()
+			var ch: CrewHall = CrewHall.new()
+			ch.session = session
+			ch.closed.connect(func() -> void: _hud.refresh())
+			_hud.hold_for(ch)
+			_room_layer.add_child(ch)
 		_:
 			Rumble.tap(10)
 			var p: Dictionary = Chart.port(id)

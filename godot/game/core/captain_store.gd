@@ -113,6 +113,13 @@ func flag_anomaly(uid: String, kind: String, severity: float, detail: Dictionary
 	(save["anomalies"] as Array).append({ "kind": kind, "severity": severity, "detail": detail })
 
 
+## The save's next row id (save.nextId++, the local stores' shared counter).
+func next_id() -> float:
+	var id: float = float(save["nextId"])
+	save["nextId"] = id + 1.0
+	return id
+
+
 func mail_to(uid: String, subject: String, body: String, sender: String) -> void:
 	me(uid)
 	var id: float = float(save["nextId"])

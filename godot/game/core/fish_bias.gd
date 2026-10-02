@@ -45,15 +45,21 @@ static func conditions(at: Vector2, now: float) -> Dictionary:
 
 ## The nudge on each species here and now: { species id: mult } (empty when
 ## nothing holds, so the pick is the web's uniform one).
-static func for_cast(candidates: Array, at: Vector2, now: float) -> Dictionary:
+## (The cast's candidates carry ids, not names: the names come from the
+## species list.)
+static func for_cast(candidates: Array, species: Array, at: Vector2, now: float) -> Dictionary:
 	var out: Dictionary = {}
 	var conds: Dictionary = conditions(at, now)
 	if conds.is_empty():
 		return out
+	var names: Dictionary = {}
+	for s: Dictionary in species:
+		names[float(s["id"])] = str(s.get("name", ""))
 	var lists: Dictionary = cfg()
 	for f: Dictionary in candidates:
+		var nm: String = str(f.get("name", names.get(float(f["id"]), "")))
 		for c: String in conds:
-			if Js.list(lists.get(c)).has(str(f["name"])):
+			if Js.list(lists.get(c)).has(nm):
 				out[float(f["id"])] = maxf(float(out.get(float(f["id"]), 1.0)), float(conds[c]))
 	return out
 

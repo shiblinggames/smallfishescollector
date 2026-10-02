@@ -93,7 +93,7 @@ static func cast_line(db: CaptainStore, uid: String, bait_type: String, habitat:
 		"habitat": habitat, "baitType": bait_type,
 		"candidates": candidates,
 		# When a fish bites best (port rules): nudged among its own rarity.
-		"nudges": FishBias.for_cast(candidates, Vector2(float(at["x"]), float(at["y"])) if at is Dictionary else Vector2(Js.num(db.me(uid).get("sea_x")), Js.num(db.me(uid).get("sea_y"))), Clock.now_ms()) if FishBias.on() else {},
+		"nudges": FishBias.for_cast(candidates, Js.list(db.save.get("species")), Vector2(float(at["x"]), float(at["y"])) if at is Dictionary else Vector2(Js.num(db.me(uid).get("sea_x")), Js.num(db.me(uid).get("sea_y"))), Clock.now_ms()) if FishBias.on() else {},
 		"fishingLevel": fishing_level,
 		"firstEver": Js.num(profile.get("fishing_xp")) == 0.0,
 		"ancientCatches": Js.list(profile.get("ancient_catches")),

@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -458,6 +458,26 @@ func _init() -> void:
 			hud.refresh()
 			hud.open_guide("achievements")
 			for f: int in 40:
+				await process_frame
+		"crewhall", "crewroster", "crewhalltier":
+			# A few days of boards signed, so the roster has hands in it.
+			for d: int in (6 if what != "crewhall" else 0):
+				var st: Dictionary = RulesApi.run(sea.session.store, sea.session.uid, "getCrewState", [])
+				for c: Dictionary in st["board"]:
+					RulesApi.run(sea.session.store, sea.session.uid, "recruitCrew", [c["id"]])
+				p["last_free_recruit_date"] = "old%d" % d
+			var ch: CrewHall = CrewHall.new()
+			ch.session = sea.session
+			ch.room = { "crewhall": "recruit", "crewroster": "roster", "crewhalltier": "hall" }[what]
+			sea._room_layer.add_child(ch)
+			for f: int in 20:
+				await process_frame
+			var list: Array = Js.list(ch._state.get("board" if what == "crewhall" else "roster"))
+			if not list.is_empty() and what != "crewhalltier":
+				ch._pick = list[0]
+				ch._pick_kind = "board" if what == "crewhall" else "roster"
+				ch._draw_room()
+			for f: int in 30:
 				await process_frame
 		"levels":
 			hud.open_guide()

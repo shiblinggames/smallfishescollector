@@ -53,6 +53,8 @@ import { DIG_SITES } from '../lib/seaDigs'
 import { XP_TABLE } from '../lib/fishingLevel'
 import { getDailyChallenges } from '../lib/dailyChallenges'
 import { CRATE_FISH_ID } from '../lib/fishingRules'
+import { getCrewState, recruitCrew, upgradeCrewHall, dismissCrew, renameCrew } from '../lib/core/crew'
+import { localCrewData } from '../lib/data/local/crewLocal'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'tests', 'parity')
 fs.mkdirSync(OUT, { recursive: true })
@@ -733,6 +735,53 @@ shop.push(await scripted('the portal and the recall', 39, captainWith(39, 99, 5,
   }
 }))
 write('shop.json', { sessions: shop })
+
+// ── The Crew Hall (slice 1) ──
+//
+// The free board across days, signing on to a full roster, every hall tier
+// and its gates, names and dismissals, refusals included. Each result is cut
+// to what the port's crew state carries (the board, the roster, capacity,
+// the hall tier, the purse and the Navigation level).
+const cutState = (st: any) => st && { board: st.board, roster: st.roster, capacity: st.capacity, navLevel: st.navLevel, hallTier: st.hallTier, doubloons: st.doubloons }
+const cutResult = (r: any) => ('error' in r ? r : { state: cutState(r.state) })
+const crewSessions = [
+  await scripted('the crew hall', 41, captainWith(41, 30, 2, { doubloons: 5000 }), async x => {
+    const crew = localCrewData(x.save)
+    const st = () => x.call('getCrewState', [], async () => cutState(await getCrewState(crew, x.uid)))
+    const rec = (id: number) => x.call('recruitCrew', [id], async () => cutResult(await recruitCrew(crew, x.uid, id)))
+    const up = () => x.call('upgradeCrewHall', [], async () => cutResult(await upgradeCrewHall(crew, x.uid)))
+    const dis = (id: number) => x.call('dismissCrew', [id], async () => cutResult(await dismissCrew(crew, x.uid, id)))
+    const ren = (id: number, n: string) => x.call('renameCrew', [id, n], async () => cutResult(await renameCrew(crew, x.uid, id, n)))
+    let s = await st()
+    await st()
+    for (const c of s.board) await rec(c.id)
+    await rec(s.board[0].id)
+    await rec(99999)
+    await up()
+    await x.patchProfile({ expedition_xp: 50_000_000 })
+    await up()
+    await x.patchProfile({ doubloons: 2_000_000 })
+    for (let k = 0; k < 6; k++) await up()
+    for (let d = 0; d < 16; d++) {
+      x.advance(DAY)
+      s = await st()
+      for (const c of s.board) await rec(c.id)
+    }
+    s = await st()
+    const first = s.roster[0].id, second = s.roster[1].id
+    await ren(first, '   '); await ren(first, 'x'.repeat(31)); await ren(first, '  Barnacle  '); await ren(first, 'Other'); await ren(99999, 'Nobody')
+    await dis(first); await dis(first)
+    await x.patchSave({ trawls: [{ id: 1, crew_id: second, zone: 'shallows', started_at: new Date(START).toISOString() }] })
+    await dis(second)
+    await x.patchSave({ trawls: [] })
+    await dis(second)
+    x.advance(DAY)
+    s = await st()
+    for (const c of s.board) await rec(c.id)
+  }),
+]
+write('crew.json', { sessions: crewSessions })
+console.log(`  ${crewSessions.length} crew sessions, ${crewSessions.reduce((n, s) => n + s.ops.length, 0)} calls`)
 {
   const cases: { now: number; x: number; y: number; bottles: unknown[] }[] = []
   for (let k = 0; k < 400; k++) {

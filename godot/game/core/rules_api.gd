@@ -34,7 +34,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 
 
 ## Calls that change nothing.
-const READS: Array = ["folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden"]
+const READS: Array = ["folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState"]
 
 
 static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
@@ -97,6 +97,11 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"digHere": return Explore.dig_here(db, uid, a[0])
 		"openBottle": return Explore.open_bottle(db, uid, a[0])
 		"clueSearch": return Clues.search(db, uid, a[0])
+		"getCrewState": return Crew.state(db, uid)
+		"recruitCrew": return Crew.recruit(db, uid, float(a[0]))
+		"upgradeCrewHall": return Crew.upgrade_hall(db, uid)
+		"dismissCrew": return Crew.dismiss(db, uid, float(a[0]))
+		"renameCrew": return Crew.rename(db, uid, float(a[0]), str(a[1]))
 		"getDigState": return Explore.get_dig_state(db, uid)
 		"saveSeaPosition": return Explore.save_sea_position(db, uid, float(a[0]), float(a[1]), a[2] if a.size() > 2 else [])
 		"setSeaPos":

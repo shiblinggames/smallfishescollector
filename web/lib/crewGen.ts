@@ -26,7 +26,7 @@ export const RARITY_COLORS: Record<CrewRarity, string> = {
 
 // Crew nicknames, keyed by lowercased card slug. Species without an entry fall
 // back to their catalog name.
-const CREW_NAMES: Record<string, string> = {
+export const CREW_NAMES: Record<string, string> = {
   angelfish: 'Ang', anglerfish: 'Anglerr', bass: 'Bob', beluga_whale: 'Bellie',
   blobfish: 'Bloo', blue_marlin: 'Marl', blue_whale: 'Big Blue', catfish: 'Kat',
   clownfish: 'Chloe', doby_mick: 'Doby', eel: 'Ell', flounder: 'Floop',
@@ -70,7 +70,7 @@ export const FREE_WEIGHTS: [number, number, number, number] = [76, 22, 2, 0]
 export const GEM_WEIGHTS:  [number, number, number, number] = [62, 34, 3.5, 0.65]
 
 // Total stat budget band per rarity (inclusive).
-const STAT_BUDGET: Record<CrewRarity, [number, number]> = {
+export const STAT_BUDGET: Record<CrewRarity, [number, number]> = {
   1: [8, 13],
   2: [13, 18],
   3: [19, 25],
@@ -145,7 +145,7 @@ export function rollStats(
 // (~22% are fully neutral) and Legendary crew are likely to hit the ±3
 // extremes (~40% chance per stat). See crewEffects.decodeTraitStats /
 // traitLabel for the parse + display side.
-const MAG_WEIGHTS: Record<CrewRarity, [number, number, number, number]> = {
+export const MAG_WEIGHTS: Record<CrewRarity, [number, number, number, number]> = {
   1: [60, 25, 10,  5],   // Common:     P(0,1,2,3) magnitude
   2: [40, 30, 20, 10],   // Rare
   3: [25, 25, 30, 20],   // Epic

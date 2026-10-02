@@ -657,7 +657,22 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   same): the odds of a rarer fish, pay, XP and crates do not move. tests/bias_check.gd holds
   that. Shown: a line under the water's name ("Night: ... are feeding."), "Bites best ..." on
   the Log's page and its shelf (caught or not), and the forecast names what a coming storm
-  or fog will stir in your water. The northern islands (Crew Hall,
+  or fog will stir in your water.
+- THE CREW HALL, SLICE 1 (2026-10-02): core/crew.gd ports lib/core/crew.ts getCrewState,
+  recruitCrew, upgradeCrewHall, dismissCrew and renameCrew over the save's crew and recruits
+  (crewLocal), with crewRules/crewGen's rolls on the rules' dice. The rules export carries
+  "crew" (names, stat budgets, trait weights, board odds, the level curve, groups, classes,
+  the hall ladder, capacity, the legendary gate, and traitLabel over the whole -4..4 cube).
+  PARITY: tests/parity/crew.json, a scripted session of 97 calls (boards over 17 days,
+  signing to a full roster, every hall tier and gate, names, dismissals and their refusals),
+  each result cut to the port's crew state (board, roster, capacity, navLevel, hallTier,
+  doubloons). PORT RULES (crewPort): the free board reloads every 10 sea days (8 hours), and
+  the hall reads FISHING where the web reads Navigation (capacity, tier gates) until
+  Navigation is earned in the port. game/crew_hall.gd is the hall on paper, opened by mooring
+  at the Crew Hall: Recruit (the board, a card opens the hand, Sign on with its moment),
+  Roster (one-time names, dismiss on a second press) and The Hall (tier, painting, roster
+  space, the next tier). Card art is content (card-arts, 320 px card_thumbs). NEXT SLICES:
+  bunks and training, Drills/Stores, crew levels' stat ticks, promotions, seats. The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the

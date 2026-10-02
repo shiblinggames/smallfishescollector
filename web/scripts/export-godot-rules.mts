@@ -63,6 +63,14 @@ import { AP_POOL } from '../lib/cosmeticGates'
 import { XP_TABLE as NAV_XP_TABLE } from '../lib/expeditionLevel'
 import { SHINY_SELL_MULT, SHINY_MESSAGES } from '../lib/shiny'
 import { SHIPS } from '../lib/ships'
+import { CREW_NAMES, STAT_BUDGET, MAG_WEIGHTS, FREE_WEIGHTS, GEM_WEIGHTS, DAILY_RECRUITS } from '../lib/crewGen'
+import { XP_TABLE as CREW_XP_TABLE, CREW_MAX_LEVEL } from '../lib/crewLevel'
+import { FISH_GROUPS } from '../lib/fishGroups'
+import { CLASS_BY_SLUG, CLASSES } from '../lib/crewClasses'
+import { CREW_HALL_TIERS } from '../lib/crewHall'
+import { BASE_CAPACITY, PER_LEVELS, ROSTER_PER_HALL_TIER } from '../lib/crewCapacity'
+import { ALWAYS_UNLOCKED_LEGENDARIES, LEGENDARY_GATE } from '../lib/legendaryUnlocks'
+import { traitLabel } from '../lib/crewEffects'
 import { SHIP_SKINS } from '../lib/shipSkins'
 import { ZONE_REWARD_BASE, PRESTIGE_MAX } from '../lib/zoneRewards'
 
@@ -117,6 +125,22 @@ const rules = {
   // hulls by tier.
   ships: SHIPS.map(d => ({ tier: d.tier, name: d.name, seaImageUrl: d.seaImageUrl ?? null, seaFlip: d.seaFlip ?? false, seaBeam: d.seaBeam ?? 0.6, seaKeel: d.seaKeel ?? 0.75 })),
   shipSkins: SHIP_SKINS.map(k => ({ id: k.id, name: k.name, imageByTier: k.imageByTier ?? null })),
+  // The Crew Hall (lib/crewGen, crewLevel, fishGroups, crewClasses, crewHall,
+  // crewCapacity, legendaryUnlocks): the recruit board's odds and budgets, the
+  // level curve, which group and class each species is, the hall's ladder,
+  // and every trait's label (traitLabel over the whole -4..4 cube).
+  crew: {
+    names: CREW_NAMES, statBudget: STAT_BUDGET, magWeights: MAG_WEIGHTS,
+    freeWeights: FREE_WEIGHTS, gemWeights: GEM_WEIGHTS, dailyRecruits: DAILY_RECRUITS,
+    xpTable: CREW_XP_TABLE, maxLevel: CREW_MAX_LEVEL,
+    groups: FISH_GROUPS.map(g => [...g]),
+    classBySlug: CLASS_BY_SLUG,
+    classes: Object.fromEntries(Object.values(CLASSES).map(c => [c.id, { name: c.name, shortLabel: c.shortLabel, blurb: c.blurb, color: c.color, milestones: c.milestones.map(m => ({ unlockLevel: m.unlockLevel, desc: m.desc })) }])),
+    hallTiers: Object.values(CREW_HALL_TIERS),
+    capacity: { base: BASE_CAPACITY, perLevels: PER_LEVELS, perHallTier: ROSTER_PER_HALL_TIER },
+    alwaysUnlocked: [...ALWAYS_UNLOCKED_LEGENDARIES], legendaryGate: LEGENDARY_GATE,
+    traitLabels: Object.fromEntries([-4, -3, -2, -1, 0, 1, 2, 3, 4].flatMap(p => [-4, -3, -2, -1, 0, 1, 2, 3, 4].flatMap(d => [-4, -3, -2, -1, 0, 1, 2, 3, 4].map(f => [`${p},${d},${f}`, traitLabel({ power: p, dodge: d, fortune: f })])))),
+  },
   // Every badge as the Achievements page lists it (the port shows the ones its systems can earn).
   badges: BADGES.map(b => ({ id: b.id, name: b.name, description: b.description, imageUrl: b.imageUrl, difficulty: b.difficulty })),
   apPool: AP_POOL,

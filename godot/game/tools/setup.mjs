@@ -28,7 +28,7 @@ const HERE = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const WEB = path.join(HERE, '..', '..', 'web')
 
 /** The web content the port reads so far. Add a file here as a system is ported. */
-const CONTENT = ['fish_species.json', 'profile_defaults.json']
+const CONTENT = ['fish_species.json', 'profile_defaults.json', 'cards.json']
 
 /** Files or folders under web/public, copied to art/ at the same path. A name
  *  with a * matches any run of characters within its folder. */
@@ -49,6 +49,8 @@ const ART = [
   'forge/forge.png', 'sea/gunwharf-v3.webp', 'sea/charterhouse-v2.webp', 'sea/trawl-harbor-v3.webp', 'sea/shipyard-v3.webp', 'sea/smack.png',
   'sea/mainland-town.png', 'sea/isle-*.webp', 'sea/isle-chest.png', 'sea/isle-chest-deep.png', 'sea/isle-chest-open.png',
   'sea/isle-note.png', 'sea/dig-box.png', 'sea/sea-bottle.png', 'sea-clouds.webp', 'sea/kelp-deep.webp', 'sea/kelp-canopy.webp', 'sea/tavern.png', 'sea/market.png', 'sea/tackle.png', 'sea/parlor.png', 'sea/den.png', 'sea/charting.png',
+  // The crew: every species' card art, and the Crew Hall's backdrop.
+  'card-arts', 'crew-bg.jpg', 'crew',
   // North of the reef: the rock of the reef and the anchorage, and the ships.
   // The ships as the chart draws them (lib/ships.ts seaImageUrl) and the ship
   // skins' hulls (lib/shipSkins.ts imageByTier).
@@ -282,6 +284,25 @@ console.log(copied ? `  art: ${copied} file(s) copied from web/public` : '  art:
     thumbs++
   }
   if (thumbs) console.log(`  fish thumbnails: ${thumbs} made`)
+}
+
+// CREW CARD THUMBNAILS (2026-10-02): the card art is 1152 px and a roster shows
+// dozens at ~170 px. art/card_thumbs holds each at 320 px for the Crew Hall's
+// cards; the full painting only for one hand's sheet.
+{
+  const sharp = createRequire(path.join(WEB, 'package.json'))('sharp')
+  const from = path.join(HERE, 'art', 'card-arts')
+  const to = path.join(HERE, 'art', 'card_thumbs')
+  fs.mkdirSync(to, { recursive: true })
+  let made = 0
+  for (const f of fs.readdirSync(from).filter(n => n.endsWith('.webp'))) {
+    const src = path.join(from, f)
+    const dst = path.join(to, f.replace(/\.webp$/, '.png'))
+    if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(src).mtimeMs) continue
+    await sharp(src).resize(320, 320, { fit: 'inside' }).png().toFile(dst)
+    made++
+  }
+  if (made) console.log(`  crew card thumbnails: ${made} made`)
 }
 
 const addon = path.join(HERE, 'addons', 'godotsteam')

@@ -23,11 +23,11 @@
 import { getLevelFromXP, MAX_LEVEL as NAV_MAX_LEVEL } from './expeditionLevel'
 import { clampHallTier, CREW_HALL_MAX_TIER } from './crewHall'
 
-const BASE_CAPACITY = 10
-const PER_LEVELS = 5
+export const BASE_CAPACITY = 10
+export const PER_LEVELS = 5
 /** Extra roster slots per hall tier ABOVE the free first one. Tier 1 adds
  *  nothing, tier 6 adds 10, so the ceiling is 30 (Nav 100) + 10 = 40. */
-const ROSTER_PER_HALL_TIER = 2
+export const ROSTER_PER_HALL_TIER = 2
 
 /** Roster slots the hall itself contributes at a given tier. */
 export function hallRosterBonus(hallTier: number | null | undefined): number {

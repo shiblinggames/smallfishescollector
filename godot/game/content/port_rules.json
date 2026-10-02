@@ -1668,5 +1668,10 @@
       "Ghost Shark",
       "Spookfish"
     ]
+  },
+  "_crewPort": "THE CREW HALL (Kong, 2026-10-02): the free board reloads every 10 sea days (8 real hours; steam-port.md 'Working it through' asked for every few sea days), and the hall reads Fishing where the web reads Navigation until Navigation is earned in the port. core/crew.gd.",
+  "crewPort": {
+    "boardEveryMs": 28800000,
+    "navFromFishing": true
   }
 }
