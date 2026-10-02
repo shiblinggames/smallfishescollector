@@ -26,7 +26,9 @@ extends RefCounted
 ## profile (clue_hunts), so a hunt reads the same every time it is opened.
 
 const TIERS: Array[String] = ["easy", "medium", "hard", "elite"]
-const TIER_NAME: Dictionary = { "easy": "Easy", "medium": "Medium", "hard": "Hard", "elite": "Elite" }
+## What each tier is called in the game (Kong: not RuneScape's easy to
+## elite): what the bottle holds. The ids stay easy..elite in the save.
+const TIER_NAME: Dictionary = { "easy": "Scrawl", "medium": "Ship's Letter", "hard": "Torn Map", "elite": "Last Will" }
 const BAND_TIER: Dictionary = { "shallows": "easy", "open_waters": "medium", "deep": "hard", "abyss": "elite", "ancient_deep": "elite" }
 ## The waters a tier's steps send you to.
 const TIER_BANDS: Dictionary = { "easy": ["shallows"], "medium": ["open_waters"], "hard": ["deep"], "elite": ["abyss", "ancient_deep"] }
@@ -126,7 +128,7 @@ static func take_bottle(db: CaptainStore, uid: String, key: String) -> Dictionar
 	var tier: String = b["tier"]
 	var hunts: Dictionary = Js.obj(p.get("clue_hunts")).duplicate(true)
 	if hunts.has(tier):
-		return { "ok": false, "held": true, "error": "You already carry %s clue. Finish it before you take another." % _a(tier) }
+		return { "ok": false, "held": true, "error": "You already carry %s. Finish that hunt before you take another." % _a(tier) }
 	var hunt: Dictionary = make_hunt(tier, int(b["seed"]) ^ uid.hash(), db.save)
 	hunts[tier] = hunt
 	# Keep only today's taken bottles.
@@ -141,7 +143,7 @@ static func take_bottle(db: CaptainStore, uid: String, key: String) -> Dictionar
 
 
 static func _a(tier: String) -> String:
-	return ("an " if tier in ["easy", "elite"] else "a ") + tier
+	return "a " + str(TIER_NAME[tier])
 
 
 # ── A hunt ─────────────────────────────────────────────────────────────────────
@@ -198,7 +200,10 @@ static func _step(kind: String, tier: String, rnd: Traders.Stream, save: Diction
 			for w: Dictionary in Chart.WATERS:
 				if w["id"] == f["habitat"]:
 					wname = w["name"]
-			return { "kind": "catch", "fish": float(f["id"]), "text": "Bring up %s %s in %s." % ["an" if "AEIOU".contains(str(f["name"]).left(1)) else "a", f["name"], wname] }
+			# Not its name: what the Log says of it, so a fish caught before can be
+			# found in the Log, and one never caught must be guessed (Kong).
+			var said: String = veil(str(f.get("fun_fact") if f.get("fun_fact") != null else f.get("description", "")).strip_edges(), str(f["name"]))
+			return { "kind": "catch", "fish": float(f["id"]), "text": "Bring up the fish in %s that your Log would describe so: \"%s\"" % [wname, said] }
 		"speak":
 			var folk: Array = Folk.roster().filter(func(f: Dictionary) -> bool: return not so_far.any(func(s: Dictionary) -> bool: return s.get("folk") == f["id"]))
 			if folk.is_empty():
@@ -206,6 +211,26 @@ static func _step(kind: String, tier: String, rnd: Traders.Stream, save: Diction
 			var f: Dictionary = folk[int(floor(rnd.next() * folk.size()))]
 			return { "kind": "speak", "folk": f["id"], "text": "Show this to %s and ask what it means." % f["name"] }
 	return {}
+
+
+## The Log's words with the fish's name taken out (and the last word of it,
+## "Catfish" in "Flathead Catfish", which would give it away as well).
+static func veil(text: String, name: String) -> String:
+	var words: PackedStringArray = name.split(" ")
+	var names: Array = [name]
+	if words.size() > 1 and words[words.size() - 1].length() > 3:
+		names.append(words[words.size() - 1])
+	var out: String = text
+	var esc: RegEx = RegEx.create_from_string(r"[.*+?^${}()|\[\]\\]")
+	for n: String in names:
+		var e: String = esc.sub(n, r"\$0", true)
+		out = RegEx.create_from_string(r"(?i)\b(the |a |an )?%s(e?s)?\b(?= (are|were|have|can|live|lie|grow|feed|hunt|spend))" % e).sub(out, "they", true)
+		out = RegEx.create_from_string(r"(?i)\b(the |a |an )?%s(e?s)?\b" % e).sub(out, "this fish", true)
+	# Each sentence starts with a capital again.
+	var parts: PackedStringArray = out.split(". ")
+	for k: int in parts.size():
+		parts[k] = parts[k].left(1).to_upper() + parts[k].substr(1)
+	return ". ".join(parts)
 
 
 static func _dig_step(tier: String, rnd: Traders.Stream) -> Dictionary:
@@ -289,7 +314,7 @@ static func search(db: CaptainStore, uid: String, tier: String) -> Dictionary:
 	var p: Dictionary = db.me(uid)
 	var s: Dictionary = current(p, tier)
 	if s.is_empty():
-		return { "ok": false, "error": "You carry no %s clue." % tier }
+		return { "ok": false, "error": "You carry no %s." % TIER_NAME[tier] }
 	var here: Vector2 = Vector2(Js.num(p.get("sea_x")), Js.num(p.get("sea_y")))
 	match s["kind"]:
 		"bearing", "dig":

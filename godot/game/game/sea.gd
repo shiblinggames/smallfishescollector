@@ -887,13 +887,13 @@ func _clue_in_reach(at: Vector2) -> Variant:
 		match s.get("kind", ""):
 			"bearing":
 				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < Clues.SEARCH_RANGE:
-					return ["Search here  ·  %s clue" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
+					return ["Search here  ·  %s" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
 			"riddle":
 				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < float(s["r"]) + Clues.SEARCH_RANGE:
-					return ["Search here  ·  %s clue" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
+					return ["Search here  ·  %s" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
 			"dig":
 				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < Clues.SEARCH_RANGE:
-					return ["Dig here  ·  %s clue" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
+					return ["Dig here  ·  %s" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
 			"speak":
 				var w: Variant = _regulars.get("folk:%s" % s["folk"])
 				if w != null and (w as Wanderer).near(at):
@@ -914,7 +914,7 @@ func _clue_search(tier: String) -> void:
 		var haul: Array = []
 		if Js.num(res.get("doubloons")) > 0:
 			haul.append([res["doubloons"], "doubloons"])
-		var lines: Array = [["The %s hunt is done. The casket held:" % tier, "note"]]
+		var lines: Array = [["The %s's hunt is done. The casket held:" % Clues.TIER_NAME[tier], "note"]]
 		for b: Variant in Js.obj(res.get("bait")):
 			lines.append(["%d %s" % [int(res["bait"][b]), Rules.bait(str(b)).get("name", b)], "body_strong"])
 		for c: Variant in Js.obj(res.get("crates")):
@@ -925,7 +925,7 @@ func _clue_search(tier: String) -> void:
 		_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Hauled up from the bottom", "%s casket" % Clues.TIER_NAME[tier], lines, haul))
 	else:
 		Sound.bell()
-		_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "%s clue  ·  step %d of %d" % [Clues.TIER_NAME[tier], int(res["stepNo"]), int(res["of"])], "The next step", [[str(res["next"]["text"]), "body_strong"]], []))
+		_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "%s  ·  step %d of %d" % [Clues.TIER_NAME[tier], int(res["stepNo"]), int(res["of"])], "The next step", [[str(res["next"]["text"]), "body_strong"]], []))
 	_hud.refresh()
 
 
@@ -992,7 +992,7 @@ func _bottle(b: Dictionary) -> void:
 	if Clues.on():
 		var hunt: Dictionary = r["hunt"]
 		Sound.bell()
-		_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "Fished out of the water", "%s clue" % Clues.TIER_NAME[r["tier"]],
+		_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "Fished out of the water", "A %s" % Clues.TIER_NAME[r["tier"]],
 			[["A treasure hunt: %d steps, then a dig. Your clues are listed at the left of the screen." % (hunt["steps"] as Array).size(), "note"], ["Step 1: %s" % r["step"]["text"], "body_strong"]], []))
 		_hud.refresh()
 		return

@@ -151,7 +151,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_TAB:
 		get_viewport().set_input_as_handled()
-		var order: Array = ["loadout", "boat", "hold", "crates", "log", "levels"]
+		var order: Array = ["loadout", "boat", "hold", "crates", "log"]
 		_show_tab(order[(order.find(tab) + 1) % order.size()])
 
 
@@ -173,7 +173,7 @@ func _show_tab(t: String) -> void:
 	_stage(t)
 	for c: Node in _tabs.get_children():
 		c.queue_free()
-	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"], ["levels", "Levels"]]:
+	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"]]:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == t)
 		b.custom_minimum_size = Vector2(76, 34)
 		b.tooltip_text = "Tab to switch"
@@ -201,8 +201,6 @@ func _show_tab(t: String) -> void:
 		_build_hold()
 	elif t == "crates":
 		_build_crates()
-	elif t == "levels":
-		_build_levels()
 	else:
 		_build_log()
 
@@ -555,155 +553,6 @@ func _build_log() -> void:
 	_almanac.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_almanac.mouse_filter = Control.MOUSE_FILTER_PASS
 	_body.add_child(_almanac)
-
-
-# ── Levels ─────────────────────────────────────────────────────────────────────
-
-var _levels_only_skills: bool = false
-## "levels", "skills" or "achievements".
-var _levels_view: String = "levels"
-
-
-## THE FISHING GUIDE (Kong, 2026-10-02: "show these level unlocks somewhere,
-## so players can see what's upcoming"): every level to 100 and what it
-## brings, the way the level-up tells it. Levels passed are ticked; the next
-## one is marked in red; the rest are in grey pencil. Or the skills alone.
-func _build_levels() -> void:
-	var lv: int = session.level()
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 6)
-	_body.add_child(head)
-	var ht: Label = Paper.text(head, "Fishing %d" % lv, "heading", Paper.INK)
-	ht.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for o: Array in [["levels", "Every level"], ["skills", "Skills"], ["achievements", "Achievements"]]:
-		var b: Pane.PaneButton = Paper.button(o[1], o[0] == _levels_view)
-		b.pressed.connect(func() -> void:
-			_levels_view = o[0]
-			_levels_only_skills = o[0] == "skills"
-			_show_tab("levels"))
-		head.add_child(b)
-	if _levels_view == "achievements":
-		ht.text = "Achievements"
-		_build_achievements()
-		return
-	Paper.text(_body, "Skills are free and yours for good. They save you time or show you more; catching is down to your gear." if _levels_only_skills else "Every level and what it brings. Gear unlocks are for sale at the shops from that level; skills, upgrades and gifts are free.", "note", Paper.INK_SOFT, true)
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_body.add_child(scroll)
-	var list: VBoxContainer = VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 8)
-	scroll.add_child(list)
-	var next_row: Control = null
-	var rows: Array = []
-	if _levels_only_skills:
-		for s: Dictionary in Rules.skills():
-			rows.append([int(s["level"]), [["Learned", "%s: %s" % [s["name"], s["text"]]]]])
-	else:
-		for n: int in range(2, 101):
-			var lines: Array = LevelUp.level_lines(n)
-			if not lines.is_empty():
-				rows.append([n, lines])
-	for r: Array in rows:
-		var n: int = r[0]
-		var done: bool = n <= lv
-		var is_next: bool = not done and next_row == null
-		var row: HBoxContainer = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		list.add_child(row)
-		if is_next:
-			next_row = row
-		var num: Label = Paper.text(row, str(n), "heading", Paper.RED if is_next else (Paper.INK if done else Paper.INK_FAINT))
-		num.custom_minimum_size = Vector2(40, 0)
-		num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		var col: VBoxContainer = VBoxContainer.new()
-		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		col.add_theme_constant_override("separation", 1)
-		row.add_child(col)
-		for l: Array in r[1]:
-			var skill: bool = l[0] == "Learned"
-			var ink: Color = LevelUp.SECTION_INK[l[0]] if (done or is_next) else Paper.INK_FAINT
-			var t: Label = Paper.text(col, ("✓ " if done else "") + ("Skill · " if skill else "") + str(l[1]), "body_strong" if skill else "small", ink, true)
-			if not done and not is_next:
-				t.modulate.a = 0.75
-		Paper.rule(list)
-	if next_row != null:
-		await get_tree().process_frame
-		await get_tree().process_frame
-		if is_instance_valid(scroll) and is_instance_valid(next_row):
-			scroll.scroll_vertical = int(maxf(0.0, next_row.position.y - 120.0))
-
-
-## ACHIEVEMENTS (port rules): your points, the colours they unlock (the only
-## way to a colour), and every badge the port can award, earned in ink and
-## the rest in grey pencil.
-func _build_achievements() -> void:
-	var pts: float = Achievements.points(session.store, session.uid)
-	var top: HBoxContainer = HBoxContainer.new()
-	top.add_theme_constant_override("separation", 10)
-	_body.add_child(top)
-	var big: Label = Paper.text(top, "%d" % int(pts), "display", Paper.INK)
-	big.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var tv: VBoxContainer = VBoxContainer.new()
-	tv.add_theme_constant_override("separation", 0)
-	tv.alignment = BoxContainer.ALIGNMENT_CENTER
-	top.add_child(tv)
-	Paper.text(tv, "achievement points", "label", Paper.INK_SOFT)
-	var nx: Array = Achievements.next_color(pts)
-	Paper.text(tv, ("Next colour at %d points" % int(nx[0])) if not nx.is_empty() else "Every colour earned", "note", Paper.INK_SOFT)
-	Paper.text(_body, "Badges pay only in points (1 rookie to 5 grandmaster). Captain colours unlock with points and come from nowhere else.", "note", Paper.INK_SOFT, true)
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_body.add_child(scroll)
-	var list: VBoxContainer = VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 8)
-	scroll.add_child(list)
-	Paper.text(list, "Colours", "eyebrow", Paper.INK_SOFT)
-	var cg: GridContainer = GridContainer.new()
-	cg.columns = 6
-	cg.add_theme_constant_override("h_separation", 6)
-	cg.add_theme_constant_override("v_separation", 6)
-	list.add_child(cg)
-	var names: Dictionary = {}
-	for cc: Dictionary in Rules.data()["characterColors"]:
-		names[cc["id"]] = cc["name"]
-	for m: Array in Achievements.colors():
-		var t: Paper.Tile = Paper.Tile.new()
-		t.label = str(names.get(m[1], m[1]))
-		t.art = Skipper.look_art(m[1])
-		t.corner = "%d" % int(m[0])
-		t.grey = pts < float(m[0])
-		t.custom_minimum_size = Vector2(84, 86)
-		t.tooltip_text = "%s: %d points" % [t.label, int(m[0])]
-		cg.add_child(t)
-	var have: Array = Js.list(session.profile().get("unlocked_badges"))
-	var defs: Array = Achievements.defs()
-	var got: int = defs.filter(func(d: Dictionary) -> bool: return Js.includes(have, d["id"])).size()
-	Paper.text(list, "Badges  ·  %d of %d" % [got, defs.size()], "eyebrow", Paper.INK_SOFT)
-	var order: Array = ["rookie", "seasoned", "veteran", "master", "grandmaster"]
-	defs.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var ea: bool = Js.includes(have, a["id"])
-		var eb: bool = Js.includes(have, b["id"])
-		if ea != eb:
-			return ea
-		return order.find(a["difficulty"]) < order.find(b["difficulty"]))
-	var bg: GridContainer = GridContainer.new()
-	bg.columns = 4
-	bg.add_theme_constant_override("h_separation", 8)
-	bg.add_theme_constant_override("v_separation", 8)
-	list.add_child(bg)
-	for d: Dictionary in defs:
-		var t: Paper.Tile = Paper.Tile.new()
-		t.label = d["name"]
-		t.art = Skipper.tex(d["imageUrl"])
-		t.corner = "+%d" % int(d["points"])
-		t.grey = not Js.includes(have, d["id"])
-		t.custom_minimum_size = Vector2(124, 116)
-		t.tooltip_text = "%s (%s, %d point%s)" % [d["description"], str(d["difficulty"]).capitalize(), int(d["points"]), "" if int(d["points"]) == 1 else "s"]
-		bg.add_child(t)
 
 
 # ── Loadout ────────────────────────────────────────────────────────────────────

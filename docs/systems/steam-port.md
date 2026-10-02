@@ -572,7 +572,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   88.6%: triples sardine 3 / marlin 10 / great white 25 / whale 50, pairs marlin 1.25 / great
   white 2.5 / whale 4 / catfish 2; the bonus round (three hooks, about 1 in 72, Jellyfish wild,
   wins x1.5) and the two-hook refund stay. Still a win about 1 spin in 3. Worked with
-  scratch enumeration matching slots-rtp.mjs's rules.
+  scratch enumeration matching slots-rtp.mjs's rules. SETTLED by Kong 2026-10-02 (300x, not
+  the rarer 500x); build it this way when the Den is ported, re-checked with slots-rtp.mjs.
 - THE LANTERN IS A BEAM (Kong, 2026-10-02: "like a flashlight, pointing where you're going"):
   the boat's PointLight2D wears Glow.beam() (a cone, apex at the lamp) turned to her heading,
   so it lights the land and boats ahead; on the water the shader throws a matching cone
@@ -607,6 +608,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   sites, and digging without a hunt gives nothing (the old once-ever dig rewards are gone).
   The casket: doubloons, bait, and a crate for the stash (35% easy to always elite).
   The three dig badges now count hunts. tests/clues_check.gd plays every tier to its casket.
+  NAMES (Kong: "too close to RuneScape's tiers"): the four are named for what the bottle
+  holds, a Scrawl, a Ship's Letter, a Torn Map and a Last Will (ids stay easy..elite). A
+  CATCH step never names the fish: it quotes what the Log says of it (the species' fun fact,
+  the name taken out by Clues.veil), so a fish caught before can be looked up and one never
+  caught must be guessed.
+- THE FISHING GUIDE MOVED (Kong: "it does not belong in the Locker"): game/levels_sheet.gd,
+  a paper sheet over the sea opened by pressing the level bar (FishingHud.open_guide); the
+  Locker's Levels tab is gone.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

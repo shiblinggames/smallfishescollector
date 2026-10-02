@@ -1455,7 +1455,7 @@
         "description": "Finish 10 treasure hunts"
       },
       "salted_away": {
-        "description": "Finish a treasure hunt of every tier"
+        "description": "Finish a treasure hunt of every kind: a Scrawl, a Ship's Letter, a Torn Map and a Last Will"
       }
     }
   },

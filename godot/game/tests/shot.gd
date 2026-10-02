@@ -441,18 +441,11 @@ func _init() -> void:
 		"achievements":
 			RulesApi.run(sea.session.store, sea.session.uid, "setSeaPos", [0, 2600])
 			hud.refresh()
-			hud._open_loadout()
-			for f: int in 30:
-				await process_frame
-			sea._locker._levels_view = "achievements"
-			sea._locker._show_tab("levels")
+			hud.open_guide("achievements")
 			for f: int in 40:
 				await process_frame
 		"levels":
-			hud._open_loadout()
-			for f: int in 30:
-				await process_frame
-			sea._locker._show_tab("levels")
+			hud.open_guide()
 			for f: int in 40:
 				await process_frame
 		"boattab":

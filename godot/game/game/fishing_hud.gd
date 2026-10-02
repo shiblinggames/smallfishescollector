@@ -128,7 +128,7 @@ func _ready() -> void:
 	_xp = XpBar.new()
 	_place(_xp, Vector2(0.5, 0.0), Vector2(-320, 12), Vector2(640, 40))
 	add_child(_xp)
-	_xp.pressed.connect(func() -> void: locker_wanted.emit("levels", ""))
+	_xp.pressed.connect(open_guide)
 	var purse_row: HBoxContainer = HBoxContainer.new()
 	purse_row.add_theme_constant_override("separation", 10)
 	purse_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -728,6 +728,22 @@ func busy() -> bool:
 	return _modal != null
 
 
+## The Fishing Guide, over the sea (pressing the level bar).
+func open_guide(view: String = "levels") -> LevelsSheet:
+	if _modal != null:
+		return null
+	var g: LevelsSheet = LevelsSheet.new()
+	g.session = session
+	g._levels_view = view
+	g._levels_only_skills = view == "skills"
+	_modal = g
+	g.closed.connect(func() -> void:
+		_modal = null
+		refresh())
+	add_child(g)
+	return g
+
+
 func _open_sheet(s: Sheet) -> void:
 	_modal = s
 	s.closed.connect(func() -> void:
@@ -956,7 +972,7 @@ func _paint_clues() -> void:
 		v.add_theme_constant_override("separation", 1)
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_clues_box.add_child(v)
-		var e: Label = Kit.lift(Kit.text(v, "%s CLUE  ·  STEP %d OF %d" % [Clues.TIER_NAME[th[0]].to_upper(), int(h["step"]) + 1, (h["steps"] as Array).size()], "eyebrow", Color(0.98, 0.84, 0.55)))
+		var e: Label = Kit.lift(Kit.text(v, "%s  ·  STEP %d OF %d" % [str(Clues.TIER_NAME[th[0]]).to_upper(), int(h["step"]) + 1, (h["steps"] as Array).size()], "eyebrow", Color(0.98, 0.84, 0.55)))
 		e.add_theme_font_size_override("font_size", 11)
 		var t: Label = Kit.lift(Kit.text(v, str(s["text"]), "small", Color(0.97, 0.93, 0.85), true))
 		t.custom_minimum_size = Vector2(330, 0)
@@ -987,7 +1003,7 @@ func _drain_badges() -> void:
 		var sum: float = 0.0
 		for b: Variant in badges:
 			sum += float(pts.get(b, 0.0))
-		_badge_q.append(["ACHIEVEMENTS", "%d achievements" % badges.size(), "+%d points  ·  see them in the Locker, Levels" % int(sum), null])
+		_badge_q.append(["ACHIEVEMENTS", "%d achievements" % badges.size(), "+%d points  ·  press the level bar to see them" % int(sum), null])
 	else:
 		for b: Variant in badges:
 			var d: Dictionary = defs.get(b, {})
@@ -1417,7 +1433,7 @@ func _fish_card(r: Dictionary, perfect: bool) -> void:
 	for st: Variant in Js.list(r.get("clueSteps")):
 		var sd: Dictionary = st
 		if sd.get("ok", false) and sd.has("next"):
-			_badge_q.append(["%s CLUE  ·  STEP %d OF %d" % [Clues.TIER_NAME[sd["tier"]].to_upper(), int(sd["stepNo"]), int(sd["of"])], "That is the fish", str(sd["next"]["text"]), Skipper.tex("sea/sea-bottle.png")])
+			_badge_q.append(["%s  ·  STEP %d OF %d" % [str(Clues.TIER_NAME[sd["tier"]]).to_upper(), int(sd["stepNo"]), int(sd["of"])], "That is the fish", str(sd["next"]["text"]), Skipper.tex("sea/sea-bottle.png")])
 	# The Log has something new to show.
 	if r.get("isNewSpecies") == true or r.get("isPB") == true or str(r.get("sizeTier", "")) == "trophy" or r.get("isShiny") == true:
 		_log_dot = true
