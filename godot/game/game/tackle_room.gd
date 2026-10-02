@@ -424,6 +424,12 @@ func _bait() -> void:
 			var how: String = "Voyages, or buy with Fathoms in the Locker" if Js.includes(b["acquisition"], "fathoms") else "Earned from voyages"
 			Room.text(v, how, 12, Color("#9a958c"), false, true).custom_minimum_size = Vector2(0, 0)
 			continue
+		# Locked behind a Fishing level (the port's rules).
+		var locked: String = Rules.gate_block("bait", b["type"], Js.num(session.profile().get("fishing_xp")))
+		if locked != "":
+			v.modulate.a = 0.7
+			Room.chip(v, "Locked  ·  %s" % locked, Color("#e8c98a"), Color(1, 1, 1, 0.07), Color(1, 1, 1, 0.2))
+			continue
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		v.add_child(row)

@@ -27,6 +27,9 @@ static func buy_special_item(db: CaptainStore, uid: String, item_id: String) -> 
 	if column == "":
 		return { "error": "Unknown item" }
 	var def: Dictionary = _special(item_id)
+	var gs: String = Rules.gate_block("special", item_id, Js.num(db.profile(uid, "fishing_xp").get("fishing_xp")))
+	if gs != "":
+		return { "error": gs }
 	var fathoms: bool = def.get("costFathoms") != null
 	if def.is_empty() or (not Js.truthy(def.get("shopCost")) and not fathoms):
 		return { "error": "Not for sale" }

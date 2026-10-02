@@ -52,6 +52,11 @@ static func buy_tier(db: CaptainStore, uid: String) -> Dictionary:
 		return { "error": "The portal already reaches the Ancient Deep." }
 	if not has_stone_for(int(next["tier"]), discovered):
 		return { "error": "No stone for %s yet. There is one in a chest out in %s. Sail it the long way first, then the portal will remember the road." % [next["name"], next["name"]] }
+	# The port's rule: the portal to a water needs that water's Fishing level.
+	if not Js.obj(Rules.data().get("levelGates")).is_empty():
+		var need: int = int(Js.num((Rules.data()["zones"]["minLevel"] as Dictionary).get(next["band"])))
+		if Rules.level_from_xp(Js.num(prof.get("fishing_xp"))) < need:
+			return { "error": "Needs Fishing %d" % need }
 	var cost: float = float(next["cost"])
 	if Js.num(prof.get("doubloons")) < cost:
 		return { "error": "That stage costs %s ⟡." % Js.thousands(cost) }

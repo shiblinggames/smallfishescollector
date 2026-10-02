@@ -108,7 +108,17 @@
       "boat:offwhite": "rare",
       "hat:golden": "epic",
       "skin:storm": "epic",
-      "boat:charcoal": "epic"
+      "boat:charcoal": "epic",
+      "boat:oak": "common",
+      "boat:cherry": "common",
+      "boat:desert": "common",
+      "boat:mahogany": "common",
+      "boat:pistachio": "uncommon",
+      "boat:taupe": "uncommon",
+      "boat:periwinkle": "uncommon",
+      "boat:golden": "rare",
+      "boat:ethereal": "epic",
+      "boat:chromium": "epic"
     },
     "cosmeticBands": {
       "wooden": {
@@ -170,7 +180,132 @@
       "gold": 0.02,
       "diamond": 0.03,
       "ancient": 0.04
-    }
+    },
+    "cosmeticPool": [
+      {
+        "kind": "skin",
+        "id": "mint",
+        "name": "Mint"
+      },
+      {
+        "kind": "skin",
+        "id": "lavender",
+        "name": "Lavender"
+      },
+      {
+        "kind": "skin",
+        "id": "storm",
+        "name": "Storm"
+      },
+      {
+        "kind": "boat",
+        "id": "charcoal",
+        "name": "Charcoal",
+        "imageUrl": "/boat_charcoal_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "offwhite",
+        "name": "Offwhite",
+        "imageUrl": "/boat_offwhite_rest.png"
+      },
+      {
+        "kind": "hat",
+        "id": "black",
+        "name": "Black",
+        "imageUrl": "/hat_black_rest.png"
+      },
+      {
+        "kind": "hat",
+        "id": "gray",
+        "name": "Gray",
+        "imageUrl": "/hat_gray_rest.png"
+      },
+      {
+        "kind": "hat",
+        "id": "golden",
+        "name": "Golden",
+        "imageUrl": "/hat_golden_rest.png"
+      },
+      {
+        "kind": "hat",
+        "id": "cheetah",
+        "name": "Cheetah",
+        "imageUrl": "/hat_cheetah_rest.png"
+      },
+      {
+        "kind": "hat",
+        "id": "fuego",
+        "name": "Fuego",
+        "imageUrl": "/hat_fuego_rest.png"
+      },
+      {
+        "kind": "hat",
+        "id": "spotted",
+        "name": "Spotted",
+        "imageUrl": "/hat_spotted_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "oak",
+        "name": "Oak",
+        "imageUrl": "/boat_oak_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "cherry",
+        "name": "Cherry",
+        "imageUrl": "/boat_cherry_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "desert",
+        "name": "Desert",
+        "imageUrl": "/boat_desert_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "mahogany",
+        "name": "Mahogany",
+        "imageUrl": "/boat_mahogany_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "pistachio",
+        "name": "Pistachio",
+        "imageUrl": "/boat_pistachio_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "taupe",
+        "name": "Taupe",
+        "imageUrl": "/boat_taupe_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "golden",
+        "name": "Golden",
+        "imageUrl": "/boat_golden_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "periwinkle",
+        "name": "Periwinkle",
+        "imageUrl": "/boat_periwinkle_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "ethereal",
+        "name": "Ethereal",
+        "imageUrl": "/boat_ethereal_rest.png"
+      },
+      {
+        "kind": "boat",
+        "id": "chromium",
+        "name": "Chromium",
+        "imageUrl": "/boat_chromium_rest.png"
+      }
+    ]
   },
   "_pets": "Each crate its own set (Kong, 2026-10-01): every pet belongs to exactly one crate tier, so a crate's collection is its own pets and its cosmetic bands, and the gold-coloured pets live in the deepest crates. The chance of a pet per crate (crate.petChance) is the web's; which pet is drawn from that crate's own list, each weighted by its share of the web's whole pet roll. Duplicates can still come up.",
   "_rarity": "Pet chance per crate, 1% to 4% by tier (Kong, 2026-10-01): wooden 1, metal 1.5, gold 2, diamond 3, ancient 4 (the web's 0.5 / 1 / 2 / 4 / 10). Cosmetics unchanged.",
@@ -395,5 +530,578 @@
     "25": {
       "hull_speed_tier": 2
     }
-  }
+  },
+  "_gates": "Everything bought is tied to a Fishing level, RuneScape style (Kong, 2026-10-01; fishing only for now, the ship's upgrades wait for Navigation). levelGates: bait, the bought holds (Titan 75, Leviathan 85, Kraken 95), the Auto Caster (25); the portal to a water needs that water's level. BOATS COME ONLY FROM FISHING CRATES: every boat that was sold is crate-only and sits in the crate cosmetic pool with a band; the boats earned by level or achievement (ice, celestial, abyssal) and the special ones stay as they were. COSMETICS HAVE NO LEVEL GATES: the crates they come from drop by water, and that is their gate.",
+  "levelGates": {
+    "bait": {
+      "worm": 1,
+      "minnow": 5,
+      "night_crawler": 15,
+      "chum": 30,
+      "anglers_formula": 45
+    },
+    "hold": {
+      "6": 75,
+      "7": 85,
+      "8": 95
+    },
+    "special": {
+      "auto_caster": 25
+    }
+  },
+  "boats": [
+    {
+      "id": "oak",
+      "name": "Oak",
+      "cost": 5000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_oak_rest.png",
+      "castImageUrl": "/boat_oak_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": 0.04
+    },
+    {
+      "id": "cherry",
+      "name": "Cherry",
+      "cost": 5000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_cherry_rest.png",
+      "castImageUrl": "/boat_cherry_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": -0.06
+    },
+    {
+      "id": "desert",
+      "name": "Desert",
+      "cost": 5000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_desert_rest.png",
+      "castImageUrl": "/boat_desert_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": 0.12
+    },
+    {
+      "id": "mahogany",
+      "name": "Mahogany",
+      "cost": 5000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_mahogany_rest.png",
+      "castImageUrl": "/boat_mahogany_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": 0.02
+    },
+    {
+      "id": "pistachio",
+      "name": "Pistachio",
+      "cost": 5000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_pistachio_rest.png",
+      "castImageUrl": "/boat_pistachio_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": -0.12
+    },
+    {
+      "id": "taupe",
+      "name": "Taupe",
+      "cost": 5000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_taupe_rest.png",
+      "castImageUrl": "/boat_taupe_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": 0
+    },
+    {
+      "id": "charcoal",
+      "name": "Charcoal",
+      "cost": 0,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_charcoal_rest.png",
+      "castImageUrl": "/boat_charcoal_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": -0.08
+    },
+    {
+      "id": "golden",
+      "name": "Golden",
+      "cost": 100000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_golden_rest.png",
+      "castImageUrl": "/boat_golden_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1.03,
+      "trim": 0.06
+    },
+    {
+      "id": "offwhite",
+      "name": "Offwhite",
+      "cost": 0,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_offwhite_rest.png",
+      "castImageUrl": "/boat_offwhite_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": 0.08
+    },
+    {
+      "id": "periwinkle",
+      "name": "Periwinkle",
+      "cost": 5000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_periwinkle_rest.png",
+      "castImageUrl": "/boat_periwinkle_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": -0.04
+    },
+    {
+      "id": "ethereal",
+      "name": "Ethereal",
+      "cost": 750000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_ethereal_rest.png",
+      "castImageUrl": "/boat_ethereal_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1.05,
+      "trim": -0.1
+    },
+    {
+      "id": "fire",
+      "name": "Fire",
+      "cost": 0,
+      "gemPrice": 1000,
+      "crateOnly": false,
+      "gate": null,
+      "restImageUrl": "/boat_fire_rest.png",
+      "castImageUrl": "/boat_fire_cast.png",
+      "positions": {
+        "rest": {
+          "top": 73.5,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 69.5,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 72.8,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": 0
+    },
+    {
+      "id": "ice",
+      "name": "Ice",
+      "cost": 0,
+      "gemPrice": null,
+      "crateOnly": false,
+      "gate": {
+        "kind": "fishing",
+        "level": 75
+      },
+      "restImageUrl": "/boat_ice_rest.png",
+      "castImageUrl": "/boat_ice_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": 0
+    },
+    {
+      "id": "jetblack",
+      "name": "Jet Black",
+      "cost": 0,
+      "gemPrice": 750,
+      "crateOnly": false,
+      "gate": null,
+      "restImageUrl": "/boat_jetblack_rest.png",
+      "castImageUrl": "/boat_jetblack_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1,
+      "trim": 0
+    },
+    {
+      "id": "chromium",
+      "name": "Chromium",
+      "cost": 1500000,
+      "gemPrice": null,
+      "crateOnly": true,
+      "gate": null,
+      "restImageUrl": "/boat_chromium_rest.png",
+      "castImageUrl": "/boat_chromium_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1.07,
+      "trim": 0.1
+    },
+    {
+      "id": "celestial",
+      "name": "Celestial",
+      "cost": 0,
+      "gemPrice": null,
+      "crateOnly": false,
+      "gate": {
+        "kind": "ap",
+        "share": 0.75
+      },
+      "restImageUrl": "/boat_celestial_rest.png",
+      "castImageUrl": "/boat_celestial_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1.05,
+      "trim": -0.1
+    },
+    {
+      "id": "abyssal",
+      "name": "Abyssal",
+      "cost": 0,
+      "gemPrice": null,
+      "crateOnly": false,
+      "gate": {
+        "kind": "ap",
+        "share": 0.5
+      },
+      "restImageUrl": "/boat_abyssal_rest.png",
+      "castImageUrl": "/boat_abyssal_cast.png",
+      "positions": {
+        "rest": {
+          "top": 77,
+          "left": 31,
+          "width": 55,
+          "rotate": 0
+        },
+        "wait": {
+          "top": 73,
+          "left": 38,
+          "width": 55,
+          "rotate": 0
+        },
+        "cast": {
+          "top": 77,
+          "left": 37,
+          "width": 55,
+          "rotate": 0
+        }
+      },
+      "grade": 1.04,
+      "trim": 0.06
+    }
+  ]
 }

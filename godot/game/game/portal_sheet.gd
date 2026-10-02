@@ -118,7 +118,10 @@ func _draw() -> void:
 			var t: Dictionary = _sel
 			accent = Color(str(t["accent"]))
 			name = t["name"]
-			if int(t["tier"]) == tier + 1:
+			var need: int = int(Js.num((Rules.data()["zones"]["minLevel"] as Dictionary).get(t["band"]))) if not Js.obj(Rules.data().get("levelGates")).is_empty() else 0
+			if int(t["tier"]) == tier + 1 and Rules.level_from_xp(Js.num(session.profile().get("fishing_xp"))) < need:
+				line = "Locked  ·  Needs Fishing %d" % need
+			elif int(t["tier"]) == tier + 1:
 				var stone: bool = _stone_for(int(t["tier"]))
 				line = "%s ⟡  ·  %s" % [Js.thousands(float(t["cost"])), "stone in hand" if stone else "needs the stone from %s" % t["name"]]
 				act = Kit.button("Working…" if _busy else ("Build" if stone else "No stone"), "primary", "small")

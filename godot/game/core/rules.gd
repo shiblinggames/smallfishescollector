@@ -13,6 +13,19 @@ static var _d: Dictionary = {}
 static var web_only: bool = false
 
 
+## The Fishing level a thing needs (the port's levelGates), or 0.
+static func gate(kind: String, key: String) -> int:
+	return int(Js.num(Js.obj(Js.obj(data().get("levelGates")).get(kind)).get(key)))
+
+
+## Why this captain cannot have it yet ("Needs Fishing 30"), or "".
+static func gate_block(kind: String, key: String, fishing_xp: float) -> String:
+	var need: int = gate(kind, key)
+	if need > 0 and level_from_xp(fishing_xp) < need:
+		return "Needs Fishing %d" % need
+	return ""
+
+
 static func data() -> Dictionary:
 	if _d.is_empty():
 		_d = JsJson.parse(FileAccess.get_file_as_string("res://content/rules.json"))

@@ -18,6 +18,9 @@ static func buy_bait(db: CaptainStore, uid: String, bait_type: String, qty: floa
 			bait = b
 	if bait.is_empty() or float(bait["shopCost"]) <= 0:
 		return { "error": "Not for sale" }
+	var gb: String = Rules.gate_block("bait", bait_type, Js.num(db.profile(uid, "fishing_xp").get("fishing_xp")))
+	if gb != "":
+		return { "error": gb }
 	if qty != floor(qty) or qty <= 0:
 		return { "error": "Invalid quantity" }
 	var p: Dictionary = db.profile(uid, "doubloons")
@@ -183,6 +186,9 @@ static func upgrade_fish_hold(db: CaptainStore, uid: String) -> Dictionary:
 	var cur: float = Js.num(p.get("fish_hold_tier"))
 	if cur >= tiers.size() - 1:
 		return { "error": "Fish hold is already at max tier" }
+	var gh: String = Rules.gate_block("hold", str(int(cur + 1.0)), Js.num(db.profile(uid, "fishing_xp").get("fishing_xp")))
+	if gh != "":
+		return { "error": gh }
 	var nxt: Dictionary = Rules.fish_hold(cur + 1.0)
 	var now: Variant = db.spend(uid, "doubloons", float(nxt["cost"]))
 	if now == null:

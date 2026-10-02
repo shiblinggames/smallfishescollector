@@ -446,6 +446,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the lantern and the top tiers stay bought. The Shipyard marks free tiers ("Free at
   Fishing 30 · or 8,000 ⟡"); the level-up slip lists Stronger / Unlocked / Earned
   (LevelUp.gains: catch zone, streak ceiling, hold, waters, gear for sale, looks, Master).
+- EVERYTHING BOUGHT IS TIED TO A FISHING LEVEL (Kong, RuneScape style; fishing only for now,
+  the ship's bought tiers, lantern and boats wait for Navigation): port_rules levelGates,
+  read by Rules.gate / gate_block and checked in the rules (buy_bait, upgrade_fish_hold,
+  buy_special_item, Portal.buy_tier). Bait: Minnow 5, Night Crawler 15, Chum 30, Angler's
+  Formula 45. Holds bought: Titan 75, Leviathan 85, Kraken 95. Auto Caster 25. The portal to
+  a water needs that water's level. Rods, reels, hooks were already gated; lines are free by
+  level. COSMETICS HAVE NO LEVEL GATES: their gate is the crate, which drops by water. BOATS
+  COME ONLY FROM FISHING CRATES: the ten boats that were sold are crateOnly and in the crate
+  cosmetic pool with bands (oak, cherry, desert, mahogany common; pistachio, taupe,
+  periwinkle uncommon; golden rare; ethereal, chromium epic). The shops show locks; the
+  level-up lists what each level opens.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

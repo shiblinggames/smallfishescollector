@@ -117,7 +117,7 @@ static func gains(from: int, to: int) -> Array:
 	for w: Dictionary in Chart.WATERS:
 		var need: int = int(mins.get(w["id"], 1))
 		if need > from and need <= to:
-			out.append(["Unlocked", "%s is open to you" % w["name"]])
+			out.append(["Unlocked", "%s is open to you, and the portal to it" % w["name"]])
 	var rods: Array = d["rods"]
 	for k: Variant in d["rodShop"]:
 		var lr: int = int(Js.num((d["rodShop"][k] as Dictionary).get("levelReq")))
@@ -142,6 +142,21 @@ static func gains(from: int, to: int) -> Array:
 		if hf != null and int(k) > from and int(k) <= to:
 			var ht: Dictionary = tiers[clampi(int(hf), 0, tiers.size() - 1)]
 			out.append(["Stronger", "Your hold is now a %s, %d fish (free)" % [ht["name"], int(ht["capacity"])]])
+	var lg: Dictionary = Js.obj(d.get("levelGates"))
+	for bt: Variant in Js.obj(lg.get("bait")):
+		var bl: int = int(lg["bait"][bt])
+		if bl > from and bl <= to:
+			out.append(["Unlocked", "%s at the Tackle Shop" % Rules.bait(str(bt)).get("name", bt)])
+	for hk: Variant in Js.obj(lg.get("hold")):
+		var hl: int = int(lg["hold"][hk])
+		if hl > from and hl <= to:
+			out.append(["Unlocked", "The %s at the Shipyard" % (tiers[clampi(int(hk), 0, tiers.size() - 1)] as Dictionary)["name"]])
+	for sk: Variant in Js.obj(lg.get("special")):
+		var sl: int = int(lg["special"][sk])
+		if sl > from and sl <= to:
+			for sp: Dictionary in d["specialItems"]:
+				if sp["id"] == sk:
+					out.append(["Unlocked", "The %s" % sp["name"]])
 	var mm: int = int(Js.num(d["daily"].get("masterMinLevel")))
 	if mm > from and mm <= to:
 		out.append(["Unlocked", "A fourth daily challenge, the Master"])
