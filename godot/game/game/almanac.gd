@@ -522,6 +522,9 @@ func _card(e: Dictionary) -> Control:
 			note = FishingHud.length_text(float(e["pbLength"]))
 		"Most Valuable":
 			note = "%s ⟡" % Js.thousands(float(e["sellValue"]))
+	# Caught or not, when it bites best: a fish can be planned for.
+	if note == "" and FishBias.best_text(str(e["name"])) != "":
+		note = FishBias.best_text(str(e["name"])).trim_suffix(".")
 	if note != "":
 		var nl: Label = _t(col, note, "small", DIM)
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -639,6 +642,10 @@ func _species(e: Dictionary) -> void:
 	if e["funFact"] != null:
 		var ff: Label = _t(v, e["funFact"], "note", Kit.INK_2, true)
 		ff.add_theme_font_override("font", Kit.italic())
+	# When it bites best (port rules, core/fish_bias.gd).
+	var best: String = FishBias.best_text(str(e["name"]))
+	if best != "":
+		_t(v, best, "body_strong", ACCENT)
 	var facts: GridContainer = GridContainer.new()
 	facts.columns = 2
 	facts.add_theme_constant_override("h_separation", 16)

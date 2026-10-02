@@ -647,7 +647,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   and galleon 0.12, man-o-war -0.04. THE FISHING BOATS TOO (Kong: "even fishing boats are at a
   slight angle"; about -0.03 on every sheet and overlay): Skipper._water_fx turns the hull's
   slope into each part's own picture, so the cut is one line across the hull, the captain and
-  any overlay, and the collar tilts with it. NPC boats share it (they are Skippers). The northern islands (Crew Hall,
+  any overlay, and the collar tilts with it. NPC boats share it (they are Skippers).
+- WHEN A FISH BITES BEST (Kong, 2026-10-02): core/fish_bias.gd, port_rules fishBias. Night,
+  Golden hour (dawn, dusk, a low sun), Storm (a Rain Squall, Gale or Tempest over the line)
+  and Fog each name a few species per water, picked for what the real fish do; Fair Wind is
+  NOT a condition (Kong). While one holds where the line goes in, those species are nudged
+  +25% (+40% in a Tempest) AMONG THEIR OWN RARITY only (FishingRules.tier_weighted_pick
+  weights the pool; with nothing holding it is the web's uniform pick, so parity is the
+  same): the odds of a rarer fish, pay, XP and crates do not move. tests/bias_check.gd holds
+  that. Shown: a line under the water's name ("Night: ... are feeding."), "Bites best ..." on
+  the Log's page and its shelf (caught or not), and the forecast names what a coming storm
+  or fog will stir in your water. The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the

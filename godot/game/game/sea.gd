@@ -431,6 +431,7 @@ func _process(delta: float) -> void:
 	if _recall_t > 1.0:
 		_recall_t = 0.0
 		_hud.set_recall(Portal.recall_left_ms(session.profile(), "fishing"))
+		_hud.set_stir(FishBias.stirring(session.save.get("species", []), str(Chart.water_at(_boat.position).get("id", "")), _boat.position, now) if not Chart.water_at(_boat.position).is_empty() else "")
 		# A stone opened (or a crewmate built a rung): the well catches up.
 		var live: bool = Portal.has_stone_for(1, session.save.get("discoveries", [])) or Js.num(session.profile().get("portal_tier")) > 1.0
 		if live != _portal.live or int(Js.num(Js.nz(session.profile().get("portal_tier"), 1.0))) != _portal.tier:

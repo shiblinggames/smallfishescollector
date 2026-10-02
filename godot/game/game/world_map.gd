@@ -302,8 +302,16 @@ func _weather_lines(now: float) -> Array:
 			out.append("%s has passed you, still out over the sea." % f["name"])
 	if glass:
 		var n: int = 2 if Rules.has_skill(xp, "sky_reader") else 1
+		var water_here: String = str(Chart.water_at(at).get("id", ""))
 		for nf: Dictionary in Weather.ahead(now, n):
-			out.append("Next: %s in %s, from %s, about %s." % [nf["name"], Weather.mins(float(nf["start"]) - now), nf["from"], Weather.mins(float(nf["dur"]))])
+			var line: String = "Next: %s in %s, from %s, about %s." % [nf["name"], Weather.mins(float(nf["start"]) - now), nf["from"], Weather.mins(float(nf["dur"]))]
+			# What it will stir in the water you are in (core/fish_bias.gd).
+			var cond: String = "storm" if nf["kind"] in ["squall", "gale", "tempest"] else ("fog" if nf["kind"] == "fog" else "")
+			if cond != "" and water_here != "":
+				var stirred: Array = Js.list(sea.session.save.get("species")).filter(func(f: Dictionary) -> bool: return f["habitat"] == water_here and Js.list(FishBias.cfg().get(cond)).has(str(f["name"]))).map(func(f: Dictionary) -> String: return str(f["name"]))
+				if not stirred.is_empty():
+					line += " Stirs %s here." % " and ".join(PackedStringArray(stirred))
+			out.append(line)
 		if n == 1 and Rules.skill("sky_reader").size() > 0:
 			out.append("Sky Reader at Fishing %d looks further ahead." % int(Rules.skill("sky_reader")["level"]))
 	else:

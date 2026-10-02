@@ -69,6 +69,7 @@ var _spot: Dictionary = {}
 var _ledger_btn: Button
 var _where: Label
 var _blurb: Label
+var _stir: Label
 var _clock: Label
 var _recall: Button
 var _action: DialButton
@@ -160,7 +161,11 @@ func _ready() -> void:
 	tr.add_theme_constant_override("separation", 4)
 	_where = Kit.lift(Kit.text(tr, "", "title", INK))
 	_blurb = Kit.lift(Kit.text(tr, "", "small", Kit.INK_2))
-	for l: Label in [_where, _blurb]:
+	# What is biting best here now (core/fish_bias.gd).
+	_stir = Kit.lift(Kit.text(tr, "", "small", Color(0.98, 0.84, 0.55)))
+	_stir.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_stir.custom_minimum_size = Vector2(360, 0)
+	for l: Label in [_where, _blurb, _stir]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	var clock_row: HBoxContainer = HBoxContainer.new()
 	clock_row.alignment = BoxContainer.ALIGNMENT_END
@@ -497,6 +502,14 @@ func refresh() -> void:
 	_loadout_val.text = "Your loadout"
 	_update_auto()
 	_update_action()
+
+
+## What is stirring in this water now ("Night: ... are feeding."), or "".
+func set_stir(text: String) -> void:
+	if _stir != null and _stir.text != text:
+		_stir.text = text
+		if text != "":
+			Kit.pop(_stir)
 
 
 func set_water(w: Dictionary) -> void:

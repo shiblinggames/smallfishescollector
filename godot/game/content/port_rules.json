@@ -1612,5 +1612,61 @@
     }
   },
   "_seaExpand": "THE SEA WIDENED (Kong, 2026-10-02): everything past the Mainland's water (1,400 out) on the fishing side sits this much further out; the waters keep their widths. core/sea_scale.gd.",
-  "seaExpand": 1000
+  "seaExpand": 1000,
+  "_fishBias": "WHEN A FISH BITES BEST (Kong, 2026-10-02): while a condition holds where the line goes in, these species are nudged up among fish of their own rarity (+25%, +40% in a Tempest); never the odds of a rarer fish, never pay. No Fair Wind (Kong). core/fish_bias.gd.",
+  "fishBias": {
+    "boost": 0.25,
+    "tempestBoost": 0.4,
+    "night": [
+      "Channel Catfish",
+      "Walleye",
+      "European Eel",
+      "Spotted Seatrout",
+      "Stingray",
+      "Red Drum",
+      "Swordfish",
+      "Lingcod",
+      "Moray Eel",
+      "Firefly Squid",
+      "Viperfish",
+      "Dragonfish",
+      "Sea Lamprey",
+      "Black Dragonfish"
+    ],
+    "golden": [
+      "Largemouth Bass",
+      "Rainbow Trout",
+      "Snook",
+      "Mahi-mahi",
+      "Striped Bass",
+      "Jack Crevalle",
+      "Chinook Salmon",
+      "Atlantic Salmon",
+      "Bigeye Tuna",
+      "Sailfish"
+    ],
+    "storm": [
+      "Brown Trout",
+      "Northern Pike",
+      "Bluefish",
+      "Cobia",
+      "Mako Shark",
+      "Blue Shark",
+      "Tiger Shark",
+      "Bull Shark",
+      "Bigfin Squid"
+    ],
+    "fog": [
+      "Pickerel",
+      "Muskellunge",
+      "Pollock",
+      "Sheepshead",
+      "Atlantic Cod",
+      "Haddock",
+      "Oarfish",
+      "Ocean Sunfish",
+      "Ghost Shark",
+      "Spookfish"
+    ]
+  }
 }

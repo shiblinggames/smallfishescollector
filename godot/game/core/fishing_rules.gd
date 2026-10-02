@@ -58,7 +58,23 @@ static func tier_weighted_pick(items: Array, habitat: String, rarity_bonus: floa
 			selected = r
 			break
 	var pool: Array = groups[selected]
-	return pool[int(floor(Dice.next() * pool.size()))]
+	if _nudge.is_empty():
+		return pool[int(floor(Dice.next() * pool.size()))]
+	# The fish that bite best now, nudged up among their own rarity (port
+	# rules, core/fish_bias.gd): one roll, as the plain pick takes.
+	var tot: float = 0.0
+	for f: Dictionary in pool:
+		tot += float(_nudge.get(float(f["id"]), 1.0))
+	var u: float = Dice.next() * tot
+	for f: Dictionary in pool:
+		u -= float(_nudge.get(float(f["id"]), 1.0))
+		if u < 0.0:
+			return f
+	return pool[pool.size() - 1]
+
+
+## The nudges for the pick under way (FishBias.for_cast, set by roll_cast).
+static var _nudge: Dictionary = {}
 
 
 static func roll_crate_tier(habitat: String) -> String:
@@ -99,6 +115,13 @@ static func zone_crate_chance(zone: String) -> float:
 ## ONE CAST, ROLLED (rollCast). Input keys as the TS's CastRollInput.
 ## Returns { error } or { crate, shot, token, fish? }.
 static func roll_cast(i: Dictionary) -> Dictionary:
+	_nudge = Js.obj(i.get("nudges"))
+	var out: Dictionary = _roll_cast(i)
+	_nudge = {}
+	return out
+
+
+static func _roll_cast(i: Dictionary) -> Dictionary:
 	var habitat: String = i["habitat"]
 	var bait_type: String = i["baitType"]
 	var candidates: Array = i["candidates"]
