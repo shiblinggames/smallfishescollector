@@ -61,6 +61,8 @@ var cue: Dictionary = { "current": "", "full": false, "kelp": false, "weather": 
 signal cue_changed(cue: Dictionary)
 ## She caught a lane or her sails filled: a splash, a buzz.
 signal surged
+## At the Sea Gate, which holds her back (the campaign is not built yet).
+signal held_at_gate
 var _lane: String = ""
 var _in_lane: bool = false
 var _kelp_keep: float = 1.0
@@ -121,6 +123,32 @@ func _ready() -> void:
 	add_child(lantern)
 
 
+var _ship: Sprite2D
+var _ship_base_y: float = 0.0
+## Under her, north of the arch: the expedition ship (North).
+var on_ship: bool = false
+
+
+## THE CHANGE OF BOAT (North): past the sign in the arch, the ship you own
+## for expeditions; back through it, the fishing boat. tex is the ship's
+## picture (lib/ships.ts, by ship tier).
+func set_ship(on: bool, tex: Texture2D) -> void:
+	on_ship = on
+	if on and _ship == null:
+		_ship = Sprite2D.new()
+		add_child(_ship)
+	if _ship != null:
+		_ship.visible = on
+		if on and tex != null:
+			_ship.texture = tex
+			# About three boats long, standing on the water.
+			var sc: float = 360.0 / float(tex.get_width())
+			_ship.scale = Vector2(sc, sc / Chart.GROUND)
+			_ship_base_y = -tex.get_height() * sc * 0.32 / Chart.GROUND
+			_ship.position = Vector2(0, _ship_base_y)
+	skipper.visible = not on
+
+
 ## The Shipyard's refits and the boat's trim, from a profile.
 func set_fit(p: Dictionary) -> void:
 	# The Full Sail skill (port rules) lifts the long-run speed.
@@ -179,6 +207,13 @@ func steer(input: Vector2, delta: float) -> void:
 	if off["hit"]:
 		next = off["at"]
 		velocity *= 0.2
+	# The reef (through the arch only) and the anchorage's wall (North).
+	var held: Dictionary = North.hold(position, next)
+	if held["hit"]:
+		next = held["at"]
+		velocity *= 0.2
+		if held["why"] == "gate":
+			held_at_gate.emit()
 	position = next
 	var speed: float = velocity.length()
 	# How she sits: rougher further out, heeling into a turn (away from its
@@ -203,6 +238,11 @@ func steer(input: Vector2, delta: float) -> void:
 	if speed > 20.0 and absf(velocity.x) > 8.0:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
 		skipper.scale.x = -_facing
+	if _ship != null:
+		# The ship's picture faces right; a little roll and heave.
+		_ship.flip_h = _facing < 0.0
+		_ship.rotation = sin(Time.get_ticks_msec() / 900.0) * 0.012 * rough
+		_ship.position.y = _ship_base_y + sin(Time.get_ticks_msec() / 1300.0) * 3.0
 
 
 ## Where her wake starts (SeaMap.tsx): the cutwater, 40px toward the bow and

@@ -49,6 +49,8 @@ const ART = [
   'forge/forge.png', 'sea/gunwharf-v3.webp', 'sea/charterhouse-v2.webp', 'sea/trawl-harbor-v3.webp', 'sea/shipyard-v3.webp', 'sea/smack.png',
   'sea/mainland-town.png', 'sea/isle-*.webp', 'sea/isle-chest.png', 'sea/isle-chest-deep.png', 'sea/isle-chest-open.png',
   'sea/isle-note.png', 'sea/dig-box.png', 'sea/sea-bottle.png', 'sea-clouds.webp', 'sea/kelp-deep.webp', 'sea/kelp-canopy.webp', 'sea/tavern.png', 'sea/market.png', 'sea/tackle.png', 'sea/parlor.png', 'sea/den.png', 'sea/charting.png',
+  // North of the reef: the rock of the reef and the anchorage, and the ships.
+  'sea/rock-*.png', 'models/*_v2.png',
   // Achievements: every badge's art (256 px).
   'badges',
   'tackle-shop-page-bg.jpg', 'monofilament.png', 'braidedline.png', 'copolymer.png', 'fluorocarbon.png', 'titaniumwire.png', 'deepsealine.png',

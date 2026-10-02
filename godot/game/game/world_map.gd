@@ -26,6 +26,10 @@ signal closed
 
 var sea: Sea
 var _center: Vector2 = Vector2(0, 9500)
+## The middle of the world: the crossing between the fishing sea and the
+## anchorage (Kong, 2026-10-02), where the whole chart centres.
+const WORLD_CENTRE: Vector2 = Vector2(-900.0, -1500.0)
+var _center_to: Variant = null
 var _scale: float = 0.03
 var _scale_to: float = 0.03
 var _paper: ColorRect
@@ -94,7 +98,10 @@ func _ready() -> void:
 
 
 func _fit_scale() -> float:
-	return minf(size.x / ((Chart.LAST_OUTER + 900.0) * 2.0), size.y / (Chart.LAST_OUTER + 9000.0)) if size.x > 0.0 else 0.03
+	# The whole world, centred on the crossing (the reef's arch): the fishing
+	# sea below it, the anchorage and the campaign's water above.
+	var half: float = Chart.LAST_OUTER + 1500.0
+	return minf(size.x / (half * 2.0), size.y / (half * 2.0)) if size.x > 0.0 else 0.03
 
 
 # ── Chrome: title, progress, layers, card, buttons ─────────────────────────────
@@ -169,7 +176,7 @@ func _build_chrome() -> void:
 	right.alignment = BoxContainer.ALIGNMENT_END
 	add_child(right)
 	var me: Button = ink_button("Find my boat")
-	me.pressed.connect(func() -> void: _center = sea._boat.position)
+	me.pressed.connect(func() -> void: _center_to = sea._boat.position)
 	right.add_child(me)
 	var left_ms: float = Portal.recall_left_ms(sea.session.profile(), "fishing")
 	var ready_n: int = Portal.recalls_ready(sea.session.profile(), "fishing")
@@ -370,6 +377,21 @@ func _process(delta: float) -> void:
 		# Keep the point under the pointer under the pointer.
 		var w: Vector2 = _zoom_world
 		_center = w - (_zoom_about - size / 2.0) / _scale
+	if _center_to != null:
+		_center = _center.lerp(_center_to, 1.0 - exp(-delta * 6.0))
+		if _center.distance_to(_center_to) < 5.0:
+			_center_to = null
+	var pm2: ShaderMaterial = _paper.material
+	var ws: Array[Dictionary] = Chart.WATERS
+	pm2.set_shader_parameter("u_bands_a", Vector4(float(ws[0]["inner"]), float(ws[1]["inner"]), float(ws[2]["inner"]), float(ws[3]["inner"])))
+	pm2.set_shader_parameter("u_bands_b", Vector2(float(ws[4]["inner"]), Chart.LAST_OUTER))
+	pm2.set_shader_parameter("u_outer", Chart.LAST_OUTER)
+	var fm2: ShaderMaterial = _fog.material
+	fm2.set_shader_parameter("u_outer", Chart.LAST_OUTER)
+	fm2.set_shader_parameter("u_wall", Explore.NORTH_WALL)
+	pm2.set_shader_parameter("u_wall", Explore.NORTH_WALL)
+	pm2.set_shader_parameter("u_gate", Vector2(North.GATE_X, North.GATE_HALF))
+	pm2.set_shader_parameter("u_anchor", Vector3(North.EXP_ORIGIN.x, North.EXP_ORIGIN.y, North.EXP_EDGE))
 	var dark: float = float(SeaClock.at(Clock.now_ms())["darkness"])
 	for m: ShaderMaterial in [_paper.material, _fog.material]:
 		m.set_shader_parameter("u_center", _center)
@@ -430,7 +452,11 @@ func _gui_input(event: InputEvent) -> void:
 		if mb.pressed and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
 			_zoom_about = mb.position
 			_zoom_world = to_world(mb.position)
-			_scale_to = clampf(_scale_to * (1.18 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.18), _fit_scale() * 0.9, 0.3)
+			_scale_to = clampf(_scale_to * (1.18 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.18), _fit_scale(), 0.3)
+			# All the way out, the chart settles on the crossing at its centre.
+			if _scale_to <= _fit_scale() * 1.01:
+				_zoom_about = Vector2.INF
+				_center_to = WORLD_CENTRE
 			accept_event()
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -449,6 +475,7 @@ func _gui_input(event: InputEvent) -> void:
 			if mm.position.distance_to(_drag_from) > 6.0:
 				_dragged = true
 			if _dragged:
+				_center_to = null
 				_center -= mm.relative / _scale
 				_zoom_about = Vector2.INF
 		_hover = _pick(mm.position)

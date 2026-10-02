@@ -145,6 +145,7 @@ func _ready() -> void:
 	# stands on it, feet first; and its berth on the water.
 	for port: Dictionary in Chart.ports():
 		_draw_port(port)
+	_draw_north()
 	for i: Dictionary in Rules.data()["isles"]:
 		var n: SeaFinds.IsleNode = SeaFinds.IsleNode.new()
 		n.isle = i
@@ -209,6 +210,7 @@ func _ready() -> void:
 	_boat = Boat.new()
 	_boat.field = _field
 	_boat.cast_landed.connect(_life.scatter)
+	_boat.held_at_gate.connect(_held_at_gate)
 	_course = Course.new()
 	_course.sea = self
 	_course.boat = _boat
@@ -404,6 +406,7 @@ func _process(delta: float) -> void:
 	_life.step(delta, cam_world, half, _boat.position, _boat.velocity.length(), dark, clock["warmth"], now)
 	_sky.step(delta, cam_world, _camera.zoom.x, vp, dark, warm, stops[2])
 	_weather(delta, now, cam_world)
+	_ship_side()
 	_feed_berths(cam_world)
 	# Every hull's wake, laid on the water.
 	var contacts: Array = [_boat.wake_contact()]
@@ -1012,6 +1015,63 @@ func _show_find(p: Control) -> void:
 	_hud.hold_for(p)
 
 
+## The reef and the anchorage's wall, rock by rock (North), and the names
+## over the arch and the Sea Gate.
+func _draw_north() -> void:
+	for r: Array in North.rocks():
+		var t: Texture2D = Skipper.tex(r[0])
+		if t == null:
+			continue
+		var s: Sprite2D = Sprite2D.new()
+		s.texture = t
+		var sc: float = float(r[3]) / float(t.get_width())
+		s.scale = Vector2(sc, sc / Chart.GROUND)
+		# Standing on the water: the picture's foot near its point.
+		s.offset = Vector2(0, -t.get_height() * 0.3)
+		s.position = Vector2(float(r[1]), float(r[2]))
+		_world.add_child(s)
+	for sign: Array in [["The Anchorage", Vector2(North.GATE_X, Explore.NORTH_WALL - 520.0)], ["The Sea Gate", North.SEA_GATE + Vector2(0, 520.0)]]:
+		var holder: Node2D = Node2D.new()
+		holder.position = sign[1]
+		holder.scale = Vector2(1.0, 1.0 / Chart.GROUND)
+		holder.z_index = 5
+		_world.add_child(holder)
+		var l: Label = Kit.text(null, sign[0], "display", Color(0.97, 0.93, 0.85, 0.9))
+		l.add_theme_font_size_override("font_size", 46)
+		l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+		l.add_theme_constant_override("shadow_outline_size", 10)
+		holder.add_child(l)
+		l.position = Vector2(-l.get_minimum_size().x / 2.0, -30.0)
+
+
+## THE CHANGE OF BOAT (North): past the sign in the arch, the ship.
+func _ship_side() -> void:
+	var want: bool = North.ship_water(_boat.position)
+	if want == _boat.on_ship:
+		return
+	var names: Dictionary = { 2: "sloop", 3: "schooner", 4: "brigantine", 5: "galleon", 6: "man-o-war" }
+	var tier: int = clampi(int(Js.num(session.profile().get("ship_tier"))), 2, 6)
+	_boat.set_ship(want, Skipper.tex("models/%s_v2.png" % names[tier]))
+	_field.ring(_boat.position, 140.0, 1.6, 0.6)
+	Rumble.buzz([0, 30, 30, 50])
+	Sound.bell()
+	if want:
+		_hud.toast("The boat changed under you: your %s. Expeditions are run from here." % str(names[tier]).capitalize().replace("-o-w", "-o-W"))
+	else:
+		_hud.toast("Back on the fishing boat")
+
+
+var _gate_note_t: float = -99.0
+
+
+func _held_at_gate() -> void:
+	var now: float = Time.get_ticks_msec() / 1000.0
+	if now - _gate_note_t < 6.0:
+		return
+	_gate_note_t = now
+	_hud.toast("Past the Sea Gate lies the campaign. It is not in this build yet.")
+
+
 func _draw_port(port: Dictionary) -> void:
 	var c: Vector2 = Vector2(float(port["x"]), float(port["y"]))
 	var r: float = float(port["r"])
@@ -1060,7 +1120,13 @@ func _dock(id: String) -> void:
 			_enter_room("shipyard")
 		_:
 			Rumble.tap(10)
-			_hud.toast("%s is not built yet in this build." % Chart.port(id).get("name", "That port"))
+			var p: Dictionary = Chart.port(id)
+			if North.COMING.has(id):
+				Sound.bell()
+				_show_find(SeaFinds.panel(_room_layer, str(Js.obj(p.get("plate")).get("art", "")).trim_prefix("/"), "Moored", str(p.get("name", "")),
+					[[str(p.get("blurb", "")).replace("’", "'"), "body_strong"], [North.COMING[id], "note"], ["Its rooms come in a later build of the port.", "small"]], []))
+			else:
+				_hud.toast("%s is not built yet in this build." % p.get("name", "That port"))
 
 
 func _go_ashore() -> void:

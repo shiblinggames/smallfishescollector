@@ -11,8 +11,13 @@ uniform float u_scale = 0.03;
 uniform vec2 u_res = vec2(1600.0, 900.0);
 uniform float u_dark = 0.0;
 uniform float u_outer = 22600.0;
-
-const float BANDS[6] = float[](1400.0, 3800.0, 6900.0, 10900.0, 16000.0, 22600.0);
+// The waters' edges (widened with the sea), the reef and its arch, and the
+// anchorage beyond it (game/north.gd).
+uniform vec4 u_bands_a = vec4(1400.0, 3800.0, 6900.0, 10900.0);
+uniform vec2 u_bands_b = vec2(16000.0, 22600.0);
+uniform float u_wall = -1500.0;
+uniform vec2 u_gate = vec2(-900.0, 430.0);
+uniform vec3 u_anchor = vec3(0.0, -3000.0, 3600.0);
 const vec3 PAPER = vec3(0.83, 0.77, 0.65);
 const vec3 INK = vec3(0.22, 0.18, 0.16);
 
@@ -34,8 +39,13 @@ float fbm(vec2 p) {
 }
 
 // The wash for a radius: pale aqua in the shallows to deep indigo at the rim.
+float band(int i) {
+	if (i < 4) return u_bands_a[i];
+	return u_bands_b[i - 4];
+}
+
 vec3 sea_wash(float r) {
-	float t = clamp((r - 1400.0) / (22600.0 - 1400.0), 0.0, 1.0);
+	float t = clamp((r - u_bands_a.x) / (u_outer - u_bands_a.x), 0.0, 1.0);
 	vec3 a = vec3(0.56, 0.78, 0.76);
 	vec3 b = vec3(0.30, 0.55, 0.66);
 	vec3 c = vec3(0.18, 0.33, 0.50);
@@ -56,18 +66,26 @@ void fragment() {
 	vec3 col = paper;
 
 	float r = length(w);
-	float north = length(w - vec2(0.0, -3000.0));
-	bool in_sea = r < u_outer || north < 3600.0;
+	float north = length(w - u_anchor.xy);
 	// The edge of the known sea wobbles like a brushed line.
 	float edge_wob = (fbm(w * 0.0006) - 0.5) * 260.0;
-	float sea_in = 1.0 - smoothstep(u_outer - 120.0, u_outer + 120.0, r + edge_wob);
-	sea_in = max(sea_in, 1.0 - smoothstep(3500.0, 3700.0, north + edge_wob));
+	// The fishing sea stops at the reef; north of it, only the anchorage.
+	float south = smoothstep(u_wall - 60.0, u_wall + 60.0, w.y);
+	float fish_in = (1.0 - smoothstep(u_outer - 120.0, u_outer + 120.0, r + edge_wob)) * south;
+	float anch_in = (1.0 - smoothstep(u_anchor.z - 100.0, u_anchor.z + 100.0, north + edge_wob)) * (1.0 - south);
+	float sea_in = max(fish_in, anch_in);
+	// Beyond the anchorage, the campaign's water: not yet charted, a faint
+	// hatching on bare paper.
+	if (w.y < u_wall && anch_in < 0.5 && length(w - u_anchor.xy) < u_outer + 3000.0) {
+		float hatch = abs(fract((w.x + w.y) / 900.0) - 0.5);
+		col = mix(col, INK, (1.0 - smoothstep(0.02, 0.05, hatch)) * 0.07);
+	}
 	if (sea_in > 0.001) {
-		vec3 wash = sea_wash(r);
+		vec3 wash = anch_in > fish_in ? vec3(0.52, 0.66, 0.62) : sea_wash(r);
 		// Pigment pools darker at each water's edge.
 		float pool = 0.0;
 		for (int i = 0; i < 6; i++) {
-			float d = abs(r + edge_wob * 0.4 - BANDS[i]);
+			float d = abs(r + edge_wob * 0.4 - band(i)) + (1.0 - fish_in) * 9999.0;
 			pool = max(pool, 1.0 - smoothstep(0.0, 260.0, d));
 		}
 		wash *= 0.86 + mottle * 0.22;
@@ -78,7 +96,7 @@ void fragment() {
 		col = mix(paper, wash, 0.78 * sea_in);
 		// Inked contour lines at each water's edge.
 		for (int i = 0; i < 6; i++) {
-			float d = abs(r + edge_wob * 0.25 - BANDS[i]) * u_scale;
+			float d = (abs(r + edge_wob * 0.25 - band(i)) + (1.0 - fish_in) * 9999.0) * u_scale;
 			col = mix(col, INK, (1.0 - smoothstep(0.4, 1.3, d)) * 0.35);
 		}
 		// The graticule: faint inked lines every 2,000 px.
@@ -86,6 +104,15 @@ void fragment() {
 		float grid = 1.0 - smoothstep(0.3, 0.9, min(g.x, g.y));
 		col = mix(col, INK, grid * 0.10 * sea_in);
 	}
+	// The reef: a heavy inked line of rock across the chart, broken at the arch.
+	float reef = abs(w.y - u_wall + (fbm(vec2(w.x * 0.002, 0.0)) - 0.5) * 120.0) * u_scale;
+	float in_arch = 1.0 - smoothstep(u_gate.y - 40.0, u_gate.y + 40.0, abs(w.x - u_gate.x));
+	float reef_span = 1.0 - smoothstep(u_outer, u_outer + 400.0, abs(w.x));
+	col = mix(col, INK * 0.8, (1.0 - smoothstep(1.2, 3.2, reef)) * 0.75 * (1.0 - in_arch) * reef_span);
+	// The anchorage's wall, the same, broken at the Sea Gate (due north).
+	float rim = abs(north - u_anchor.z) * u_scale;
+	float at_gate = 1.0 - smoothstep(620.0, 700.0, length(w - (u_anchor.xy - vec2(0.0, u_anchor.z))));
+	col = mix(col, INK * 0.8, (1.0 - smoothstep(1.2, 3.2, rim)) * 0.75 * (1.0 - south) * (1.0 - at_gate));
 	// A darker margin round the sheet, like an old chart's edge.
 	vec2 q = UV - 0.5;
 	col *= 1.0 - smoothstep(0.35, 0.75, length(q * vec2(1.0, 1.3))) * 0.28;

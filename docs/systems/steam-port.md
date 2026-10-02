@@ -624,6 +624,20 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   buyers, regulars' moorings, currents and kelp, the traders' reach, the blooms and the sandy
   caustics; hotspots and bottles follow the rings. A chart saved on the old grid is carried
   over cell by cell (Explore.fog_decode). Never under parity (web tables alone).
+- NORTH OF THE REEF, PLACES FIRST (Kong, 2026-10-02): game/north.gd, a port of chart.ts's
+  reef, anchorage and Sea Gate and SeaMap's reefRocks/anchorageRocks (same seeds, so the same
+  rock). The reef runs the chart's width at NORTH_WALL with one gap, the arch (GATE_X -900,
+  half 430); the anchorage is the disc of 3,600 from (0, -3000), walled wherever north of the
+  reef, with the Sea Gate due north (half 620). North.hold keeps a hull to the arch and inside
+  the wall; the Sea Gate holds you too (the campaign is not ported) with a line saying so.
+  Past the sign in the arch (GATE_SIGN_Y) the boat becomes your ship (lib/ships.ts art by
+  ship_tier, models/*_v2.png), and back again south of it. The northern islands (Crew Hall,
+  Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
+  sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
+  CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the
+  fishing/expedition crossover"): zoomed all the way out it settles there, the reef inked
+  across the middle with its arch, the anchorage and its wall above, the campaign's water
+  hatched as uncharted, and only the fishing sea under fog.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

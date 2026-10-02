@@ -14,6 +14,10 @@ uniform vec2 u_res = vec2(1600.0, 900.0);
 uniform vec2 u_origin = vec2(-22600.0, -1500.0);
 uniform vec2 u_span = vec2(45500.0, 24500.0);
 uniform float u_dark = 0.0;
+// Only the fishing sea is fogged: south of the reef, inside its last water.
+// The anchorage beyond the reef is always known.
+uniform float u_outer = 22600.0;
+uniform float u_wall = -1500.0;
 
 float hash(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -36,8 +40,7 @@ void fragment() {
 	vec2 px = (UV - 0.5) * u_res;
 	vec2 w = u_center + px / u_scale;
 	float r = length(w);
-	float north = length(w - vec2(0.0, -3000.0));
-	bool in_sea = r < 22800.0 || north < 3800.0;
+	bool in_sea = r < u_outer + 200.0 && w.y > u_wall;
 	if (!in_sea) {
 		COLOR = vec4(0.0);
 	} else {

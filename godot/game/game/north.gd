@@ -1,0 +1,171 @@
+class_name North
+extends RefCounted
+## NORTH OF THE REEF (Kong, 2026-10-02: "build out the northern region now,
+## with the Crew Hall and everything else"; places first). A port of the
+## reef, the anchorage and the Sea Gate in app/(app)/sea/chart.ts and the rock
+## that draws them (reefRocks, anchorageRocks in SeaMap.tsx).
+##
+## THE REEF runs the whole width of the chart at NORTH_WALL, rock all the way,
+## with one gap: the arch at GATE_X. Sailing through it is how you leave the
+## fishing grounds, and under the sign in the passage the boat changes under
+## you to your expedition ship (crossing back, the fishing boat again).
+##
+## THE ANCHORAGE is the harbour beyond it: a disc 3,600 across from
+## EXP_ORIGIN, walled in the same rock wherever it is north of the reef, with
+## the islands expeditions are run from (the Crew Hall with the Posting House
+## and the Forge either side, the Gunwharf and the Charterhouse flanking the
+## way out). THE SEA GATE is that way out, due north, dead opposite the arch;
+## past it is the campaign's water, not yet in the port, so it holds you back.
+
+const GATE_X: float = -900.0
+const GATE_HALF: float = 430.0
+const GATE_SIGN_Y: float = Explore.NORTH_WALL - 210.0
+const EXP_ORIGIN: Vector2 = Vector2(0.0, Explore.NORTH_WALL - 1500.0)
+const EXP_EDGE: float = 3600.0
+const SEA_GATE: Vector2 = Vector2(0.0, Explore.NORTH_WALL - 1500.0 - 3600.0)
+const SEA_GATE_HALF: float = 620.0
+const REEF_STEP: float = 700.0
+const PEBBLE_STEP: float = 175.0
+## How far off the rock a hull's centre keeps.
+const KEEP: float = 150.0
+
+const BOULDERS: Array = [["sea/rock-crag.png", 420.0, 760.0], ["sea/rock-split.png", 400.0, 700.0], ["sea/rock-dome.png", 460.0, 820.0], ["sea/rock-spire.png", 260.0, 470.0]]
+const SHINGLE: Array = [["sea/rock-cobbles.png", 190.0, 340.0], ["sea/rock-slab.png", 250.0, 440.0], ["sea/rock-dome.png", 175.0, 300.0]]
+
+
+## Is this point north of the reef (the anchorage)?
+static func is_north(p: Vector2) -> bool:
+	return p.y < Explore.NORTH_WALL
+
+
+## Past the sign in the arch: the expedition ship's water.
+static func ship_water(p: Vector2) -> bool:
+	return p.y < GATE_SIGN_Y
+
+
+## The wall's angle sweep: wherever the rim is north of the reef.
+static func arc() -> Vector2:
+	var s: float = (Explore.NORTH_WALL - EXP_ORIGIN.y) / EXP_EDGE
+	var a: float = asin(s)
+	return Vector2(PI - a, TAU + a)
+
+
+## The xorshift the web rolls the rock with.
+class Roll:
+	extends RefCounted
+	var s: int
+
+	func _init(seed: int) -> void:
+		s = seed
+
+	func next() -> float:
+		s = (s ^ (s << 13)) & 0xFFFFFFFF
+		s = s ^ (s >> 17)
+		s = (s ^ (s << 5)) & 0xFFFFFFFF
+		return float(s) / 4294967296.0
+
+
+static func _pick(list: Array, rnd: Roll) -> Array:
+	return list[mini(list.size() - 1, int(floor(rnd.next() * list.size())))]
+
+
+## Every rock of the reef and the anchorage's wall: [art, x, y, width], far
+## (north) first, so the nearer ones draw over them.
+static func rocks() -> Array:
+	var out: Array = []
+	var out_r: float = Chart.LAST_OUTER
+	var nw: float = Explore.NORTH_WALL
+	var rnd: Roll = Roll.new(0x7f4a7c15)
+	# The reef: two staggered rows of boulders, clear of the arch.
+	for row: int in 2:
+		var x: float = -out_r - REEF_STEP + (row * REEF_STEP) / 2.0
+		while x < out_r + REEF_STEP:
+			if absf(x - GATE_X) >= GATE_HALF + 520.0:
+				var b: Array = _pick(BOULDERS, rnd)
+				var jx: float = (rnd.next() - 0.5) * REEF_STEP * 0.22
+				var jy: float = (1.0 if row == 1 else -1.0) * 110.0 + (rnd.next() - 0.5) * 150.0
+				out.append([b[0], x + jx, nw + jy, b[1] + rnd.next() * (b[2] - b[1])])
+			x += REEF_STEP
+	# The headlands either side of the arch, and a crag behind each.
+	out.append(["sea/rock-gate-w.png", GATE_X - (GATE_HALF + 370.0), nw - 40.0, 760.0])
+	out.append(["sea/rock-gate-e.png", GATE_X + (GATE_HALF + 370.0), nw - 40.0, 760.0])
+	for side: float in [-1.0, 1.0]:
+		out.append(["sea/rock-crag.png", GATE_X + side * (GATE_HALF + 640.0), nw + 140.0, 520.0])
+	# The shingle, packed tight.
+	var px: float = -out_r - PEBBLE_STEP
+	while px < out_r + PEBBLE_STEP:
+		if absf(px - GATE_X) >= GATE_HALF + 300.0:
+			var p: Array = _pick(SHINGLE, rnd)
+			var r: float = rnd.next()
+			var jx2: float = (rnd.next() - 0.5) * PEBBLE_STEP * 0.8
+			out.append([p[0], px + jx2, nw + (rnd.next() - 0.5) * 330.0, p[1] + r * r * (p[2] - p[1])])
+		px += PEBBLE_STEP
+	# The anchorage's wall, by angle, with the Sea Gate's gap at the middle.
+	var a: Vector2 = arc()
+	var mid: float = (a.x + a.y) / 2.0
+	var at: Callable = func(th: float, off: float) -> Vector2:
+		return EXP_ORIGIN + Vector2(cos(th), sin(th)) * (EXP_EDGE + off)
+	var rnd2: Roll = Roll.new(0x1f83d9ab)
+	var skip: float = (SEA_GATE_HALF + 520.0) / EXP_EDGE
+	for row: int in 2:
+		var step: float = REEF_STEP / EXP_EDGE
+		var th: float = a.x + (row * step) / 2.0
+		while th < a.y:
+			if absf(th - mid) >= skip:
+				var b: Array = _pick(BOULDERS, rnd2)
+				var q: Vector2 = at.call(th + (rnd2.next() - 0.5) * step * 0.22, (1.0 if row == 1 else -1.0) * 110.0 + (rnd2.next() - 0.5) * 150.0)
+				out.append([b[0], q.x, q.y, b[1] + rnd2.next() * (b[2] - b[1])])
+			th += step
+	var gate: float = (SEA_GATE_HALF + 370.0) / EXP_EDGE
+	var gw: Vector2 = at.call(mid - gate, 40.0)
+	var ge: Vector2 = at.call(mid + gate, 40.0)
+	out.append(["sea/rock-gate-w.png", gw.x, gw.y, 760.0])
+	out.append(["sea/rock-gate-e.png", ge.x, ge.y, 760.0])
+	for side: float in [-1.0, 1.0]:
+		var c: Vector2 = at.call(mid + side * (SEA_GATE_HALF + 640.0) / EXP_EDGE, -140.0)
+		out.append(["sea/rock-crag.png", c.x, c.y, 520.0])
+	var pskip: float = (SEA_GATE_HALF + 300.0) / EXP_EDGE
+	var pstep: float = PEBBLE_STEP / EXP_EDGE
+	var pth: float = a.x
+	while pth < a.y:
+		if absf(pth - mid) >= pskip:
+			var sp: Array = _pick(SHINGLE, rnd2)
+			var r2: float = rnd2.next()
+			var q2: Vector2 = at.call(pth + (rnd2.next() - 0.5) * pstep * 0.8, (rnd2.next() - 0.5) * 330.0)
+			out.append([sp[0], q2.x, q2.y, sp[1] + r2 * r2 * (sp[2] - sp[1])])
+		pth += pstep
+	out.sort_custom(func(p: Array, q: Array) -> bool: return float(p[2]) < float(q[2]))
+	return out
+
+
+## Where a hull moving from `from` to `to` may go: the reef stops it except in
+## the arch; the anchorage's wall stops it except at the Sea Gate, and the
+## Sea Gate holds it too (the campaign is not in the port yet).
+## { at, hit, why } with why "" / "reef" / "wall" / "gate".
+static func hold(from: Vector2, to: Vector2) -> Dictionary:
+	var nw: float = Explore.NORTH_WALL
+	var out: Vector2 = to
+	var why: String = ""
+	# Through the reef only in the arch.
+	var crossing: bool = (from.y >= nw) != (to.y >= nw) or absf(to.y - nw) < KEEP * 0.5
+	if crossing and absf(to.x - GATE_X) > GATE_HALF - 60.0:
+		out.y = nw + (KEEP * 0.5 if from.y >= nw else -KEEP * 0.5)
+		why = "reef"
+	# Inside the anchorage's wall.
+	if out.y < nw:
+		var d: Vector2 = out - EXP_ORIGIN
+		var lim: float = EXP_EDGE - KEEP
+		if d.length() > lim:
+			why = "gate" if out.distance_to(SEA_GATE) < SEA_GATE_HALF + KEEP else "wall"
+			out = EXP_ORIGIN + d.normalized() * lim
+	return { "at": out, "hit": why != "", "why": why }
+
+
+## What each northern building will be (shown on mooring until it is built).
+const COMING: Dictionary = {
+	"crew_hall": "Your crew sleep, drill and are signed on here: recruiting, the roster, the bunks and who sails in which seat.",
+	"posting_house": "The bounty board: the day's hunts out past the Sea Gate, and what each one pays.",
+	"forge_isle": "The bench where two raid items go in and one stronger one comes out.",
+	"gunwharf": "Where your ship lies at her berth, is refitted and armed for the campaign.",
+	"charterhouse": "The voyage board: routes, crews and the day's voyage.",
+}
