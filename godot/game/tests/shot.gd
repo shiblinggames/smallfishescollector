@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "squall", "squalledge", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -427,6 +427,18 @@ func _init() -> void:
 			hud._stow_card({ "stowed": "gold", "stash": { "gold": 2.0, "wooden": 1.0 } })
 			for f: int in 45:
 				await process_frame
+		"baitpick":
+			hud._toggle_bait_picker()
+			for f: int in 20:
+				await process_frame
+		"boattab":
+			p["unlocked_boats"] = ["oak", "fire", "golden"]
+			hud._open_loadout()
+			for f: int in 30:
+				await process_frame
+			sea._locker._show_tab("boat")
+			for f: int in 40:
+				await process_frame
 		"crates", "crateopen":
 			p["crate_stash"] = { "gold": 2.0, "wooden": 3.0, "ancient": 1.0 }
 			p["unlocked_hats"] = ["gray", "spotted"]
@@ -458,7 +470,7 @@ func _init() -> void:
 			var lu: LevelUp = LevelUp.new()
 			lu.claim = { "from": 4.0, "to": 6.0, "granted": [{ "level": 5.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["5"] }, { "level": 6.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["6"] }] }
 			if OS.get_environment("LV_ONE") != "":
-				lu.claim = { "from": 19.0, "to": 20.0, "granted": [{ "level": 15.0, "reward": (Rules.data()["levelRewards"] as Dictionary).get("20", {}) }] }
+				lu.claim = { "from": 14.0, "to": 15.0, "granted": [{ "level": 15.0, "reward": (Rules.data()["levelRewards"] as Dictionary).get("15", {}) }] }
 			hud._action.visible = false
 			hud.add_child(lu)
 			await create_timer(1.8).timeout

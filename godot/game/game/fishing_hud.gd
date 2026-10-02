@@ -201,10 +201,18 @@ func _ready() -> void:
 	# the hold (a press opens it in the Locker).
 	_place(bottom, Vector2(0.5, 1.0), Vector2(-300, -72), Vector2(600, 54))
 	add_child(bottom)
-	var bv: Array = _menu(bottom, "Bait  ·  press to switch", _cycle_bait)
+	var bv: Array = _menu(bottom, "Bait", _toggle_bait_picker)
 	_m_bait = bv[0]
 	_bait_val = bv[1]
-	_m_bait.tooltip_text = "Put on the next bait you hold (hold Q for the wheel)"
+	_m_bait.tooltip_text = "Choose the bait on your line (Q for the wheel)"
+	# The bait on the line, pictured, at the button's left.
+	_bait_icon = TextureRect.new()
+	_bait_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_bait_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_bait_icon.position = Vector2(10, 7)
+	_bait_icon.size = Vector2(40, 40)
+	_bait_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_m_bait.add_child(_bait_icon)
 	var lv: Array = _menu(bottom, "Locker  ·  I", _open_loadout)
 	_m_loadout = lv[0]
 	_loadout_val = lv[1]
@@ -443,6 +451,8 @@ func refresh() -> void:
 		if b[0] == _bait:
 			have = true
 			_bait_val.text = "%s  %d" % [b[1], int(b[2])]
+	if _bait_icon != null:
+		_bait_icon.texture = Skipper.tex(Rules.bait(_bait).get("imageUrl")) if not held.is_empty() else null
 	if not have and held.size() > 0:
 		_bait = held[0][0]
 		_bait_val.text = "%s  %d" % [held[0][1], int(held[0][2])]
@@ -670,7 +680,70 @@ func _open_loadout() -> void:
 	locker_wanted.emit("loadout", "rod")
 
 
-## Put on the next bait held (the bottom row's Bait).
+var _bait_icon: TextureRect
+var _picker: Control
+
+
+## THE BAIT PICKER (Kong, 2026-10-01): a strip of paper rising over the Bait
+## button with every bait aboard, pictured with its count and what it does;
+## press one to put it on. Press the button again, or anywhere else, to close.
+func _toggle_bait_picker() -> void:
+	if _picker != null and is_instance_valid(_picker):
+		_picker.queue_free()
+		_picker = null
+		return
+	if phase != "idle" and phase != "result":
+		toast("Bait goes on before the cast")
+		return
+	var held: Array = session.baits()
+	if held.is_empty():
+		toast("No bait aboard")
+		return
+	_picker = Control.new()
+	_picker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_picker.mouse_filter = Control.MOUSE_FILTER_STOP
+	_picker.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and _picker != null:
+			_picker.queue_free()
+			_picker = null)
+	add_child(_picker)
+	var card: Pane = Kit.pane(_picker, { "radius": 14, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.4), 16, Vector2(0, 5)], "pad": [14, 12, 14, 12], "paper": true })
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	card.add_child(row)
+	for b: Array in held:
+		var def: Dictionary = Rules.bait(b[0])
+		var t: Paper.Tile = Paper.Tile.new()
+		t.on = b[0] == _bait
+		t.label = b[1]
+		t.art = Skipper.tex(def.get("imageUrl"))
+		t.pigment = Color(str(def.get("color", "#5f9fb0"))).darkened(0.15)
+		t.corner = "×%s" % Js.thousands(float(b[2]))
+		t.custom_minimum_size = Vector2(108, 104)
+		var bonus: float = Js.num(def.get("catchZoneBonus"))
+		var faster: float = 1.0 - float(def.get("waitMult", 1.0))
+		t.tooltip_text = "%s%s" % [("+%d° catch zone  " % int(bonus)) if bonus > 0 else "", ("%d%% faster bites" % int(round(faster * 100.0))) if faster > 0.001 else ""]
+		t.pressed.connect(func() -> void:
+			set_bait(b[0])
+			Rumble.tap(8)
+			toast("%s on the line" % b[1])
+			if _picker != null:
+				_picker.queue_free()
+				_picker = null)
+		row.add_child(t)
+	await get_tree().process_frame
+	if _picker == null or not is_instance_valid(_picker):
+		return
+	var r: Rect2 = _m_bait.get_global_rect()
+	card.position = Vector2(clampf(r.position.x + r.size.x / 2.0 - card.size.x / 2.0, 12.0, size.x - card.size.x - 12.0), r.position.y - card.size.y - 10.0)
+	card.modulate.a = 0.0
+	card.position.y += 10.0
+	var tw: Tween = card.create_tween().set_parallel()
+	tw.tween_property(card, "modulate:a", 1.0, 0.15)
+	tw.tween_property(card, "position:y", card.position.y - 10.0, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+## Put on the next bait held.
 func _cycle_bait() -> void:
 	if phase != "idle" and phase != "result":
 		toast("Bait goes on before the cast")

@@ -24,7 +24,20 @@ const WIDTH: float = 0.75
 var skipper: Skipper
 
 
-func _process(_delta: float) -> void:
+## THE LINE IS A ROPE (Kong, 2026-10-01: the drawn curve still moved
+## wrongly). A chain of points simulated in the world (verlet, under gravity,
+## held to its length), so it swings with the boat, trails behind the hook in
+## flight, sags, pulls taut and falls slack on its own. The rod's tip holds
+## one end. The other: at rest it hangs free with the hook's weight; in the
+## cast it rides the thrown hook; waiting, it is held where the line runs into
+## the water; in a fight, on the fish. The chain lives on the Skipper, so it
+## carries on through a change of pose (which rebuilds this node).
+const NODES: int = 20
+const GRAVITY: float = 900.0
+
+
+func _process(delta: float) -> void:
+	_step(clampf(delta, 0.0, 1.0 / 30.0))
 	queue_redraw()
 
 
@@ -33,91 +46,123 @@ func _sheet(p: Vector2) -> Vector2:
 	var skin: Variant = skipper._roles.get("skin")
 	if skin == null or not is_instance_valid(skin):
 		return Vector2.ZERO
-	var s: Sprite2D = skin
-	return s.transform * (p - s.texture.get_size() / 2.0)
+	var sp: Sprite2D = skin
+	return sp.transform * (p - sp.texture.get_size() / 2.0)
 
 
-func _draw() -> void:
+## Where each end is this frame (global), how long the line is, and whether
+## the far end is held (else it hangs free).
+func _ends() -> Dictionary:
 	var frame: String = skipper.frame
-	if not PTS.has(frame) or skipper._roles.get("skin") == null:
-		return
-	var tip: Vector2 = _sheet(PTS[frame][0])
-	var end: Vector2 = _sheet(PTS[frame][1])
+	var tip: Vector2 = to_global(_sheet(PTS[frame][0]))
 	var now: float = skipper.line_clock
 	var t: float = now - skipper.frame_at
-	if skipper.line_snap_t >= 0.0:
-		_snapped(tip, end, now - skipper.line_snap_t)
-		return
-	# Coming into a pose, the end eases from wherever it was (a fight, a
-	# cast, the water) to the pose's own place, so the line never jumps.
-	var from: Variant = skipper.line_from
-	var ease_in: float = clampf(t / 0.32, 0.0, 1.0)
-	ease_in = ease_in * ease_in * (3.0 - 2.0 * ease_in)
 	match frame:
 		"rest":
-			end += Vector2(sin(now * 1.3 + skipper._phase) * 2.2, 0.0)
-			if from != null and ease_in < 1.0:
-				end = (from as Vector2).lerp(end, ease_in)
-			_curve(tip, end, 3.0, 0.0, 0.0)
-			_hook(end, _last_dir)
-			_remember(end)
+			var rest_end: Vector2 = to_global(_sheet(PTS["rest"][1]))
+			return { "tip": tip, "len": tip.distance_to(rest_end), "held": null }
 		"cast":
-			# THE CAST: the hook flies out from where it hung in a high arc
-			# and comes down exactly where the line will run into the water
-			# once she is waiting, so the cast and the wait are one movement.
-			var water: Vector2 = skipper.sheet_point("wait", PTS["wait"][1])
-			var start: Vector2 = from if from != null else tip
+			var water: Vector2 = to_global(skipper.sheet_point("wait", PTS["wait"][1]))
+			var start: Vector2 = skipper.line_from if skipper.line_from != null else tip
 			var u: float = clampf(t / 0.55, 0.0, 1.0)
-			# Thrown: quick off the rod, slowing as it falls (ease out), up
-			# over the tip and out, along a curve through a point high above
-			# and beyond the tip.
 			var e: float = 1.0 - pow(1.0 - u, 2.2)
-			var high: Vector2 = tip + Vector2((water.x - tip.x) * 0.9, -95.0)
+			var high: Vector2 = tip + Vector2((water.x - tip.x) * 0.9, -95.0 * absf(global_scale.y))
 			var at: Vector2 = start.lerp(high, e).lerp(high.lerp(water, e), e)
-			_curve(tip, at, 4.0 + 10.0 * u, 8.0 * (1.0 - u), now * 24.0)
-			_hook(at, _last_dir)
-			_remember(at)
+			return { "tip": tip, "len": maxf(tip.distance_to(at), tip.distance_to(water)) * 1.06, "held": at }
 		_:
 			if skipper.line_target != null:
-				var to: Vector2 = to_local(skipper.line_target)
-				_remember(to)
-				var slack: float = skipper.line_slack
-				# Taut, it hums; slack, it hangs.
-				var hum: float = sin(now * 46.0) * 1.3 * (1.0 - slack)
-				# Slack, it bows out sideways in a lazy loop as well as sagging.
-				_curve(tip, to, 3.0 + slack * 22.0, hum + slack * 16.0 * sin(now * 3.0 + 1.0), slack * 2.0)
-			else:
-				if from != null and ease_in < 1.0:
-					end = (from as Vector2).lerp(end, ease_in)
-				# A nibble: the end dips under and comes back up.
-				if skipper.line_dip_t >= 0.0:
-					var d: float = (now - skipper.line_dip_t) / 0.24
-					if d >= 0.0 and d < 1.0:
-						end.y += sin(d * PI) * 6.0
-				_curve(tip, end, 5.0, 0.0, 0.0)
-				_remember(end)
+				var to: Vector2 = skipper.line_target
+				return { "tip": tip, "len": tip.distance_to(to) * (1.0 + 0.4 * skipper.line_slack), "held": to }
+			var end: Vector2 = to_global(_sheet(PTS["wait"][1]))
+			if skipper.line_dip_t >= 0.0:
+				var d: float = (now - skipper.line_dip_t) / 0.24
+				if d >= 0.0 and d < 1.0:
+					end.y += sin(d * PI) * 6.0 * absf(global_scale.y)
+			return { "tip": tip, "len": tip.distance_to(end) * 1.04, "held": end }
 
 
-func _remember(at: Vector2) -> void:
-	skipper.line_end_prev = at
+func _step(dt: float) -> void:
+	if skipper == null or not PTS.has(skipper.frame) or skipper._roles.get("skin") == null:
+		return
+	if skipper.line_snap_t >= 0.0:
+		return
+	var e: Dictionary = _ends()
+	var tip: Vector2 = e["tip"]
+	var pts: PackedVector2Array = skipper.line_pts
+	var prev: PackedVector2Array = skipper.line_prev
+	# A jump (a teleport, a recall, a new captain): start the rope again in
+	# place rather than drag it across the sea.
+	if pts.size() == NODES and pts[0].distance_to(tip) > 120.0 * absf(global_scale.x):
+		pts = PackedVector2Array()
+	if pts.size() != NODES:
+		pts.resize(NODES)
+		prev.resize(NODES)
+		var far: Vector2 = e["held"] if e["held"] != null else tip + Vector2(0, float(e["len"]))
+		for n: int in NODES:
+			pts[n] = tip.lerp(far, float(n) / (NODES - 1))
+			prev[n] = pts[n]
+	var seg: float = float(e["len"]) / (NODES - 1)
+	var g: Vector2 = Vector2(0, GRAVITY * absf(global_scale.y))
+	# Move: carry on as last frame (damped), and fall.
+	for n: int in range(1, NODES):
+		# Damped harder while the far end is held, so slack settles fast.
+		var v: Vector2 = (pts[n] - prev[n]) * (0.93 if e["held"] != null else 0.975)
+		prev[n] = pts[n]
+		var weight: float = 2.2 if n == NODES - 1 else 1.0
+		pts[n] = pts[n] + v + g * weight * dt * dt
+	# Hold to length, pinning the ends.
+	for it: int in 14:
+		pts[0] = tip
+		if e["held"] != null:
+			pts[NODES - 1] = e["held"]
+		for n: int in range(NODES - 1):
+			var a: Vector2 = pts[n]
+			var b: Vector2 = pts[n + 1]
+			var dv: Vector2 = b - a
+			var dl: float = dv.length()
+			if dl < 0.0001 or dl <= seg:
+				continue
+			var fix: Vector2 = dv * ((dl - seg) / dl)
+			var a_pinned: bool = n == 0
+			var b_pinned: bool = n + 1 == NODES - 1 and e["held"] != null
+			if a_pinned and not b_pinned:
+				pts[n + 1] = b - fix
+			elif b_pinned and not a_pinned:
+				pts[n] = a + fix
+			elif not a_pinned and not b_pinned:
+				pts[n] = a + fix * 0.5
+				pts[n + 1] = b - fix * 0.5
+	skipper.line_pts = pts
+	skipper.line_prev = prev
+	skipper.line_end_prev = pts[NODES - 1]
 	skipper.line_end_ok = true
 
 
-## A line from a to b, sagging by sag (down the screen), with a wave along it
-## (amp, at phase) for a whip or a hum.
-func _curve(a: Vector2, b: Vector2, sag: float, amp: float, phase: float) -> void:
-	var pts: PackedVector2Array = PackedVector2Array()
-	var n: int = 18
-	var side: Vector2 = (b - a).orthogonal().normalized()
-	for i: int in n + 1:
-		var u: float = float(i) / n
-		var p: Vector2 = a.lerp(b, u)
-		p.y += sin(u * PI) * sag
-		p += side * sin(u * PI) * sin(u * 9.0 - phase) * amp
-		pts.append(p)
-	draw_polyline(pts, INK, WIDTH, true)
-	# Which way the line runs at its end, for the hook to hang along it.
-	_last_dir = (pts[n] - pts[n - 1]).normalized() if n > 0 else Vector2.DOWN
+func _draw() -> void:
+	if skipper == null or not PTS.has(skipper.frame) or skipper._roles.get("skin") == null:
+		return
+	var now: float = skipper.line_clock
+	var tip_l: Vector2 = _sheet(PTS[skipper.frame][0])
+	if skipper.line_snap_t >= 0.0:
+		_snapped(tip_l, to_local(skipper.line_end_prev), now - skipper.line_snap_t)
+		return
+	var pts: PackedVector2Array = skipper.line_pts
+	if pts.size() != NODES:
+		return
+	var local: PackedVector2Array = PackedVector2Array()
+	var taut: bool = skipper.line_target != null and skipper.line_slack < 0.1 and skipper.frame == "wait"
+	for n: int in NODES:
+		var q: Vector2 = to_local(pts[n])
+		if taut:
+			# Taut, it hums.
+			var u: float = float(n) / (NODES - 1)
+			q.y += sin(u * PI) * sin(now * 46.0) * 1.2
+		local.append(q)
+	draw_polyline(local, INK, WIDTH, true)
+	_last_dir = (local[NODES - 1] - local[NODES - 2]).normalized()
+	# The hook: on show at rest and in flight; under the water otherwise.
+	if skipper.frame != "wait":
+		_hook(local[NODES - 1], _last_dir)
 
 
 ## The hook, on the end of the line, hanging along it. The worn hook's own art

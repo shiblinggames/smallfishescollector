@@ -82,7 +82,7 @@ func _max(key: String) -> int:
 
 
 ## The value at a tier, as text with its unit.
-func _value(key: String, t: float) -> String:
+static func _value(key: String, t: float) -> String:
 	var base: Dictionary = Rules.data()["shipyard"]["base"]
 	match key:
 		"hull":
@@ -98,7 +98,7 @@ func _value(key: String, t: float) -> String:
 	return ""
 
 
-func _gain(key: String, t: float) -> String:
+static func _gain(key: String, t: float) -> String:
 	var base: Dictionary = Rules.data()["shipyard"]["base"]
 	match key:
 		"hull":
@@ -114,7 +114,7 @@ func _gain(key: String, t: float) -> String:
 	return ""
 
 
-func _cost(key: String, t: int) -> float:
+static func _cost(key: String, t: int) -> float:
 	if key == "hold":
 		return float(Rules.fish_hold(float(t))["cost"])
 	return float((Shipyard.ladder(_col(key))["costs"] as Array)[t])

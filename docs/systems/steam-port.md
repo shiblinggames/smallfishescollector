@@ -469,6 +469,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   shown). The BOTTOM ROW is three: Bait (press to put on the next bait held; Q for the
   wheel), Locker (I: gear, hold, crates, log), Hold (opens it in the Locker). The LEVEL BAR
   is larger and brighter over a soft dark pool.
+- (Kong, same day) THE LINE IS A ROPE: fishing_line.gd simulates 20 verlet points in world
+  space (gravity, length constraints, the rod tip pinned, the far end held by the thrown
+  hook / the water point / the fish, free at rest with the hook's weight), kept on the
+  Skipper across poses (line_pts/line_prev), reset after a jump, damped harder while held.
+  THE LEVEL-UP shows pictures of unlocked rods, reels, hooks, bait and looks as tiles, sorted
+  Stronger / Unlocked / Earned, and only reports the streak ceiling when it moved as shown.
+  THE BAIT BUTTON shows the bait on the line and opens a picker of every bait aboard
+  (pictures, counts, what it does); the old press-to-cycle remains as _cycle_bait. THE
+  LOCKER tags only the chosen slot, and has a BOAT tab (after Loadout): her hulls from crates
+  to wear, and her fittings (reading, pips, how the next tier comes: free at Fishing N, or
+  Fishing N then the price at the Shipyard). ShipyardRoom._value/_gain/_cost are static.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

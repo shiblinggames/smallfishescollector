@@ -133,6 +133,9 @@ var line_clock: float = 0.0
 var line_dip_t: float = -1.0
 ## Where the line's end was last drawn (this node's space), and where it
 ## starts from in a new pose (eased from there to the pose's own end).
+## The rope (game/fishing_line.gd), in world space, kept across poses.
+var line_pts: PackedVector2Array = PackedVector2Array()
+var line_prev: PackedVector2Array = PackedVector2Array()
 var line_end_prev: Vector2 = Vector2.ZERO
 var line_end_ok: bool = false
 var line_from: Variant = null

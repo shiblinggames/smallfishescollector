@@ -18,7 +18,9 @@ extends Control
 
 signal closed
 
-const SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["skin", "Look"], ["hat", "Hat"], ["boat", "Boat"], ["pet", "Pet"]]
+const SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["skin", "Look"], ["hat", "Hat"], ["pet", "Pet"]]
+## Every slot a tag can point at (the Boat has its own tab).
+const ALL_SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["skin", "Look"], ["hat", "Hat"], ["pet", "Pet"], ["boat", "Boat"]]
 const HOW_TO_GET: Dictionary = {
 	"rod": "New rods are sold at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.",
 	"bait": "Bait is sold at the Tackle Shop, by the traders out on the water, and found in crates.",
@@ -142,7 +144,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_TAB:
 		get_viewport().set_input_as_handled()
-		var order: Array = ["loadout", "hold", "crates", "log"]
+		var order: Array = ["loadout", "boat", "hold", "crates", "log"]
 		_show_tab(order[(order.find(tab) + 1) % order.size()])
 
 
@@ -163,9 +165,9 @@ func _show_tab(t: String) -> void:
 	tab = t
 	for c: Node in _tabs.get_children():
 		c.queue_free()
-	for o: Array in [["loadout", "Loadout"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"]]:
+	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"]]:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == t)
-		b.custom_minimum_size = Vector2(110, 34)
+		b.custom_minimum_size = Vector2(92, 34)
 		b.pressed.connect(func() -> void: _show_tab(o[0]))
 		_tabs.add_child(b)
 	var hint: Label = Paper.text(_tabs, "Tab to switch", "note", Paper.INK_FAINT)
@@ -178,11 +180,17 @@ func _show_tab(t: String) -> void:
 	for c: Node in _body.get_children():
 		c.queue_free()
 	_gauge = null
-	_callouts.visible = t == "loadout"
-	_card.visible = t == "loadout"
+	_callouts.visible = t == "loadout" or t == "boat"
+	_card.visible = t == "loadout" or t == "boat"
 	_widen(t == "log")
+	if t == "boat":
+		slot = "boat"
+	elif t == "loadout" and slot == "boat":
+		slot = "rod"
 	if t == "loadout":
 		_build_loadout()
+	elif t == "boat":
+		_build_boat()
 	elif t == "hold":
 		_build_hold()
 	elif t == "crates":
@@ -202,6 +210,71 @@ func _widen(wide: bool) -> void:
 		return
 	var tw: Tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_panel, "offset_left", goal, 0.32)
+
+
+# ── Boat ───────────────────────────────────────────────────────────────────────
+
+## THE BOAT (Kong, 2026-10-01): her hull to wear (from crates) and what she
+## is fitted with: each upgrade's reading now, its tier, and how the next one
+## comes (free at a Fishing level, or bought at the Shipyard behind one).
+func _build_boat() -> void:
+	Paper.text(_body, "Her look", "eyebrow", Paper.INK_SOFT)
+	Paper.text(_body, "Boats come only from fishing crates. Hover one to see it on her; press to sail it.", "note", Paper.INK_SOFT, true)
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 8)
+	_body.add_child(grid)
+	var worn: Variant = _worn("boat")
+	var opts: Array = _options("boat")
+	if opts.is_empty():
+		Paper.text(grid, "Just the hull she came with.", "note", Paper.INK_SOFT)
+	for o: Array in opts:
+		var t: Paper.Tile = Paper.Tile.new()
+		t.on = o[0] != null and worn != null and str(o[0]) == str(worn)
+		t.label = o[1]
+		t.art = Skipper.tex(o[2]) if o[2] != "" else null
+		t.pigment = o[3]
+		t.custom_minimum_size = Vector2(124, 104)
+		t.mouse_entered.connect(func() -> void: _try_on(o))
+		t.mouse_exited.connect(func() -> void: _try_on([]))
+		t.pressed.connect(func() -> void: _choose(o[0]))
+		grid.add_child(t)
+	Paper.rule(_body)
+	Paper.text(_body, "Her fittings", "eyebrow", Paper.INK_SOFT)
+	var lvl: int = session.level()
+	for l: Array in ShipyardRoom.LADDERS:
+		var col: String = l[5]
+		var cur: int = int(Js.num(session.profile().get(col)))
+		var mx: int = (Rules.data()["fishHoldTiers"] as Array).size() - 1 if l[0] == "hold" else Shipyard.max_tier(col)
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		_body.add_child(row)
+		var name: Label = Paper.text(row, l[2], "body_strong", Paper.INK)
+		name.custom_minimum_size = Vector2(96, 0)
+		Paper.text(row, ShipyardRoom._value(l[0], float(cur)), "value", Paper.INK)
+		var pips: Label = Paper.text(row, "  " + "●".repeat(cur + 1) + "○".repeat(mx - cur), "small", Color(l[3]).darkened(0.35))
+		pips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var nxt: String = "Fully fitted"
+		if cur < mx:
+			var free_lv: int = 0
+			if l[0] == "hold":
+				var lr: Dictionary = Rules.data()["levelRewards"]
+				for k: Variant in lr:
+					if (lr[k] as Dictionary).get("holdFloor") != null and int(lr[k]["holdFloor"]) == cur + 1:
+						free_lv = int(k)
+			else:
+				free_lv = Shipyard.free_at(col, float(cur + 1))
+			var gate_lv: int = Rules.gate("hold", str(cur + 1)) if l[0] == "hold" else int(Js.num(Js.obj(Js.obj(Js.obj(Rules.data().get("levelGates")).get("ship")).get(col)).get(str(cur + 1))))
+			if free_lv > 0:
+				nxt = "Next free at Fishing %d" % free_lv
+			elif gate_lv > lvl:
+				nxt = "Next: Fishing %d, then %s ⟡ at the Shipyard" % [gate_lv, Js.thousands(ShipyardRoom._cost(l[0], cur + 1))]
+			else:
+				nxt = "Next: %s ⟡ at the Shipyard" % Js.thousands(ShipyardRoom._cost(l[0], cur + 1))
+		Paper.text(row, nxt, "note", Paper.INK_SOFT)
+	_trying = ["__"]
+	_try_on([])
 
 
 # ── Crates ─────────────────────────────────────────────────────────────────────
@@ -665,6 +738,8 @@ func _blurb(s: String, o: Array) -> String:
 			var id: String = str(o[0]) if not o.is_empty() else hud._bait
 			var bonus: float = Js.num(Rules.bait(id).get("catchZoneBonus"))
 			return ("Widens the catch zone by %d°. A wider catch zone is an easier reel; nothing else changes." % int(bonus)) if bonus > 0 else "Plain bait. No change to the catch zone."
+	if s == "boat":
+		return "A look, not a stat: her fittings are what make her faster. Boats come only from fishing crates."
 	return "A look, not a stat. It changes how you appear on the water and nothing about the catch."
 
 
@@ -1034,7 +1109,7 @@ class Callouts:
 	func _ready() -> void:
 		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		for s: Array in Locker.SLOTS:
+		for s: Array in Locker.ALL_SLOTS:
 			var b: Pane.PaneButton = Paper.button("")
 			b.custom_minimum_size = Vector2(0, 30)
 			b.pressed.connect(func() -> void: locker.pick_slot(s[0]))
@@ -1061,8 +1136,13 @@ class Callouts:
 		if not visible:
 			return
 		var centre: Vector2 = locker.sea._boat.get_global_transform_with_canvas().origin
-		for s: Array in Locker.SLOTS:
+		for s: Array in Locker.ALL_SLOTS:
 			var b: Pane.PaneButton = _tags[s[0]]
+			# Only the slot you are on is tagged (Kong: the lines everywhere
+			# were too much).
+			b.visible = locker.slot == s[0]
+			if not b.visible:
+				continue
 			var label: String = "%s  ·  %s" % [s[1], locker._name_for(s[0])]
 			if b.text != label.to_upper():
 				b.text = label.to_upper()
@@ -1074,7 +1154,9 @@ class Callouts:
 		queue_redraw()
 
 	func _draw() -> void:
-		for s: Array in Locker.SLOTS:
+		for s: Array in Locker.ALL_SLOTS:
+			if locker.slot != s[0]:
+				continue
 			var b: Pane.PaneButton = _tags[s[0]]
 			var p: Vector2 = _point(s[0])
 			var t: Vector2 = b.position + b.size / 2.0

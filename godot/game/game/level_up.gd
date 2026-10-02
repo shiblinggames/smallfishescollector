@@ -57,7 +57,7 @@ func _ready() -> void:
 	slip_row.anchor_right = 1.0
 	slip_row.anchor_top = 0.5
 	slip_row.anchor_bottom = 0.5
-	slip_row.offset_top = 80
+	slip_row.offset_top = 50
 	slip_row.offset_bottom = 230
 	slip_row.use_top_left = false
 	add_child(slip_row)
@@ -111,7 +111,7 @@ static func gains(from: int, to: int) -> Array:
 		out.append(["Stronger", "Catch zone +%d° (%d° from your level now)" % [cz, int(floor(to * 0.2))]])
 	var s0: float = Rules.streak_mult(10.0, float(from))
 	var s1: float = Rules.streak_mult(10.0, float(to))
-	if s1 > s0 + 0.0001:
+	if "%.2f" % s1 != "%.2f" % s0:
 		out.append(["Stronger", "A full perfect streak pays ×%.2f XP (was ×%.2f)" % [s1, s0]])
 	var mins: Dictionary = d["zones"]["minLevel"]
 	for w: Dictionary in Chart.WATERS:
@@ -123,19 +123,19 @@ static func gains(from: int, to: int) -> Array:
 		var lr: int = int(Js.num((d["rodShop"][k] as Dictionary).get("levelReq")))
 		if lr > from and lr <= to and int(k) < rods.size():
 			var captain: bool = (d["rodShop"][k] as Dictionary).get("captainRod") == true
-			out.append(["Unlocked", "%s at the Tackle Shop%s" % [rods[int(k)]["name"], " (Captain)" if captain else ""]])
+			out.append(["Unlocked", "%s at the Tackle Shop%s" % [rods[int(k)]["name"], " (Captain)" if captain else ""], Skipper.tex("%s_thumb.png" % rods[int(k)].get("slug", ""))])
 	for kind: Array in [["reels", "reel"], ["hooks", "hook"]]:
 		for g: Dictionary in d[kind[0]]:
 			var lr2: int = int(Js.num(g.get("levelReq")))
 			if lr2 > from and lr2 <= to:
-				out.append(["Unlocked", "%s at the Tackle Shop" % g["name"]])
+				out.append(["Unlocked", "%s at the Tackle Shop" % g["name"], Skipper.tex(str(g.get("imageUrl", "")).replace(".png", "_thumb.png")) if Skipper.tex(str(g.get("imageUrl", "")).replace(".png", "_thumb.png")) != null else Skipper.tex(g.get("imageUrl"))])
 	var by: Dictionary = d["fishingColorsByLevel"]
 	var c0: Array = by.get(str(from), [])
 	for cid: Variant in by.get(str(to), []):
 		if not c0.has(cid):
 			for cc: Dictionary in d["characterColors"]:
 				if cc["id"] == cid:
-					out.append(["Unlocked", "The %s look" % cc["name"]])
+					out.append(["Unlocked", "The %s look" % cc["name"], Skipper.look_art(cid)])
 	var tiers: Array = d["fishHoldTiers"]
 	for k: Variant in d["levelRewards"]:
 		var hf: Variant = (d["levelRewards"][k] as Dictionary).get("holdFloor")
@@ -146,7 +146,7 @@ static func gains(from: int, to: int) -> Array:
 	for bt: Variant in Js.obj(lg.get("bait")):
 		var bl: int = int(lg["bait"][bt])
 		if bl > from and bl <= to:
-			out.append(["Unlocked", "%s at the Tackle Shop" % Rules.bait(str(bt)).get("name", bt)])
+			out.append(["Unlocked", "%s at the Tackle Shop" % Rules.bait(str(bt)).get("name", bt), Skipper.tex(Rules.bait(str(bt)).get("imageUrl"))])
 	for hk: Variant in Js.obj(lg.get("hold")):
 		var hl: int = int(lg["hold"][hk])
 		if hl > from and hl <= to:
@@ -175,6 +175,9 @@ static func gains(from: int, to: int) -> Array:
 	return out
 
 
+var _tiles: Dictionary = {}
+
+
 func _build_slip(parent: Control, from: int, to: int) -> Control:
 	var lines: Array = gains(from, to)
 	var granted: Array = claim.get("granted", [])
@@ -184,6 +187,14 @@ func _build_slip(parent: Control, from: int, to: int) -> Control:
 			lines.append(["Earned", ("Level %d  ·  %s" % [int(g["level"]), label]) if granted.size() > 1 else label])
 	if lines.is_empty():
 		return null
+	# In order: Stronger, Unlocked, Earned.
+	var order: Array = ["Stronger", "Unlocked", "Earned"]
+	var sorted: Array = []
+	for sec: String in order:
+		for l: Array in lines:
+			if l[0] == sec:
+				sorted.append(l)
+	lines = sorted
 	var p: Pane = Kit.pane(parent, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.4), 18, Vector2(0, 6)], "pad": [28, 16, 28, 18], "paper": true })
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var v: VBoxContainer = VBoxContainer.new()
@@ -200,6 +211,45 @@ func _build_slip(parent: Control, from: int, to: int) -> Control:
 			if v.get_child_count() > 1:
 				head.custom_minimum_size = Vector2(0, 22)
 				head.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		var art: Texture2D = l[2] if l.size() > 2 else null
+		if art != null:
+			# Pictures sit side by side, each with its name under it.
+			var flow: HFlowContainer = _tiles.get(v)
+			if flow == null or flow.get_meta("sec", "") != l[0]:
+				flow = HFlowContainer.new()
+				flow.alignment = FlowContainer.ALIGNMENT_CENTER
+				flow.add_theme_constant_override("h_separation", 12)
+				flow.add_theme_constant_override("v_separation", 6)
+				flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				flow.set_meta("sec", l[0])
+				v.add_child(flow)
+				_tiles[v] = flow
+			var cell: VBoxContainer = VBoxContainer.new()
+			cell.add_theme_constant_override("separation", 0)
+			cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			cell.custom_minimum_size = Vector2(118, 0)
+			flow.add_child(cell)
+			var holder: Control = Control.new()
+			holder.custom_minimum_size = Vector2(118, 58)
+			holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			cell.add_child(holder)
+			Paper.blot(holder, Color(0.36, 0.6, 0.58), 0.55)
+			var pic: TextureRect = TextureRect.new()
+			pic.texture = art
+			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			pic.offset_left = 26
+			pic.offset_right = -26
+			pic.offset_top = 4
+			pic.offset_bottom = -4
+			pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			holder.add_child(pic)
+			var cap: Label = Kit.text(cell, str(l[1]).replace(" at the Tackle Shop", "").replace("The ", ""), "small", Kit.PAPER_INK)
+			cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			continue
+		_tiles.erase(v)
 		var t: Label = Kit.text(v, l[1], "body_strong", Kit.PAPER_INK)
 		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if to - from > 1:
