@@ -1039,22 +1039,52 @@ func _draw_north() -> void:
 		s.texture = t
 		var sc: float = float(r[3]) / float(t.get_width())
 		s.scale = Vector2(sc, sc / Chart.GROUND)
-		# Standing on the water: the picture's foot near its point.
-		s.offset = Vector2(0, -t.get_height() * 0.3)
 		# The painted foot, and the water a little up from it.
 		var band: Vector2 = Skipper._band(t)
+		# Standing on the water: the picture's foot at its point (so the
+		# arch's span draws over a boat in the passage behind its front foot).
+		s.offset = Vector2(0, -t.get_height() * (band.y - 0.5))
+		var arch: bool = r[0] == North.ARCH
 		var cut: float = band.y - 0.13
 		var depth: float = 0.12
 		var phase: float = randf() * 6.0
+		if arch:
+			# Its two feet at different heights: the water slopes between them.
+			cut = 0.72
 		var m: ShaderMaterial = Skipper.afloat_mat("res://game/fx/waterline.gdshader", s, cut, depth, phase)
 		m.set_shader_parameter("lap_amp", 0.4)
+		if arch:
+			m.set_shader_parameter("tilt", -0.43)
 		s.material = m
-		# The ring sits behind the rock, from its own shape.
-		var ring: Sprite2D = Skipper.collar_of(s, cut, depth, phase)
-		ring.offset = s.offset
-		holder.add_child(ring)
+		# The ring sits behind the rock, from its own shape (not the arch's:
+		# one ring would run across the open passage).
+		if not arch:
+			var ring: Sprite2D = Skipper.collar_of(s, cut, depth, phase)
+			ring.offset = s.offset
+			holder.add_child(ring)
 		holder.add_child(s)
-	for sign: Array in [["The Anchorage", Vector2(North.GATE_X, Explore.NORTH_WALL - 520.0)], ["The Sea Gate", North.SEA_GATE + Vector2(0, 520.0)]]:
+	# The arch's board says where it goes, painted on in the board's ink.
+	var at: Texture2D = Skipper.tex(North.ARCH)
+	if at != null:
+		var foot: float = Skipper._band(at).y
+		var board: Node2D = Node2D.new()
+		board.position = Vector2(North.GATE_X - North.ARCH_WIDE * 0.03 + North.ARCH_WIDE * (North.ARCH_BOARD.x - 0.5), Explore.NORTH_WALL + 60.0 - (foot - North.ARCH_BOARD.y) * at.get_height() * North.ARCH_WIDE / at.get_width() / Chart.GROUND)
+		board.scale = Vector2(1.0, 1.0 / Chart.GROUND)
+		board.z_index = 5
+		_world.add_child(board)
+		var bl: Label = Kit.text(null, "The
+Anchorage", "display", Color(0.2, 0.13, 0.08, 0.92))
+		bl.add_theme_font_size_override("font_size", 17)
+		bl.add_theme_constant_override("line_spacing", -12)
+		bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		bl.clip_text = false
+		bl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		bl.size = bl.get_minimum_size()
+		# The board hangs a little askew, its right end higher.
+		board.rotation = deg_to_rad(-5.0)
+		board.add_child(bl)
+		bl.position = -bl.get_minimum_size() / 2.0
+	for sign: Array in [["The Sea Gate", North.SEA_GATE + Vector2(0, 520.0)]]:
 		var holder: Node2D = Node2D.new()
 		holder.position = sign[1]
 		holder.scale = Vector2(1.0, 1.0 / Chart.GROUND)

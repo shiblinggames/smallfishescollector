@@ -29,8 +29,20 @@ const PEBBLE_STEP: float = 175.0
 ## How far off the rock a hull's centre keeps.
 const KEEP: float = 150.0
 
-const BOULDERS: Array = [["sea/rock-crag.png", 420.0, 760.0], ["sea/rock-split.png", 400.0, 700.0], ["sea/rock-dome.png", 460.0, 820.0], ["sea/rock-spire.png", 260.0, 470.0]]
-const SHINGLE: Array = [["sea/rock-cobbles.png", 190.0, 340.0], ["sea/rock-slab.png", 250.0, 440.0], ["sea/rock-dome.png", 175.0, 300.0]]
+## The port's own rock (Godot over the web baseline; Kong 2026-10-02: the
+## web's pale side-on crags did not fit), painted from the camera's angle in
+## the islands' blue-grey stone: [art, least width, most width].
+const BOULDERS: Array = [["sea/north-reef-1.png", 480.0, 660.0], ["sea/north-reef-2.png", 400.0, 560.0], ["sea/north-reef-3.png", 300.0, 400.0], ["sea/north-reef-4.png", 420.0, 580.0], ["sea/north-reef-5.png", 400.0, 540.0], ["sea/north-reef-6.png", 380.0, 520.0], ["sea/north-reef-9.png", 460.0, 620.0], ["sea/north-reef-10.png", 360.0, 480.0]]
+const SHINGLE: Array = [["sea/north-reef-7.png", 160.0, 300.0], ["sea/north-reef-8.png", 200.0, 340.0], ["sea/north-reef-2.png", 150.0, 260.0], ["sea/north-reef-5.png", 150.0, 240.0]]
+## The anchorage's wall: older, darker basalt.
+const WALL: Array = [["sea/north-wall-1.png", 480.0, 660.0], ["sea/north-wall-2.png", 340.0, 460.0], ["sea/north-wall-3.png", 420.0, 580.0], ["sea/north-wall-4.png", 420.0, 560.0]]
+const WALL_SHINGLE: Array = [["sea/north-wall-5.png", 170.0, 320.0], ["sea/north-wall-3.png", 160.0, 280.0], ["sea/north-reef-8.png", 180.0, 300.0]]
+## The arch: one picture over the passage; its opening is 0.25 to 0.81 of its
+## width, and its far (right) footing stands higher in the picture than the near.
+const ARCH: String = "sea/north-arch.png"
+const ARCH_WIDE: float = 1600.0
+## The middle of the hanging board in the arch's picture (fractions).
+const ARCH_BOARD: Vector2 = Vector2(0.546, 0.432)
 
 
 ## Is this point north of the reef (the anchorage)?
@@ -86,11 +98,10 @@ static func rocks() -> Array:
 				var jy: float = (1.0 if row == 1 else -1.0) * 110.0 + (rnd.next() - 0.5) * 150.0
 				out.append([b[0], x + jx, nw + jy, b[1] + rnd.next() * (b[2] - b[1])])
 			x += REEF_STEP
-	# The headlands either side of the arch, and a crag behind each.
-	out.append(["sea/rock-gate-w.png", GATE_X - (GATE_HALF + 370.0), nw - 40.0, 760.0])
-	out.append(["sea/rock-gate-e.png", GATE_X + (GATE_HALF + 370.0), nw - 40.0, 760.0])
+	# The arch over the passage, and a stack behind either footing.
+	out.append([ARCH, GATE_X - ARCH_WIDE * 0.03, nw + 60.0, ARCH_WIDE])
 	for side: float in [-1.0, 1.0]:
-		out.append(["sea/rock-crag.png", GATE_X + side * (GATE_HALF + 640.0), nw + 140.0, 520.0])
+		out.append(["sea/north-reef-3.png", GATE_X + side * (ARCH_WIDE * 0.5 + 120.0), nw - 120.0, 380.0])
 	# The shingle, packed tight.
 	var px: float = -out_r - PEBBLE_STEP
 	while px < out_r + PEBBLE_STEP:
@@ -112,18 +123,18 @@ static func rocks() -> Array:
 		var th: float = a.x + (row * step) / 2.0
 		while th < a.y:
 			if absf(th - mid) >= skip:
-				var b: Array = _pick(BOULDERS, rnd2)
+				var b: Array = _pick(WALL, rnd2)
 				var q: Vector2 = at.call(th + (rnd2.next() - 0.5) * step * 0.22, (1.0 if row == 1 else -1.0) * 110.0 + (rnd2.next() - 0.5) * 150.0)
 				out.append([b[0], q.x, q.y, b[1] + rnd2.next() * (b[2] - b[1])])
 			th += step
 	var gate: float = (SEA_GATE_HALF + 370.0) / EXP_EDGE
 	var gw: Vector2 = at.call(mid - gate, 40.0)
 	var ge: Vector2 = at.call(mid + gate, 40.0)
-	out.append(["sea/rock-gate-w.png", gw.x, gw.y, 760.0])
-	out.append(["sea/rock-gate-e.png", ge.x, ge.y, 760.0])
+	out.append(["sea/north-wall-2.png", gw.x, gw.y, 620.0])
+	out.append(["sea/north-wall-2.png", ge.x, ge.y, 620.0])
 	for side: float in [-1.0, 1.0]:
 		var c: Vector2 = at.call(mid + side * (SEA_GATE_HALF + 640.0) / EXP_EDGE, -140.0)
-		out.append(["sea/rock-crag.png", c.x, c.y, 520.0])
+		out.append(["sea/north-wall-1.png", c.x, c.y, 560.0])
 	var pskip: float = (SEA_GATE_HALF + 300.0) / EXP_EDGE
 	var pstep: float = PEBBLE_STEP / EXP_EDGE
 	var pth: float = a.x

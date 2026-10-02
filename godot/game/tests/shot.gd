@@ -449,7 +449,7 @@ func _init() -> void:
 		"arch", "anchorage":
 			if OS.get_environment("SHIP_TIER") != "":
 				p["ship_tier"] = float(OS.get_environment("SHIP_TIER"))
-			sea._boat.position = Vector2(North.GATE_X, Explore.NORTH_WALL + 700.0) if what == "arch" else Vector2(-500.0, -3700.0)
+			sea._boat.position = Vector2(North.GATE_X, Explore.NORTH_WALL + (float(OS.get_environment("SHOT_DY")) if OS.get_environment("SHOT_DY") != "" else 700.0)) if what == "arch" else Vector2(-500.0, -3700.0)
 			sea._boat.heading = -PI / 2.0
 			for f: int in 90:
 				await process_frame

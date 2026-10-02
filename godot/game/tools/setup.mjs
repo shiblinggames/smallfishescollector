@@ -54,7 +54,7 @@ const ART = [
   // North of the reef: the rock of the reef and the anchorage, and the ships.
   // The ships as the chart draws them (lib/ships.ts seaImageUrl) and the ship
   // skins' hulls (lib/shipSkins.ts imageByTier).
-  'sea/rock-*.png', 'ship-hero/*_v3.png', 'enemychapter*.png', 'enemy_finnship.png', '*hull.png',
+  'sea/rock-*.png', 'sea/north-*.png', 'ship-hero/*_v3.png', 'enemychapter*.png', 'enemy_finnship.png', '*hull.png',
   // Achievements: every badge's art (256 px).
   'badges',
   'tackle-shop-page-bg.jpg', 'monofilament.png', 'braidedline.png', 'copolymer.png', 'fluorocarbon.png', 'titaniumwire.png', 'deepsealine.png',
