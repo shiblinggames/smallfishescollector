@@ -21,6 +21,9 @@ const RARITY_COLORS: Array = [Color("#8a857c"), Color("#3b8ef0"), Color("#a78bfa
 
 var session: Session
 var room: String = "recruit"
+## Moored at the Crew Hall (the building's room is shown only there; from
+## the expedition row it is the roster and the board).
+var at_hall: bool = true
 var _state: Dictionary = {}
 var _pick: Dictionary = {}
 var _pick_kind: String = ""
@@ -163,7 +166,12 @@ func _build_room() -> void:
 	for c: Node in _tabs.get_children():
 		c.queue_free()
 	var board_open: int = Js.list(_state.get("board")).filter(func(b: Dictionary) -> bool: return b["recruited"] != true).size()
-	for o: Array in [["recruit", "Recruit%s" % ("  %d" % board_open if board_open > 0 else "")], ["roster", "Roster  %d" % Js.list(_state.get("roster")).size()], ["hall", "The Hall"]]:
+	if room == "hall" and not at_hall:
+		room = "recruit"
+	var rooms: Array = [["recruit", "Recruit%s" % ("  %d" % board_open if board_open > 0 else "")], ["roster", "Roster  %d" % Js.list(_state.get("roster")).size()]]
+	if at_hall:
+		rooms.append(["hall", "The Hall"])
+	for o: Array in rooms:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == room)
 		b.custom_minimum_size = Vector2(110, 34)
 		b.pressed.connect(func() -> void:

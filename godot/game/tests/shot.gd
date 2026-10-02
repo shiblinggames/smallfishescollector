@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -295,6 +295,19 @@ func _init() -> void:
 			sea._boat.heading = 0.0
 			sea._boat.target = Vector2(1400, 14300)
 			for f: int in 90:
+				await process_frame
+		"crossing":
+			# North through the arch and back (run with --write-movie): the
+			# boat changes, the row changes, the name over the water.
+			sea._boat.position = Vector2(North.GATE_X, Explore.NORTH_WALL + 520.0)
+			sea._boat.heading = -PI / 2.0
+			for f: int in 20:
+				await process_frame
+			sea._boat.target = Vector2(North.GATE_X, Explore.NORTH_WALL - 900.0)
+			for f: int in 170:
+				await process_frame
+			sea._boat.target = Vector2(North.GATE_X, Explore.NORTH_WALL + 700.0)
+			for f: int in 170:
 				await process_frame
 		"film":
 			# One whole cast, for a film (run with --write-movie and --fixed-fps):

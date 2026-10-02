@@ -150,16 +150,54 @@ var _ship_wob: float = 0.0
 ## mirrored about the waterline through the hull-mirror shader, lying down and
 ## swaying. def: the rules' "ships" row; tex: the picture; wide: how much
 ## wider a skin's padded plate is drawn.
-func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float = 1.0) -> void:
+## THE CROSSING (Kong: "very satisfying and seamless"): with `animate`, a
+## pool of light blooms under her (gold going north, sea-blue coming home),
+## the hull she leaves fades down into the water and the one she takes rises
+## out of it, settling with a little overshoot.
+var _rise: float = 0.0
+var _swap_tw: Tween
+
+
+func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float = 1.0, animate: bool = false) -> void:
 	on_ship = on
-	skipper.visible = not on
-	if _ship_rig != null:
-		_ship_rig.queue_free()
-		_ship_mirror.queue_free()
-		_ship_rig = null
-		_ship_mirror = null
-		_ship = null
-	if not on or tex == null:
+	if _swap_tw != null and _swap_tw.is_valid():
+		_swap_tw.kill()
+	_rise = 0.0
+	var old_rig: Node2D = _ship_rig
+	var old_mirror: Node2D = _ship_mirror
+	_ship_rig = null
+	_ship_mirror = null
+	_ship = null
+	if animate:
+		_bloom(Color(1.0, 0.8, 0.45) if on else Color(0.45, 0.82, 1.0))
+		_swap_tw = create_tween().set_parallel()
+	# What she leaves: faded down into the water.
+	if on:
+		if animate:
+			_swap_tw.tween_property(skipper, "modulate:a", 0.0, 0.3)
+			_swap_tw.chain().tween_callback(func() -> void:
+				skipper.visible = false
+				skipper.modulate.a = 1.0)
+			_swap_tw.set_parallel()
+		else:
+			skipper.visible = false
+	for n: Node2D in [old_rig, old_mirror]:
+		if n == null:
+			continue
+		if animate:
+			var fade: Tween = n.create_tween()
+			fade.tween_property(n, "modulate:a", 0.0, 0.3)
+			fade.tween_callback(n.queue_free)
+		else:
+			n.queue_free()
+	# What she takes: risen out of it.
+	if not on:
+		skipper.visible = true
+		if animate:
+			skipper.modulate.a = 0.0
+			_swap_tw.tween_property(skipper, "modulate:a", 1.0, 0.5).set_delay(0.18)
+		return
+	if tex == null:
 		return
 	_ship_flip = def.get("seaFlip", false) == true
 	var box: float = 340.0 * wide
@@ -205,6 +243,28 @@ func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float
 	add_child(_ship_mirror)
 	move_child(_ship_mirror, 0)
 	_ship_base_y = 0.0
+	if animate:
+		_rise = 30.0
+		_ship_rig.modulate.a = 0.0
+		_ship_mirror.modulate.a = 0.0
+		_swap_tw.tween_property(_ship_rig, "modulate:a", 1.0, 0.45).set_delay(0.15)
+		_swap_tw.tween_property(_ship_mirror, "modulate:a", 1.0, 0.6).set_delay(0.25)
+		_swap_tw.tween_property(self, "_rise", 0.0, 0.7).set_delay(0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## A pool of light blooming under her and fading, for the crossing.
+func _bloom(col: Color) -> void:
+	var l: PointLight2D = PointLight2D.new()
+	l.texture = Glow.radial(256, col, true)
+	l.texture_scale = 3.2
+	l.color = col
+	l.energy = 0.0
+	l.position = Vector2(0, -10)
+	add_child(l)
+	var tw: Tween = l.create_tween()
+	tw.tween_property(l, "energy", 1.5, 0.18).set_ease(Tween.EASE_OUT)
+	tw.tween_property(l, "energy", 0.0, 0.9).set_trans(Tween.TRANS_SINE)
+	tw.tween_callback(l.queue_free)
 
 
 ## The Shipyard's refits and the boat's trim, from a profile.
@@ -304,10 +364,10 @@ func steer(input: Vector2, delta: float) -> void:
 		var bob: float = sin(Time.get_ticks_msec() / 1300.0) * 3.0
 		_ship_rig.scale.x = fx
 		_ship_rig.rotation = sin(Time.get_ticks_msec() / 900.0) * 0.012 * rough
-		_ship_rig.position.y = bob
+		_ship_rig.position.y = bob + _rise
 		_ship_mirror.scale.x = fx
 		_ship_mirror.rotation = -_ship_rig.rotation
-		_ship_mirror.position.y = _ship_mirror_y - bob * 0.75
+		_ship_mirror.position.y = _ship_mirror_y - bob * 0.75 - _rise * Skipper.LIE
 		_ship_wob += delta
 		_ship_mirror.skew = sin(_ship_wob * Skipper.MIRROR_RATE + _ship_phase) * Skipper.MIRROR_SHEAR + sin(_ship_wob * Skipper.MIRROR_RATE * 1.63 + _ship_phase * 2.1) * Skipper.MIRROR_SHEAR * 0.45
 

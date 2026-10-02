@@ -294,6 +294,7 @@ func _ready() -> void:
 	_course.hud = _hud
 	_hud.chart_pressed.connect(_open_chart)
 	_hud.locker_wanted.connect(_open_locker)
+	_hud.expedition_wanted.connect(_open_expedition)
 	_hud.course_autopilot.connect(_course.toggle_autopilot)
 	_hud.course_clear.connect(_course.clear)
 	hud_layer.add_child(_hud)
@@ -1053,6 +1054,7 @@ func _draw_north() -> void:
 func _ship_side() -> void:
 	var want: bool = North.ship_water(_boat.position)
 	if want == _boat.on_ship:
+		_sided = true
 		return
 	# Her ship as the web's chart draws it (lib/ships.ts; a skin's hull if worn).
 	var p: Dictionary = session.profile()
@@ -1069,17 +1071,49 @@ func _ship_side() -> void:
 			if by.has(str(tier)):
 				art = str(by[str(tier)])
 				wide = 0.969 / 0.651
-	_boat.set_ship(want, def, Skipper.tex(art), wide)
-	_field.ring(_boat.position, 140.0, 1.6, 0.6)
+	# The first time (opening the sea already north) is no crossing.
+	var crossing: bool = _sided
+	_sided = true
+	_boat.set_ship(want, def, Skipper.tex(art), wide, crossing)
+	_hud.set_side(want, crossing)
+	if not crossing:
+		return
+	# The water gives under her: rings running out, one after another.
+	for k: int in 3:
+		get_tree().create_timer(0.12 * k).timeout.connect(func() -> void:
+			if is_instance_valid(_boat):
+				_field.ring(_boat.position, 120.0 + 70.0 * k, 1.6 + 0.3 * k, 0.6 - 0.15 * k))
 	Rumble.buzz([0, 30, 30, 50])
 	Sound.bell()
 	if want:
-		_hud.toast("The boat changed under you: your %s. Expeditions are run from here." % str(def.get("name", "ship")))
+		_hud.side_banner("The Anchorage", "Your %s is under you" % str(def.get("name", "ship")))
 	else:
-		_hud.toast("Back on the fishing boat")
+		_hud.side_banner("The Fishing Grounds", "Back on your boat")
 
 
 var _gate_note_t: float = -99.0
+var _sided: bool = false
+
+
+## The expedition row (Crew, Recruits, Ship), north of the arch.
+func _open_expedition(what: String) -> void:
+	if _hud.busy():
+		return
+	var c: Control
+	if what == "ship":
+		var sh: ShipSheet = ShipSheet.new()
+		sh.session = session
+		sh.closed.connect(func() -> void: _hud.refresh())
+		c = sh
+	else:
+		var ch: CrewHall = CrewHall.new()
+		ch.session = session
+		ch.at_hall = false
+		ch.room = "roster" if what == "crew" else "recruit"
+		ch.closed.connect(func() -> void: _hud.refresh())
+		c = ch
+	_hud.hold_for(c)
+	_room_layer.add_child(c)
 var _crew_key: String = ""
 
 

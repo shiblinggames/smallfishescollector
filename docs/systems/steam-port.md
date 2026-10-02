@@ -693,7 +693,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   NIGHT PAPER: a tarred chart, warm-black (Paper.NIGHT_PAPER), cream ink, brass for what is
   chosen, dark buttons. A screen sets Paper.night while it builds and unsets it after; the
   sheet, buttons, rules and stats read it, and its own text uses Paper.ink() / ink_soft() /
-  ink_faint() / red(). Rarity and class colours are lightened on it rather than darkened. The northern islands (Crew Hall,
+  ink_faint() / red(). Rarity and class colours are lightened on it rather than darkened.
+- THE EXPEDITION SIDE OF THE HUD (Kong, 2026-10-02): the level bar stays on Fishing until
+  you pass under the arch's sign (North.ship_water, the same line as the change of boat),
+  not merely north of the Mainland. There the bottom row becomes the expedition's: CREW (the
+  roster), RECRUITS (the board; a dot when a fresh one is in) and SHIP (game/ship_sheet.gd);
+  Crew and Recruits open the Crew Hall from anywhere, without its building room
+  (CrewHall.at_hall), which is only shown moored at the hall. More join as voyages and raids
+  are ported. THE CROSSING (Kong: "very satisfying and seamless"): a pool of light under her
+  (gold north, sea-blue south), the boat she leaves fading down while the other rises out of
+  the water with an overshoot (Boat._rise), the water ringing out three times, the row she
+  leaves sinking away and the other rising a button at a time, the level bar crossfading,
+  and the side's name lettered over the water ("The Anchorage" / "The Fishing Grounds").
+  Opening the sea already on a side is no crossing (Sea._sided). The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the

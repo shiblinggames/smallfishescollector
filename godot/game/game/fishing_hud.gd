@@ -32,6 +32,8 @@ signal recall_pressed
 signal chart_pressed
 ## The Locker was asked for, on a tab (and a slot).
 signal locker_wanted(tab: String, slot: String)
+## North of the arch: "crew", "recruits" or "ship" (the Sea opens it).
+signal expedition_wanted(what: String)
 
 const HOLD_S: float = 0.62
 ## A perfect holds longer than a catch so the leap lands before the card.
@@ -45,6 +47,16 @@ var session: Session
 var boat: Boat
 var leave_label: String = "Captains"
 var water: Dictionary = {}
+## Past the arch's sign, on the expedition side (the Sea sets it with the
+## change of boat): the level bar reads Navigation and the bottom row is the
+## expedition's, not fishing's.
+var expedition: bool = false
+var _bottom_fish: HBoxContainer
+var _bottom_exp: HBoxContainer
+var _crew_val: Label
+var _recruit_val: Label
+var _ship_val: Label
+var _recruit_dot: Control
 var phase: String = "idle"
 
 var _shot: Dictionary = {}
@@ -258,6 +270,8 @@ func _ready() -> void:
 	var hv: Array = _menu(bottom, "Hold", _open_hold)
 	_m_hold = hv[0]
 	_hold = hv[1]
+	_bottom_fish = bottom
+	_build_expedition_row()
 	_blocked = Kit.lift(Kit.text(self, "", "small", Color("#f8a2a2")))
 	_blocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_blocked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -404,6 +418,124 @@ func _menu(parent: Control, key: String, on_press: Callable) -> Array:
 	return [b, v]
 
 
+## THE EXPEDITION SIDE'S ROW (Kong, 2026-10-02: "once you cross through,
+## the bottom menu items should swap to what is relevant for navigation"):
+## Crew (the roster), Recruits (the board, with a dot when new hopefuls are
+## in) and Ship. More join as voyages and raids are ported.
+func _build_expedition_row() -> void:
+	_bottom_exp = HBoxContainer.new()
+	_bottom_exp.alignment = BoxContainer.ALIGNMENT_CENTER
+	_bottom_exp.add_theme_constant_override("separation", 8)
+	_place(_bottom_exp, Vector2(0.5, 1.0), Vector2(-300, -72), Vector2(600, 54))
+	add_child(_bottom_exp)
+	var cv: Array = _menu(_bottom_exp, "Crew", func() -> void: expedition_wanted.emit("crew"))
+	_crew_val = cv[1]
+	var rv: Array = _menu(_bottom_exp, "Recruits", func() -> void: expedition_wanted.emit("recruits"))
+	_recruit_val = rv[1]
+	_recruit_dot = Control.new()
+	_recruit_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_recruit_dot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_recruit_dot.draw.connect(func() -> void:
+		if _recruit_dot.get_meta("on", false):
+			var p: Vector2 = Vector2(_recruit_dot.size.x - 14.0, 12.0)
+			var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 260.0)
+			_recruit_dot.draw_circle(p, 7.0 + pulse * 2.0, Color(0.95, 0.72, 0.3, 0.25))
+			_recruit_dot.draw_circle(p, 5.0, Color(0.95, 0.72, 0.3)))
+	(rv[0] as Control).add_child(_recruit_dot)
+	var sv: Array = _menu(_bottom_exp, "Ship", func() -> void: expedition_wanted.emit("ship"))
+	_ship_val = sv[1]
+	_bottom_exp.visible = false
+
+
+## Which side of the arch she is on: the row and the level bar follow.
+## With `animate` (a crossing, not opening the sea): the row she leaves sinks
+## away, and the other rises in a button at a time.
+var _side_tw: Tween
+
+
+func set_side(on_expedition: bool, animate: bool = false) -> void:
+	if expedition == on_expedition:
+		return
+	expedition = on_expedition
+	var going: HBoxContainer = _bottom_exp if not expedition else _bottom_fish
+	var coming: HBoxContainer = _bottom_exp if expedition else _bottom_fish
+	_update_action()
+	refresh()
+	if _side_tw != null and _side_tw.is_valid():
+		_side_tw.kill()
+	if not animate:
+		going.visible = false
+		coming.visible = true
+		return
+	var home_y: float = coming.position.y
+	_side_tw = create_tween()
+	_side_tw.set_parallel()
+	_side_tw.tween_property(going, "modulate:a", 0.0, 0.22)
+	_side_tw.tween_property(going, "position:y", going.position.y + 26.0, 0.22).set_ease(Tween.EASE_IN)
+	_side_tw.chain().tween_callback(func() -> void:
+		going.visible = false
+		going.modulate.a = 1.0
+		going.position.y = home_y
+		coming.visible = true
+		coming.position.y = home_y + 26.0
+		for b: Node in coming.get_children():
+			(b as Control).modulate.a = 0.0)
+	_side_tw.chain().tween_property(coming, "position:y", home_y, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var k: int = 0
+	for b: Node in coming.get_children():
+		_side_tw.parallel().tween_property(b, "modulate:a", 1.0, 0.25).set_delay(0.07 * k)
+		k += 1
+
+
+## The side she has crossed into, lettered over the water: its name large,
+## a line under it, rising in and fading after a moment.
+func side_banner(title: String, line: String) -> void:
+	var v: VBoxContainer = VBoxContainer.new()
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 2)
+	_place(v, Vector2(0.5, 0.5), Vector2(-400, -260), Vector2(800, 110))
+	add_child(v)
+	var t: Label = Kit.lift(Kit.text(v, title, "display", Color(0.98, 0.94, 0.85)))
+	t.add_theme_font_size_override("font_size", 48)
+	t.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	t.add_theme_constant_override("shadow_outline_size", 14)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var l: Label = Kit.lift(Kit.text(v, line, "eyebrow", Color(0.98, 0.84, 0.55)))
+	l.add_theme_font_size_override("font_size", 14)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.modulate.a = 0.0
+	v.position.y += 14.0
+	var tw: Tween = v.create_tween()
+	tw.set_parallel()
+	tw.tween_property(v, "modulate:a", 1.0, 0.45).set_delay(0.2)
+	tw.tween_property(v, "position:y", v.position.y - 14.0, 0.6).set_delay(0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_interval(1.6)
+	tw.chain().tween_property(v, "modulate:a", 0.0, 0.7)
+	tw.chain().tween_callback(v.queue_free)
+
+
+## The expedition row's words: crew aboard, the board, the ship.
+func _paint_expedition_row() -> void:
+	if _crew_val == null:
+		return
+	var p: Dictionary = session.profile()
+	var live: int = Crew.live(session.store).size()
+	var cap: int = Crew.capacity(Crew.nav_level(p), p.get("crew_hall_tier"))
+	_crew_val.text = "%d of %d aboard" % [live, cap]
+	var fresh: bool = not Crew.port().is_empty() and str(p.get("last_free_recruit_date", "")) != Crew.board_key(Clock.now_ms())
+	var open: int = Js.list(session.save.get("recruits")).filter(func(r: Dictionary) -> bool: return r.get("recruited") != true).size()
+	_recruit_val.text = "New hopefuls" if fresh else ("%d waiting" % open if open > 0 else "Board signed")
+	_recruit_dot.set_meta("on", fresh)
+	_recruit_dot.queue_redraw()
+	var tier: int = clampi(int(Js.num(p.get("ship_tier"))), 2, 6)
+	var nm: String = "Your ship"
+	for sd: Dictionary in Js.list(Rules.data().get("ships")):
+		if int(sd["tier"]) == tier:
+			nm = str(sd["name"])
+	_ship_val.text = nm
+
+
 func _box(at: Vector2, right: bool, w: float) -> VBoxContainer:
 	var b: VBoxContainer = VBoxContainer.new()
 	_place(b, Vector2(1.0 if right else 0.0, 0.0), at + (Vector2(-w, 0) if right else Vector2.ZERO), Vector2(w, 120))
@@ -447,6 +579,7 @@ func _streak() -> int:
 func refresh() -> void:
 	_drain_badges()
 	_paint_clues()
+	_paint_expedition_row()
 	var p: Dictionary = session.profile()
 	var lvl: int = session.level()
 	var table: Array = Rules.data()["xpTable"]
@@ -459,8 +592,8 @@ func refresh() -> void:
 		var hi: float = float(table[lvl])
 		frac = (xp - lo) / maxf(1.0, hi - lo)
 		left = hi - xp
-	if water.is_empty():
-		# North of the reef, in the harbour waters: the Navigation level.
+	if expedition:
+		# Through the arch, on the expedition side: the Navigation level.
 		var nxp: float = Js.num(p.get("expedition_xp"))
 		var nlv: int = Loadout.nav_level_from_xp(nxp)
 		var nt: Array = Rules.data()["navXpTable"]
@@ -1715,6 +1848,8 @@ func _process(delta: float) -> void:
 		_focus.color.a = lerpf(_focus.color.a, want, 1.0 - exp(-delta * (10.0 if want > 0.0 else 6.0)))
 	if _log_dot and _log_dot_c != null:
 		_log_dot_c.queue_redraw()
+	if _recruit_dot != null and _recruit_dot.get_meta("on", false):
+		_recruit_dot.queue_redraw()
 	if _zoom_t > 0.0:
 		_zoom_t -= delta
 		_zoom_l.modulate.a = clampf(_zoom_t / 0.5, 0.0, 1.0)
