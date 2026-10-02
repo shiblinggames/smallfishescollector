@@ -84,7 +84,8 @@ static func drift_r(at: Vector2, zone_id: String) -> float:
 	return 240.0 * 0.6
 
 ## The five waters, inside out. `sea` is the palette: deep, middle, lit.
-const WATERS: Array[Dictionary] = [
+## (Widened by core/sea_scale.gd when the port's rules load.)
+static var WATERS: Array[Dictionary] = [
 	{ "id": "shallows", "name": "The Shallows", "blurb": "Calm water, common fish", "inner": 1400.0, "outer": 3800.0, "sea": ["#123139", "#2a6165", "#60b9af"] },
 	{ "id": "open_waters", "name": "Open Waters", "blurb": "Further out, better catches", "inner": 3800.0, "outer": 6900.0, "sea": ["#0e2937", "#244f64", "#4c8fb4"] },
 	{ "id": "deep", "name": "The Deep", "blurb": "Long waits, real weight", "inner": 6900.0, "outer": 10900.0, "sea": ["#0a1e2d", "#183c55", "#3a6b91"] },
@@ -92,8 +93,21 @@ const WATERS: Array[Dictionary] = [
 	{ "id": "ancient_deep", "name": "The Ancient Deep", "blurb": "Giants, and worse", "inner": 16000.0, "outer": 22600.0, "sea": ["#07101a", "#16202f", "#31363f"] },
 ]
 const OPEN_SEA: Array[String] = ["#0b1a24", "#1c3a48", "#4a6f7d"]
-const LAST_OUTER: float = 22600.0
-const SHELF: Vector2 = Vector2(1400.0, 22600.0)
+static var LAST_OUTER: float = 22600.0
+static var SHELF: Vector2 = Vector2(1400.0, 22600.0)
+static var _widened: bool = false
+
+
+## Push every water's rings out by d (SeaScale.apply, once).
+static func widen(d: float) -> void:
+	if _widened:
+		return
+	_widened = true
+	for w: Dictionary in WATERS:
+		w["inner"] = float(w["inner"]) + d
+		w["outer"] = float(w["outer"]) + d
+	LAST_OUTER += d
+	SHELF = Vector2(SHELF.x + d, SHELF.y + d)
 
 
 ## The water this point is in, or {} on no fishing water.

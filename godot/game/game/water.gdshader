@@ -33,6 +33,8 @@ uniform float u_shadow = 1.0;
 uniform float u_swell = 1.0;
 uniform float u_rush = 0.0;
 uniform vec2 u_shelf = vec2(1400.0, 22600.0);
+// Where the sandy shallows' caustics fade out (widened with the sea).
+uniform vec2 u_sand = vec2(3000.0, 6200.0);
 uniform float u_lantern = 0.0;
 // THE DISTURBANCE (game/sea_field.gd): height from every wake, hull, cast and
 // splash, at half the screen's resolution.
@@ -180,7 +182,7 @@ void fragment() {
 	col *= shade;
 
 	// Caustics over the sandy shallows, by day.
-	float sandy = 1.0 - smoothstep(3000.0, 6200.0, length(world));
+	float sandy = 1.0 - smoothstep(u_sand.x, u_sand.y, length(world));
 	if (sandy > 0.01 && u_dark < 0.9) {
 		vec2 cw = w * 3.1 + vec2(swell * 1.5, swell * -0.9);
 		vec2 cwa = along_wind(cw, 0.44);

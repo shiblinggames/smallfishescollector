@@ -94,7 +94,7 @@ func _ready() -> void:
 
 
 func _fit_scale() -> float:
-	return minf(size.x / 47000.0, size.y / 30000.0) if size.x > 0.0 else 0.03
+	return minf(size.x / ((Chart.LAST_OUTER + 900.0) * 2.0), size.y / (Chart.LAST_OUTER + 9000.0)) if size.x > 0.0 else 0.03
 
 
 # ── Chrome: title, progress, layers, card, buttons ─────────────────────────────

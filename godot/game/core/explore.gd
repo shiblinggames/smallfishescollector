@@ -171,6 +171,17 @@ static func fog_decode(raw: Variant) -> PackedByteArray:
 	if raw == null or str(raw) == "":
 		return bits
 	var got: PackedByteArray = Marshalls.base64_to_raw(str(raw))
+	# A chart saved before the sea was widened (a smaller grid): each cell it
+	# had seen is carried to where that water is now (SeaScale).
+	var old_outer: float = _outer() - SeaScale.d
+	var old_w: int = int(ceil(old_outer * 2.0 / FOG_CELL))
+	var old_h: int = int(ceil((old_outer - NORTH_WALL) / FOG_CELL))
+	if SeaScale.d > 0.0 and got.size() == int(ceil(old_w * old_h / 8.0)) and got.size() != bits.size():
+		for i: int in old_w * old_h:
+			if (got[i >> 3] & (1 << (i & 7))) != 0:
+				var c: Vector2 = Vector2(-old_outer + (i % old_w + 0.5) * FOG_CELL, NORTH_WALL + (i / old_w + 0.5) * FOG_CELL)
+				fog_set(bits, fog_index(SeaScale.expand(c).x, SeaScale.expand(c).y))
+		return bits
 	for i: int in mini(got.size(), bits.size()):
 		bits[i] = got[i]
 	return bits

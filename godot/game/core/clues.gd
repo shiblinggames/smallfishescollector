@@ -73,7 +73,7 @@ static func bottles(now: float) -> Array:
 		tries += 1
 		# Anywhere on the fishing side: a radius (weighted to the wider, outer
 		# rings a little less than area would) and an angle south of the reef.
-		var r: float = lerpf(1700.0, Chart.LAST_OUTER - 500.0, pow(rnd.next(), 0.8))
+		var r: float = lerpf(float(Chart.WATERS[0]["inner"]) + 300.0, Chart.LAST_OUTER - 500.0, pow(rnd.next(), 0.8))
 		var ang: float = lerpf(0.05, PI - 0.05, rnd.next())
 		var x: float = cos(ang) * r
 		var y: float = sin(ang) * r

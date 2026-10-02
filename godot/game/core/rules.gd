@@ -68,6 +68,7 @@ static func data() -> Dictionary:
 		_d = JsJson.parse(FileAccess.get_file_as_string("res://content/rules.json"))
 		if not web_only and FileAccess.file_exists("res://content/port_rules.json"):
 			_merge(_d, JsJson.parse(FileAccess.get_file_as_string("res://content/port_rules.json")))
+			SeaScale.apply(_d)
 	return _d
 
 

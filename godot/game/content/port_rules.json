@@ -1610,5 +1610,7 @@
       "ancient_deep-4": "Nobody claims me, south-west in the Ancient Deep.",
       "ancient_deep-5": "Drop the lead here and it keeps on falling, at the western edge of the Ancient Deep."
     }
-  }
+  },
+  "_seaExpand": "THE SEA WIDENED (Kong, 2026-10-02): everything past the Mainland's water (1,400 out) on the fishing side sits this much further out; the waters keep their widths. core/sea_scale.gd.",
+  "seaExpand": 1000
 }

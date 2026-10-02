@@ -365,6 +365,8 @@ func _process(delta: float) -> void:
 	# moonlight.
 	var shadow_k: float = smoothstep(0.02, 0.2, elev) * (0.4 if sky["moon"] else 1.0)
 	_water.set_shader_parameter("u_dark", dark)
+	_water.set_shader_parameter("u_shelf", Chart.SHELF)
+	_water.set_shader_parameter("u_sand", Vector2(3000.0, 6200.0) + Vector2.ONE * SeaScale.d)
 	_water.set_shader_parameter("u_warm", warm)
 	_water.set_shader_parameter("u_light", toward)
 	_water.set_shader_parameter("u_sun_h", elev)
@@ -703,8 +705,9 @@ func _night_water(dark: float, at: Vector2) -> void:
 	_water.set_shader_parameter("u_lamp_n", lamps.size())
 	var blooms: Array[Vector4] = []
 	for b: Array in BLOOMS:
-		if blooms.size() < 4 and Vector2(float(b[0]), float(b[1])).distance_to(at) < float(b[2]) + 2600.0:
-			blooms.append(Vector4(b[0], b[1], b[2], 1.0))
+		var bp: Vector2 = SeaScale.expand(Vector2(float(b[0]), float(b[1])))
+		if blooms.size() < 4 and bp.distance_to(at) < float(b[2]) + 2600.0:
+			blooms.append(Vector4(bp.x, bp.y, b[2], 1.0))
 	while blooms.size() < 4:
 		blooms.append(Vector4(0, 0, 0, 0))
 	_water.set_shader_parameter("u_blooms", blooms)

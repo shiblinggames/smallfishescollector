@@ -616,6 +616,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
 - THE FISHING GUIDE MOVED (Kong: "it does not belong in the Locker"): game/levels_sheet.gd,
   a paper sheet over the sea opened by pressing the level bar (FishingHud.open_guide); the
   Locker's Levels tab is gone.
+- THE SEA WIDENED (Kong, 2026-10-02: "the Shallows start too close to the Mainland; an overall
+  expansion is fine"): core/sea_scale.gd. Everything on the fishing side past 1,400 out moves
+  port_rules seaExpand (1,000) further out along its bearing, so the Shallows now run 2,400 to
+  4,800 and every water keeps its width. Applied once when the port's rules load: the waters'
+  rings (Chart.WATERS is a static var, widened by Chart.widen), the isles, buried sites,
+  buyers, regulars' moorings, currents and kelp, the traders' reach, the blooms and the sandy
+  caustics; hotspots and bottles follow the rings. A chart saved on the old grid is carried
+  over cell by cell (Explore.fog_decode). Never under parity (web tables alone).
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules
