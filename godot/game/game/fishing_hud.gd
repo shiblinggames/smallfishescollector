@@ -1679,18 +1679,32 @@ func _catch_note(r: Dictionary, perfect: bool) -> void:
 	for n: Array in news:
 		Kit.text(col, "★ " + str(n[0]), "small", n[1])
 	await get_tree().process_frame
-	var at: Vector2 = boat.get_parent().get_global_transform_with_canvas() * boat.position
-	note.position = at + Vector2(-note.size.x / 2.0, -150.0 - note.size.y)
+	# SMOOTH, AND WITH HER (Kong, 2026-10-02: it stuttered): it rides over
+	# the boat every frame as she sails, rising quickly into place and then
+	# holding still, never a slow crawl (a control creeping a pixel every few
+	# frames is what stuttered: they snap to whole pixels).
 	note.pivot_offset = note.size / 2.0
-	note.scale = Vector2(0.8, 0.8)
+	note.scale = Vector2(0.86, 0.86)
 	note.modulate.a = 0.0
 	var hold: float = 2.0 + 0.8 * news.size()
+	var rise: Array = [0.0]
+	var place: Callable = func() -> void:
+		if not is_instance_valid(note) or not is_instance_valid(boat):
+			return
+		var at: Vector2 = boat.get_parent().get_global_transform_with_canvas() * boat.position
+		note.position = (at + Vector2(-note.size.x / 2.0, -150.0 - note.size.y - rise[0])).round()
+	place.call()
+	get_tree().process_frame.connect(place)
+	note.tree_exiting.connect(func() -> void: get_tree().process_frame.disconnect(place))
 	var tw: Tween = note.create_tween()
 	tw.set_parallel()
 	tw.tween_property(note, "modulate:a", 1.0, 0.18)
-	tw.tween_property(note, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(note, "position:y", note.position.y - 18.0, hold + 0.5).set_trans(Tween.TRANS_SINE)
-	tw.chain().tween_property(note, "modulate:a", 0.0, 0.5)
+	tw.tween_property(note, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(v: float) -> void: rise[0] = v, -14.0, 0.0, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_interval(hold)
+	tw.chain().set_parallel()
+	tw.tween_property(note, "modulate:a", 0.0, 0.45)
+	tw.tween_method(func(v: float) -> void: rise[0] = v, 0.0, 22.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	tw.chain().tween_callback(note.queue_free)
 
 

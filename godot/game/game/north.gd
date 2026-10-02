@@ -37,12 +37,10 @@ const SHINGLE: Array = [["sea/north-reef-7.png", 160.0, 300.0], ["sea/north-reef
 ## The anchorage's wall: older, darker basalt.
 const WALL: Array = [["sea/north-wall-1.png", 480.0, 660.0], ["sea/north-wall-2.png", 340.0, 460.0], ["sea/north-wall-3.png", 420.0, 580.0], ["sea/north-wall-4.png", 420.0, 560.0]]
 const WALL_SHINGLE: Array = [["sea/north-wall-5.png", 170.0, 320.0], ["sea/north-wall-3.png", 160.0, 280.0], ["sea/north-reef-8.png", 180.0, 300.0]]
-## The arch: one picture over the passage; its opening is 0.25 to 0.81 of its
+## The arch: one picture over the passage; its opening is 0.26 to 0.83 of its
 ## width, and its far (right) footing stands higher in the picture than the near.
 const ARCH: String = "sea/north-arch.png"
 const ARCH_WIDE: float = 1600.0
-## The middle of the hanging board in the arch's picture (fractions).
-const ARCH_BOARD: Vector2 = Vector2(0.546, 0.432)
 
 
 ## Is this point north of the reef (the anchorage)?
@@ -99,7 +97,7 @@ static func rocks() -> Array:
 				out.append([b[0], x + jx, nw + jy, b[1] + rnd.next() * (b[2] - b[1])])
 			x += REEF_STEP
 	# The arch over the passage, and a stack behind either footing.
-	out.append([ARCH, GATE_X - ARCH_WIDE * 0.03, nw + 60.0, ARCH_WIDE])
+	out.append([ARCH, GATE_X - ARCH_WIDE * 0.045, nw + 60.0, ARCH_WIDE])
 	for side: float in [-1.0, 1.0]:
 		out.append(["sea/north-reef-3.png", GATE_X + side * (ARCH_WIDE * 0.5 + 120.0), nw - 120.0, 380.0])
 	# The shingle, packed tight.

@@ -1063,27 +1063,6 @@ func _draw_north() -> void:
 			ring.offset = s.offset
 			holder.add_child(ring)
 		holder.add_child(s)
-	# The arch's board says where it goes, painted on in the board's ink.
-	var at: Texture2D = Skipper.tex(North.ARCH)
-	if at != null:
-		var foot: float = Skipper._band(at).y
-		var board: Node2D = Node2D.new()
-		board.position = Vector2(North.GATE_X - North.ARCH_WIDE * 0.03 + North.ARCH_WIDE * (North.ARCH_BOARD.x - 0.5), Explore.NORTH_WALL + 60.0 - (foot - North.ARCH_BOARD.y) * at.get_height() * North.ARCH_WIDE / at.get_width() / Chart.GROUND)
-		board.scale = Vector2(1.0, 1.0 / Chart.GROUND)
-		board.z_index = 5
-		_world.add_child(board)
-		var bl: Label = Kit.text(null, "The
-Anchorage", "display", Color(0.2, 0.13, 0.08, 0.92))
-		bl.add_theme_font_size_override("font_size", 17)
-		bl.add_theme_constant_override("line_spacing", -12)
-		bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		bl.clip_text = false
-		bl.autowrap_mode = TextServer.AUTOWRAP_OFF
-		bl.size = bl.get_minimum_size()
-		# The board hangs a little askew, its right end higher.
-		board.rotation = deg_to_rad(-5.0)
-		board.add_child(bl)
-		bl.position = -bl.get_minimum_size() / 2.0
 	for sign: Array in [["The Sea Gate", North.SEA_GATE + Vector2(0, 520.0)]]:
 		var holder: Node2D = Node2D.new()
 		holder.position = sign[1]

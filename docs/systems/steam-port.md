@@ -631,9 +631,9 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Kie.ai from nano-banana-2/prompts/north-*.json (blue-grey island-rim stone, painted from the
   camera's three-quarter angle, the wall darker basalt), keyed on magenta HARD 35 / SOFT 8.
   The same seeds place them, so the layout is the web's; the picture at each spot is not. The
-  arch is ONE picture over the passage (ARCH_WIDE 1,600, opening 0.25 to 0.81 of it), anchored
-  at its near foot so a hull past that foot draws behind the span; its board carries "The
-  Anchorage" in ink. Every rock stands in the water as the boats do (fx/waterline with a calm
+  arch is ONE picture over the passage (ARCH_WIDE 1,600, opening 0.26 to 0.83 of it), anchored
+  at its near foot so a hull past that foot draws behind the span. NO SIGN on it (Kong: a
+  board with "The Anchorage" on it "shouldn't be there"). Every rock stands in the water as the boats do (fx/waterline with a calm
   lap_amp 0.4, plus a collar; the arch has no collar and a sloped waterline, its far foot
   higher). The reef runs the chart's width at NORTH_WALL with one gap, the arch (GATE_X -900,
   half 430); the anchorage is the disc of 3,600 from (0, -3000), walled wherever north of the
