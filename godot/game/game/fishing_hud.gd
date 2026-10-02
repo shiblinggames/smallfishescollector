@@ -440,6 +440,8 @@ func _streak() -> int:
 
 ## Everything read off the save: the purse, the level, the streak, the bait, the hold.
 func refresh() -> void:
+	_drain_badges()
+	_paint_clues()
 	var p: Dictionary = session.profile()
 	var lvl: int = session.level()
 	var table: Array = Rules.data()["xpTable"]
@@ -923,6 +925,132 @@ func show_zoom(z: float) -> void:
 	_zoom_t = 1.6
 
 
+# ── Treasure hunts ───────────────────────────────────────────────────────────
+
+var _clues_box: VBoxContainer
+var _clues_sig: String = "-"
+
+
+## The clues in hand, at the left: tier, step, and what it says.
+func _paint_clues() -> void:
+	if not Clues.on():
+		return
+	var p: Dictionary = session.profile()
+	var hunts: Array = Clues.hunts(p)
+	var sig: String = JSON.stringify(hunts)
+	if sig == _clues_sig:
+		return
+	_clues_sig = sig
+	if _clues_box == null:
+		_clues_box = VBoxContainer.new()
+		_clues_box.add_theme_constant_override("separation", 8)
+		_clues_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_place(_clues_box, Vector2(0.0, 0.0), Vector2(20, 104), Vector2(330, 0))
+		add_child(_clues_box)
+	for c: Node in _clues_box.get_children():
+		c.queue_free()
+	for th: Array in hunts:
+		var h: Dictionary = th[1]
+		var s: Dictionary = (h["steps"] as Array)[int(h["step"])]
+		var v: VBoxContainer = VBoxContainer.new()
+		v.add_theme_constant_override("separation", 1)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_clues_box.add_child(v)
+		var e: Label = Kit.lift(Kit.text(v, "%s CLUE  ·  STEP %d OF %d" % [Clues.TIER_NAME[th[0]].to_upper(), int(h["step"]) + 1, (h["steps"] as Array).size()], "eyebrow", Color(0.98, 0.84, 0.55)))
+		e.add_theme_font_size_override("font_size", 11)
+		var t: Label = Kit.lift(Kit.text(v, str(s["text"]), "small", Color(0.97, 0.93, 0.85), true))
+		t.custom_minimum_size = Vector2(330, 0)
+
+
+# ── Achievements ─────────────────────────────────────────────────────────────
+
+## [title, line, art] waiting to be shown, one at a time.
+var _badge_q: Array = []
+var _badge_t: float = 0.0
+
+
+## What the rules just earned (Achievements.sweep queues it in the save),
+## taken off the save and shown as notes. A great many at once (a save from
+## before achievements) is one note.
+func _drain_badges() -> void:
+	var q: Array = Js.list(session.save.get("badges_new"))
+	if q.is_empty():
+		return
+	session.save.erase("badges_new")
+	var pts: Dictionary = Rules.data()["badgePoints"]
+	var defs: Dictionary = {}
+	for d: Dictionary in Achievements.defs():
+		defs[d["id"]] = d
+	var badges: Array = q.filter(func(x: Variant) -> bool: return not str(x).begins_with("color:"))
+	var cols: Array = q.filter(func(x: Variant) -> bool: return str(x).begins_with("color:"))
+	if badges.size() > 3:
+		var sum: float = 0.0
+		for b: Variant in badges:
+			sum += float(pts.get(b, 0.0))
+		_badge_q.append(["ACHIEVEMENTS", "%d achievements" % badges.size(), "+%d points  ·  see them in the Locker, Levels" % int(sum), null])
+	else:
+		for b: Variant in badges:
+			var d: Dictionary = defs.get(b, {})
+			_badge_q.append(["ACHIEVEMENT", str(d.get("name", b)), "+%d point%s  ·  %s" % [int(pts.get(b, 0.0)), "" if int(pts.get(b, 0.0)) == 1 else "s", d.get("description", "")], Skipper.tex(d.get("imageUrl"))])
+	for c: Variant in cols:
+		var cid: String = str(c).trim_prefix("color:")
+		var nm: String = cid.capitalize()
+		for cc: Dictionary in Rules.data()["characterColors"]:
+			if cc["id"] == cid:
+				nm = cc["name"]
+		_badge_q.append(["UNLOCKED", "New colour: %s" % nm, "Earned with achievement points. Wear it from the Locker, Look.", Skipper.look_art(cid)])
+
+
+var _badge_note: Control
+
+
+func _badge_step(delta: float) -> void:
+	_badge_t -= delta
+	if _badge_t > 0.0 or _badge_q.is_empty():
+		return
+	var n: Array = _badge_q.pop_front()
+	_badge_t = 3.2
+	if _badge_note != null and is_instance_valid(_badge_note):
+		_badge_note.queue_free()
+	var note: Pane = Kit.pane(self, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(0.55, 0.42, 0.1, 0.6)], "shadow": [Color(0, 0, 0, 0.35), 14, Vector2(0, 4)], "pad": [12, 8, 16, 8], "paper": true })
+	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_badge_note = note
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	note.add_child(row)
+	if n[3] != null:
+		var pic: TextureRect = TextureRect.new()
+		pic.texture = n[3]
+		pic.custom_minimum_size = Vector2(48, 48)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(pic)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(col)
+	Kit.text(col, n[0], "eyebrow", Color(0.55, 0.42, 0.1))
+	Kit.text(col, n[1], "name", Kit.PAPER_INK).add_theme_font_size_override("font_size", 16)
+	var line: Label = Kit.text(col, n[2], "note", Kit.PAPER_INK_SOFT)
+	line.custom_minimum_size = Vector2(300, 0)
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Sound.chest(false)
+	await get_tree().process_frame
+	if not is_instance_valid(note):
+		return
+	note.position = Vector2(size.x - note.size.x - 24.0, 150.0)
+	note.modulate.a = 0.0
+	var tw: Tween = note.create_tween()
+	tw.tween_property(note, "modulate:a", 1.0, 0.25)
+	tw.parallel().tween_property(note, "position:x", note.position.x, 0.3).from(note.position.x + 40.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(2.5)
+	tw.tween_property(note, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(note.queue_free)
+
+
 func toast(text: String) -> void:
 	# Under the boat while the dial is up (it sits where toasts go).
 	if _dial != null and _dial.visible:
@@ -1285,6 +1413,11 @@ func _fish_card(r: Dictionary, perfect: bool) -> void:
 		_wire(card)
 	else:
 		_catch_note(r, perfect)
+	# The catch a treasure hunt asked for.
+	for st: Variant in Js.list(r.get("clueSteps")):
+		var sd: Dictionary = st
+		if sd.get("ok", false) and sd.has("next"):
+			_badge_q.append(["%s CLUE  ·  STEP %d OF %d" % [Clues.TIER_NAME[sd["tier"]].to_upper(), int(sd["stepNo"]), int(sd["of"])], "That is the fish", str(sd["next"]["text"]), Skipper.tex("sea/sea-bottle.png")])
 	# The Log has something new to show.
 	if r.get("isNewSpecies") == true or r.get("isPB") == true or str(r.get("sizeTier", "")) == "trophy" or r.get("isShiny") == true:
 		_log_dot = true
@@ -1542,6 +1675,7 @@ func _focus_on(on: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	_badge_step(delta)
 	if _focus != null:
 		var want: float = 0.42 if _dial.visible else 0.0
 		_focus.color.a = lerpf(_focus.color.a, want, 1.0 - exp(-delta * (10.0 if want > 0.0 else 6.0)))

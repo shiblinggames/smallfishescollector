@@ -110,6 +110,8 @@ const rules = {
   characterColors: CHARACTER_COLORS.map(c => ({ id: c.id, name: c.name, free: c.free ?? false, gate: c.gate ?? null })),
   petOverlays: PET_OVERLAYS,
   badgePoints: Object.fromEntries(BADGES.map(b => [b.id, badgePoints(b.id)])),
+  // Every badge as the Achievements page lists it (the port shows the ones its systems can earn).
+  badges: BADGES.map(b => ({ id: b.id, name: b.name, description: b.description, imageUrl: b.imageUrl, difficulty: b.difficulty })),
   apPool: AP_POOL,
   navXpTable: NAV_XP_TABLE,
   shinySellMult: SHINY_SELL_MULT,

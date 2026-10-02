@@ -16,6 +16,28 @@ extends RefCounted
 ## Run one call. Returns the result (a dictionary, or null where the TS returned
 ## nothing), or the string "not ported".
 static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
+	var out: Variant = _run(db, uid, op, a)
+	# A catch may answer a treasure hunt's step (port rules).
+	if op == "reelIn" and out is Dictionary and (out as Dictionary).get("caught") == true and Clues.on():
+		var fish: Dictionary = Js.obj((out as Dictionary).get("fish"))
+		if fish.has("id"):
+			var steps: Array = Clues.on_catch(db, uid, float(fish["id"]))
+			if not steps.is_empty():
+				(out as Dictionary)["clueSteps"] = steps
+	# Achievements are earned on state: check after anything that may have
+	# changed it (port rules; never under the parity run).
+	if not READS.has(op):
+		var got: Array = Achievements.sweep(db, uid)
+		if not got.is_empty():
+			db.save["badges_new"] = Js.list(db.save.get("badges_new")) + got
+	return out
+
+
+## Calls that change nothing.
+const READS: Array = ["folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden"]
+
+
+static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 	match op:
 		"castLine": return Fishing.cast_line(db, uid, a[0], a[1], a[2] if a.size() > 2 else null)
 		"reelIn": return Fishing.reel_in(db, uid, float(a[0]), a[1], a[2])
@@ -74,6 +96,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 		"goAshore": return Explore.go_ashore(db, uid, a[0])
 		"digHere": return Explore.dig_here(db, uid, a[0])
 		"openBottle": return Explore.open_bottle(db, uid, a[0])
+		"clueSearch": return Clues.search(db, uid, a[0])
 		"getDigState": return Explore.get_dig_state(db, uid)
 		"saveSeaPosition": return Explore.save_sea_position(db, uid, float(a[0]), float(a[1]), a[2] if a.size() > 2 else [])
 		"setSeaPos":

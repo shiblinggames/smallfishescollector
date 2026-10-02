@@ -810,6 +810,9 @@ func _finds(delta: float, now: float, lift: Color) -> void:
 		var h: SeaFinds.DigHint = _digs[id]
 		var d: float = at.distance_to(h.position)
 		h.strength = clampf((Explore.DIG_HINT_RANGE - d) / 480.0, 0.0, 1.0) if not _dug(id) else 0.0
+		# A buried site shows itself only to a hunt that points at it.
+		if Clues.on() and Clues.dig_open(session.profile(), id) == "":
+			h.strength = 0.0
 		# Something on the bottom: bubbles breaking the surface over it, more
 		# of them and stronger the closer she is.
 		if h.strength > 0.0:
@@ -819,12 +822,13 @@ func _finds(delta: float, now: float, lift: Color) -> void:
 				var off: Vector2 = Vector2(randf_range(-55.0, 55.0), randf_range(-35.0, 35.0))
 				_field.ring(h.position + off, randf_range(26.0, 58.0), 1.2, 0.25 + 0.4 * h.strength)
 	_bottle_t += delta
-	var win: int = Explore.bottle_window(now)
+	var win: int = Clues.sea_day(now) if Clues.on() else Explore.bottle_window(now)
 	if _bottle_t > 10.0 or win != _bottle_win:
 		_bottle_t = 0.0
 		_bottle_win = win
 		var want: Dictionary = {}
-		for b: Dictionary in Explore.bottles_around(at.x, at.y, 5200.0, now):
+		var near: Array = Clues.bottles_near(session.profile(), at.x, at.y, 5200.0, now) if Clues.on() else Explore.bottles_around(at.x, at.y, 5200.0, now)
+		for b: Dictionary in near:
 			if not _taken.has(b["key"]):
 				want[b["key"]] = b
 		for k: String in _bottles.keys():
@@ -849,18 +853,75 @@ func _dug(site_id: String) -> bool:
 ## The nearest thing to do out here: an isle to land on, a site to dig, a
 ## bottle to fish out. [label, action] or null.
 func _find_in_reach(at: Vector2) -> Variant:
+	var clue: Variant = _clue_in_reach(at)
+	if clue != null:
+		return clue
 	var isle: Dictionary = Explore.isle_near(at.x, at.y)
 	if not isle.is_empty():
 		var been: bool = Js.includes(session.save.get("discoveries", []), isle["id"])
 		return [("Look again at %s" if been else "Go ashore at %s") % isle["name"], _land.bind(isle)]
 	var site: Dictionary = Explore.dig_at(at.x, at.y)
-	if not site.is_empty() and not _dug(site["id"]):
+	if not site.is_empty() and not Clues.on() and not _dug(site["id"]):
 		return ["Drop the grapple", _dig.bind(site)]
 	for k: String in _bottles:
 		var bn: SeaFinds.BottleNode = _bottles[k]
 		if at.distance_to(bn.position) < Explore.BOTTLE_REACH:
 			return ["Take the bottle", _bottle.bind(bn.bottle)]
 	return null
+
+
+## A treasure hunt's step she has reached: [label, action] or null. A dig is
+## the hunt's last step and the only way a site is found (port rules).
+func _clue_in_reach(at: Vector2) -> Variant:
+	if not Clues.on():
+		return null
+	var p: Dictionary = session.profile()
+	for th: Array in Clues.hunts(p):
+		var tier: String = th[0]
+		var s: Dictionary = Clues.current(p, tier)
+		match s.get("kind", ""):
+			"bearing":
+				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < Clues.SEARCH_RANGE:
+					return ["Search here  ·  %s clue" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
+			"riddle":
+				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < float(s["r"]) + Clues.SEARCH_RANGE:
+					return ["Search here  ·  %s clue" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
+			"dig":
+				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < Clues.SEARCH_RANGE:
+					return ["Dig here  ·  %s clue" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
+			"speak":
+				var w: Variant = _regulars.get("folk:%s" % s["folk"])
+				if w != null and (w as Wanderer).near(at):
+					return ["Ask %s about the clue" % (w as Wanderer).info["name"], _clue_search.bind(tier)]
+	return null
+
+
+func _clue_search(tier: String) -> void:
+	Rumble.tap(14)
+	await _flush_position()
+	var r: Variant = await session.act("clueSearch", [tier])
+	session.persist()
+	if not r is Dictionary or not (r as Dictionary).get("ok", false):
+		_hud.toast(str((r as Dictionary).get("error", "Nothing here.")) if r is Dictionary else "Nothing here.")
+		return
+	var res: Dictionary = r
+	if res.get("done", false):
+		var haul: Array = []
+		if Js.num(res.get("doubloons")) > 0:
+			haul.append([res["doubloons"], "doubloons"])
+		var lines: Array = [["The %s hunt is done. The casket held:" % tier, "note"]]
+		for b: Variant in Js.obj(res.get("bait")):
+			lines.append(["%d %s" % [int(res["bait"][b]), Rules.bait(str(b)).get("name", b)], "body_strong"])
+		for c: Variant in Js.obj(res.get("crates")):
+			var cname: String = str((CrateMoment.TIERS.get(c, [str(c).capitalize()]) as Array)[0])
+			var cn: int = int(res["crates"][c])
+			lines.append([("%s, stowed in your Locker" % cname) if cn == 1 else ("%d of the %s, stowed in your Locker" % [cn, cname]), "body_strong"])
+		Sound.chest(true)
+		_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Hauled up from the bottom", "%s casket" % Clues.TIER_NAME[tier], lines, haul))
+	else:
+		Sound.bell()
+		_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "%s clue  ·  step %d of %d" % [Clues.TIER_NAME[tier], int(res["stepNo"]), int(res["of"])], "The next step", [[str(res["next"]["text"]), "body_strong"]], []))
+	_hud.refresh()
 
 
 func _land(isle: Dictionary) -> void:
@@ -912,12 +973,23 @@ func _bottle(b: Dictionary) -> void:
 	await _flush_position()
 	var r: Variant = await session.act("openBottle", [b["key"]])
 	session.persist()
+	# Holding a clue of its tier: it is left where it floats.
+	if r is Dictionary and (r as Dictionary).get("held", false):
+		_hud.toast(str(r["error"]))
+		return
 	_taken[b["key"]] = true
 	if _bottles.has(b["key"]):
 		(_bottles[b["key"]] as Node).queue_free()
 		_bottles.erase(b["key"])
 	if not r is Dictionary or not (r as Dictionary).get("ok", false):
 		_hud.toast(str((r as Dictionary).get("error", "It slipped out of your hands. Try that one again.")) if r is Dictionary else "It slipped out of your hands. Try that one again.")
+		return
+	if Clues.on():
+		var hunt: Dictionary = r["hunt"]
+		Sound.bell()
+		_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "Fished out of the water", "%s clue" % Clues.TIER_NAME[r["tier"]],
+			[["A treasure hunt: %d steps, then a dig. Your clues are listed at the left of the screen." % (hunt["steps"] as Array).size(), "note"], ["Step 1: %s" % r["step"]["text"], "body_strong"]], []))
+		_hud.refresh()
 		return
 	var lines: Array = [[str(r["text"]), "note"]]
 	var title: String = "A note in a bottle"

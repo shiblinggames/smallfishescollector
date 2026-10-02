@@ -176,8 +176,17 @@ func _init() -> void:
 	await process_frame
 	var site: Dictionary = (Rules.data()["digSites"] as Array)[0]
 	sea._boat.position = Vector2(float(site["x"]), float(site["y"]))
-	await sea._dig(site)
-	check(sea._dug(site["id"]), "a dig is dug")
+	if Clues.on():
+		# A site is dug only as a hunt's last step (port rules): a hunt on it.
+		var hunt: Dictionary = Clues.make_hunt("easy", 31, sea.session.save)
+		hunt["steps"] = [{ "kind": "dig", "site": site["id"], "x": float(site["x"]), "y": float(site["y"]), "text": "X marks it." }]
+		p["clue_hunts"] = { "easy": hunt }
+		var before: float = Js.num(p.get("clues_done"))
+		await sea._clue_search("easy")
+		check(Js.num(p.get("clues_done")) == before + 1.0, "a hunt's dig is dug and its casket opened")
+	else:
+		await sea._dig(site)
+		check(sea._dug(site["id"]), "a dig is dug")
 	for c: Node in sea._room_layer.get_children():
 		c.queue_free()
 	await process_frame

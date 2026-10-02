@@ -305,6 +305,9 @@ static func _add_dig_bearing(db: CaptainStore, site_id: String) -> String:
 
 
 static func open_bottle(db: CaptainStore, uid: String, key: String) -> Dictionary:
+	# Port rules: a bottle is a clue (core/clues.gd).
+	if Clues.on():
+		return Clues.take_bottle(db, uid, key)
 	var bottle: Dictionary = bottle_from_key(key, Clock.now_ms())
 	if bottle.is_empty():
 		return { "ok": false, "error": "The tide took it." }
@@ -336,6 +339,12 @@ static func open_bottle(db: CaptainStore, uid: String, key: String) -> Dictionar
 
 
 static func dig_here(db: CaptainStore, uid: String, site_id: String) -> Dictionary:
+	# Port rules: a site is dug only as a treasure hunt's last step.
+	if Clues.on():
+		var tier: String = Clues.dig_open(db.me(uid), site_id)
+		if tier == "":
+			return { "ok": false, "error": "There is nothing here." }
+		return Clues.search(db, uid, tier)
 	var site: Dictionary = dig_site(site_id)
 	if site.is_empty():
 		return { "ok": false, "error": "There is nothing here." }

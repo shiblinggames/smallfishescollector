@@ -567,6 +567,27 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   is now ~70-90 ms. Full paintings load only for one fish's page. The Locker no longer
   pushes the camera in on the Log tab (the book covers the screen; the push in and back out
   read as a strange zoom).
+- ACHIEVEMENTS, BUILT (Kong, 2026-10-02; the 2026-09-30 decision): core/achievements.gd.
+  Badges pay ONLY points (1 rookie to 5 grandmaster). The 81 badges the port's systems can
+  earn are checked on STATE after every action (RulesApi.run sweeps; never under parity)
+  and queued in save "badges_new" for the HUD's notes (many at once read as one note).
+  CAPTAIN COLOURS COME ONLY FROM POINTS (Kong: "skin colours only come from achievements"):
+  port_rules achievements.colors, 18 milestones from 5 to 236 points (the port's whole pool
+  today; stretch them as more systems port). Removed from crates, levels
+  (fishingColorsByLevel all empty) and every other road; the four starters stay free. The
+  Locker's Levels tab has an Achievements view: points, the colour track, every badge in ink
+  or grey pencil. The rules export now carries the badge list (rules.json "badges").
+- TREASURE HUNTS (Kong, 2026-10-02: "bottles like RuneScape clue scrolls; the dig is the
+  final step; never come across a dig spot except on a hunt"): core/clues.gd. 3 to 5
+  bottles a sea day, hashed from the day, shared, each taken once per captain; the water
+  sets the tier (Shallows easy, Open Waters medium, Deep hard, Abyss and Ancient Deep
+  elite), one hunt per tier in hand. Steps (easy 2, medium 3, hard 4, elite 5): bearing
+  (metres off the nearest landmark), riddle (port_rules clues.riddles, one per isle), catch
+  (a species of the tier's water), word (ask a regular). Then a dig at one of the 12 sites in
+  the tier's water: its tell shows only to a hunt pointing at it, the chart no longer marks
+  sites, and digging without a hunt gives nothing (the old once-ever dig rewards are gone).
+  The casket: doubloons, bait, and a crate for the stash (35% easy to always elite).
+  The three dig badges now count hunts. tests/clues_check.gd plays every tier to its casket.
 - THE PORT'S OWN RULES FILE (2026-10-01): content/port_rules.json is laid over the web's
   tables by Rules.data() (dictionaries merge, "_" keys are notes). The parity runner sets
   Rules.web_only so it replays against the web's tables alone. Put a deliberate rules

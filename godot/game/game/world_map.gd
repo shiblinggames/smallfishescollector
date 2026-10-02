@@ -329,7 +329,10 @@ func _draw_progress() -> void:
 		var row: VBoxContainer = VBoxContainer.new()
 		row.add_theme_constant_override("separation", 1)
 		_progress.add_child(row)
-		Kit.text(row, "%s  ·  %d%%  ·  isles %d/%d  ·  dug %d/%d" % [w["name"], int(round(100.0 * seen / maxf(1.0, total))), got, isles.size(), gd, sites.size()], "small", ink)
+		if Clues.on():
+			Kit.text(row, "%s  ·  %d%%  ·  isles %d/%d" % [w["name"], int(round(100.0 * seen / maxf(1.0, total))), got, isles.size()], "small", ink)
+		else:
+			Kit.text(row, "%s  ·  %d%%  ·  isles %d/%d  ·  dug %d/%d" % [w["name"], int(round(100.0 * seen / maxf(1.0, total))), got, isles.size(), gd, sites.size()], "small", ink)
 		var bar: Kit.Bar = Kit.bar(row, float(seen) / maxf(1.0, total), Color(0.3, 0.5, 0.62), true)
 		bar.custom_minimum_size.x = 240
 
@@ -504,7 +507,8 @@ func _all_marks() -> Array:
 	if _layers["hotspots"]:
 		for h: Dictionary in Hotspots.at_time(now):
 			out.append({ "kind": "hotspot", "at": Vector2(float(h["x"]), float(h["y"])), "name": _hotspot_name(h), "color": _hotspot_color(h), "data": h })
-	if _layers["finds"]:
+	# Buried sites are a treasure hunt's to find, not the chart's (port rules).
+	if _layers["finds"] and not Clues.on():
 		var digs: Dictionary = Explore.get_dig_state(sea.session.store, sea.session.uid)
 		for d: Dictionary in Rules.data()["digSites"]:
 			if not digs["bearings"].has(d["id"]):

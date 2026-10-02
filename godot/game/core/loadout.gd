@@ -236,7 +236,12 @@ static func update_character_color(db: CaptainStore, uid: String, color_id: Stri
 			color = c
 	if color.is_empty():
 		return { "error": "Invalid color" }
-	if not color["free"]:
+	if not color["free"] and not Achievements.colors().is_empty():
+		# Port rules: a colour is earned by achievement points, and only so.
+		if not Js.includes(Achievements.colors_for(db.achievement_points(uid)), color_id):
+			return { "error": "Color not unlocked" }
+		db.add_to_list(uid, "unlocked_character_colors", color_id)
+	elif not color["free"]:
 		var p: Dictionary = db.profile(uid, "unlocked_character_colors, fishing_xp, expedition_xp, prestige_levels")
 		var unlocked: Array = Js.list(p.get("unlocked_character_colors"))
 		if not Js.includes(unlocked, color_id):

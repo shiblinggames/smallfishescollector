@@ -4313,6 +4313,1709 @@
   "six_feet_down": 2,
   "salted_away": 3
  },
+ "badges": [
+  {
+   "id": "prestige_i",
+   "name": "Prestige I",
+   "description": "Reach Prestige in any fishing zone",
+   "imageUrl": "/badges/prestige_i.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "trophy_catch",
+   "name": "Trophy Catch",
+   "description": "Land a Trophy-tier fish",
+   "imageUrl": "/badges/trophy_catch.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "unbroken",
+   "name": "Unbroken",
+   "description": "Land 10 perfect catches in a row",
+   "imageUrl": "/badges/unbroken.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "relentless",
+   "name": "Relentless",
+   "description": "Land 15 perfect catches in a row",
+   "imageUrl": "/badges/relentless.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "untouchable",
+   "name": "Untouchable",
+   "description": "Land 20 perfect catches in a row",
+   "imageUrl": "/badges/untouchable.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "dead_eye",
+   "name": "Dead-Eye",
+   "description": "Land 1,000 perfect catches all-time",
+   "imageUrl": "/badges/dead_eye.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "master_angler",
+   "name": "Master Angler",
+   "description": "Reach Fishing Level 100",
+   "imageUrl": "/badges/master_angler.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "zone_legend",
+   "name": "Zone Legend",
+   "description": "Reach Prestige in all 4 fishing zones",
+   "imageUrl": "/badges/zone_legend.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "prestige_stars",
+   "name": "Prestige Stars",
+   "description": "Earn all 20 prestige stars (5 per zone)",
+   "imageUrl": "/badges/prestige_stars.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "two_for_the_pot",
+   "name": "Two for the Pot",
+   "description": "Reel in a double catch",
+   "imageUrl": "/badges/two_for_the_pot.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "saltlung",
+   "name": "Saltlung",
+   "description": "Cast your line 1,000 times",
+   "imageUrl": "/badges/saltlung.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "crate_digger",
+   "name": "Crate Digger",
+   "description": "Open 50 supply crates",
+   "imageUrl": "/badges/crate_digger.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "half_the_sea",
+   "name": "Half the Sea",
+   "description": "Catch 50 fish species",
+   "imageUrl": "/badges/half_the_sea.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "ancient_ones",
+   "name": "Ancient Ones",
+   "description": "Catch all 6 Ancient Deep trophies",
+   "imageUrl": "/badges/ancient_ones.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "full_collection",
+   "name": "Full Collection",
+   "description": "Catch every fish species in the game",
+   "imageUrl": "/badges/full_collection.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "completionist_rod",
+   "name": "The Completionist",
+   "description": "Claim the Completionist Rod",
+   "imageUrl": "/badges/completionist_rod.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "fully_rigged",
+   "name": "Fully Rigged",
+   "description": "Forge all 3 effects into the Completionist Rod",
+   "imageUrl": "/badges/fully_rigged.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "reforged",
+   "name": "Reforged",
+   "description": "Pay to re-forge the Completionist Rod into a fresh 3-effect loadout",
+   "imageUrl": "/badges/reforged.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "growing_crew",
+   "name": "Growing Crew",
+   "description": "Recruit 25 crew",
+   "imageUrl": "/badges/growing_crew.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "theres_a_grave",
+   "name": "There's a Grave?",
+   "description": "Lose a crew member for the first time",
+   "imageUrl": "/badges/theres_a_grave.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "crewmaster",
+   "name": "Crewmaster",
+   "description": "Reach the top Crew Hall tier",
+   "imageUrl": "/badges/crewmaster.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "full_muster",
+   "name": "Full Muster",
+   "description": "Recruit 100 crew",
+   "imageUrl": "/badges/full_muster.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "legendary_recruit",
+   "name": "Legendary Recruit",
+   "description": "Recruit a legendary crew",
+   "imageUrl": "/badges/legendary_recruit.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "old_salt",
+   "name": "Old Salt",
+   "description": "Level a crew to 100",
+   "imageUrl": "/badges/old_salt.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "leviathan_hall",
+   "name": "Leviathan Hall",
+   "description": "Build the Crew Hall to its final tier",
+   "imageUrl": "/badges/leviathan_hall.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "fully_outfitted",
+   "name": "Fully Outfitted",
+   "description": "Max both Drills and Stores",
+   "imageUrl": "/badges/fully_outfitted.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "deep_cut",
+   "name": "Deep Cut",
+   "description": "Carry a stat only the Leviathan bunk can roll",
+   "imageUrl": "/badges/deep_cut.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "full_complement",
+   "name": "Full Complement",
+   "description": "Level 10 crew to 100",
+   "imageUrl": "/badges/full_complement.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "divine_hand",
+   "name": "Divine Hand",
+   "description": "Land a Divine trait on a crew",
+   "imageUrl": "/badges/divine_hand.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "six_divine",
+   "name": "Choir of the Deep",
+   "description": "Hold six crew with Divine traits at once",
+   "imageUrl": "/badges/six_divine.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "navigator",
+   "name": "Wayfinder",
+   "description": "Reach Navigation Level 50",
+   "imageUrl": "/badges/navigator.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "fleet_admiral",
+   "name": "Fleet Admiral",
+   "description": "Complete 100 voyages",
+   "imageUrl": "/badges/fleet_admiral.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "master_navigator",
+   "name": "Master Navigator",
+   "description": "Reach Navigation Level 100",
+   "imageUrl": "/badges/master_navigator.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "corsairs_bane",
+   "name": "Corsair's Bane",
+   "description": "Defeat Barnacle Pete in challenge mode",
+   "imageUrl": "/badges/corsairs_bane.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "ghost_ship",
+   "name": "Krust's Crutch",
+   "description": "Defeat Captain Krust in challenge mode",
+   "imageUrl": "/badges/ghost_ship.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "cartographers_fall",
+   "name": "The Cartographer's Fall",
+   "description": "Defeat the Cartographer in challenge mode",
+   "imageUrl": "/badges/cartographers_fall.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "toll_paid",
+   "name": "Toll Paid",
+   "description": "Defeat Tollmaster Spet in challenge mode",
+   "imageUrl": "/badges/toll_paid.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "swift_reckoning",
+   "name": "Swift Reckoning",
+   "description": "Clear Corsair's Reckoning in under 1:30",
+   "imageUrl": "/badges/swift_reckoning.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "opening_salvo",
+   "name": "Opening Salvo",
+   "description": "Land a single raid hit for 50 or more",
+   "imageUrl": "/badges/opening_salvo.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "hard_hitter",
+   "name": "Hard Hitter",
+   "description": "Land a single raid hit for 100 or more",
+   "imageUrl": "/badges/hard_hitter.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "heavy_broadside",
+   "name": "Heavy Broadside",
+   "description": "Land a single raid hit for 250 or more",
+   "imageUrl": "/badges/heavy_broadside.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "finndicates_bane",
+   "name": "Finndicate's Bane",
+   "description": "Clear all four raids in challenge mode",
+   "imageUrl": "/badges/finndicates_bane.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "into_the_deep",
+   "name": "Into the Deep",
+   "description": "Descend to depth 5 in the Gauntlet",
+   "imageUrl": "/badges/into_the_deep.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "fathomless",
+   "name": "Fathomless",
+   "description": "Bank 500 Fathoms all-time",
+   "imageUrl": "/badges/fathomless.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "davy_jones",
+   "name": "Davy Jones' Locker",
+   "description": "Descend to depth 10 in the Gauntlet",
+   "imageUrl": "/badges/davy_jones.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "landfall",
+   "name": "Landfall",
+   "description": "Chart your first World Chart landmark",
+   "imageUrl": "/badges/landfall.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "quartermaster",
+   "name": "Quartermaster",
+   "description": "Bank 40 charting points",
+   "imageUrl": "/badges/quartermaster.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "den_magnate",
+   "name": "Chartwright",
+   "description": "Bank 80 charting points",
+   "imageUrl": "/badges/den_magnate.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "uncharted_no_more",
+   "name": "Uncharted No More",
+   "description": "Chart seven World Chart landmarks",
+   "imageUrl": "/badges/uncharted_no_more.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "fully_laden",
+   "name": "Fully Laden",
+   "description": "Solve a Man-o-War hold (the hardest sudoku)",
+   "imageUrl": "/badges/fully_laden.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "the_long_watch",
+   "name": "The Long Watch",
+   "description": "Bank 500 charting points",
+   "imageUrl": "/badges/the_long_watch.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "clean_manifest",
+   "name": "Clean Manifest",
+   "description": "Stow all four holds in a single week",
+   "imageUrl": "/badges/clean_manifest.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "master_cartographer",
+   "name": "Master Cartographer",
+   "description": "Chart the entire World Chart (all 13 landmarks)",
+   "imageUrl": "/badges/master_cartographer.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "catfish_jackpot",
+   "name": "Catfish Jackpot",
+   "description": "Win the slots Catfish Jackpot",
+   "imageUrl": "/badges/catfish_jackpot.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "baby_steps",
+   "name": "Baby Steps",
+   "description": "Hold 100,000 doubloons at once",
+   "imageUrl": "/badges/baby_steps.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "deep_pockets",
+   "name": "Deep Pockets",
+   "description": "Hold 1,000,000 doubloons at once",
+   "imageUrl": "/badges/deep_pockets.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "bilge_baron",
+   "name": "Bilge Baron",
+   "description": "Hold 2,500,000 doubloons at once",
+   "imageUrl": "/badges/bilge_baron.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "got_away",
+   "name": "The One That Got Away",
+   "description": "Lose 50 fish to snapped lines",
+   "imageUrl": "/badges/got_away.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "reel_lucky",
+   "name": "Reel Lucky",
+   "description": "Hit a fishing jackpot",
+   "imageUrl": "/badges/reel_lucky.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "two_fisted",
+   "name": "Two-Fisted",
+   "description": "Land 100 double catches",
+   "imageUrl": "/badges/two_fisted.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "sure_shot",
+   "name": "Sure Shot",
+   "description": "Land 250 perfect catches all-time",
+   "imageUrl": "/badges/sure_shot.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "salted_through",
+   "name": "Salted Through",
+   "description": "Cast your line 10,000 times",
+   "imageUrl": "/badges/salted_through.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "maiden_voyage",
+   "name": "Maiden Voyage",
+   "description": "Complete your first voyage",
+   "imageUrl": "/badges/maiden_voyage.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "old_sea_dog",
+   "name": "Old Sea Dog",
+   "description": "Complete 50 voyages",
+   "imageUrl": "/badges/old_sea_dog.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "hundred_fins",
+   "name": "A Hundred Fins",
+   "description": "Catch 100 fish species",
+   "imageUrl": "/badges/hundred_fins.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "three_legends",
+   "name": "The Three Legends",
+   "description": "Own 3 legendary crew at once",
+   "imageUrl": "/badges/three_legends.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "captains_colors",
+   "name": "Captain's Colors",
+   "description": "Become a Captain",
+   "imageUrl": "/badges/captains_colors.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "crowned",
+   "name": "Crowned",
+   "description": "Make it all the way up the Pirate King ladder",
+   "imageUrl": "/badges/crowned.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "throne_in_sight",
+   "name": "Throne in Sight",
+   "description": "Reach rung 7 of the Pirate King ladder",
+   "imageUrl": "/badges/throne_in_sight.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "clean_sweep",
+   "name": "Clean Sweep",
+   "description": "Clear a Captain's Board, every answer correct",
+   "imageUrl": "/badges/clean_sweep.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "parlor_hot_hand",
+   "name": "Hot Hand",
+   "description": "Answer 5 Parlor questions in a row",
+   "imageUrl": "/badges/parlor_hot_hand.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "parlor_sharpshooter",
+   "name": "Sharpshooter",
+   "description": "Answer 10 Parlor questions in a row",
+   "imageUrl": "/badges/parlor_sharpshooter.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "parlor_flawless",
+   "name": "Flawless",
+   "description": "Answer 20 Parlor questions in a row",
+   "imageUrl": "/badges/parlor_flawless.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "parlor_cardsharp",
+   "name": "Cardsharp",
+   "description": "Reach the Cardsharp rank in the Parlor",
+   "imageUrl": "/badges/parlor_cardsharp.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "parlor_kingpin",
+   "name": "Kingpin",
+   "description": "Reach the Kingpin rank in the Parlor",
+   "imageUrl": "/badges/parlor_kingpin.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "parlor_legend",
+   "name": "Parlor Legend",
+   "description": "Reach the top Parlor rank",
+   "imageUrl": "/badges/parlor_legend.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "friend_at_sea",
+   "name": "A Friend at Sea",
+   "description": "Earn your first fishing pet",
+   "imageUrl": "/badges/friend_at_sea.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "unstoppable",
+   "name": "Unstoppable",
+   "description": "Win 5 blackjack hands in a row",
+   "imageUrl": "/badges/unstoppable.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "stacked_deck",
+   "name": "Stacked Deck",
+   "description": "Watch the dealer pull blackjack two hands running",
+   "imageUrl": "/badges/stacked_deck.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "called_it",
+   "name": "Called It",
+   "description": "Win a straight-up single-number roulette bet",
+   "imageUrl": "/badges/called_it.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "ship_of_the_line",
+   "name": "Ship of the Line",
+   "description": "Own the Man-o-War",
+   "imageUrl": "/badges/ship_of_the_line.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "first_haul",
+   "name": "First Haul",
+   "description": "Collect your first trawl",
+   "imageUrl": "/badges/first_haul.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "steady_nets",
+   "name": "Steady Nets",
+   "description": "Collect 25 trawls",
+   "imageUrl": "/badges/steady_nets.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "deep_trawler",
+   "name": "Deep Trawler",
+   "description": "Collect 100 trawls",
+   "imageUrl": "/badges/deep_trawler.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "wet_behind_ears",
+   "name": "Wet Behind the Ears",
+   "description": "Reach Fishing Level 25",
+   "imageUrl": "/badges/wet_behind_ears.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "beginners_luck",
+   "name": "Beginner's Luck",
+   "description": "Fish up and open your first supply crate",
+   "imageUrl": "/badges/beginners_luck.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "struck_gold",
+   "name": "Struck Gold",
+   "description": "Catch your first golden fish",
+   "imageUrl": "/badges/struck_gold.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "old_hand",
+   "name": "Old Hand",
+   "description": "Reach Fishing Level 50",
+   "imageUrl": "/badges/old_hand.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "crate_expectations",
+   "name": "Crate Expectations",
+   "description": "Open 250 supply crates",
+   "imageUrl": "/badges/crate_expectations.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "a_real_keeper",
+   "name": "A Real Keeper",
+   "description": "Land 10 Trophy-size catches",
+   "imageUrl": "/badges/a_real_keeper.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "full_stringer",
+   "name": "Full Stringer",
+   "description": "Keep 3 fishing pets at once",
+   "imageUrl": "/badges/full_stringer.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "one_upped",
+   "name": "The Hand on the Rod",
+   "description": "Finish the first chapter of Finn's jobs",
+   "imageUrl": "/badges/one_upped.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "fresh_coat",
+   "name": "Fresh Coat",
+   "description": "Own a boat skin",
+   "imageUrl": "/badges/fresh_coat.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "twice_the_haul",
+   "name": "Twice the Haul",
+   "description": "Land 500 double catches",
+   "imageUrl": "/badges/twice_the_haul.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "menagerie",
+   "name": "The Menagerie",
+   "description": "Keep 5 fishing pets at once",
+   "imageUrl": "/badges/menagerie.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "fishmonger",
+   "name": "Fishmonger",
+   "description": "Sell 250,000 doubloons of fish",
+   "imageUrl": "/badges/fishmonger.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "net_positive",
+   "name": "Net Positive",
+   "description": "Collect 500 trawls",
+   "imageUrl": "/badges/net_positive.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "crack_shot",
+   "name": "Crack Shot",
+   "description": "Land 2,500 perfect catches all-time",
+   "imageUrl": "/badges/crack_shot.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "wreck_diver",
+   "name": "Wreck Diver",
+   "description": "Open 500 supply crates",
+   "imageUrl": "/badges/wreck_diver.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "salvage_rights",
+   "name": "Salvage Rights",
+   "description": "Open 1,000 supply crates",
+   "imageUrl": "/badges/salvage_rights.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "high_water_mark",
+   "name": "High Water Mark",
+   "description": "Reach Max Prestige in any fishing zone",
+   "imageUrl": "/badges/high_water_mark.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "fish_baron",
+   "name": "Fish Baron",
+   "description": "Sell 1,000,000 doubloons of fish",
+   "imageUrl": "/badges/fish_baron.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "hoard_of_gold",
+   "name": "Hoard of Gold",
+   "description": "Catch 10 golden fish",
+   "imageUrl": "/badges/hoard_of_gold.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "finns_rival",
+   "name": "The Long Sail",
+   "description": "Finish three chapters of Finn's jobs",
+   "imageUrl": "/badges/finns_rival.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "in_the_flow",
+   "name": "In the Flow",
+   "description": "Land 30 perfect catches in a row",
+   "imageUrl": "/badges/in_the_flow.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "eagle_eyed",
+   "name": "Eagle-Eyed",
+   "description": "Land 5,000 perfect catches all-time",
+   "imageUrl": "/badges/eagle_eyed.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "el_dorado",
+   "name": "El Dorado",
+   "description": "Catch 25 golden fish",
+   "imageUrl": "/badges/el_dorado.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "the_better_angler",
+   "name": "The Better Angler",
+   "description": "Finish every job Finn sets you",
+   "imageUrl": "/badges/the_better_angler.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "full_drydock",
+   "name": "Full Drydock",
+   "description": "Own every boat skin",
+   "imageUrl": "/badges/full_drydock.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "first_descent",
+   "name": "First Descent",
+   "description": "Cash out a Gauntlet run",
+   "imageUrl": "/badges/first_descent.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "abyssward",
+   "name": "Abyssward",
+   "description": "Reach depth 20 in the Gauntlet",
+   "imageUrl": "/badges/abyssward.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "forge_worthy",
+   "name": "Forge-Worthy",
+   "description": "Reach depth 35 in the Gauntlet",
+   "imageUrl": "/badges/forge_worthy.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "davys_doorstep",
+   "name": "Davy's Doorstep",
+   "description": "Reach depth 60 in the Gauntlet",
+   "imageUrl": "/badges/davys_doorstep.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "well_provisioned",
+   "name": "Well-Provisioned",
+   "description": "Claim your first Gauntlet upgrade",
+   "imageUrl": "/badges/well_provisioned.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "locker_raider",
+   "name": "Locker Raider",
+   "description": "Claim 6 Gauntlet upgrades",
+   "imageUrl": "/badges/locker_raider.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "forge_awakened",
+   "name": "The Forge Awakens",
+   "description": "Unlock the Forge from the Gauntlet",
+   "imageUrl": "/badges/forge_awakened.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "master_of_the_locker",
+   "name": "Master of the Locker",
+   "description": "Own every Gauntlet upgrade",
+   "imageUrl": "/badges/master_of_the_locker.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "push_your_luck",
+   "name": "Push Your Luck",
+   "description": "Complete 10 Gauntlet runs",
+   "imageUrl": "/badges/push_your_luck.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "again_and_again",
+   "name": "Again and Again",
+   "description": "Complete 50 Gauntlet runs",
+   "imageUrl": "/badges/again_and_again.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "fathom_hoarder",
+   "name": "Fathom Hoarder",
+   "description": "Earn 1,000 Fathoms all-time",
+   "imageUrl": "/badges/fathom_hoarder.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "one_shot",
+   "name": "One Shot",
+   "description": "Land a single Gauntlet hit for 2,000 or more",
+   "imageUrl": "/badges/one_shot.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "greeds_price",
+   "name": "Greed's Price",
+   "description": "Die deeper than your best cash-out",
+   "imageUrl": "/badges/greeds_price.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "storm_reader",
+   "name": "Storm Reader",
+   "description": "Discover your first confluence",
+   "imageUrl": "/badges/storm_reader.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "deep_cartographer",
+   "name": "Deep Cartographer",
+   "description": "Discover every confluence",
+   "imageUrl": "/badges/deep_cartographer.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "drowned_ledger",
+   "name": "The Drowned Ledger",
+   "description": "Cash out a Hardcore Gauntlet run",
+   "imageUrl": "/badges/drowned_ledger.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "the_unsinkable",
+   "name": "The Unsinkable",
+   "description": "Reach depth 15 in the Hardcore Gauntlet",
+   "imageUrl": "/badges/the_unsinkable.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "locker_bound",
+   "name": "Locker-Bound",
+   "description": "Reach depth 25 in the Hardcore Gauntlet",
+   "imageUrl": "/badges/locker_bound.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "the_deep_end",
+   "name": "The Deep End",
+   "description": "Reach depth 50 in the Hardcore Gauntlet",
+   "imageUrl": "/badges/the_deep_end.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "ferrymans_toll",
+   "name": "The Ferryman's Toll",
+   "description": "Lose a squad to the Locker in Hardcore",
+   "imageUrl": "/badges/ferrymans_toll.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "ink_and_salt",
+   "name": "Ink and Salt",
+   "description": "Cash out from depth 10 with 5+ Pressure",
+   "imageUrl": "/badges/ink_and_salt.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "the_weight",
+   "name": "The Weight",
+   "description": "Cash out from depth 20 with 15+ Pressure",
+   "imageUrl": "/badges/the_weight.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "crushing_depth",
+   "name": "Crushing Depth",
+   "description": "Cash out from depth 30 with 25+ Pressure",
+   "imageUrl": "/badges/crushing_depth.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "not_a_drop",
+   "name": "Not a Drop",
+   "description": "Cash out from depth 20 under Iron Rations II",
+   "imageUrl": "/badges/not_a_drop.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "paid_in_full",
+   "name": "Paid in Full",
+   "description": "Cash out from depth 35 with 40+ Pressure",
+   "imageUrl": "/badges/paid_in_full.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "for_glory_alone",
+   "name": "For Glory Alone",
+   "description": "Cash out from depth 15 with every term signed",
+   "imageUrl": "/badges/for_glory_alone.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "blood_charged",
+   "name": "Blood-Charged",
+   "description": "Boost a recruit reroll with Blood Gems",
+   "imageUrl": "/badges/blood_charged.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "blood_rich",
+   "name": "Blood-Rich",
+   "description": "Earn 500 Blood Gems all-time",
+   "imageUrl": "/badges/blood_rich.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "bloodhoard",
+   "name": "Bloodhoard",
+   "description": "Earn 2,000 Blood Gems all-time",
+   "imageUrl": "/badges/bloodhoard.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "crimson_fortune",
+   "name": "Crimson Fortune",
+   "description": "Win a crew skin from the blood gamble",
+   "imageUrl": "/badges/crimson_fortune.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "weapon_of_legend",
+   "name": "Weapon of Legend",
+   "description": "Build your Man-o-War ultimate",
+   "imageUrl": "/badges/weapon_of_legend.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "first_fusion",
+   "name": "First Fusion",
+   "description": "Forge your first item",
+   "imageUrl": "/badges/first_fusion.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "ruse_undone",
+   "name": "Ruse Undone",
+   "description": "Defeat Admiral Ruse in challenge mode",
+   "imageUrl": "/badges/ruse_undone.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "account_settled",
+   "name": "Account Settled",
+   "description": "Defeat the Quartermaster in challenge mode",
+   "imageUrl": "/badges/account_settled.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "grand_forgemaster",
+   "name": "Grand Forgemaster",
+   "description": "Learn every forge recipe",
+   "imageUrl": "/badges/grand_forgemaster.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "mark_of_mastery",
+   "name": "Mark of Mastery",
+   "description": "Reach a Mark III ship class",
+   "imageUrl": "/badges/mark_of_mastery.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "quick_draw",
+   "name": "Quick Draw",
+   "description": "Clear any raid in under 1:00",
+   "imageUrl": "/badges/quick_draw.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "complete_captain",
+   "name": "The Complete Captain",
+   "description": "Reach Navigation 100 and Fishing 100",
+   "imageUrl": "/badges/complete_captain.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "six_legends",
+   "name": "The Avengers",
+   "description": "Own all 5 base legendary crew",
+   "imageUrl": "/badges/six_legends.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "colors_raised",
+   "name": "Colors Raised",
+   "description": "Own your first crew skin",
+   "imageUrl": "/badges/colors_raised.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "the_chase",
+   "name": "The Chase",
+   "description": "Own a chase skin",
+   "imageUrl": "/badges/the_chase.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "fashionista",
+   "name": "Fashionista",
+   "description": "Have a skin equipped on 5 crew at once",
+   "imageUrl": "/badges/fashionista.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "full_wardrobe",
+   "name": "Full Wardrobe",
+   "description": "Own all four skins for one legendary crew",
+   "imageUrl": "/badges/full_wardrobe.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "dressed_to_the_nines",
+   "name": "Dressed to the Nines",
+   "description": "Own 10 crew skins",
+   "imageUrl": "/badges/dressed_to_the_nines.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "trophy_hunter",
+   "name": "Trophy Hunter",
+   "description": "Land 25 Trophy-size catches",
+   "imageUrl": "/badges/trophy_hunter.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "overkill",
+   "name": "Overkill",
+   "description": "Land a single raid hit for 500 or more",
+   "imageUrl": "/badges/overkill.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "all_hands_legends",
+   "name": "All Hands, All Legends",
+   "description": "Raid in the Man-o-War with 5 Level 100 legendary crew",
+   "imageUrl": "/badges/all_hands_legends.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "iron_ruse",
+   "name": "Iron Ruse",
+   "description": "Beat the Admiral Ruse raid taking no damage",
+   "imageUrl": "/badges/iron_ruse.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "not_a_shot_fired",
+   "name": "Not a Shot Fired",
+   "description": "Sink a boss without a shot or a crew ability",
+   "imageUrl": "/badges/not_a_shot_fired.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "tight_quarters",
+   "name": "Tight Quarters",
+   "description": "Beat the Quartermaster raid using no crew abilities",
+   "imageUrl": "/badges/tight_quarters.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "dead_reckoning",
+   "name": "Dead Reckoning",
+   "description": "Clear the Cartographer raid missing no critical hits",
+   "imageUrl": "/badges/dead_reckoning.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "blockade_broken",
+   "name": "Blockade Broken",
+   "description": "Defeat Sal Brackwater in challenge mode",
+   "imageUrl": "/badges/blockade_broken.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "don_drowned",
+   "name": "The Don Is Drowned",
+   "description": "Defeat Don Finleone in challenge mode",
+   "imageUrl": "/badges/don_drowned.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "the_sunken_hand",
+   "name": "The Sunken Hand",
+   "description": "Clear all 8 raids in challenge mode",
+   "imageUrl": "/badges/the_sunken_hand.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "six_aboard",
+   "name": "Six Aboard",
+   "description": "Add the Sixth Berth to your ship",
+   "imageUrl": "/badges/six_aboard.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "expanded_armory",
+   "name": "Expanded Armory",
+   "description": "Bolt the Expanded Armory onto your deck",
+   "imageUrl": "/badges/expanded_armory.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "full_tackle_box",
+   "name": "Full Tackle Box",
+   "description": "Own every rod money can buy",
+   "imageUrl": "/badges/full_tackle_box.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "dons_descent",
+   "name": "The Green Beckons",
+   "description": "Cash out a Don's Gauntlet run",
+   "imageUrl": "/badges/dons_descent.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "dons_doorstep",
+   "name": "The Don's Doorstep",
+   "description": "Descend to depth 50 in Don's Gauntlet",
+   "imageUrl": "/badges/dons_doorstep.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "dons_reckoning",
+   "name": "The Don's Reckoning",
+   "description": "Descend to depth 75 in Don's Gauntlet",
+   "imageUrl": "/badges/dons_reckoning.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "dons_ghost_hull_won",
+   "name": "Ghost of the Court",
+   "description": "Earn the Don's Ghost Hull from Don's Gauntlet",
+   "imageUrl": "/badges/dons_ghost_hull_won.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "first_convergence",
+   "name": "The Convergence",
+   "description": "Forge a convergence in Don's Gauntlet",
+   "imageUrl": "/badges/first_convergence.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "one_true_shot",
+   "name": "One True Shot",
+   "description": "Land a single Gauntlet hit for 4,000+",
+   "imageUrl": "/badges/one_true_shot.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "abyssal_smith",
+   "name": "The Abyssal Forge",
+   "description": "Forge your first tier-3 Abyssal item",
+   "imageUrl": "/badges/abyssal_smith.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "abyssal_master",
+   "name": "Abyssal Master",
+   "description": "Forge every Abyssal item",
+   "imageUrl": "/badges/abyssal_master.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "ghost_armory",
+   "name": "The Ghost Armory",
+   "description": "Own all three Don's Gauntlet items",
+   "imageUrl": "/badges/ghost_armory.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "ultimate_only",
+   "name": "The Long Reload",
+   "description": "Reach depth 10 in Don's Gauntlet firing only your Mega",
+   "imageUrl": "/badges/ultimate_only.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "weight_of_green",
+   "name": "The Weight of the Green",
+   "description": "Bank from depth 30 in Don's Gauntlet carrying 5+ curses",
+   "imageUrl": "/badges/weight_of_green.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "untouched",
+   "name": "Untouched",
+   "description": "Bank a Don's Gauntlet run from depth 5 without taking a hit",
+   "imageUrl": "/badges/untouched.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "one_last_ride",
+   "name": "One Last Ride",
+   "description": "Clear The Sunken Hand",
+   "imageUrl": "/badges/one_last_ride.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "cut_off_at_the_wrist",
+   "name": "Cut Off at the Wrist",
+   "description": "Clear The Sunken Hand on Challenge",
+   "imageUrl": "/badges/cut_off_at_the_wrist.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "the_long_quiet",
+   "name": "The Long Quiet",
+   "description": "See the Sunken Hand through to its end",
+   "imageUrl": "/badges/the_long_quiet.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "ancient_tackle",
+   "name": "Ancient Tackle",
+   "description": "Earn your first Ancient-rarity item",
+   "imageUrl": "/badges/ancient_tackle.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "salvors_claim",
+   "name": "Salvor's Claim",
+   "description": "Open a berth from the wreck",
+   "imageUrl": "/badges/salvors_claim.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "both_hands",
+   "name": "Both Hands",
+   "description": "Open both berths from the wreck",
+   "imageUrl": "/badges/both_hands.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "something_old",
+   "name": "Something Old",
+   "description": "Carry your first Primeval spoil",
+   "imageUrl": "/badges/something_old.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "both_in_hand",
+   "name": "Both in Hand",
+   "description": "Own both Primeval spoils",
+   "imageUrl": "/badges/both_in_hand.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "first_contract",
+   "name": "Paper Captain",
+   "description": "Open your first contract on the Exchange",
+   "imageUrl": "/badges/first_contract.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "first_settle",
+   "name": "Read the Water",
+   "description": "Have a contract settle in your favor",
+   "imageUrl": "/badges/first_settle.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "cut_losses",
+   "name": "Out Before the Bell",
+   "description": "Sell a contract early rather than ride it out",
+   "imageUrl": "/badges/cut_losses.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "worthless",
+   "name": "Not a Doubloon",
+   "description": "Watch a contract expire worthless",
+   "imageUrl": "/badges/worthless.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "big_score",
+   "name": "The Whole Berth",
+   "description": "Clear 200,000 doubloons profit on a single contract",
+   "imageUrl": "/badges/big_score.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "market_maker",
+   "name": "Market Maker",
+   "description": "Turn a profit on 100 contracts",
+   "imageUrl": "/badges/market_maker.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "first_bounty",
+   "name": "Took the Job",
+   "description": "Claim your first bounty",
+   "imageUrl": "/badges/first_bounty.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "full_board",
+   "name": "Board Cleared",
+   "description": "Claim every order posted in one day",
+   "imageUrl": "/badges/full_board.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "elite_order",
+   "name": "The Hard Way",
+   "description": "Claim an Elite bounty",
+   "imageUrl": "/badges/elite_order.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "fifty_orders",
+   "name": "Known at the Docks",
+   "description": "Claim 50 bounties",
+   "imageUrl": "/badges/fifty_orders.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "seven_boards",
+   "name": "Every Morning",
+   "description": "Clear the whole board on 7 days",
+   "imageUrl": "/badges/seven_boards.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "bounty_hoard",
+   "name": "Harbormaster's Favorite",
+   "description": "Earn 5,000 gems from bounties",
+   "imageUrl": "/badges/bounty_hoard.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "waking_it",
+   "name": "Waking It",
+   "description": "Take a Primeval spoil to Tier III",
+   "imageUrl": "/badges/waking_it.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "fully_attuned",
+   "name": "Fully Attuned",
+   "description": "Take a Primeval spoil to Tier VI",
+   "imageUrl": "/badges/fully_attuned.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "the_sixth_mount",
+   "name": "The Sixth Mount",
+   "description": "Sail with all six item slots filled",
+   "imageUrl": "/badges/the_sixth_mount.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "colours_of_the_hand",
+   "name": "Colors of the Hand",
+   "description": "Own all three hulls off The Sunken Hand",
+   "imageUrl": "/badges/colours_of_the_hand.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "three_for_three",
+   "name": "Three for Three",
+   "description": "Clear all three daily challenges, 7 times",
+   "imageUrl": "/badges/three_for_three.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "standing_watch",
+   "name": "Standing Watch",
+   "description": "Clear all three daily challenges, 30 times",
+   "imageUrl": "/badges/standing_watch.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "old_reliable",
+   "name": "Old Reliable",
+   "description": "Clear all three daily challenges, 100 times",
+   "imageUrl": "/badges/old_reliable.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "massive_booty",
+   "name": "Massive Booty",
+   "description": "Land a Massive Booty on a voyage",
+   "imageUrl": "/badges/massive_booty.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "the_fourth_task",
+   "name": "The Fourth Task",
+   "description": "Clear 25 Master daily challenges",
+   "imageUrl": "/badges/the_fourth_task.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "back_to_the_dark",
+   "name": "Back to the Dark",
+   "description": "Release an Ancient back into the deep",
+   "imageUrl": "/badges/back_to_the_dark.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "twice_landed",
+   "name": "Twice Landed",
+   "description": "Raise an Ancient to Vigil Rank II",
+   "imageUrl": "/badges/twice_landed.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "six_abreast",
+   "name": "Six Abreast",
+   "description": "Every Ancient at Vigil Rank III or better",
+   "imageUrl": "/badges/six_abreast.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "struck_in_gold",
+   "name": "Struck in Gold",
+   "description": "Take an Ancient to Vigil Rank V",
+   "imageUrl": "/badges/struck_in_gold.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "deep_remembers",
+   "name": "The Deep Remembers",
+   "description": "Reach 20 total Vigil",
+   "imageUrl": "/badges/deep_remembers.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "the_long_vigil",
+   "name": "The Long Vigil",
+   "description": "Master all six Ancients at Rank V",
+   "imageUrl": "/badges/the_long_vigil.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "known_face",
+   "name": "Known Face",
+   "description": "Become a known face to one of the regulars",
+   "imageUrl": "/badges/known_face.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "whole_road",
+   "name": "The Whole Road",
+   "description": "Meet all nine regulars out on the water",
+   "imageUrl": "/badges/whole_road.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "you_remembered",
+   "name": "You Remembered",
+   "description": "Bring a regular the one fish they actually want",
+   "imageUrl": "/badges/you_remembered.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "bearing_gifts",
+   "name": "Bearing Gifts",
+   "description": "Hand over 25 gifts",
+   "imageUrl": "/badges/bearing_gifts.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "good_company",
+   "name": "Good Company",
+   "description": "Be good company to five regulars",
+   "imageUrl": "/badges/good_company.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "trusted_three",
+   "name": "Trusted Three",
+   "description": "Be trusted by three regulars",
+   "imageUrl": "/badges/trusted_three.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "open_hand",
+   "name": "Open Hand",
+   "description": "Hand over 100 gifts",
+   "imageUrl": "/badges/open_hand.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "thick_as_thieves",
+   "name": "Thick as Thieves",
+   "description": "Reach the top standing with a regular",
+   "imageUrl": "/badges/thick_as_thieves.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "salt_of_the_earth",
+   "name": "Salt of the Earth",
+   "description": "Reach the top standing with all nine regulars",
+   "imageUrl": "/badges/salt_of_the_earth.png",
+   "difficulty": "grandmaster"
+  },
+  {
+   "id": "roof_of_your_own",
+   "name": "A Roof of Your Own",
+   "description": "Build the cottage on your island",
+   "imageUrl": "/badges/roof_of_your_own.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "name_on_the_chart",
+   "name": "Name on the Chart",
+   "description": "Give your homestead a name of your own",
+   "imageUrl": "/badges/name_on_the_chart.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "the_longhouse",
+   "name": "The Longhouse",
+   "description": "Build the longhouse",
+   "imageUrl": "/badges/the_longhouse.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "furnished",
+   "name": "Furnished",
+   "description": "Own 10 furnishings",
+   "imageUrl": "/badges/furnished.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "gallery_hung",
+   "name": "Gallery Hung",
+   "description": "Hang six badges in your gallery",
+   "imageUrl": "/badges/gallery_hung.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "the_great_hall",
+   "name": "The Great Hall",
+   "description": "Build the great hall",
+   "imageUrl": "/badges/the_great_hall.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "the_estate",
+   "name": "The Estate",
+   "description": "Build the Estate, the last rung of the house",
+   "imageUrl": "/badges/the_estate.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "every_comfort",
+   "name": "Every Comfort",
+   "description": "Own every furnishing there is",
+   "imageUrl": "/badges/every_comfort.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "first_ashore",
+   "name": "First Ashore",
+   "description": "Go ashore on your first isle",
+   "imageUrl": "/badges/first_ashore.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "beachcomber",
+   "name": "Beachcomber",
+   "description": "Land on 10 isles",
+   "imageUrl": "/badges/beachcomber.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "others_came_before",
+   "name": "Others Came Before",
+   "description": "Read all nine notes left on the rocks",
+   "imageUrl": "/badges/others_came_before.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "far_rocks",
+   "name": "The Far Rocks",
+   "description": "Land on 20 isles",
+   "imageUrl": "/badges/far_rocks.png",
+   "difficulty": "veteran"
+  },
+  {
+   "id": "every_last_rock",
+   "name": "Every Last Rock",
+   "description": "Land on all 27 isles",
+   "imageUrl": "/badges/every_last_rock.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "wake_behind_you",
+   "name": "Wake Behind You",
+   "description": "Chart a quarter of the fishing sea",
+   "imageUrl": "/badges/wake_behind_you.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "home_waters",
+   "name": "Home Waters",
+   "description": "Chart three fifths of the fishing sea",
+   "imageUrl": "/badges/home_waters.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "into_the_fog",
+   "name": "Into the Fog",
+   "description": "Chart half the campaign water",
+   "imageUrl": "/badges/into_the_fog.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "no_blank_spaces",
+   "name": "No Blank Spaces",
+   "description": "Chart nine tenths of the fishing sea",
+   "imageUrl": "/badges/no_blank_spaces.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "fog_burned_off",
+   "name": "The Fog Burned Off",
+   "description": "Chart nine tenths of the campaign water",
+   "imageUrl": "/badges/fog_burned_off.png",
+   "difficulty": "master"
+  },
+  {
+   "id": "first_spade",
+   "name": "First Spade",
+   "description": "Dig up your first buried cache",
+   "imageUrl": "/badges/first_spade.png",
+   "difficulty": "rookie"
+  },
+  {
+   "id": "six_feet_down",
+   "name": "Six Feet Down",
+   "description": "Dig up 6 buried caches",
+   "imageUrl": "/badges/six_feet_down.png",
+   "difficulty": "seasoned"
+  },
+  {
+   "id": "salted_away",
+   "name": "Salted Away",
+   "description": "Dig up all 12 buried caches",
+   "imageUrl": "/badges/salted_away.png",
+   "difficulty": "veteran"
+  }
+ ],
  "apPool": 693,
  "navXpTable": [
   0,

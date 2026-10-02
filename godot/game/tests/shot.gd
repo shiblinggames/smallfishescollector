@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -432,6 +432,21 @@ func _init() -> void:
 		"baitpick":
 			hud._toggle_bait_picker()
 			for f: int in 20:
+				await process_frame
+		"clue":
+			p["clue_hunts"] = { "easy": Clues.make_hunt("easy", 777, sea.session.save), "hard": Clues.make_hunt("hard", 4242, sea.session.save) }
+			hud.refresh()
+			for f: int in 40:
+				await process_frame
+		"achievements":
+			RulesApi.run(sea.session.store, sea.session.uid, "setSeaPos", [0, 2600])
+			hud.refresh()
+			hud._open_loadout()
+			for f: int in 30:
+				await process_frame
+			sea._locker._levels_view = "achievements"
+			sea._locker._show_tab("levels")
+			for f: int in 40:
 				await process_frame
 		"levels":
 			hud._open_loadout()

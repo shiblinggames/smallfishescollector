@@ -183,21 +183,6 @@
     },
     "cosmeticPool": [
       {
-        "kind": "skin",
-        "id": "mint",
-        "name": "Mint"
-      },
-      {
-        "kind": "skin",
-        "id": "lavender",
-        "name": "Lavender"
-      },
-      {
-        "kind": "skin",
-        "id": "storm",
-        "name": "Storm"
-      },
-      {
         "kind": "boat",
         "id": "charcoal",
         "name": "Charcoal",
@@ -1282,5 +1267,348 @@
   ],
   "_market": "THE MARKET DAY (Kong, 2026-10-02): prices change once a sea day (48 min), at sunrise (two thirds into the clock's cycle), each day with its own mood. The Advanced board needs Fishing 50 (levelGates.feature).",
   "marketTickMs": 2880000,
-  "marketTickOffsetMs": 1920000
+  "marketTickOffsetMs": 1920000,
+  "fishingColorsByLevel": {
+    "1": [],
+    "2": [],
+    "3": [],
+    "4": [],
+    "5": [],
+    "6": [],
+    "7": [],
+    "8": [],
+    "9": [],
+    "10": [],
+    "11": [],
+    "12": [],
+    "13": [],
+    "14": [],
+    "15": [],
+    "16": [],
+    "17": [],
+    "18": [],
+    "19": [],
+    "20": [],
+    "21": [],
+    "22": [],
+    "23": [],
+    "24": [],
+    "25": [],
+    "26": [],
+    "27": [],
+    "28": [],
+    "29": [],
+    "30": [],
+    "31": [],
+    "32": [],
+    "33": [],
+    "34": [],
+    "35": [],
+    "36": [],
+    "37": [],
+    "38": [],
+    "39": [],
+    "40": [],
+    "41": [],
+    "42": [],
+    "43": [],
+    "44": [],
+    "45": [],
+    "46": [],
+    "47": [],
+    "48": [],
+    "49": [],
+    "50": [],
+    "51": [],
+    "52": [],
+    "53": [],
+    "54": [],
+    "55": [],
+    "56": [],
+    "57": [],
+    "58": [],
+    "59": [],
+    "60": [],
+    "61": [],
+    "62": [],
+    "63": [],
+    "64": [],
+    "65": [],
+    "66": [],
+    "67": [],
+    "68": [],
+    "69": [],
+    "70": [],
+    "71": [],
+    "72": [],
+    "73": [],
+    "74": [],
+    "75": [],
+    "76": [],
+    "77": [],
+    "78": [],
+    "79": [],
+    "80": [],
+    "81": [],
+    "82": [],
+    "83": [],
+    "84": [],
+    "85": [],
+    "86": [],
+    "87": [],
+    "88": [],
+    "89": [],
+    "90": [],
+    "91": [],
+    "92": [],
+    "93": [],
+    "94": [],
+    "95": [],
+    "96": [],
+    "97": [],
+    "98": [],
+    "99": [],
+    "100": []
+  },
+  "_achievements": "ACHIEVEMENTS (Kong, 2026-10-02): badges pay nothing but their points; captain colours unlock at point milestones and come from nowhere else (not crates, not levels, not shops), save the four free starters. The milestones span the 236 points the port's badges can earn today (core/achievements.gd); stretch them as more systems are ported. The three dig badges belong to the treasure hunts now.",
+  "achievements": {
+    "colors": [
+      [
+        5,
+        "sand"
+      ],
+      [
+        10,
+        "mint"
+      ],
+      [
+        16,
+        "sky"
+      ],
+      [
+        24,
+        "autumn"
+      ],
+      [
+        32,
+        "forest"
+      ],
+      [
+        42,
+        "lavender"
+      ],
+      [
+        54,
+        "ruby"
+      ],
+      [
+        66,
+        "storm"
+      ],
+      [
+        80,
+        "ice"
+      ],
+      [
+        95,
+        "golden"
+      ],
+      [
+        110,
+        "lava"
+      ],
+      [
+        126,
+        "frozen"
+      ],
+      [
+        142,
+        "crystal"
+      ],
+      [
+        160,
+        "galaxy"
+      ],
+      [
+        178,
+        "gilded"
+      ],
+      [
+        196,
+        "ethereal"
+      ],
+      [
+        216,
+        "spectral"
+      ],
+      [
+        236,
+        "abyssal"
+      ]
+    ],
+    "badgeText": {
+      "first_spade": {
+        "description": "Finish your first treasure hunt"
+      },
+      "six_feet_down": {
+        "name": "Ten Feet Down",
+        "description": "Finish 10 treasure hunts"
+      },
+      "salted_away": {
+        "description": "Finish a treasure hunt of every tier"
+      }
+    }
+  },
+  "_clues": "TREASURE HUNTS (Kong, 2026-10-02): bottles work like RuneScape clue scrolls; 3 to 5 drift on the open sea each sea day, shared, one take each; tier by water; steps then a dig, the only way a dig site is ever found. Caskets pay doubloons, bait and fishing crates (cosmetics stay crate-only). core/clues.gd.",
+  "clues": {
+    "bottlesPerDay": [
+      3,
+      5
+    ],
+    "steps": {
+      "easy": 2,
+      "medium": 3,
+      "hard": 4,
+      "elite": 5
+    },
+    "kinds": [
+      "bearing",
+      "riddle",
+      "catch",
+      "speak"
+    ],
+    "catchRarity": {
+      "easy": 2,
+      "medium": 3,
+      "hard": 3,
+      "elite": 4
+    },
+    "rewards": {
+      "easy": {
+        "doubloons": [
+          400,
+          900
+        ],
+        "bait": {
+          "minnow": [
+            3,
+            8
+          ],
+          "night_crawler": [
+            0,
+            3
+          ]
+        },
+        "crateChance": 0.35,
+        "crates": {
+          "wooden": 3,
+          "metal": 1
+        },
+        "crateCount": [
+          1,
+          1
+        ]
+      },
+      "medium": {
+        "doubloons": [
+          1200,
+          2600
+        ],
+        "bait": {
+          "night_crawler": [
+            4,
+            8
+          ],
+          "chum": [
+            0,
+            4
+          ]
+        },
+        "crateChance": 0.5,
+        "crates": {
+          "metal": 3,
+          "gold": 1
+        },
+        "crateCount": [
+          1,
+          1
+        ]
+      },
+      "hard": {
+        "doubloons": [
+          3000,
+          6000
+        ],
+        "bait": {
+          "chum": [
+            5,
+            10
+          ],
+          "anglers_formula": [
+            0,
+            3
+          ]
+        },
+        "crateChance": 0.7,
+        "crates": {
+          "gold": 3,
+          "diamond": 1
+        },
+        "crateCount": [
+          1,
+          1
+        ]
+      },
+      "elite": {
+        "doubloons": [
+          7000,
+          14000
+        ],
+        "bait": {
+          "anglers_formula": [
+            3,
+            6
+          ]
+        },
+        "crateChance": 1.0,
+        "crates": {
+          "diamond": 3,
+          "ancient": 1
+        },
+        "crateCount": [
+          1,
+          2
+        ]
+      }
+    },
+    "riddles": {
+      "shallows-0": "Black birds hang their wings to dry on me, a short row east of home.",
+      "shallows-1": "Diving birds gave me my name. I lie south of home in the shallow water.",
+      "shallows-2": "My weed lies low and my name says so. West of home, in the shallows.",
+      "open_waters-0": "A salted fist, clenched in the open water, east where the sun comes up.",
+      "open_waters-1": "My flag never climbs all the way. Out in the open water, to the south-east.",
+      "open_waters-2": "I am the colour of old bone under the open water, south of home.",
+      "open_waters-3": "I boil without a fire, out in the open water, south and a little west.",
+      "open_waters-4": "A broken spar points out of me, west of home in the open water.",
+      "open_waters-5": "Ships once rested here and none do now. Far west, in the open water.",
+      "deep-0": "Dark fins circle my shoulder, east in the Deep.",
+      "deep-1": "I rock nothing but the swell, south-east in the Deep.",
+      "deep-2": "Bones and salt, due south where the Deep begins to bite.",
+      "deep-3": "My name is a depth, and I stand south-west in the Deep.",
+      "deep-4": "Hush here. A flat ledge, west in the Deep.",
+      "deep-5": "Built from what the sea broke, far west in the Deep.",
+      "abyss-0": "A dark fang bites at the sky, far east where the Abyss starts.",
+      "abyss-1": "Even the fish shiver round me, south-east in the Abyss.",
+      "abyss-2": "A stair that only goes down, south in the Abyss.",
+      "abyss-3": "I carry a light for nobody, south and a touch west in the Abyss.",
+      "abyss-4": "Nothing moves in my water. West, in the Abyss.",
+      "abyss-5": "Worth less than a coin and twice as hard to find, far west in the Abyss.",
+      "ancient_deep-0": "Before anything, there was me. East, in the Ancient Deep.",
+      "ancient_deep-1": "Something grew me and left me, south-east in the Ancient Deep.",
+      "ancient_deep-2": "Past me the map gives up. South, in the Ancient Deep.",
+      "ancient_deep-3": "The water round me forgot how to move. Deep south, and west of it.",
+      "ancient_deep-4": "Nobody claims me, south-west in the Ancient Deep.",
+      "ancient_deep-5": "Drop the lead here and it keeps on falling, at the western edge of the Ancient Deep."
+    }
+  }
 }

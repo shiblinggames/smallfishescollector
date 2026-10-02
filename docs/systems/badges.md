@@ -8,6 +8,8 @@ the rationale and the traps around it.
 **DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong): badges will pay in ACHIEVEMENT POINTS
 ONLY. The Claim button and the per-badge doubloon and gem rewards go; AP milestones unlock
 cosmetics, and Steam achievements mirror the badges. See steam-port.md "Working it through".
+BUILT IN THE GODOT PORT 2026-10-02 (core/achievements.gd): points only; captain colours come
+ONLY from point milestones. See steam-port.md "ACHIEVEMENTS, BUILT".
 
 ## Files
 
