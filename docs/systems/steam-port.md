@@ -630,8 +630,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   half 430); the anchorage is the disc of 3,600 from (0, -3000), walled wherever north of the
   reef, with the Sea Gate due north (half 620). North.hold keeps a hull to the arch and inside
   the wall; the Sea Gate holds you too (the campaign is not ported) with a line saying so.
-  Past the sign in the arch (GATE_SIGN_Y) the boat becomes your ship (lib/ships.ts art by
-  ship_tier, models/*_v2.png), and back again south of it. The northern islands (Crew Hall,
+  Past the sign in the arch (GATE_SIGN_Y) the boat becomes your ship, and back again south of
+  it. Drawn as the web's Warship (Kong: "match what's current in the web"): the hull's SEA
+  art (lib/ships.ts seaImageUrl, ship-hero/*_v3.png; never the old models/*_v2), in a
+  340-wide box with its keel (seaKeel) on the water, turned by seaFlip into the chart's
+  bow-left convention, with a soft reflection; an equipped ship skin's hull (lib/shipSkins.ts
+  imageByTier) instead, drawn 0.969/0.651 wider for its padded plate. The rules export now
+  carries "ships" and "shipSkins". The northern islands (Crew Hall,
   Posting House, Forge, Gunwharf, Charterhouse) were already drawn; mooring now opens a paper
   sheet of what each will hold (North.COMING) until their rooms are ported. THE WORLD
   CHART centres on the crossing (WorldMap.WORLD_CENTRE, Kong: "the centre of the world is the

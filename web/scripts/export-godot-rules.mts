@@ -62,6 +62,8 @@ import { BADGES, badgePoints } from '../lib/badges'
 import { AP_POOL } from '../lib/cosmeticGates'
 import { XP_TABLE as NAV_XP_TABLE } from '../lib/expeditionLevel'
 import { SHINY_SELL_MULT, SHINY_MESSAGES } from '../lib/shiny'
+import { SHIPS } from '../lib/ships'
+import { SHIP_SKINS } from '../lib/shipSkins'
 import { ZONE_REWARD_BASE, PRESTIGE_MAX } from '../lib/zoneRewards'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'content', 'rules.json')
@@ -110,6 +112,11 @@ const rules = {
   characterColors: CHARACTER_COLORS.map(c => ({ id: c.id, name: c.name, free: c.free ?? false, gate: c.gate ?? null })),
   petOverlays: PET_OVERLAYS,
   badgePoints: Object.fromEntries(BADGES.map(b => [b.id, badgePoints(b.id)])),
+  // The expedition ships as the chart draws them north of the reef (SeaMap's
+  // Warship: the hull's sea art, its facing, beam and keel), and the ship skins'
+  // hulls by tier.
+  ships: SHIPS.map(d => ({ tier: d.tier, name: d.name, seaImageUrl: d.seaImageUrl ?? null, seaFlip: d.seaFlip ?? false, seaBeam: d.seaBeam ?? 0.6, seaKeel: d.seaKeel ?? 0.75 })),
+  shipSkins: SHIP_SKINS.map(k => ({ id: k.id, name: k.name, imageByTier: k.imageByTier ?? null })),
   // Every badge as the Achievements page lists it (the port shows the ones its systems can earn).
   badges: BADGES.map(b => ({ id: b.id, name: b.name, description: b.description, imageUrl: b.imageUrl, difficulty: b.difficulty })),
   apPool: AP_POOL,

@@ -4313,6 +4313,165 @@
   "six_feet_down": 2,
   "salted_away": 3
  },
+ "ships": [
+  {
+   "tier": 2,
+   "name": "Sloop",
+   "seaImageUrl": "/ship-hero/sloop_v3.png",
+   "seaFlip": true,
+   "seaBeam": 0.53,
+   "seaKeel": 0.683
+  },
+  {
+   "tier": 3,
+   "name": "Schooner",
+   "seaImageUrl": "/ship-hero/schooner_v3.png",
+   "seaFlip": true,
+   "seaBeam": 0.62,
+   "seaKeel": 0.728
+  },
+  {
+   "tier": 4,
+   "name": "Brigantine",
+   "seaImageUrl": "/ship-hero/brigantine_v3.png",
+   "seaFlip": true,
+   "seaBeam": 0.72,
+   "seaKeel": 0.748
+  },
+  {
+   "tier": 5,
+   "name": "Galleon",
+   "seaImageUrl": "/ship-hero/galleon_v3.png",
+   "seaFlip": true,
+   "seaBeam": 0.87,
+   "seaKeel": 0.855
+  },
+  {
+   "tier": 6,
+   "name": "Man-o-War",
+   "seaImageUrl": "/ship-hero/man-o-war_v3.png",
+   "seaFlip": false,
+   "seaBeam": 0.97,
+   "seaKeel": 0.913
+  }
+ ],
+ "shipSkins": [
+  {
+   "id": "finndicate_hull",
+   "name": "Finndicate Hull",
+   "imageByTier": {
+    "0": "/enemychapter1rowboat_v2.png",
+    "1": "/enemychapter1dinghy_v2.png",
+    "2": "/enemychapter1sloop_v2.png",
+    "3": "/enemychapter1schooner_v2.png",
+    "4": "/enemychapter1brigantine_v2.png",
+    "5": "/enemychapter1galleon_v2.png",
+    "6": "/enemychapter1man-o-war_v2.png"
+   }
+  },
+  {
+   "id": "chartmaker_hull",
+   "name": "Chartmaker Hull",
+   "imageByTier": {
+    "0": "/enemychapter2rowboat_v2.png",
+    "1": "/enemychapter2dinghy_v2.png",
+    "2": "/enemychapter2sloop_v2.png",
+    "3": "/enemychapter2schooner_v2.png",
+    "4": "/enemychapter2brigantine_v2.png",
+    "5": "/enemychapter2galleon_v2.png",
+    "6": "/enemychapter2man-o-war_v2.png"
+   }
+  },
+  {
+   "id": "coffers_hull",
+   "name": "Coffers Hull",
+   "imageByTier": {
+    "0": "/enemychapter3rowboat.png",
+    "1": "/enemychapter3dinghy.png",
+    "2": "/enemychapter3sloop.png",
+    "3": "/enemychapter3schooner.png",
+    "4": "/enemychapter3brigantine.png",
+    "5": "/enemychapter3galleon.png",
+    "6": "/enemychapter3man-o-war.png"
+   }
+  },
+  {
+   "id": "sunken_hand_hull",
+   "name": "Sunken Hand Hull",
+   "imageByTier": {
+    "4": "/enemy_finnship.png",
+    "5": "/enemy_finnship.png",
+    "6": "/enemy_finnship.png"
+   }
+  },
+  {
+   "id": "drowned_giant_hull",
+   "name": "Tundra Hull",
+   "imageByTier": {
+    "4": "/tundrahull.png",
+    "5": "/tundrahull.png",
+    "6": "/tundrahull.png"
+   }
+  },
+  {
+   "id": "last_cast_hull",
+   "name": "Volcanic Hull",
+   "imageByTier": {
+    "4": "/volcanichull.png",
+    "5": "/volcanichull.png",
+    "6": "/volcanichull.png"
+   }
+  },
+  {
+   "id": "last_fathom_hull",
+   "name": "Last Fathom Hull",
+   "imageByTier": {
+    "4": "/enemychapter4brigantine.png",
+    "5": "/enemychapter4galleon.png",
+    "6": "/enemychapter4man-o-war.png"
+   }
+  },
+  {
+   "id": "golden_gauntlet_hull",
+   "name": "Golden Gauntlet Hull",
+   "imageByTier": {
+    "6": "/goldengauntlethull.png"
+   }
+  },
+  {
+   "id": "bad_blood_hull",
+   "name": "Bad Blood Hull",
+   "imageByTier": {
+    "6": "/badbloodhull.png"
+   }
+  },
+  {
+   "id": "pitch_black_hull",
+   "name": "Pitch Black Hull",
+   "imageByTier": {
+    "6": "/pitchblackhull.png"
+   }
+  },
+  {
+   "id": "galaxy_hull",
+   "name": "Galaxy Hull",
+   "imageByTier": {
+    "6": "/galaxyhull.png"
+   }
+  },
+  {
+   "id": "dons_ghost_hull",
+   "name": "Don's Ghost Hull",
+   "imageByTier": {
+    "6": "/donsghosthull.png"
+   }
+  },
+  {
+   "id": "corsair_hull",
+   "name": "Corsair Hull",
+   "imageByTier": null
+  }
+ ],
  "badges": [
   {
    "id": "prestige_i",

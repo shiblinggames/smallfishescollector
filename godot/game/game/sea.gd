@@ -1049,14 +1049,27 @@ func _ship_side() -> void:
 	var want: bool = North.ship_water(_boat.position)
 	if want == _boat.on_ship:
 		return
-	var names: Dictionary = { 2: "sloop", 3: "schooner", 4: "brigantine", 5: "galleon", 6: "man-o-war" }
-	var tier: int = clampi(int(Js.num(session.profile().get("ship_tier"))), 2, 6)
-	_boat.set_ship(want, Skipper.tex("models/%s_v2.png" % names[tier]))
+	# Her ship as the web's chart draws it (lib/ships.ts; a skin's hull if worn).
+	var p: Dictionary = session.profile()
+	var tier: int = clampi(int(Js.num(p.get("ship_tier"))), 2, 6)
+	var def: Dictionary = {}
+	for sd: Dictionary in Js.list(Rules.data().get("ships")):
+		if int(sd["tier"]) == tier:
+			def = sd
+	var art: String = str(def.get("seaImageUrl", ""))
+	var wide: float = 1.0
+	for sk: Dictionary in Js.list(Rules.data().get("shipSkins")):
+		if sk["id"] == p.get("equipped_ship_skin") and sk.get("imageByTier") != null:
+			var by: Dictionary = sk["imageByTier"]
+			if by.has(str(tier)):
+				art = str(by[str(tier)])
+				wide = 0.969 / 0.651
+	_boat.set_ship(want, def, Skipper.tex(art), wide)
 	_field.ring(_boat.position, 140.0, 1.6, 0.6)
 	Rumble.buzz([0, 30, 30, 50])
 	Sound.bell()
 	if want:
-		_hud.toast("The boat changed under you: your %s. Expeditions are run from here." % str(names[tier]).capitalize().replace("-o-w", "-o-W"))
+		_hud.toast("The boat changed under you: your %s. Expeditions are run from here." % str(def.get("name", "ship")))
 	else:
 		_hud.toast("Back on the fishing boat")
 

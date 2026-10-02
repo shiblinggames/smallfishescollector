@@ -50,7 +50,9 @@ const ART = [
   'sea/mainland-town.png', 'sea/isle-*.webp', 'sea/isle-chest.png', 'sea/isle-chest-deep.png', 'sea/isle-chest-open.png',
   'sea/isle-note.png', 'sea/dig-box.png', 'sea/sea-bottle.png', 'sea-clouds.webp', 'sea/kelp-deep.webp', 'sea/kelp-canopy.webp', 'sea/tavern.png', 'sea/market.png', 'sea/tackle.png', 'sea/parlor.png', 'sea/den.png', 'sea/charting.png',
   // North of the reef: the rock of the reef and the anchorage, and the ships.
-  'sea/rock-*.png', 'models/*_v2.png',
+  // The ships as the chart draws them (lib/ships.ts seaImageUrl) and the ship
+  // skins' hulls (lib/shipSkins.ts imageByTier).
+  'sea/rock-*.png', 'ship-hero/*_v3.png', 'enemychapter*.png', 'enemy_finnship.png', '*hull.png',
   // Achievements: every badge's art (256 px).
   'badges',
   'tackle-shop-page-bg.jpg', 'monofilament.png', 'braidedline.png', 'copolymer.png', 'fluorocarbon.png', 'titaniumwire.png', 'deepsealine.png',

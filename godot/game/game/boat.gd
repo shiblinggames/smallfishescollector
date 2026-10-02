@@ -129,23 +129,44 @@ var _ship_base_y: float = 0.0
 var on_ship: bool = false
 
 
+## The ship's reflection, and whether her picture is drawn bow-right (so it
+## turns the other way to the fishing boat's bow-left convention).
+var _ship_mirror: Sprite2D
+var _ship_flip: bool = false
+
+
 ## THE CHANGE OF BOAT (North): past the sign in the arch, the ship you own
-## for expeditions; back through it, the fishing boat. tex is the ship's
-## picture (lib/ships.ts, by ship tier).
-func set_ship(on: bool, tex: Texture2D) -> void:
+## for expeditions; back through it, the fishing boat. Drawn as the web's
+## Warship (SeaMap.tsx): the hull's sea art (lib/ships.ts seaImageUrl, or an
+## equipped ship skin's hull) in a 340-wide box, its keel on the water, and a
+## soft reflection under it. def: the rules' "ships" row; tex: the picture;
+## wide: how much wider a skin's padded plate is drawn.
+func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float = 1.0) -> void:
 	on_ship = on
 	if on and _ship == null:
 		_ship = Sprite2D.new()
 		add_child(_ship)
+		_ship_mirror = Sprite2D.new()
+		_ship_mirror.modulate.a = 0.26
+		add_child(_ship_mirror)
+		move_child(_ship_mirror, 0)
 	if _ship != null:
 		_ship.visible = on
+		_ship_mirror.visible = on
 		if on and tex != null:
 			_ship.texture = tex
-			# About three boats long, standing on the water.
-			var sc: float = 360.0 / float(tex.get_width())
+			_ship_mirror.texture = tex
+			_ship_flip = def.get("seaFlip", false) == true
+			var box: float = 340.0 * wide
+			var sc: float = box / float(tex.get_width())
 			_ship.scale = Vector2(sc, sc / Chart.GROUND)
-			_ship_base_y = -tex.get_height() * sc * 0.32 / Chart.GROUND
+			# The keel (a share of the box's height) sits on the water here.
+			var keel: float = float(def.get("seaKeel", 0.75))
+			_ship_base_y = -box * (keel - 0.5) / Chart.GROUND
 			_ship.position = Vector2(0, _ship_base_y)
+			# Mirrored about the keel, lying down (0.55) and a little sunk.
+			_ship_mirror.scale = Vector2(sc, -sc * 0.55 / Chart.GROUND)
+			_ship_mirror.position = Vector2(0, (box * (keel - 0.5) * 0.55 - box * 0.02) / Chart.GROUND)
 	skipper.visible = not on
 
 
@@ -239,9 +260,13 @@ func steer(input: Vector2, delta: float) -> void:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
 		skipper.scale.x = -_facing
 	if _ship != null:
-		# The ship's picture faces right; a little roll and heave.
-		_ship.flip_h = _facing < 0.0
+		# Bow-left by convention (as the fishing boat), turned to her way; a
+		# little roll and heave, the reflection keeping time.
+		var fl: bool = (_facing > 0.0) != _ship_flip
+		_ship.flip_h = fl
+		_ship_mirror.flip_h = fl
 		_ship.rotation = sin(Time.get_ticks_msec() / 900.0) * 0.012 * rough
+		_ship_mirror.rotation = -_ship.rotation
 		_ship.position.y = _ship_base_y + sin(Time.get_ticks_msec() / 1300.0) * 3.0
 
 
