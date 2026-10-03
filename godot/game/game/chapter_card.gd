@@ -10,6 +10,11 @@ signal finished
 
 var chapter: Dictionary = {}
 var closing: bool = false
+## The line over the numeral (the campaign's own: "Chapter I complete", and
+## that the next has opened).
+var eyebrow: String = "THE LONG CAST"
+## Gold sparks rising round the sheet (the campaign's unlock).
+var sparks: bool = false
 var _sheet: Control
 var _ready_at: float = 0.0
 var _t: float = 0.0
@@ -39,9 +44,10 @@ func _ready() -> void:
 	col.add_theme_constant_override("separation", 8)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(col)
-	var eb: Label = Paper.text(col, "THE LONG CAST", "eyebrow", Paper.RED)
+	var eb: Label = Paper.text(col, eyebrow, "eyebrow", Paper.RED)
 	eb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var num: Label = Paper.text(col, "Chapter %s" % str(chapter.get("romanNumeral", "")), "display", Paper.INK)
+	var numeral: String = str(chapter.get("romanNumeral", ""))
+	var num: Label = Paper.text(col, ("Chapter %s" % numeral) if numeral != "" else "The Last of It", "display", Paper.INK)
 	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	num.add_theme_font_size_override("font_size", 54)
 	num.pivot_offset = Vector2(300, 34)
@@ -67,6 +73,27 @@ func _ready() -> void:
 	sub.custom_minimum_size = Vector2(520, 0)
 	if not closing:
 		sub.add_theme_font_override("font", Kit.italic())
+	if sparks:
+		var fx: CPUParticles2D = CPUParticles2D.new()
+		fx.position = Vector2(330, 380)
+		fx.amount = 28
+		fx.lifetime = 2.6
+		fx.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+		fx.emission_rect_extents = Vector2(360, 10)
+		fx.direction = Vector2(0, -1)
+		fx.spread = 18.0
+		fx.gravity = Vector2(0, -12)
+		fx.initial_velocity_min = 40.0
+		fx.initial_velocity_max = 110.0
+		fx.scale_amount_min = 2.0
+		fx.scale_amount_max = 4.5
+		fx.texture = Glow.radial(16, Color(1.0, 0.85, 0.45))
+		var ramp: Gradient = Gradient.new()
+		ramp.set_color(0, Color(1.0, 0.86, 0.5, 0.9))
+		ramp.set_color(1, Color(1.0, 0.7, 0.3, 0.0))
+		fx.color_ramp = ramp
+		fx.z_index = -1
+		_sheet.add_child(fx)
 	var go: Label = Paper.text(col, "Press to go on", "small", Paper.INK_FAINT)
 	go.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	go.modulate.a = 0.0

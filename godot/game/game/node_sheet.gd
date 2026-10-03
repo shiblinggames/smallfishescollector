@@ -165,6 +165,13 @@ func _paint() -> void:
 	Paper.text(_body, str(_n.get("flavor", "")), "body", Paper.ink_soft(), true).add_theme_font_override("font", Kit.font("karla", 400))
 	Paper.rule(_body)
 	var det: Dictionary = Js.obj(_n.get("detail"))
+	if _n["type"] == "raid" and _st != "locked":
+		_boss_card(det)
+		_err = Paper.text(_body, "", "small", Paper.red(), true)
+		_footer(false)
+		Paper.night = false
+		_fit.call_deferred()
+		return
 	if _st == "locked":
 		var why: String = ""
 		for v: Dictionary in sea._campaign.view["views"]:
@@ -280,6 +287,57 @@ func _cleared_now(r: Variant) -> void:
 
 
 # ── Each kind ─────────────────────────────────────────────────────────────────
+
+## The boss card: who waits, what they carry, your best, and Normal or the
+## Challenge (the harder run hanging off this one, open once it is beaten).
+func _boss_card(det: Dictionary) -> void:
+	Paper.text(_body, str(det.get("description", "")), "small", Paper.ink_soft(), true)
+	var foes: Array = Js.list(det.get("enemies"))
+	if not foes.is_empty():
+		Paper.stat(_body, "The run", " · ".join(PackedStringArray(foes)), Paper.ink())
+	var raid: Dictionary = Js.obj(Rules.data()["raids"].get(_n["raidId"]))
+	var drops: Array = []
+	for row: Dictionary in Js.list(raid.get("loot")):
+		var rid: String = str(row["id"])
+		if rid.begins_with("doubloons") or rid.begins_with("gems") or rid.begins_with("pack"):
+			continue
+		drops.append(str(row.get("label", rid)))
+	if not drops.is_empty():
+		Paper.stat(_body, "The crate may hold", ", ".join(PackedStringArray(drops)), GOLD)
+	var rec: Dictionary = Js.obj(Js.obj(sea._campaign.view.get("raidRecords")).get(_n["raidId"]))
+	var times: int = sea.session.store.clear_count(sea.session.uid, str(_n["raidId"]))
+	if times > 0:
+		var best: Variant = rec.get("yourBestMs")
+		Paper.stat(_body, "Beaten", "%d time%s%s" % [times, "" if times == 1 else "s", ("  ·  best %s" % _clock(float(best))) if best != null else ""], Paper.ink())
+	var ch: Dictionary = {}
+	for n: Dictionary in Campaign.nodes():
+		if Js.obj(n.get("sideBranch")).get("parentId") == node_id and n["type"] == "raid":
+			ch = n
+	var h: HBoxContainer = HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	_body.add_child(h)
+	var go: Pane.PaneButton = Paper.button("Set sail against %s" % _n["label"] if _st != "cleared" else "Take them on again", true)
+	go.pressed.connect(func() -> void:
+		var rid: String = str(_n["raidId"])
+		_close()
+		sea.start_battle(rid, node_id))
+	h.add_child(go)
+	if not ch.is_empty():
+		var cst: String = str(sea._campaign.status.get(ch["id"], "locked"))
+		var cb: Pane.PaneButton = Paper.button("Challenge" if cst != "locked" else "Challenge: beat the raid first")
+		cb.disabled = cst == "locked"
+		cb.tooltip_text = str(ch.get("flavor", ""))
+		cb.pressed.connect(func() -> void:
+			var crid: String = str(ch["raidId"])
+			_close()
+			sea.start_battle(crid, node_id))
+		h.add_child(cb)
+
+
+static func _clock(ms: float) -> String:
+	var s2: int = int(ms / 1000.0)
+	return "%d:%02d" % [s2 / 60, s2 % 60]
+
 
 func _toll() -> void:
 	var m: Dictionary = _n["milestone"]

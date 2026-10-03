@@ -24,6 +24,7 @@ const SKIN: float = 14.0
 const ENCOUNTER_REACH: float = 300.0
 const ISLE_REACH: float = 240.0
 const DOCK_OFF: Vector2 = Vector2(-340, 250)
+const PORTAL_REACH: float = 340.0
 const GOLD: Color = Color(1.0, 0.82, 0.38)
 
 ## The shown campaign isles (collision, Chart.off_shore) and the shut bays
@@ -37,6 +38,8 @@ var status: Dictionary = {}
 var next_id: String = ""
 var _isles: Dictionary = {}
 var _ships: Dictionary = {}
+var _homes: Array = []
+var _spans: Array = []
 var _seen: Dictionary = {}
 var _primed: bool = false
 
@@ -59,6 +62,20 @@ func _ready() -> void:
 		s.enc = e
 		sea._world.add_child(s)
 		_ships[e["node"]] = s
+	for pt: Dictionary in w["portals"]:
+		var h: WayHome = WayHome.new()
+		h.info = pt
+		sea._world.add_child(h)
+		_homes.append(h)
+	for sp: Dictionary in w["spans"]:
+		var c: Span = Span.new()
+		c.info = sp
+		sea._world.add_child(c)
+		_spans.append(c)
+	for fb: Dictionary in w["banks"]:
+		var f: FogBank = FogBank.new()
+		f.info = fb
+		sea._world.add_child(f)
 	refresh()
 
 
@@ -90,6 +107,10 @@ func refresh() -> void:
 		s.visible = vis2
 		s.set_state(str(status.get(nid, "locked")), nid == next_id, _primed and vis2 and not _seen.get(nid, false), sea._field)
 		_seen[nid] = vis2
+	for h: WayHome in _homes:
+		h.open = status.get(h.info["node"]) == "cleared"
+	for c: Span in _spans:
+		c.cleared = status.get(c.info["node"]) == "cleared"
 	var sh: Array = []
 	for b: Dictionary in Campaign.water()["bays"]:
 		if b.get("opensBy") != null and status.get(b["opensBy"]) != "cleared":
@@ -123,6 +144,28 @@ func _process(_delta: float) -> void:
 	for nid: String in _ships:
 		(_ships[nid] as Ship).boat_at = at
 		(_ships[nid] as Ship).fighting = sea.stage != null
+
+
+## The chapter whose celebration is owed (state-based: every main stop of the
+## chapter before it cleared, and not yet seen), or {}.
+func owed_chapter() -> Dictionary:
+	var chs: Array = Campaign.chapters()
+	var seen: Array = Js.list(view.get("seenChapterUnlocks"))
+	for i: int in range(1, mini(5, chs.size())):
+		var ch: Dictionary = chs[i]
+		if seen.has(ch["id"]):
+			continue
+		var prev: String = str(chs[i - 1]["id"])
+		var all: bool = true
+		for n: Dictionary in Campaign.nodes():
+			if Campaign.chapter_for(str(n["id"]))["id"] != prev or n.get("sideBranch") != null or n.get("comingSoon") == true:
+				continue
+			if status.get(n["id"]) != "cleared":
+				all = false
+				break
+		if all:
+			return ch
+	return {}
 
 
 func shown(id: String) -> bool:
@@ -177,6 +220,15 @@ func reach(at: Vector2) -> Variant:
 		if d2 < ISLE_REACH and d2 < best:
 			best = d2
 			pick = nid2
+	var home: WayHome = null
+	for h: WayHome in _homes:
+		h.gather = h.open and at.distance_to(h.position) < PORTAL_REACH
+		if h.gather and at.distance_to(h.position) < best:
+			best = at.distance_to(h.position)
+			home = h
+	if home != null:
+		var to: Dictionary = Campaign.water()["portalHome"]
+		return ["Take the way home", func() -> void: sea._warp(float(to["x"]), float(to["y"]), Color(0.55, 0.85, 0.95))]
 	if pick == "":
 		return null
 	return [label_for(pick), func() -> void: node_pressed.emit(pick)]
@@ -431,3 +483,166 @@ class Ship:
 		draw_circle(DOCK_OFF, ENCOUNTER_REACH, Color(col, a * 0.18))
 		draw_arc(DOCK_OFF, ENCOUNTER_REACH, 0.0, TAU, 64, Color(col, a + 0.1 * sin(_t * 2.0)), 3.0, true)
 		draw_arc(DOCK_OFF, ENCOUNTER_REACH * 0.9, 0.0, TAU, 64, Color(col, a * 0.4), 1.5, true)
+
+
+# ── A way home: a well beside a beaten raid's anchorage ──────────────────────
+
+## A WAY HOME (RETURN_PORTALS): one beside each raid's anchorage, opening once
+## that raid is beaten; take it and she comes out at the anchorage's mouth.
+class WayHome:
+	extends Node2D
+	var info: Dictionary = {}
+	var open: bool = false
+	var gather: bool = false
+	var _t: float = randf() * 4.0
+	var _g: float = 0.0
+	var _label: Label
+
+	func _ready() -> void:
+		position = Vector2(float(info["at"]["x"]), float(info["at"]["y"]))
+		z_index = -1
+		var holder: Node2D = Node2D.new()
+		holder.scale = Vector2(1.0, 1.0 / Chart.GROUND)
+		holder.position = Vector2(0, PORTAL_REACH * 0.7)
+		holder.z_index = 6
+		add_child(holder)
+		_label = Kit.lift(Kit.text(holder, "Way Home", "heading", Color("#eef4f8")))
+		_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_label.resized.connect(func() -> void: _label.position = Vector2(-_label.size.x / 2.0, 0))
+
+	func _process(delta: float) -> void:
+		_t += delta
+		_g = move_toward(_g, 1.0 if gather else 0.0, delta * 2.0)
+		visible = open
+		queue_redraw()
+
+	func _draw() -> void:
+		var r: float = PORTAL_REACH
+		var c: Color = Color(0.55, 0.85, 0.95)
+		var hot: float = 1.5 + _g * 1.2
+		var spin: float = -_t * (0.4 + _g * 0.9)
+		draw_circle(Vector2.ZERO, r, Color(c, 0.08 + 0.08 * _g))
+		draw_circle(Vector2.ZERO, r * 0.4, Color(c, 0.12 + 0.18 * _g))
+		draw_arc(Vector2.ZERO, r, 0.0, TAU, 128, Color(c, 0.5 + 0.3 * _g), 4.0, true)
+		for k: int in 5:
+			var a0: float = spin + k * TAU / 5.0
+			for s: int in 3:
+				var arm: Color = c.lightened(0.3) * hot
+				arm.a = (0.3 - s * 0.08) * (0.7 + 0.5 * _g)
+				draw_arc(Vector2.ZERO, r * (0.88 - s * 0.22), a0 + s * 0.5, a0 + s * 0.5 + 0.9, 24, arm, 3.0 - s * 0.6, true)
+
+
+# ── The Coffers' gate and boom: iron across the channel until it is beaten ───
+
+## A SPAN (seaChains.ts): the harbor gate's eleven iron bars between its two
+## posts, or the boom's sagging chain on three floats between the wall's two
+## rocks. Decoration (the rocks either end are the solid part). Once its stop
+## is cleared the gate's bars blow outward from the middle and the boom goes
+## slack and sinks, easing open at 0.7 a second; on first sight it is
+## simply as it is.
+class Span:
+	extends Node2D
+	var info: Dictionary = {}
+	var cleared: bool = false
+	var _open: float = -1.0
+	var _t: float = 0.0
+
+	func _process(delta: float) -> void:
+		_t += delta
+		var want: float = 1.0 if cleared else 0.0
+		_open = want if _open < 0.0 else move_toward(_open, want, delta * 0.7)
+		visible = _open < 0.999
+		queue_redraw()
+
+	func _draw() -> void:
+		var a: Vector2 = Vector2(float(info["ends"]["a"]["x"]), float(info["ends"]["a"]["y"]))
+		var b: Vector2 = Vector2(float(info["ends"]["b"]["x"]), float(info["ends"]["b"]["y"]))
+		var u: float = clampf(_open, 0.0, 1.0)
+		var fade: float = 1.0 - smoothstep(0.55, 1.0, u)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0 / Chart.GROUND))
+		var A: Vector2 = Vector2(a.x, a.y * Chart.GROUND)
+		var B: Vector2 = Vector2(b.x, b.y * Chart.GROUND)
+		var iron: Color = Color(0.2, 0.19, 0.18, fade)
+		var rust: Color = Color(0.45, 0.27, 0.16, fade)
+		if info["kind"] == "gate":
+			# The bars, standing out of the water, blown outward from the middle.
+			var mid: Vector2 = (A + B) / 2.0
+			var n: int = 11
+			var top: float = 150.0
+			draw_line(A + Vector2(0, -top), B + Vector2(0, -top), Color(iron, fade * (1.0 - u)), 9.0, true)
+			for k: int in n:
+				var f: float = (k + 0.5) / n
+				var foot: Vector2 = A.lerp(B, f)
+				var away: Vector2 = (foot - mid).normalized() * 160.0 * u * (0.6 + absf(f - 0.5))
+				var fall: float = 120.0 * u * u
+				var tilt: float = (f - 0.5) * 1.6 * u
+				var p0: Vector2 = foot + away + Vector2(0, fall)
+				var p1: Vector2 = p0 + Vector2(sin(tilt), -cos(tilt)) * top
+				draw_line(p0, p1, iron, 10.0, true)
+				draw_line(p0 + Vector2(-2, 0), p1 + Vector2(-2, 0), rust, 3.0, true)
+				draw_circle(p1, 7.0, iron)
+		else:
+			# The boom: links along a sagging line, three floats, going slack and down.
+			var len: float = A.distance_to(B)
+			var sag: float = 0.055 * len * (1.0 + 2.2 * u)
+			var sink: float = 100.0 * u
+			var pts: PackedVector2Array = PackedVector2Array()
+			for k: int in 27:
+				var f2: float = k / 26.0
+				var p: Vector2 = A.lerp(B, f2) + Vector2(0, sin(f2 * PI) * sag + sink + sin(_t * 1.4 + f2 * 6.0) * 3.0)
+				pts.append(p)
+			for k: int in 26:
+				var c: Vector2 = (pts[k] + pts[k + 1]) / 2.0
+				var d: Vector2 = (pts[k + 1] - pts[k])
+				draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0 / Chart.GROUND))
+				var w: Vector2 = d.normalized() * d.length() * 0.62
+				var h2: Vector2 = d.normalized().orthogonal() * (6.0 if k % 2 == 0 else 3.0)
+				var poly: PackedVector2Array = PackedVector2Array([c - w / 2.0 - h2, c + w / 2.0 - h2, c + w / 2.0 + h2, c - w / 2.0 + h2])
+				draw_colored_polygon(poly, iron)
+				poly.append(poly[0])
+				draw_polyline(poly, rust, 1.5, true)
+			for f3: float in [0.25, 0.5, 0.75]:
+				var fp: Vector2 = A.lerp(B, f3) + Vector2(0, sin(f3 * PI) * sag * 0.6 + sink * 1.1 + sin(_t * 1.2 + f3 * 5.0) * 4.0)
+				draw_circle(fp, 22.0, Color(0.42, 0.28, 0.16, fade))
+				draw_circle(fp + Vector2(-5, -6), 8.0, Color(0.62, 0.44, 0.26, fade))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+# ── The Sounding: a fog bank that never lifts ─────────────────────────────────
+
+## A FOG BANK (seaBanks.ts): seven puffs lying on the water and four drifting
+## in the air above them, pale and breathing, drawn lighter than the sea.
+class FogBank:
+	extends Node2D
+	var info: Dictionary = {}
+	var _puffs: Array = []
+	var _t: float = 0.0
+
+	func _ready() -> void:
+		position = Vector2(float(info["at"]["x"]), float(info["at"]["y"]))
+		z_index = 8
+		var r: float = float(info["r"])
+		var mat: CanvasItemMaterial = CanvasItemMaterial.new()
+		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		var tex: Texture2D = Glow.radial(256, Color(0.85, 0.9, 0.95))
+		var rnd: RandomNumberGenerator = RandomNumberGenerator.new()
+		rnd.seed = hash(str(info["id"]))
+		for k: int in 11:
+			var lying: bool = k < 7
+			var s: Sprite2D = Sprite2D.new()
+			s.texture = tex
+			s.material = mat
+			var size: float = r * (rnd.randf_range(0.9, 1.6) if lying else rnd.randf_range(1.5, 2.2))
+			s.scale = Vector2(size, size * (1.0 if lying else 0.62 / Chart.GROUND)) / 128.0
+			var at: Vector2 = Vector2.from_angle(rnd.randf() * TAU) * r * rnd.randf_range(0.0, 0.7)
+			s.position = at
+			add_child(s)
+			_puffs.append({ "s": s, "at": at, "ph": rnd.randf() * TAU, "lying": lying, "a": float(info["density"]) * (0.85 if lying else 0.5) * rnd.randf_range(0.7, 1.2) })
+
+	func _process(delta: float) -> void:
+		_t += delta
+		for p: Dictionary in _puffs:
+			var s: Sprite2D = p["s"]
+			var ph: float = float(p["ph"])
+			s.position = (p["at"] as Vector2) + Vector2(sin(_t * 0.05 + ph) * 160.0, cos(_t * 0.037 + ph * 1.3) * 90.0)
+			s.modulate.a = float(p["a"]) * (0.8 + 0.2 * sin(_t * 0.3 + ph)) * 0.55

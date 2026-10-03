@@ -1319,15 +1319,31 @@ func _open_sea_gate() -> void:
 	North.gate_open = seated
 
 
+## A new chapter's water opened: the parchment, once (markChapterUnlockSeen).
+func celebrate_chapter() -> void:
+	var ch: Dictionary = _campaign.owed_chapter()
+	if ch.is_empty() or _hud.busy():
+		return
+	var prev: Dictionary = Campaign.chapters()[int(ch["number"]) - 2]
+	var card: ChapterCard = ChapterCard.new()
+	card.chapter = ch
+	card.sparks = true
+	card.eyebrow = "CHAPTER %s COMPLETE  ·  NEW CHAPTER UNLOCKED" % str(prev.get("romanNumeral", ""))
+	card.finished.connect(func() -> void:
+		session.act("markChapterUnlockSeen", [ch["id"]])
+		session.persist()
+		_campaign.refresh())
+	_hud.hold_for(card)
+	_hud_layer.add_child(card)
+
+
 ## Back to the Gunwharf's berth (a lost fight, a gate that held): the sea
 ## dims and she is there.
 func warp_to_gunwharf() -> void:
 	if not _berths.has("gunwharf"):
 		return
-	_boat.velocity = Vector2.ZERO
-	_boat.target = null
-	_boat.position = (_berths["gunwharf"] as Node2D).position
-	_field.ring(_boat.position, 160.0, 1.4, 0.8)
+	var at: Vector2 = (_berths["gunwharf"] as Node2D).position
+	_warp(at.x, at.y, Color(0.85, 0.75, 0.6))
 
 
 ## A node of the campaign pressed at the helm: a fight is taken on from its
@@ -1335,7 +1351,7 @@ func warp_to_gunwharf() -> void:
 func open_node(id: String) -> void:
 	var n: Dictionary = Campaign.node(id)
 	var st: String = str(_campaign.status.get(id, "locked"))
-	if (n["type"] == "raid" or n["type"] == "skirmish") and st != "locked" and n.get("raidId") != null:
+	if n["type"] == "skirmish" and st != "locked" and n.get("raidId") != null:
 		start_battle(str(n["raidId"]), id)
 		return
 	var sheet: NodeSheet = NodeSheet.new()
@@ -1343,7 +1359,8 @@ func open_node(id: String) -> void:
 	sheet.node_id = id
 	sheet.done.connect(func() -> void:
 		_campaign.refresh()
-		_hud.refresh())
+		_hud.refresh()
+		get_tree().create_timer(0.4).timeout.connect(celebrate_chapter))
 	_hud.hold_for(sheet)
 	_hud_layer.add_child(sheet)
 
@@ -1433,7 +1450,8 @@ func start_battle(raid_id: String, node_id: String = "") -> void:
 	st.finished.connect(func(_won: bool) -> void:
 		_campaign.refresh()
 		_open_sea_gate()
-		_hud.refresh())
+		_hud.refresh()
+		get_tree().create_timer(0.4).timeout.connect(celebrate_chapter))
 	_hud.hold_for(st)
 	_hud_layer.add_child(st)
 

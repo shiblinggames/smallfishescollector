@@ -702,10 +702,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   with a scene plays and the read is the clear; any other stop with a scene plays it once a
   session as the intro, then the toll, the cache's two items (press to arm, again to take), the
   call, the bones (a d20 tumbling onto the rules' roll), the gate (odds, fire one shot or pay),
-  the clerk's ledger, the class cards, the yard's terms, the spoils. NOT YET: the five puzzle
-  boards (game/puzzles/<kind>.gd, PuzzleBoard.make), challenge raids from the boss card, the
-  chapter unlock celebration, ways home and the Wargate, the fog bank and the gate and boom
-  spans, the fog of war, the legendary unlock overlay (a notice for now).
+  the clerk's ledger, the class cards, the yard's terms, the spoils. A RAID opens its BOSS CARD
+  (the run, what the crate may hold, how often beaten and your best time, Set sail or the
+  Challenge, open once the raid is beaten); the skirmish goes straight in. THE CHAPTER UNLOCK
+  (the Long Cast's ChapterCard with the campaign's eyebrow and gold sparks), state-based: every
+  main stop of the chapter before cleared and not yet seen; markChapterUnlockSeen on dismiss.
+  WAYS HOME: a turning well beside each beaten raid's anchorage, "Take the way home" to the
+  anchorage's mouth (the sea's own warp). THE COFFERS' SPANS drawn (the gate's eleven bars blow
+  outward from the middle once the gate is run; the boom goes slack and sinks once the lens is
+  cracked). THE SOUNDING's fog bank (seven lying puffs, four drifting, breathing). A lost fight
+  or a gate that held warps her to the Gunwharf. NOT YET: the Wargate and the two maelstroms
+  (the gauntlets are not ported), the fog of war past the gate, the legendary unlock overlay (a
+  notice for now).
 - THE CHART ROOM, BUILT (2026-10-03). Rules: core/chart_room.gd ports lib/core/chartRoom,
   lib/chartBoards, lib/worldChart, the four pure engines (charting/treasureMatch and minefield,
   chart-room/hold/sudoku, chart-room/rigging) and chartLocal (each week's boards built from the

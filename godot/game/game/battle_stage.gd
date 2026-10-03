@@ -685,11 +685,16 @@ func _end(won: bool) -> void:
 	sea._hud.visible = true
 	# Home: back to where she lay (sunk, to the Gunwharf's berth).
 	var home: Vector2 = _from
-	if not won and sea._berths.has("gunwharf"):
-		home = (sea._berths["gunwharf"] as Node2D).position
-	var back: Tween = create_tween()
-	back.tween_property(sea._boat, "position", home, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	back.tween_callback(func() -> void: sea._boat.hold_still = false)
+	if not won and dock != Vector2.INF:
+		# Out on the campaign's water: she wakes at the Gunwharf.
+		sea._boat.hold_still = false
+		sea.warp_to_gunwharf()
+	else:
+		if not won and sea._berths.has("gunwharf"):
+			home = (sea._berths["gunwharf"] as Node2D).position
+		var back: Tween = create_tween()
+		back.tween_property(sea._boat, "position", home, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		back.tween_callback(func() -> void: sea._boat.hold_still = false)
 	var tw: Tween = create_tween()
 	tw.tween_property(self, "_bars", 0.0, 0.5)
 	tw.parallel().tween_property(self, "_drop", 260.0, 0.4)
