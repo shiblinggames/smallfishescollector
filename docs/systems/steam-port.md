@@ -620,8 +620,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   and generated; the port's settled shape is not): core/parlor.gd, with the web's tables
   (rules.json "parlor": payouts 50/100/200, the 12 s clock and 4 s grace, the ranks, the King's
   prizes and havens at 4 and 7, the capstan's wheel, strikes and 250 vowel). THE BANK:
-  content/trivia_bank.json, built by tools/build-trivia.mjs from the web's weeks (356), the
-  fresh fact-checked set (content/trivia_fresh.json, the trivia-bank-800 workflow) and ~450
+  content/trivia_bank.json (1,580 questions, 140 phrases: about a year of daily play before a
+  repeat), built by tools/build-trivia.mjs from the web's weeks (356), the
+  fresh fact-checked set (content/trivia_fresh.json: the trivia-bank-800 workflow, 2026-10-03,
+  eight topic writers of 100 and a separate fact-checker on each batch who kept, fixed or
+  dropped every question; 773 kept, 768 after dedup against the web's; 118 capstan phrases)
+  and ~450
   questions from our own fish (the Log fact veiled, the water, the rarity); every question has a
   stable id and a captain meets every one before any comes round again (profile.parlor.seen).
   THE BOARD: a card every 8 hours into a hand of 3/4/5 (port_rules parlorPort), the tier
