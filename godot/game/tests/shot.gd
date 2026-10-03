@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -351,6 +351,26 @@ func _init() -> void:
 				else:
 					for f: int in 160:
 						await process_frame
+		"journal", "chaptercard":
+			# The Journal (JOURNAL_TAB story or people), or a chapter card
+			# (CARD_CLOSING set for the closing one), on a captain partway in.
+			var sv2: Dictionary = sea.session.save
+			sv2["profile"]["finn_quests_done"] = ["q1", "q2", "q3", "q21", "q22", "q23", "q4"]
+			sv2["profile"]["finn_seen_beats"] = ["e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8"]
+			sv2["profile"]["finn_encounters"] = 14
+			sv2["profile"]["finn_quest"] = null
+			Finn.speak(sea.session.store, sea.session.uid, 14.0)
+			for f: int in 30:
+				await process_frame
+			if what == "journal":
+				hud.open_journal(OS.get_environment("JOURNAL_TAB") if OS.get_environment("JOURNAL_TAB") != "" else "story")
+			else:
+				var cc: ChapterCard = ChapterCard.new()
+				cc.chapter = Finn.chapters()[1] if OS.get_environment("CARD_CLOSING") == "" else Finn.chapters()[0]
+				cc.closing = OS.get_environment("CARD_CLOSING") != ""
+				hud.add_child(cc)
+			for f: int in 120:
+				await process_frame
 		"crossing":
 			# North through the arch and back (run with --write-movie): the
 			# boat changes, the row changes, the name over the water.

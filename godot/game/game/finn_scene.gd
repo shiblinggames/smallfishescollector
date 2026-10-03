@@ -244,6 +244,11 @@ func _put_slip(job: Dictionary, have: float) -> JobSlip:
 ## A new job: its slip slides up, and "Take the job" stamps it and sends it
 ## up to the story line.
 func _offer(q: Dictionary) -> void:
+	var def: Dictionary = Finn.quest_by_id(q.get("id"))
+	var ch: Dictionary = JobSlip.chapter_of(def)
+	var first: Array = Finn.chapter_quests(str(ch.get("id", "")))
+	if not first.is_empty() and (first[0] as Dictionary)["id"] == def.get("id"):
+		await _chapter(ch, false)
 	_put_slip(q, 0.0)
 	Sound.plip()
 	_clear_choices()
@@ -283,15 +288,34 @@ func _turn_in() -> void:
 	_slip = null
 	_busy = false
 	changed.emit()
+	var handed: Dictionary = Finn.quest_by_id((st.get("quest") as Dictionary).get("id")) if st.get("quest") is Dictionary else {}
 	_say((r as Dictionary)["lines"], func() -> void:
 		var now: Variant = await session.act("finnState")
 		var nq: Variant = (now as Dictionary).get("quest") if now is Dictionary else null
 		if now is Dictionary:
 			st = now
+		var hch: Dictionary = JobSlip.chapter_of(handed)
+		if not hch.is_empty():
+			var all_done: bool = true
+			for cq: Dictionary in Finn.chapter_quests(str(hch["id"])):
+				if not Js.list((r as Dictionary)["questsDone"]).has(cq["id"]):
+					all_done = false
+			if all_done:
+				await _chapter(hch, true)
 		if nq is Dictionary:
 			_offer(nq)
 		else:
 			_farewell())
+
+
+## A chapter's card over the scene, opening or closed; on when it is pressed.
+func _chapter(ch: Dictionary, closing: bool) -> void:
+	_clear_choices()
+	var c: ChapterCard = ChapterCard.new()
+	c.chapter = ch
+	c.closing = closing
+	add_child(c)
+	await c.finished
 
 
 func _tap_outside() -> void:

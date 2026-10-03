@@ -149,6 +149,7 @@ func _ready() -> void:
 	_story = StoryLine.new()
 	_place(_story, Vector2(0.5, 0.0), Vector2(-StoryLine.W / 2.0, 64), Vector2(StoryLine.W, 52))
 	add_child(_story)
+	_story.pressed.connect(func() -> void: open_journal("story"))
 	_finn_arrow = FinnArrow.new()
 	add_child(_finn_arrow)
 	move_child(_finn_arrow, 0)
@@ -931,6 +932,21 @@ func busy() -> bool:
 
 
 ## The Fishing Guide, over the sea (pressing the level bar).
+## THE JOURNAL (the story and the people you know): from the story line, or J.
+func open_journal(tab: String = "story") -> Journal:
+	if _modal != null:
+		return null
+	var j: Journal = Journal.new()
+	j.session = session
+	j.tab = tab
+	_modal = j
+	j.closed.connect(func() -> void:
+		_modal = null
+		refresh())
+	add_child(j)
+	return j
+
+
 func open_guide(view: String = "levels") -> LevelsSheet:
 	if _modal != null:
 		return null
@@ -1959,6 +1975,10 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _modal != null:
+		return
+	if event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo and (event as InputEventKey).keycode == KEY_J and not expedition:
+		open_journal("story")
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("reach") or (event.is_action_pressed("fish_act") and water.is_empty() and _reach_btn.visible):
 		_press_reach()

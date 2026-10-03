@@ -94,7 +94,8 @@ func apply(st: Dictionary) -> void:
 			_seal_k = 0.0
 			_text.text = str(qv["label"])
 			_text.add_theme_color_override("font_color", Kit.INK)
-			_count.text = str(qv["progressText"]) if def.get("type") != "catch_ancient" else ""
+			# Short: the job's words already say "in a row" or "raise".
+			_count.text = "" if def.get("type") == "catch_ancient" else "%d of %d" % [mini(int(have), int(target)), int(target)]
 			_count.add_theme_color_override("font_color", GOLD)
 			var to: float = clampf(have / maxf(1.0, target), 0.0, 1.0)
 			if grew:

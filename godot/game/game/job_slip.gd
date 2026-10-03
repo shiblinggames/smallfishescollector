@@ -25,6 +25,8 @@ func _ready() -> void:
 	_card = Kit.pane(self, { "radius": 6, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.45), 18, Vector2(0, 6)], "pad": [20, 16, 20, 14], "paper": true })
 	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_card.custom_minimum_size = Vector2(W, 0)
+	# The slip is as tall as its paper, so a list it sits in makes room.
+	_card.resized.connect(func() -> void: custom_minimum_size = Vector2(W, _card.size.y))
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 6)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE

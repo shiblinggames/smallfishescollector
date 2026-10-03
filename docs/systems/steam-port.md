@@ -640,7 +640,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   one presses a wax seal with its own chime and the line turns gold, "Back to Finn"), and
   game/finn_arrow.gd (a gold chevron at the screen edge pointing to him while he has a mark).
   His state is read off the local save each second (a crewmate's Charter never sends it).
-  NOT YET: the Journal, chapter open/close cards, the port-only job types, the per-chapter
+  THE JOURNAL (game/journal.gd; the story line, or J): Story (the job's slip, the five
+  chapters with a pip per job, inked when handed back, and what he has told you, newest first,
+  only beats heard) and People (what the regulars are waiting on, handable first, then a card
+  each with their face, standing and a red dot when there is a reason to sail out; unmet ones
+  are question marks with their water). CHAPTER CARDS (game/chapter_card.gd): parchment over
+  everything when a chapter's first job is offered, and when its last is handed back
+  ("Complete. 6 jobs for Finn, 560 XP."). NOT YET: the port-only job types and the per-chapter
   moments on the water.
 - NORTH OF THE REEF, PLACES FIRST (Kong, 2026-10-02): game/north.gd, a port of chart.ts's
   reef, anchorage and Sea Gate and SeaMap's reefRocks/anchorageRocks (same seeds, so the same
