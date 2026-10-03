@@ -116,6 +116,7 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 	var max_hp: float = float(Js.round((float(hull["durability"]) + nav + 3.0 * bulwark) * float(fx["maxHp"]) * float(cls_fx["hpMult"])))
 	return {
 		"uid": uid, "name": name if name != "" else str(prof.get("username", "Captain")),
+		"face": { "characterColor": str(Js.nz(prof.get("character_color"), "default")), "hat": prof.get("equipped_hat") },
 		"tier": float(tier), "hp": max_hp, "max": max_hp, "speed": maxf(0.0, float(hull["speed"]) + float(cls_fx["speedFlat"])),
 		"shipMin": float(hull["minDamage"]), "power": pw + floor(nav / 5.0), "nav": dg + floor(nav / 5.0),
 		"fortune": ft + floor(nav / 5.0), "dmgMult": float(cls_fx["damageMult"]) * (1.0 + 0.005 * might),

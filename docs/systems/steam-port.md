@@ -736,6 +736,24 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   battle.crossfire.pct). A hit turned crit by gear or a tide does not count. On the water: a
   "Crossfire!" call, gold lines from each ship to the enemy; while choosing, "Ben landed a
   critical. Land one too for a crossfire." NOT YET TESTED over a real Steam lobby.
+- THE FIGHT'S LOOK, OVERHAULED (2026-10-03; game/battle_look.gd). Kong: the fight UI and the
+  plates "look a bit elementary", then "still in the similar style as what our overall theme
+  is" and "use the players profile pic ... like how the leaderboard on the web game displays
+  the profiles". So: the night paper dressed in brass. PLATES: a warm dark-paper plaque with a
+  brass inlay rim, the captain's own avatar (game/avatar.gd, CharacterAvatar, rendered once to a
+  texture per seat; the seat carries face {characterColor, hat}) or the enemy's portrait in a
+  brass medallion on its left edge, a BOSS / ELITE / YOU tag, a glossed health bar with quarter
+  ticks and a pale trail that drains after a hit, the shield as a bright bead along the top,
+  drawn round shot for balls, status pills; the acting ship's plate glows. TOP BAR: brass
+  hairlines with a knot, the raid's title over its fights as knots on a cord (the boss's red),
+  the initiative order as medallions on a cord (the one acting lit), "Choosing: ..." in a pill.
+  THE DECK: on the night paper with a brass rim and a "YOUR ORDERS" tab, as tall as what is on
+  it, tucked wholly under the bar while a round plays; each order a brass-rimmed plaque with a
+  drawn icon (fire, volley, reload, dodge, Mega, drum, flee), its cost and its key in a brass
+  cap, lifting under the pointer; the shot rack as round shot; crew orders as cards with the
+  hand's portrait in a ring of their class colour. The aim bar's rail is a trough in a brass
+  collar with rounded, glossed bands. The log sits in a pill, the banner between brass
+  flourishes, and words landing on one spot stack instead of overprinting.
 - THE CAMPAIGN'S WATER, BUILT (2026-10-03). RULES: core/campaign.gd ports computeRaidMap,
   chapterForNode, buildClearedSetVia and all of lib/core/raidMap (the view, chapter unlocks seen,
   tolls, story reads with the legendary gates, puzzles, the caches, the muster, events, dice,

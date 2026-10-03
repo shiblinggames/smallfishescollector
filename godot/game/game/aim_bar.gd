@@ -175,20 +175,24 @@ func _draw() -> void:
 	var w: float = size.x
 	var h: float = size.y
 	var rail: Rect2 = Rect2(14, h * 0.32, w - 28, h * 0.36)
-	# The rail: dark wood with a brass rim.
-	draw_rect(rail.grow(4), Color("#3a2716"))
-	draw_rect(rail, Color("#5b3c22"))
-	for k: int in 7:
-		var gx: float = rail.position.x + rail.size.x * float(k) / 6.0
-		draw_line(Vector2(gx, rail.position.y), Vector2(gx, rail.end.y), Color(0, 0, 0, 0.15), 1.0)
+	# The rail: a lacquer trough in a brass collar (game/battle_look.gd).
+	BattleLook.draw_box(self, rail.grow(7), BattleLook.box(BattleLook.LACQUER_LO, BattleLook.BRASS_LO, 2, 13, 8.0))
+	BattleLook.draw_box(self, rail, BattleLook.box(Color("#140e0a"), Color(0, 0, 0, 0.7), 1, 7))
+	for k: int in range(1, 12):
+		var gx: float = rail.position.x + rail.size.x * float(k) / 12.0
+		draw_line(Vector2(gx, rail.position.y + 3), Vector2(gx, rail.end.y - 3), Color(1, 1, 1, 0.05 if k % 3 else 0.1), 1.0)
 	var px: Callable = func(u: float) -> float: return rail.position.x + rail.size.x * u
 	var gw: float = Battle.HIT_W + Battle.GRAZE_W
 	# The bands, widest first.
-	draw_rect(Rect2(px.call(_zone - gw), rail.position.y, rail.size.x * gw * 2.0, rail.size.y), Color(0.95, 0.88, 0.62, 0.35))
-	draw_rect(Rect2(px.call(_zone - Battle.HIT_W), rail.position.y, rail.size.x * Battle.HIT_W * 2.0, rail.size.y), Color(0.36, 0.72, 0.42, 0.85))
+	BattleLook.draw_box(self, Rect2(px.call(_zone - gw), rail.position.y + 1, rail.size.x * gw * 2.0, rail.size.y - 2), BattleLook.box(Color(0.95, 0.88, 0.62, 0.2), Color(0.95, 0.88, 0.62, 0.45), 1, 5))
+	var hr: Rect2 = Rect2(px.call(_zone - Battle.HIT_W), rail.position.y + 1, rail.size.x * Battle.HIT_W * 2.0, rail.size.y - 2)
+	BattleLook.draw_box(self, hr, BattleLook.box(Color(0.24, 0.62, 0.38, 0.95), Color(0.62, 1.0, 0.72, 0.7), 1, 5))
+	BattleLook.draw_box(self, Rect2(hr.position, Vector2(hr.size.x, hr.size.y * 0.5)), BattleLook.box(Color(0.42, 0.82, 0.55, 0.9), Color(0, 0, 0, 0), 0, 5))
 	var cg: float = 0.5 + 0.5 * sin(_t * 8.0)
 	var seam: float = _zone + _seam
-	draw_rect(Rect2(px.call(seam - crit_w), rail.position.y - 3, rail.size.x * crit_w * 2.0, rail.size.y + 6), Color(1.0, 0.82, 0.3).lerp(Color(1, 0.95, 0.7), cg * 0.4))
+	var cr: Rect2 = Rect2(px.call(seam - crit_w), rail.position.y - 4, rail.size.x * crit_w * 2.0, rail.size.y + 8)
+	BattleLook.draw_box(self, cr, BattleLook.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 4, 10.0, Color(1.0, 0.82, 0.3, 0.5 + 0.3 * cg)))
+	BattleLook.draw_box(self, cr, BattleLook.box(Color(1.0, 0.82, 0.3).lerp(Color(1, 0.95, 0.7), cg * 0.4), Color(1, 0.97, 0.8), 1, 3))
 	# The false court: gilded bands that are not the zone.
 	for d: Dictionary in _decoys:
 		var dx: float = px.call(float(d["p"]))
@@ -220,12 +224,13 @@ func _draw() -> void:
 			draw_line(a, a + Vector2(-8, 16), Color(0.75, 0.85, 0.95, 0.4), 1.2, true)
 	for sp: Dictionary in _sparks:
 		draw_circle(sp["p"], 2.0, Color(1.0, 0.75, 0.35, 1.0 - float(sp["t"]) / 0.6))
-	draw_rect(rail.grow(4), Color(0.78, 0.62, 0.36), false, 2.0)
+	BattleLook.draw_box(self, rail.grow(3), BattleLook.box(Color(0, 0, 0, 0), Color(BattleLook.BRASS, 0.6), 1, 9))
 	# The needle: a brass pointer above and below the rail.
 	var nx: float = px.call(_pos)
 	var col: Color = Color(1, 0.96, 0.85)
-	draw_line(Vector2(nx, rail.position.y - 10), Vector2(nx, rail.end.y + 10), Color(0, 0, 0, 0.5), 5.0)
-	draw_line(Vector2(nx, rail.position.y - 10), Vector2(nx, rail.end.y + 10), col, 3.0)
+	draw_line(Vector2(nx, rail.position.y - 10), Vector2(nx, rail.end.y + 10), Color(1, 0.95, 0.8, 0.18), 9.0)
+	draw_line(Vector2(nx, rail.position.y - 10), Vector2(nx, rail.end.y + 10), Color(0, 0, 0, 0.55), 5.0)
+	draw_line(Vector2(nx, rail.position.y - 10), Vector2(nx, rail.end.y + 10), col, 2.5)
 	draw_colored_polygon(PackedVector2Array([Vector2(nx - 8, rail.position.y - 18), Vector2(nx + 8, rail.position.y - 18), Vector2(nx, rail.position.y - 6)]), Color(0.86, 0.68, 0.36))
 	draw_colored_polygon(PackedVector2Array([Vector2(nx - 8, rail.end.y + 18), Vector2(nx + 8, rail.end.y + 18), Vector2(nx, rail.end.y + 6)]), Color(0.86, 0.68, 0.36))
 	var f: Font = Kit.font("cinzel", 800)
