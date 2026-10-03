@@ -616,6 +616,41 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   every winning spot paying back, blackjack's bet and its return, solo and at the shared
   table). The roulette board draws the painted chips (the others' ringed in their colour).
   GOTCHA: a texture first loaded inside _draw is white until the next frame; load ahead.
+- THE BATTLE ENGINE AND THE FIGHT ON THE WATER, FIRST SLICE (2026-10-03; the settled shape is in
+  the co-op combat section). RULES: core/battle.gd, one engine for parties (solo a party of
+  one), on the web's numbers: the aim bar's judgment (crit 0.012 / hit 0.06 / graze 0.038 half
+  widths, inclusive), raidDamageProfile and rollShotDamage, initiative (d20 + speed, ties to the
+  ships), the dodge contest (d20 + Navigation against d20 + accuracy, ties to the dodger, a
+  failed dodge still cuts to 30%), pickEnemyAction (pattern, reload substitutions, the 30%
+  feint, snare jams, never two dodges), specials and ultimates, phases (revive at revivePct),
+  mechanic checks (any captain's crew order answers; a failure lands on every ship), statuses,
+  shields, the Vengeance ward, and every crew class's order by milestone (a heal, shield, brace
+  or ward may go to a crewmate). The enemy's TARGET is a ship it picks as it fires (hidden).
+  PARTY SCALING (port rules battle.party, PROPOSED): HP x1 / 1.8 / 2.5 / 3.2 and 1 / 2 / 3 / 4
+  shots per attack, each at a ship not yet shot that round; tests/battle_check.gd plays Pete's
+  raid 300 times a size with a fair bot: 33% / 47% / 63% / 76% won (one shot a round made two or
+  more captains win every time, so it was raised). NOT YET: raid items, tides, elite affixes,
+  boss off-turn abilities, the Last Wall, flare barrages, aim afflictions, burn, freeze, flee.
+  Crew.leveled_stats ports crewLevel's stat ticks and resolveDeployedCrew. SEATS: Crew.assign
+  (assignToRaid / assignToVoyage / benchCrew, parity: crew.json "the party seats").
+  REWARDS: core/raid_run.gd (awardRaidKill's XP and doubloons, crew XP to the seated hands, the
+  boss's crate: 300 to 600 times Fortune and each item rolled by rarity; PORT RULE: the crate
+  always pays coin, gems retired), raid_clears in the profile.
+  THE FIGHT (game/battle_stage.gd): the sea BECOMES the battle screen. She sails out (through
+  the Sea Gate for now) while black bars slide in, the sea's HUD falls away and the deck rises;
+  the enemy is a real hull (game/hull_rig.gd, the expedition ship's waterline, collar and
+  reflection) sailing in from the right with its portrait over the masthead; nameplates over
+  every hull (HP, shield, balls, statuses). The deck: Fire, Volley, Reload, Dodge (1 to 4), the
+  balls, the crew's orders as cards. Fire or Volley swaps in the aim bar (game/aim_bar.gd: the
+  web's needle and drifting zone, judged raw where the needle is). A round plays as a show: a
+  crew order's card rises with its colour and its effect lands on the water; the turn strip
+  lights each ship as it acts; cannonballs arc (game/battle_fx.gd: muzzle flash and smoke,
+  splashes and rings in the sea's field on a miss, splinters, fire and smoke on a hit, bigger on
+  a crit; Sound.cannon and Sound.impact, synthesised with a new noise voice); numbers rise off
+  the hulls; a sunk hull goes under its own waterline (the shader's cut climbs); the next enemy
+  sails in; a Rest Stop refreshes the orders; the crate at the end; sunk, she sails back to the
+  Gunwharf. THE GUNWHARF (game/gunwharf_sheet.gd) seats the raid party and, until the campaign
+  water is ported, launches the Reef Skirmish and the Corsair's Reckoning.
 - THE CHART ROOM, BUILT (2026-10-03). Rules: core/chart_room.gd ports lib/core/chartRoom,
   lib/chartBoards, lib/worldChart, the four pure engines (charting/treasureMatch and minefield,
   chart-room/hold/sudoku, chart-room/rigging) and chartLocal (each week's boards built from the

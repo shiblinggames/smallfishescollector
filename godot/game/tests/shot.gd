@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -610,6 +610,50 @@ func _init() -> void:
 			hud.refresh()
 			hud.open_guide("achievements")
 			for f: int in 40:
+				await process_frame
+		"battle":
+			# A fight on the water: Pete's raid from the Gunwharf. BATTLE_STEP:
+			# "enter" (the cut and the enemy sailing in), "aim" (Fire chosen,
+			# the bar up), "round" (a round played out, SHOT_F frames in).
+			var bdb: CaptainStore = sea.session.store
+			var bu: String = sea.session.uid
+			p["expedition_xp"] = 2000.0
+			p["ship_tier"] = 4.0
+			for d: int in 2:
+				var st1: Dictionary = RulesApi.run(bdb, bu, "getCrewState", [])
+				for c: Dictionary in st1["board"]:
+					RulesApi.run(bdb, bu, "recruitCrew", [c["id"]])
+				p["last_free_recruit_date"] = "old%d" % d
+			var ids2: Array = (RulesApi.run(bdb, bu, "getCrewState", [])["roster"] as Array).map(func(m: Dictionary) -> float: return float(m["id"]))
+			for k: int in mini(3, ids2.size()):
+				RulesApi.run(bdb, bu, "assignToRaid", [ids2[k], float(k)])
+			if sea._berths.has("gunwharf"):
+				sea._boat.position = (sea._berths["gunwharf"] as Node2D).position + Vector2(-500, 200)
+			for f: int in 60:
+				await process_frame
+			sea.start_battle(OS.get_environment("BATTLE_RAID") if OS.get_environment("BATTLE_RAID") != "" else "corsairs_reckoning")
+			var bst: BattleStage = null
+			for f: int in 10:
+				await process_frame
+			for n: Node in sea._hud_layer.get_children():
+				if n is BattleStage:
+					bst = n
+			var step: String = OS.get_environment("BATTLE_STEP")
+			if step == "auto":
+				bst.autoplay = true
+			for f: int in 150:
+				await process_frame
+			if step == "aim" or step == "round":
+				bst._choose("reload")
+				for f: int in 260:
+					await process_frame
+				bst._choose("fire")
+				for f: int in 40:
+					await process_frame
+				if step == "round":
+					for bar: Node in bst.find_children("", "AimBar", true, false):
+						(bar as AimBar).lock()
+			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 10:
 				await process_frame
 		"chartroom":
 			# The Chart Room. CHART_TAB: match, minefield, rigging, hold, chart;

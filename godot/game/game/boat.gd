@@ -71,6 +71,8 @@ var _cue_t: float = 0.0
 var _rush: GPUParticles2D
 var target: Variant = null
 var locked: bool = false
+## A fight has her (game/battle_stage.gd): no helm, no shore, no wall.
+var hold_still: bool = false
 var skipper: Skipper
 var _facing: float = -1.0
 var lantern: PointLight2D
@@ -322,6 +324,10 @@ func set_fit(p: Dictionary) -> void:
 
 
 func steer(input: Vector2, delta: float) -> void:
+	# In a fight (BattleStage) the stage moves her; nothing else does.
+	if hold_still:
+		velocity = Vector2.ZERO
+		return
 	var top: float = SPEED * hull * boat_speed * weather_speed
 	var order: Variant = null
 	var want: float = 0.0

@@ -1341,6 +1341,14 @@ func _dock(id: String) -> void:
 			ch.closed.connect(func() -> void: _hud.refresh())
 			_hud.hold_for(ch)
 			_room_layer.add_child(ch)
+		"gunwharf":
+			Rumble.buzz([18, 40, 24])
+			Sound.bell()
+			var gw: GunwharfSheet = GunwharfSheet.new()
+			gw.session = session
+			gw.sail.connect(start_battle)
+			_hud.hold_for(gw)
+			_room_layer.add_child(gw)
 		_:
 			Rumble.tap(10)
 			var p: Dictionary = Chart.port(id)
@@ -1350,6 +1358,16 @@ func _dock(id: String) -> void:
 					[[str(p.get("blurb", "")).replace("’", "'"), "body_strong"], [North.COMING[id], "note"], ["Its rooms come in a later build of the port.", "small"]], []))
 			else:
 				_hud.toast("%s is not built yet in this build." % p.get("name", "That port"))
+
+
+## A FIGHT ON THE WATER (game/battle_stage.gd): the sea becomes its stage.
+func start_battle(raid_id: String) -> void:
+	var st: BattleStage = BattleStage.new()
+	st.sea = self
+	st.raid_id = raid_id
+	st.finished.connect(func(_won: bool) -> void: _hud.refresh())
+	_hud.hold_for(st)
+	_hud_layer.add_child(st)
 
 
 func _go_ashore() -> void:

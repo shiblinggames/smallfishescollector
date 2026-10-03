@@ -151,6 +151,7 @@ static func _render(voices: Array, seconds: float) -> AudioStreamWAV:
 		var attack: float = v[3]
 		var decay: float = v[4]
 		var tri: bool = v[5] == "triangle"
+		var noise: bool = v[5] == "noise"
 		var i0: int = int(start * RATE)
 		var i1: int = mini(n, int((start + decay + 0.05) * RATE))
 		for i: int in range(i0, i1):
@@ -158,7 +159,7 @@ static func _render(voices: Array, seconds: float) -> AudioStreamWAV:
 			# Linear up to the peak, then exponential down to 0.0001 at decay.
 			var env: float = peak * t / attack if t < attack else peak * pow(0.0001 / peak, (t - attack) / maxf(0.001, decay - attack))
 			var ph: float = fmod(f * t, 1.0)
-			var w: float = (4.0 * absf(ph - 0.5) - 1.0) if tri else sin(TAU * ph)
+			var w: float = randf_range(-1.0, 1.0) if noise else ((4.0 * absf(ph - 0.5) - 1.0) if tri else sin(TAU * ph))
 			buf[i] += w * env
 	var bytes: PackedByteArray = PackedByteArray()
 	bytes.resize(n * 2)
@@ -287,6 +288,29 @@ static func job_tick(step: int) -> void:
 	_play_made("jobtick%d" % k, func() -> AudioStreamWAV:
 		var f: float = 587.33 * pow(2.0, k / 12.0)
 		return _render([[f, 0.0, 0.1, 0.003, 0.28, "sine"], [f * 2.0, 0.0, 0.03, 0.003, 0.16, "sine"]], 0.4), 1.0)
+
+
+## A CANNON (the battle): a deep boom with a crack of powder over it; `big`
+## for a volley.
+static func cannon(big: bool = false) -> void:
+	_play_made("cannon%s" % big, func() -> AudioStreamWAV:
+		var v: Array = [[48.0, 0.0, 0.5, 0.004, 0.9, "sine"], [66.0, 0.0, 0.35, 0.004, 0.7, "sine"], [0.0, 0.0, 0.28, 0.002, 0.35, "noise"], [130.0, 0.0, 0.12, 0.003, 0.3, "triangle"]]
+		if big:
+			v.append([44.0, 0.09, 0.4, 0.004, 0.9, "sine"])
+			v.append([0.0, 0.09, 0.22, 0.002, 0.3, "noise"])
+			v.append([52.0, 0.18, 0.35, 0.004, 0.9, "sine"])
+			v.append([0.0, 0.18, 0.2, 0.002, 0.3, "noise"])
+		return _render(v, 1.3), 1.4)
+
+
+## A ball striking timber: a short crack and a thud.
+static func impact(crit: bool = false) -> void:
+	_play_made("impact%s" % crit, func() -> AudioStreamWAV:
+		var v: Array = [[0.0, 0.0, 0.32, 0.001, 0.18, "noise"], [90.0, 0.0, 0.3, 0.002, 0.35, "triangle"], [180.0, 0.0, 0.1, 0.002, 0.2, "sine"]]
+		if crit:
+			v.append([0.0, 0.03, 0.25, 0.001, 0.3, "noise"])
+			v.append([60.0, 0.0, 0.4, 0.002, 0.6, "sine"])
+		return _render(v, 0.8), 1.3)
 
 
 ## The harbour bell: 660Hz with two inharmonic partials, ringing out.

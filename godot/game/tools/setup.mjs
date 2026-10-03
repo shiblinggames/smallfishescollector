@@ -50,7 +50,7 @@ const ART = [
   'sea/mainland-town.png', 'sea/isle-*.webp', 'sea/isle-chest.png', 'sea/isle-chest-deep.png', 'sea/isle-chest-open.png',
   'sea/isle-note.png', 'sea/dig-box.png', 'sea/sea-bottle.png', 'sea-clouds.webp', 'sea/kelp-deep.webp', 'sea/kelp-canopy.webp', 'sea/tavern.png', 'sea/market.png', 'sea/tackle.png', 'sea/parlor.png', 'sea/den.png', 'sea/charting.png',
   // The crew: every species' card art, and the Crew Hall's backdrop.
-  'card-arts', 'crew-bg.jpg', 'crew',
+  'card-arts', 'crew-bg.jpg', 'crew', 'enemy-arts',
   // North of the reef: the rock of the reef and the anchorage, and the ships.
   // The ships as the chart draws them (lib/ships.ts seaImageUrl) and the ship
   // skins' hulls (lib/shipSkins.ts imageByTier).
