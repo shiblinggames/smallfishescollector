@@ -21063,6 +21063,796 @@
    }
   }
  },
+ "raidAffixes": {
+  "affixes": {
+   "ledger": {
+    "id": "ledger",
+    "name": "The Ledger",
+    "description": "He fights with everything he is still holding: your fire, your ice, your sights, your bearings. Take them back and he cannot use them on you again.",
+    "burnChance": 0.15,
+    "freezeChance": 0.15,
+    "critMult": 2,
+    "speedBonus": 5
+   },
+   "ironclad": {
+    "id": "ironclad",
+    "name": "Ironclad",
+    "description": "50% chance to soak 30% off your shot.",
+    "damageTakenMult": 0.7,
+    "damageTakenChance": 0.5
+   },
+   "vampiric": {
+    "id": "vampiric",
+    "name": "Vampiric",
+    "description": "50% chance to repair 20% of the damage it deals you.",
+    "lifestealPct": 0.2,
+    "lifestealChance": 0.5
+   },
+   "volatile": {
+    "id": "volatile",
+    "name": "Volatile",
+    "description": "Wreck explodes on sinking for 10% of your current HP.",
+    "deathBurnRemainingPct": 0.1
+   },
+   "fleet": {
+    "id": "fleet",
+    "name": "Fleet",
+    "description": "Heavy speed bonus. Usually acts before you each turn.",
+    "speedBonus": 5
+   },
+   "frenzied": {
+    "id": "frenzied",
+    "name": "Frenzied",
+    "description": "33% chance to fire twice in one turn.",
+    "doubleFireChance": 0.33
+   },
+   "reflective": {
+    "id": "reflective",
+    "name": "Reflective",
+    "description": "50% chance to reflect 15% of your damage back.",
+    "reflectPct": 0.15,
+    "reflectChance": 0.5
+   },
+   "resilient": {
+    "id": "resilient",
+    "name": "Resilient",
+    "description": "33% chance to repair 5 HP at the start of its turn.",
+    "turnStartHealBase": 5,
+    "turnStartHealMaxPct": 0.05,
+    "turnStartHealChance": 0.33
+   },
+   "marksman": {
+    "id": "marksman",
+    "name": "Marksman",
+    "description": "Doubles its crit chance against you.",
+    "critMult": 2
+   },
+   "scorching": {
+    "id": "scorching",
+    "name": "Scorching",
+    "description": "20% chance its shot sets you ablaze, burning for 2 turns.",
+    "burnChance": 0.2
+   },
+   "glacial": {
+    "id": "glacial",
+    "name": "Glacial",
+    "description": "20% chance its shot freezes you solid, costing your next turn.",
+    "freezeChance": 0.2
+   },
+   "riposte": {
+    "id": "riposte",
+    "name": "Riposte",
+    "description": "When it dodges your shot, it turns 50% of that blow back on you.",
+    "riposteReflectPct": 0.5
+   },
+   "yawing": {
+    "id": "yawing",
+    "name": "Yawing",
+    "description": "Never holds a line. Your target band slides across the aim bar much faster.",
+    "zoneSpeedMult": 1.35
+   },
+   "warded": {
+    "id": "warded",
+    "name": "Warded",
+    "description": "Behind a barrier worth 30% of its hull that soaks your shots before its health. Break it first. (Burn bleeds through; the Railgun pierces it.)",
+    "shieldPctMaxHp": 0.3
+   }
+  },
+  "all": [
+   "ironclad",
+   "vampiric",
+   "volatile",
+   "fleet",
+   "frenzied",
+   "reflective",
+   "resilient",
+   "marksman",
+   "scorching",
+   "glacial",
+   "riposte",
+   "yawing",
+   "warded"
+  ],
+  "eliteHp": 1.5,
+  "eliteDmg": 1.25
+ },
+ "tides": {
+  "pool": [
+   {
+    "id": "drifting_wreck",
+    "tier": 1,
+    "title": "A Drifting Wreck",
+    "flavor": "Half a hull no flag claims, dredged from somewhere deeper than these waters should reach.",
+    "choices": [
+     {
+      "id": "strip",
+      "label": "Strip the hold",
+      "description": "+10% crit chance all run. Enemies hit you 10% harder all run.",
+      "effects": [
+       {
+        "kind": "critChanceBonus",
+        "chance": 0.1
+       },
+       {
+        "kind": "incomingDmgMult",
+        "mult": 1.1,
+        "scope": "allRemaining"
+       }
+      ]
+     },
+     {
+      "id": "medical",
+      "label": "Take the medical chest",
+      "description": "Heal 18% of your max HP now. Costs you 50 ⟡ at raid end.",
+      "effects": [
+       {
+        "kind": "instantHealPct",
+        "pct": 0.18
+       },
+       {
+        "kind": "doubloonsAtRaidEnd",
+        "n": -50
+       }
+      ]
+     },
+     {
+      "id": "sail_past",
+      "label": "Sail past",
+      "description": "Nothing happens. Clean wake.",
+      "effects": []
+     }
+    ]
+   },
+   {
+    "id": "sounding_bell",
+    "tier": 1,
+    "title": "A Sounding Bell",
+    "flavor": "A bell tolls through the fog. Either an open invitation, or a trap meant to herd you onto someone's guns.",
+    "choices": [
+     {
+      "id": "follow",
+      "label": "Follow the bell",
+      "description": "It leads to a half-sunk cache: +150 ⟡ at raid end. But the chase leaves you ragged. You enter the boss fight with 8% less HP.",
+      "effects": [
+       {
+        "kind": "doubloonsAtRaidEnd",
+        "n": 150
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.08,
+        "scope": "boss"
+       }
+      ]
+     },
+     {
+      "id": "hold",
+      "label": "Hold your course",
+      "description": "Nothing happens. The safe heading.",
+      "effects": []
+     },
+     {
+      "id": "sail_wide",
+      "label": "Sail wide of the bell",
+      "description": "+15% Volley damage in the boss fight. The long way around runs the crew ragged. You enter the boss with 10% less HP.",
+      "effects": [
+       {
+        "kind": "bossVolleyDmgMult",
+        "mult": 1.15
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.1,
+        "scope": "boss"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "empty_powder_keg",
+    "tier": 1,
+    "title": "Empty Powder Keg",
+    "flavor": "A black-powder cask bobs alongside, lid half-off. Useful to the right captain. Dangerous to the careless one.",
+    "choices": [
+     {
+      "id": "refill",
+      "label": "Refill stores",
+      "description": "Every reload has a 10% chance to load +1 cannonball, all run. Enter the next fight with 8% less HP.",
+      "effects": [
+       {
+        "kind": "reloadProc",
+        "chance": 0.1,
+        "bonusCharges": 1
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.08,
+        "scope": "nextFight"
+       }
+      ]
+     },
+     {
+      "id": "rig",
+      "label": "Rig it as a one-shot",
+      "description": "Next enemy starts at 65% HP. Rigging the blast leaves your hull wide open. You take 20% more damage that fight.",
+      "effects": [
+       {
+        "kind": "enemyHpScale",
+        "mult": 0.65,
+        "scope": "nextFight"
+       },
+       {
+        "kind": "incomingDmgMult",
+        "mult": 1.2,
+        "scope": "nextFight"
+       }
+      ]
+     },
+     {
+      "id": "heave",
+      "label": "Heave it overboard",
+      "description": "1 guaranteed dodge next fight (no roll needed). Heaving it took the crew off the rail. You enter that fight with 6% less HP.",
+      "effects": [
+       {
+        "kind": "guaranteedDodge",
+        "n": 1
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.06,
+        "scope": "nextFight"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "bottle_in_surf",
+    "tier": 1,
+    "title": "A Bottle in the Surf",
+    "flavor": "A captain's log fragment, water-stained, readable. From someone who didn't make the next port.",
+    "choices": [
+     {
+      "id": "read",
+      "label": "Read it",
+      "description": "Gold crit zone is 5% wider all run. Enter the next fight with 8% less HP (wheel went unattended).",
+      "effects": [
+       {
+        "kind": "critZoneScale",
+        "mult": 1.05
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.08,
+        "scope": "nextFight"
+       }
+      ]
+     },
+     {
+      "id": "pocket",
+      "label": "Pocket the bottle",
+      "description": "+150 ⟡ at raid end. Reading it under way, you let the watch slip. You enter the next fight with 8% less HP.",
+      "effects": [
+       {
+        "kind": "doubloonsAtRaidEnd",
+        "n": 150
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.08,
+        "scope": "nextFight"
+       }
+      ]
+     },
+     {
+      "id": "toss",
+      "label": "Toss it back",
+      "description": "Nothing happens. The bottle drifts on.",
+      "effects": []
+     }
+    ]
+   },
+   {
+    "id": "wounded_whale",
+    "tier": 1,
+    "title": "A Wounded Whale",
+    "flavor": "Entangled in Finndicate netting, dragging the lines deeper.",
+    "choices": [
+     {
+      "id": "cut_loose",
+      "label": "Cut it loose",
+      "description": "+10% Volley damage all run. The freed whale thrashes through your lines. -2 ship speed for the next 2 fights.",
+      "effects": [
+       {
+        "kind": "volleyDmgMult",
+        "mult": 1.1
+       },
+       {
+        "kind": "speedDelta",
+        "n": -2,
+        "scope": "next2Fights"
+       }
+      ]
+     },
+     {
+      "id": "harvest",
+      "label": "Harvest it",
+      "description": "+10% Fire damage all run. -10% dodge next fight (cries draw attention).",
+      "effects": [
+       {
+        "kind": "fireDmgMult",
+        "mult": 1.1
+       },
+       {
+        "kind": "dodgeBonus",
+        "chance": -0.1,
+        "scope": "nextFight"
+       }
+      ]
+     },
+     {
+      "id": "netting",
+      "label": "Take only the netting",
+      "description": "+2 cannonballs at the start of the next fight. Hauling it aboard leaves the rail exposed. Enter that fight with 5% less HP.",
+      "effects": [
+       {
+        "kind": "startCharges",
+        "n": 2,
+        "scope": "nextFight"
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.05,
+        "scope": "nextFight"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "foggy_crosswind",
+    "tier": 1,
+    "title": "A Foggy Crosswind",
+    "flavor": "The wind shifts hard against the current. The fog bows but does not lift.",
+    "choices": [
+     {
+      "id": "trim",
+      "label": "Trim sails for speed",
+      "description": "+15% Fire damage all run. -2 ship speed for the next 2 fights.",
+      "effects": [
+       {
+        "kind": "fireDmgMult",
+        "mult": 1.15
+       },
+       {
+        "kind": "speedDelta",
+        "n": -2,
+        "scope": "next2Fights"
+       }
+      ]
+     },
+     {
+      "id": "stay",
+      "label": "Stay the course",
+      "description": "Nothing happens. No trade either way.",
+      "effects": []
+     },
+     {
+      "id": "anchor",
+      "label": "Drop the sea anchor",
+      "description": "Take 12% less damage all run. Riding low and cautious blunts your guns. -8% damage all run.",
+      "effects": [
+       {
+        "kind": "incomingDmgMult",
+        "mult": 0.88,
+        "scope": "allRemaining"
+       },
+       {
+        "kind": "damageMult",
+        "mult": 0.92
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "sheltered_cove",
+    "tier": 1,
+    "title": "A Sheltered Cove",
+    "flavor": "A driftwood inlet behind a rock-spit. Calm water, no enemy sails in sight. A captain could put in here.",
+    "choices": [
+     {
+      "id": "beach",
+      "label": "Beach the ship and patch the hull",
+      "description": "Full HP restored. But the long stop leaves your gun crews rusty. -12% damage all run.",
+      "effects": [
+       {
+        "kind": "fullHeal"
+       },
+       {
+        "kind": "damageMult",
+        "mult": 0.88
+       }
+      ]
+     },
+     {
+      "id": "quick_patch",
+      "label": "Quick patch in the bow",
+      "description": "Heal 18% of your max HP now. You enter the boss fight with 10% less HP.",
+      "effects": [
+       {
+        "kind": "instantHealPct",
+        "pct": 0.18
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.1,
+        "scope": "boss"
+       }
+      ]
+     },
+     {
+      "id": "sail_on",
+      "label": "Sail on",
+      "description": "Nothing happens. Save your hull for whatever is ahead.",
+      "effects": []
+     }
+    ]
+   },
+   {
+    "id": "damage_control_drill",
+    "tier": 1,
+    "title": "A Damage-Control Drill",
+    "flavor": "The bo`sun wants a half-hour for the crew. The water around you is empty enough that he might be right.",
+    "choices": [
+     {
+      "id": "live_fire",
+      "label": "Live-fire drill",
+      "description": "+6% crit chance all run. The powder spent drilling leaves you thin. You enter the next fight with 5% less HP.",
+      "effects": [
+       {
+        "kind": "critChanceBonus",
+        "chance": 0.06
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.05,
+        "scope": "nextFight"
+       }
+      ]
+     },
+     {
+      "id": "damage_control",
+      "label": "Damage-control rehearsal",
+      "description": "Heal 4% of your max HP at the start of every remaining fight. The crew drills patches, not gunnery. -10% Fire damage all run.",
+      "effects": [
+       {
+        "kind": "startOfFightHealPct",
+        "pctMax": 0.04
+       },
+       {
+        "kind": "fireDmgMult",
+        "mult": 0.9
+       }
+      ]
+     },
+     {
+      "id": "skip",
+      "label": "Skip the drill",
+      "description": "Nothing happens. Save the time.",
+      "effects": []
+     }
+    ]
+   },
+   {
+    "id": "maelstrom_pull",
+    "tier": 2,
+    "title": "A Maelstrom's Pull",
+    "flavor": "The sea opens a slow gray throat off the bow. Ride its edge and it will hurl you forward, or swallow you whole.",
+    "choices": [
+     {
+      "id": "ride",
+      "label": "Ride the current",
+      "description": "+16% damage all run. Enemies hit you 20% harder all run.",
+      "effects": [
+       {
+        "kind": "damageMult",
+        "mult": 1.16
+       },
+       {
+        "kind": "incomingDmgMult",
+        "mult": 1.2,
+        "scope": "allRemaining"
+       }
+      ]
+     },
+     {
+      "id": "bail",
+      "label": "Brace and bail",
+      "description": "Heal 30% of your max HP now. Costs you 100 ⟡ at raid end.",
+      "effects": [
+       {
+        "kind": "instantHealPct",
+        "pct": 0.3
+       },
+       {
+        "kind": "doubloonsAtRaidEnd",
+        "n": -100
+       }
+      ]
+     },
+     {
+      "id": "sail_past",
+      "label": "Sail wide",
+      "description": "Nothing happens. Clean wake.",
+      "effects": []
+     }
+    ]
+   },
+   {
+    "id": "drowned_armory",
+    "tier": 2,
+    "title": "The Drowned Armory",
+    "flavor": "A sunken man-o-war's gun deck, still stocked, the powder somehow dry. Take what the sea was keeping.",
+    "choices": [
+     {
+      "id": "heavy_shot",
+      "label": "Load the heavy shot",
+      "description": "+18% Fire damage all run. The heavy rounds are a slow, back-breaking load. -2 ship speed all run.",
+      "effects": [
+       {
+        "kind": "fireDmgMult",
+        "mult": 1.18
+       },
+       {
+        "kind": "speedDelta",
+        "n": -2,
+        "scope": "allRemaining"
+       }
+      ]
+     },
+     {
+      "id": "powder",
+      "label": "Haul the powder aboard",
+      "description": "Every reload has a 20% chance to load +1 cannonball, all run. The extra powder weighs the hull down. -1 ship speed all run.",
+      "effects": [
+       {
+        "kind": "reloadProc",
+        "chance": 0.2,
+        "bonusCharges": 1
+       },
+       {
+        "kind": "speedDelta",
+        "n": -1,
+        "scope": "allRemaining"
+       }
+      ]
+     },
+     {
+      "id": "plate",
+      "label": "Bolt on the hull plate",
+      "description": "Take 22% less damage all run. The added weight slows your guns. -12% damage all run.",
+      "effects": [
+       {
+        "kind": "incomingDmgMult",
+        "mult": 0.78,
+        "scope": "allRemaining"
+       },
+       {
+        "kind": "damageMult",
+        "mult": 0.88
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "sirens_bargain",
+    "tier": 2,
+    "title": "A Siren's Bargain",
+    "flavor": "A voice in the swell offers a trade, sweet and certain. Bargains struck on open water are always paid in full.",
+    "choices": [
+     {
+      "id": "sing_back",
+      "label": "Sing back",
+      "description": "+12% crit chance all run. Enemies hit you 15% harder all run.",
+      "effects": [
+       {
+        "kind": "critChanceBonus",
+        "chance": 0.12
+       },
+       {
+        "kind": "incomingDmgMult",
+        "mult": 1.15,
+        "scope": "allRemaining"
+       }
+      ]
+     },
+     {
+      "id": "ears",
+      "label": "Take the song",
+      "description": "Full HP restored. But the bargain is paid in full. You take 12% more damage all run.",
+      "effects": [
+       {
+        "kind": "fullHeal"
+       },
+       {
+        "kind": "incomingDmgMult",
+        "mult": 1.12,
+        "scope": "allRemaining"
+       }
+      ]
+     },
+     {
+      "id": "sail_past",
+      "label": "Sail past",
+      "description": "Nothing happens. Hold the line.",
+      "effects": []
+     }
+    ]
+   },
+   {
+    "id": "king_tide",
+    "tier": 2,
+    "title": "The King Tide",
+    "flavor": "The whole sea heaves at once, a wave with no weather behind it. Time it right and it carries you onto the boss like a battering ram.",
+    "choices": [
+     {
+      "id": "crest",
+      "label": "Crest the wave",
+      "description": "+25% damage in the boss fight. Riding the crest in slams you against the hull. You enter the boss with 12% less HP.",
+      "effects": [
+       {
+        "kind": "bossDamageMult",
+        "mult": 1.25
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.12,
+        "scope": "boss"
+       }
+      ]
+     },
+     {
+      "id": "trough",
+      "label": "Heal in the trough",
+      "description": "Heal 6% of your max HP at the start of every remaining fight. -15% Volley damage all run.",
+      "effects": [
+       {
+        "kind": "startOfFightHealPct",
+        "pctMax": 0.06
+       },
+       {
+        "kind": "volleyDmgMult",
+        "mult": 0.85
+       }
+      ]
+     },
+     {
+      "id": "ride_out",
+      "label": "Ride it out",
+      "description": "+2 Initiative all run (fire first and flee more reliably). The hard heel into the swell strains the seams. Take 12% more damage all run.",
+      "effects": [
+       {
+        "kind": "speedDelta",
+        "n": 2,
+        "scope": "allRemaining"
+       },
+       {
+        "kind": "incomingDmgMult",
+        "mult": 1.12,
+        "scope": "allRemaining"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "ghost_convoy",
+    "tier": 2,
+    "title": "A Ghost Convoy",
+    "flavor": "A line of ships rides the horizon, lanterns lit, no crew at the rails. They hold formation as if still waiting on orders.",
+    "choices": [
+     {
+      "id": "board",
+      "label": "Board the lead ship",
+      "description": "The next enemy starts at half HP. You take 15% more damage that fight.",
+      "effects": [
+       {
+        "kind": "enemyHpScale",
+        "mult": 0.5,
+        "scope": "nextFight"
+       },
+       {
+        "kind": "incomingDmgMult",
+        "mult": 1.15,
+        "scope": "nextFight"
+       }
+      ]
+     },
+     {
+      "id": "flank",
+      "label": "Fall in behind them",
+      "description": "+2 guaranteed dodges next fight (no roll needed). Drifting in their cold wake saps the crew. Enter that fight with 8% less HP.",
+      "effects": [
+       {
+        "kind": "guaranteedDodge",
+        "n": 2
+       },
+       {
+        "kind": "startHpPctDelta",
+        "pct": -0.08,
+        "scope": "nextFight"
+       }
+      ]
+     },
+     {
+      "id": "sail_past",
+      "label": "Let them sail on",
+      "description": "Nothing happens. Some things are best left to the fog.",
+      "effects": []
+     }
+    ]
+   }
+  ],
+  "reprieve": {
+   "id": "pre_boss_reprieve",
+   "tier": 1,
+   "title": "The Don's Gift",
+   "flavor": "Don Finleone waves the court back and looks you over, unimpressed. \"Half-sunk already? No, no. I did not swim up from the deep to gut some wounded little thing. Patch yourself. Load your guns. Wake a hand. Make this worth my while.\"",
+   "choices": [
+    {
+     "id": "reprieve_heal",
+     "label": "Patch the hull",
+     "description": "Heal 20% of your max HP before the fight.",
+     "effects": [
+      {
+       "kind": "instantHealPct",
+       "pct": 0.2
+      }
+     ]
+    },
+    {
+     "id": "reprieve_damage",
+     "label": "Sharpen the guns",
+     "description": "+5% damage for the fight ahead.",
+     "effects": [
+      {
+       "kind": "damageMult",
+       "mult": 1.05
+      }
+     ]
+    },
+    {
+     "id": "reprieve_ability",
+     "label": "Wake a hand",
+     "description": "Refresh one spent crew ability, ready for the don.",
+     "effects": []
+    }
+   ]
+  }
+ },
  "raidItems": [
   {
    "id": "corsair_cannon",
@@ -22309,6 +23099,283 @@
    "source": "Abyssal Forge: Palisade Bulwark + Last Bastion"
   }
  ],
+ "forgeRecipes": [
+  {
+   "components": [
+    "navigators_compass",
+    "tollmasters_primer"
+   ],
+   "result": "vanguards_chronometer",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "davys_heavy_cannon",
+    "davys_hand_cannon"
+   ],
+   "result": "davys_grand_cannon",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "corsair_prime_cannon",
+    "davys_heavy_cannon"
+   ],
+   "result": "siege_cannon",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "davys_hand_cannon",
+    "gunners_sight"
+   ],
+   "result": "sharpshooters_cannon",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "reinforced_hull",
+    "captains_carapace"
+   ],
+   "result": "ironclad_bulwark",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "quartermasters_anchor",
+    "reinforced_hull"
+   ],
+   "result": "last_bastion",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "captains_astrolabe",
+    "captains_carapace"
+   ],
+   "result": "deflector_plate",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "corsair_prime_cannon",
+    "gunners_sight"
+   ],
+   "result": "warlords_cannon",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "corsair_prime_cannon",
+    "davys_hand_cannon"
+   ],
+   "result": "marauders_cannon",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "corsair_prime_cannon",
+    "captains_carapace"
+   ],
+   "result": "dreadnought_cannon",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "captains_carapace",
+    "tollmasters_primer"
+   ],
+   "result": "bastion_primer",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "captains_astrolabe",
+    "tollmasters_primer"
+   ],
+   "result": "riposte_chronometer",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "davys_blood_cannon",
+    "davys_heavy_cannon"
+   ],
+   "result": "bloodletter",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "davys_blood_cannon",
+    "davys_hand_cannon"
+   ],
+   "result": "reavers_cannon",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "incendiary_cannonball",
+    "frozen_cannonball"
+   ],
+   "result": "emberfrost_cannonball",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "quartermasters_anchor",
+    "navigators_compass"
+   ],
+   "result": "deadmans_bearing",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "gunners_sight",
+    "reinforced_hull"
+   ],
+   "result": "heavy_gunners_sight",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "dons_palisade",
+    "made_man"
+   ],
+   "result": "palisade_bulwark",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "palisade_bulwark",
+    "last_bastion"
+   ],
+   "result": "the_standing_wall",
+   "fathomCost": 250,
+   "tier": 3
+  },
+  {
+   "components": [
+    "siege_cannon",
+    "warlords_cannon"
+   ],
+   "result": "leviathans_cannon",
+   "fathomCost": 250,
+   "tier": 3
+  },
+  {
+   "components": [
+    "ironclad_bulwark",
+    "deflector_plate"
+   ],
+   "result": "aegis_of_the_deep",
+   "fathomCost": 250,
+   "tier": 3
+  },
+  {
+   "components": [
+    "marauders_cannon",
+    "last_bastion"
+   ],
+   "result": "drowned_crown",
+   "fathomCost": 250,
+   "tier": 3
+  },
+  {
+   "components": [
+    "vanguards_chronometer",
+    "riposte_chronometer"
+   ],
+   "result": "tempest_chronometer",
+   "fathomCost": 250,
+   "tier": 3
+  },
+  {
+   "components": [
+    "the_shakedown",
+    "brackwater_rack"
+   ],
+   "result": "carrion_rack",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "opening_statement",
+    "dons_signet"
+   ],
+   "result": "ambush_signet",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "made_man",
+    "thunder_drum"
+   ],
+   "result": "bastion_drum",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "admirals_eye",
+    "crows_nest_rigging"
+   ],
+   "result": "hawkeye_glass",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "opening_statement",
+    "the_shakedown"
+   ],
+   "result": "predators_battery",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "trade_wind_sails",
+    "thunder_drum"
+   ],
+   "result": "rally_rigging",
+   "fathomCost": 150
+  },
+  {
+   "components": [
+    "carrion_rack",
+    "sharpshooters_cannon"
+   ],
+   "result": "plague_cannon",
+   "fathomCost": 250,
+   "tier": 3
+  },
+  {
+   "components": [
+    "bastion_drum",
+    "deadmans_bearing"
+   ],
+   "result": "warden_of_the_deep",
+   "fathomCost": 250,
+   "tier": 3
+  },
+  {
+   "components": [
+    "hawkeye_glass",
+    "heavy_gunners_sight"
+   ],
+   "result": "oracles_eye",
+   "fathomCost": 250,
+   "tier": 3
+  },
+  {
+   "components": [
+    "ambush_signet",
+    "marauders_cannon"
+   ],
+   "result": "warlords_reckoning",
+   "fathomCost": 250,
+   "tier": 3
+  }
+ ],
+ "sixthBerthCost": 1000000,
+ "armoryExpansionCost": 1000000,
  "shipClasses": {
   "classes": {
    "master_gunner": {

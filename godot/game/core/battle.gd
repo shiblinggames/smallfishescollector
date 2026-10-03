@@ -25,9 +25,20 @@ extends RefCounted
 ## volleys and ultimates, and the volleys of listed enemies, hit EVERY ship
 ## at once, each with its own dodge. Hits stay the size they are.
 ##
-## NOT YET (later raids need them; each is in the specs): raid items, tides,
-## elite affixes, boss off-turn abilities, the Last Wall, flare barrages, aim
-## afflictions, burn and freeze, flee.
+## THE ENEMIES' OWN WAYS (lib/bossRaids, lib/raidAffixes): affixes (baked on a
+## named hand, or rolled onto two elites a challenge run), armour (Carapace),
+## the riposte, the shark's bite on your balls, aim afflictions (the zone's
+## speed, a drifting crit seam, fog, a false court of decoys, iron shutters, a
+## squall), the flare barrage, a boss's off-turn abilities, the vengeance ward
+## and foresight, the Last Wall. Burn and freeze on a ship. TIDES between
+## fights and the Throne's reprieve, each captain choosing their own.
+##
+## RAID ITEMS (lib/raidItems effects, as RaidCombat reads them): each
+## captain's equipped items become their ship's fx (products, sums or the best
+## of each type), and the Quartermaster repossesses one for a fight. The War
+## Drum family's once-a-raid rally is a free action (use_drum).
+##
+## NOT YET: flee; the Primeval Maw's charged effects.
 ##
 ## Everything is plain Dictionaries and Arrays (it crosses the Charter's wire).
 
@@ -82,13 +93,17 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 		})
 	# The chapters' class picks (raidLoadout): hull, speed and damage.
 	var cls_fx: Dictionary = Campaign.class_effects(prof.get("ship_classes"))
-	var max_hp: float = float(Js.round((float(hull["durability"]) + nav) * float(cls_fx["hpMult"])))
+	# The raid items on the hull (the loadout's cap, and the finale's mount).
+	var items: Array = Armory.live_items(prof)
+	var fx: Dictionary = item_fx(items)
+	var max_hp: float = float(Js.round((float(hull["durability"]) + nav) * float(fx["maxHp"]) * float(cls_fx["hpMult"])))
 	return {
 		"uid": uid, "name": name if name != "" else str(prof.get("username", "Captain")),
 		"tier": float(tier), "hp": max_hp, "max": max_hp, "speed": maxf(0.0, float(hull["speed"]) + float(cls_fx["speedFlat"])),
 		"shipMin": float(hull["minDamage"]), "power": pw + floor(nav / 5.0), "nav": dg + floor(nav / 5.0),
 		"fortune": ft + floor(nav / 5.0), "dmgMult": float(cls_fx["damageMult"]), "maxCharges": float(MAX_CHARGES),
 		"crew": crew, "used": [], "repairKit": prof.get("equipped_repair_kit"),
+		"items": items, "fx": fx, "saves": float(fx["lethalSave"]), "drum": false,
 	}
 
 
@@ -113,7 +128,21 @@ static func _ready_seat(s: Dictionary) -> void:
 	s["sharp"] = {}
 	s["dodgeToken"] = 0.0
 	s["abilityThisTurn"] = false
+	s["burn"] = {}
+	s["freeze"] = 0.0
+	s["frozenNow"] = false
+	s["afflict"] = {}
+	s["shots"] = 0.0
+	s["critRamp"] = 0.0
+	s["firstBlow"] = false
+	s["cheated"] = false
+	s["anchorUsed"] = false
 	s["sunk"] = s.get("sunk", false) == true
+	if s.has("items"):
+		s["live"] = (s["items"] as Array).duplicate()
+		s["fx"] = item_fx(s["live"])
+	if not s.has("tfx"):
+		s["tfx"] = []
 
 
 # ══ A raid and its fights ═════════════════════════════════════════════════════
@@ -134,8 +163,45 @@ static func fight_at(raid: Dictionary, r: int) -> Dictionary:
 static func begin(raid_id: String, seats: Array) -> Dictionary:
 	var raid: Dictionary = raid_def(raid_id)
 	var b: Dictionary = { "raidId": raid_id, "round": 0.0, "fight": 0.0, "seats": seats, "turn": 1.0, "state": "plan", "events": [] }
+	var seq_n: int = Js.list(raid.get("sequence")).size()
+	# A challenge run: two of its fights are elites, each with a rolled affix;
+	# the Quartermaster's merges a second onto every baked one.
+	b["elites"] = {}
+	b["bonusAffix"] = {}
+	if raid_id.ends_with("_challenge"):
+		var pool: Array = range(seq_n)
+		var picks: Array = []
+		for k: int in mini(2, seq_n):
+			picks.append(pool.pop_at(int(floor(Dice.next() * pool.size()))))
+		picks.sort()
+		for slot: int in picks:
+			b["elites"][str(slot)] = _roll_affix()
+		if raid.get("mergeRandomAffix") == true:
+			var seq: Array = Js.list(raid.get("sequence"))
+			for i: int in seq.size():
+				var baked: Variant = Js.obj(raid["enemies"][seq[i]]).get("affix")
+				if baked != null:
+					var second: String = _roll_affix()
+					for g: int in 8:
+						if second != baked:
+							break
+						second = _roll_affix()
+					b["bonusAffix"][str(i)] = second
+	# The run's tides, drawn at the start (drawTides).
+	var td: Dictionary = Js.obj(raid.get("tides"))
+	b["tides"] = draw_tides(Js.list(td.get("slots")).size(), int(Js.nz(td.get("maxTier"), 1.0))) if not td.is_empty() else []
+	b["tideFired"] = []
 	start_fight(b, 0)
 	return b
+
+
+static func _affixes() -> Dictionary:
+	return Js.obj(Js.obj(Rules.data().get("raidAffixes")).get("affixes"))
+
+
+static func _roll_affix() -> String:
+	var all: Array = Js.list(Js.obj(Rules.data().get("raidAffixes")).get("all"))
+	return str(all[int(floor(Dice.next() * all.size()))])
 
 
 static func party_hp_mult(n: int) -> float:
@@ -155,7 +221,32 @@ static func start_fight(b: Dictionary, r: int) -> void:
 	var e: Dictionary = Js.obj(raid["enemies"][f["enemyId"]]).duplicate(true)
 	var n: int = maxi(1, alive(b).size())
 	var skirmish: bool = raid.get("skirmish", false) == true
-	var hp: float = maxf(1.0, float(Js.round(float(e["hpBase"]) * party_hp_mult(n))))
+	# Its affix: a baked one (with a challenge's merged second), else a rolled
+	# elite's (which also hardens it: HP x1.5, damage x1.25).
+	var seq_n: int = Js.list(raid.get("sequence")).size()
+	var slot: String = str(r % (seq_n + 1))
+	var affix: Dictionary = {}
+	var elite: bool = false
+	if e.get("affix") != null:
+		affix = Js.obj(_affixes().get(e["affix"])).duplicate()
+		var bonus: Variant = Js.obj(b.get("bonusAffix")).get(slot)
+		if bonus != null:
+			var bd: Dictionary = Js.obj(_affixes().get(bonus))
+			var nm: String = "%s + %s" % [affix.get("name", ""), bd.get("name", "")]
+			affix.merge(bd, true)
+			affix["name"] = nm
+	elif not f["boss"] and Js.obj(b.get("elites")).has(slot):
+		affix = Js.obj(_affixes().get(b["elites"][slot])).duplicate()
+		elite = true
+		var ra: Dictionary = Js.obj(Rules.data().get("raidAffixes"))
+		e["hpBase"] = float(Js.round(float(e["hpBase"]) * float(Js.nz(ra.get("eliteHp"), 1.5))))
+		e["minDmg"] = maxf(1.0, float(Js.round(float(e["minDmg"]) * float(Js.nz(ra.get("eliteDmg"), 1.25)))))
+		e["maxDmg"] = maxf(1.0, float(Js.round(float(e["maxDmg"]) * float(Js.nz(ra.get("eliteDmg"), 1.25)))))
+	# The tides the line took that shrink the next enemy.
+	var hp_scale: float = 1.0
+	for s0: Dictionary in b["seats"]:
+		hp_scale *= float(tide_agg(s0)["enemyHpScale"])
+	var hp: float = maxf(1.0, float(Js.round(float(e["hpBase"]) * party_hp_mult(n) * hp_scale)))
 	var acc: float = Js.nz(e.get("accuracy"), Js.nz(raid.get("enemyAccuracy"), 0.0)) + float(e["shipSpeed"])
 	b["fight"] = float(r)
 	b["enemy"] = {
@@ -167,11 +258,60 @@ static func start_fight(b: Dictionary, r: int) -> void:
 		"phases": Js.list(Js.nz(e.get("phases"), [e["phase2"]] if e.get("phase2") != null else [])),
 		"special": e.get("special"), "ultimate": e.get("ultimate"), "image": e.get("image"), "portrait": e.get("portrait"),
 		"check": {}, "action": "", "dodgeRoll": false,
+		"affix": affix, "elite": elite, "dr": Js.nz(e.get("damageReduction"), 0.0), "drName": e.get("abilityName", "Carapace"),
+		"parry": Js.nz(e.get("parryChance"), 0.0), "parryPct": Js.nz(e.get("parryDamagePct"), 0.0), "parryName": e.get("parryName", "Riposte"),
+		"bite": Js.nz(e.get("chargeBiteChance"), 0.0), "decoy": Js.nz(e.get("decoyCount"), 0.0), "decoyName": e.get("decoyName", "Flare Barrage"),
+		"flareDmg": Js.nz(e.get("flareDmgMult"), 1.0), "flareFuse": Js.nz(e.get("flareFuseMult"), 1.0),
+		"zoneMult": Js.nz(e.get("zoneSpeedMult"), 1.0), "aimSpeed": Js.nz(e.get("aimSpeedMult"), 1.0), "critDrift": Js.nz(e.get("critDrift"), 0.0),
+		"fog": Js.nz(e.get("aimFogDensity"), 0.0), "fogName": e.get("aimFogName", ""), "critDriftName": e.get("critDriftName", ""),
+		"phaseAbility": e.get("phaseAbility"), "abTurn": 0.0, "abOn": 0.0, "abUsed": false,
+		"foresight": 0.0, "ward": 0.0, "wardBuff": 0.0, "aegis": {}, "frozenNow": false, "burn": {}, "freeze": 0.0,
+		"repossess": e.get("repossess") == true, "repossessName": e.get("repossessName", "Repossession"),
 	}
+	# The opening barrier: its own, or a Warded affix's, whichever is bigger.
+	var sp: float = maxf(Js.nz(e.get("shieldPct"), 0.0), Js.nz(affix.get("shieldPctMaxHp"), 0.0))
+	b["enemy"]["shield"] = float(Js.round(hp * sp))
+	b["enemy"]["shieldMax"] = b["enemy"]["shield"]
 	b["turn"] = 1.0
 	b["state"] = "plan"
+	b.erase("flares")
 	for s: Dictionary in b["seats"]:
 		_ready_seat(s)
+		if s.get("sunk", false):
+			continue
+		# The tides the captain took: the fight's opening HP and balls, and
+		# their banked sure dodges.
+		var ta: Dictionary = tide_agg(s, f["boss"])
+		var mx: float = float(s["max"])
+		var hp1: float = float(s["hp"]) + float(Js.round(float(ta["startHpPct"]) * mx)) + float(Js.round(float(ta["startHealPct"]) * mx))
+		s["hp"] = clampf(hp1, 1.0, mx)
+		# The Quartermaster takes back one item he sold you, for this fight.
+		if e.get("repossess") == true and not Js.list(s.get("live")).is_empty():
+			var live: Array = s["live"]
+			var edge: Array = live.filter(func(id: Variant) -> bool:
+				return item_fx([id])["offensive"])
+			var pool: Array = edge if not edge.is_empty() else live
+			var taken: Variant = pool[int(floor(Dice.next() * pool.size()))]
+			live.erase(taken)
+			s["fx"] = item_fx(live)
+			s["repossessed"] = taken
+		else:
+			s.erase("repossessed")
+		var fx: Dictionary = Js.obj(s.get("fx"))
+		# The primers: a chance to open with a ball chambered (best of), and
+		# the extra opener on its own roll.
+		var primed: float = 0.0
+		if float(fx.get("startCharge", 0.0)) > 0.0 and Dice.next() < float(fx["startCharge"]):
+			primed += 1.0
+		if float(fx.get("extraStart", 0.0)) > 0.0 and Dice.next() < float(fx["extraStart"]):
+			primed += 1.0
+		s["charges"] = clampf(primed + float(ta["startCharges"]), 0.0, float(s["maxCharges"]))
+		s["dodgeToken"] = float(ta["guaranteedDodge"])
+		# The palisade: a ward over the hull every fight.
+		s["wardMax"] = float(Js.round(float(fx.get("wardPct", 0.0)) * mx))
+		s["wardRefill"] = float(Js.round(float(s["wardMax"]) * float(fx.get("wardRefill", 0.0))))
+		if float(s["wardMax"]) > 0.0:
+			s["shield"] = float(s["wardMax"])
 	# A boss's opening mechanic check.
 	if b["enemy"]["boss"] and e.get("openingCheck") != null:
 		_arm_check(b, e["openingCheck"], [])
@@ -216,6 +356,31 @@ static func roll_shot(res: String, ship_min: float, power: float) -> float:
 static func crit_max(ship_min: float, power: float) -> float:
 	var pmax: float = maxf(ship_min, float(Js.round(ship_min + 2.0 + floor(power / 4.0))))
 	return float(Js.round(pmax * 1.5))
+
+
+## What a captain's aim bar does this pass (RaidCombat's aim set-up): the
+## zone's speed stack (the enemy, an affix, capped at 4), the needle's speed,
+## a drifting crit seam, the fog over the bar, the crit band (a tide), and an
+## affliction the enemy laid on this ship (a false court of decoys, iron
+## shutters that take a first knock, a squall), which spends one pass.
+static func aim_for(b: Dictionary, si: int) -> Dictionary:
+	var e: Dictionary = b["enemy"]
+	var s: Dictionary = b["seats"][si]
+	var stack: float = minf(4.0, float(e["zoneMult"]) * float(Js.nz(Js.obj(e["affix"]).get("zoneSpeedMult"), 1.0)))
+	var out: Dictionary = {
+		"enemySpeed": float(e["speed"]), "zoneStack": stack, "needleMult": float(e["aimSpeed"]),
+		"critDrift": float(e["critDrift"]), "fog": minf(0.92, float(e["fog"])), "critZone": float(tide_agg(s)["critZone"]),
+		"afflict": "", "decoys": 0,
+	}
+	var af: Dictionary = s["afflict"]
+	if not af.is_empty() and float(af["passes"]) > 0.0:
+		out["afflict"] = af["kind"]
+		if af["kind"] == "decoys":
+			out["decoys"] = 2
+		af["passes"] = float(af["passes"]) - 1.0
+		if float(af["passes"]) <= 0.0:
+			s["afflict"] = {}
+	return out
 
 
 # ══ Statuses (lib/statuses) ═══════════════════════════════════════════════════
@@ -306,11 +471,13 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 		"mender":
 			var heal: float = float(Js.round(float(t["max"]) * float(ms["pctMaxHp"])))
 			out["heal"] = _heal(t, heal)
+			t["burn"] = {}
 			if ms.get("cleanseDebuff", false):
 				_cleanse(t)
 			flags = ["heal"]
 		"abyssal_tide":
 			out["heal"] = _heal(t, float(Js.round(float(t["max"]) * float(ms["pctMaxHp"]))))
+			t["burn"] = {}
 			var sh: float = float(Js.round(float(t["max"]) * float(ms["shieldPctMaxHp"])))
 			t["shield"] = float(t["shield"]) + sh
 			out["shield"] = sh
@@ -396,6 +563,9 @@ static func _ability_mult(b: Dictionary, s: Dictionary) -> float:
 ## pierce; no dodge, no ward.
 static func _ability_damage(b: Dictionary, dmg: float) -> float:
 	var e: Dictionary = b["enemy"]
+	if not (e["aegis"] as Dictionary).is_empty():
+		_aegis_hit(b, 1.0, [])
+		return 0.0
 	var to_hull: float = dmg
 	if float(e["markPierce"]) <= 0.0 and float(e["shield"]) > 0.0:
 		var absorbed: float = minf(float(e["shield"]), dmg)
@@ -494,15 +664,43 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 	var e_act: String = pick_enemy(b)
 	e["action"] = e_act
 	ev.append({ "t": "intent", "action": e_act, "jammed": e.get("jammed", false) })
+	# Freezes that were waiting take hold this round; burns tick.
+	e["frozenNow"] = float(e.get("freeze", 0.0)) > 0.0
+	if e["frozenNow"]:
+		e["freeze"] = float(e["freeze"]) - 1.0
+	var eb: Dictionary = e.get("burn", {})
+	if not eb.is_empty() and float(e["hp"]) > 0.0 and (e["aegis"] as Dictionary).is_empty():
+		e["hp"] = _ward_floor(b, float(e["hp"]) - float(eb["dmg"]), ev)
+		ev.append({ "t": "eBurn", "dmg": eb["dmg"], "hp": e["hp"] })
+		eb["turns"] = float(eb["turns"]) - 1.0
+		if float(eb["turns"]) <= 0.0:
+			e["burn"] = {}
+		if float(e["hp"]) <= 0.0:
+			_enemy_down(b, ev, false)
+			if b.get("revived", false):
+				b.erase("revived")
+			return _finish(b, ev)
+	for i: int in (b["seats"] as Array).size():
+		var sf: Dictionary = b["seats"][i]
+		sf["frozenNow"] = float(sf.get("freeze", 0.0)) > 0.0 and not sf.get("sunk", false)
+		if sf["frozenNow"]:
+			sf["freeze"] = 0.0
+		var bn: Dictionary = sf.get("burn", {})
+		if not bn.is_empty() and not sf.get("sunk", false):
+			sf["hp"] = maxf(0.0, float(sf["hp"]) - float(bn["dmg"]))
+			ev.append({ "t": "burn", "seat": i, "dmg": bn["dmg"], "hp": sf["hp"] })
+			bn["turns"] = float(bn["turns"]) - 1.0
+			if float(bn["turns"]) <= 0.0:
+				sf["burn"] = {}
 	# Initiative.
 	var order: Array = []
 	for i: int in plans.size():
 		var s: Dictionary = b["seats"][i]
 		if s.get("sunk", false):
 			continue
-		var roll: int = d20() + int(maxf(1.0, float(s["speed"]) + float(mods(s["statuses"])["speed"])))
+		var roll: int = d20() + int(maxf(1.0, float(s["speed"]) + float(tide_agg(s)["speed"]) + float(mods(s["statuses"])["speed"]))) + int(floor(float(s["nav"]) * float(Js.obj(s.get("fx")).get("navSpeed", 0.0))))
 		order.append({ "who": i, "roll": roll })
-	var er: int = d20() + int(maxf(1.0, float(e["speed"]) + float(mods(e["statuses"])["speed"])))
+	var er: int = d20() + int(maxf(1.0, float(e["speed"]) + float(mods(e["statuses"])["speed"]))) + int(Js.nz(Js.obj(e["affix"]).get("speedBonus"), 0.0))
 	order.append({ "who": -1, "roll": er })
 	order.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
 		if x["roll"] != y["roll"]:
@@ -523,6 +721,10 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			var s2: Dictionary = b["seats"][who]
 			if s2.get("sunk", false) or float(s2["hp"]) <= 0.0:
 				continue
+			if s2.get("frozenNow", false):
+				s2["last"] = ""
+				ev.append({ "t": "frozen", "seat": who })
+				continue
 			_seat_act(b, who, Js.obj(plans[who]), e_act, e_mods, ev)
 			if b.get("revived", false):
 				b.erase("revived")
@@ -537,32 +739,108 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 	s["last"] = act
 	match act:
 		"reload":
-			s["charges"] = minf(float(s["maxCharges"]), float(s["charges"]) + 1.0)
-			ev.append({ "t": "reload", "seat": si, "charges": s["charges"] })
+			var ta: Dictionary = tide_agg(s)
+			var extra: float = float(ta["reloadBonus"]) if float(ta["reloadChance"]) > 0.0 and Dice.next() < float(ta["reloadChance"]) else 0.0
+			var fxr: Dictionary = Js.obj(s.get("fx"))
+			if float(fxr.get("reloadCharge", 0.0)) > 0.0 and Dice.next() < float(fxr["reloadCharge"]):
+				extra += 1.0
+			s["charges"] = minf(float(s["maxCharges"]), float(s["charges"]) + 1.0 + extra)
+			# The palisade braces back on a reload, never past its opening size.
+			if float(s.get("wardRefill", 0.0)) > 0.0:
+				s["shield"] = float(s["shield"]) + minf(float(s["wardRefill"]), maxf(0.0, float(s["wardMax"]) - float(s["shield"])))
+			ev.append({ "t": "reload", "seat": si, "charges": s["charges"], "extra": extra })
 		"dodge":
 			ev.append({ "t": "brace", "seat": si })
 		"fire", "volley":
 			var cost: float = 1.0 if act == "fire" else float(VOLLEY_COST)
 			s["charges"] = float(s["charges"]) - cost
 			var res: String = str(plan.get("aim", "miss"))
+			# Locked on a decoy: the shot never leaves, and the gun bites back.
+			if res == "fumble":
+				var chip: float = maxf(float(e["min"]), float(Js.round(float(s["max"]) * 0.06)))
+				s["hp"] = maxf(1.0, float(s["hp"]) - chip)
+				ev.append({ "t": "fumble", "seat": si, "chip": chip, "hp": s["hp"] })
+				return
+			var ta2: Dictionary = tide_agg(s, e["boss"])
+			var fx: Dictionary = Js.obj(s.get("fx"))
+			s["shots"] = float(s.get("shots", 0.0)) + 1.0
+			# A hit may still come up a crit (a tide's chance, a crow's nest).
+			var up: float = float(ta2["critBonus"]) + float(fx.get("critUpgrade", 0.0))
+			if res == "hit" and up > 0.0 and Dice.next() < up:
+				res = "critical"
 			var sh: Dictionary = s["sharp"]
 			if not sh.is_empty():
 				sh["shots"] = float(sh["shots"]) - 1.0
 				if float(sh["shots"]) <= 0.0:
 					s["sharp"] = {}
-			var mult: float = (1.0 if act == "fire" else 2.0) * float(s["dmgMult"]) * (1.0 + float(s["vBuff"])) * float(mods(s["statuses"])["dealt"]) * float(e_mods["taken"])
+			var tmult: float = float(ta2["dmgMult"]) * (float(ta2["fireMult"]) if act == "fire" else float(ta2["volleyMult"]))
+			if e["boss"]:
+				tmult *= float(ta2["bossMult"]) * (float(ta2["bossVolMult"]) if act == "volley" else 1.0)
+			var crit_shot: bool = res == "critical"
+			var imult: float = float(fx.get("bossMult", 1.0)) if e["boss"] else float(fx.get("nonbossMult", 1.0))
+			imult *= float(fx.get("critMult", 1.0)) if crit_shot else float(fx.get("noncritMult", 1.0))
+			imult *= 1.0 + minf(1.0, float(fx.get("ramp", 0.0)) * (maxf(0.0, float(b["turn"]) - 1.0) + float(s.get("critRamp", 0.0))))
+			if float(s["shots"]) == 1.0:
+				imult *= float(fx.get("firstShot", 1.0))
+			if not (e["statuses"] as Dictionary).is_empty() or not Js.obj(e.get("burn")).is_empty() or e.get("frozenNow", false):
+				imult *= float(fx.get("afflicted", 1.0))
+			if s.get("cheated", false) and (e.get("elite", false) or not (e["affix"] as Dictionary).is_empty()):
+				imult *= float(fx.get("avengeElite", 1.0))
+			var mult: float = (1.0 if act == "fire" else 2.0) * float(s["dmgMult"]) * (1.0 + float(s["vBuff"])) * float(mods(s["statuses"])["dealt"]) * float(e_mods["taken"]) * tmult * imult
 			var dmg: float = floor(roll_shot(res, float(s["shipMin"]), float(s["power"])) * mult)
 			var out: Dictionary = { "t": "shot", "seat": si, "action": act, "aim": res, "raw": dmg }
-			# The enemy's dodge stance.
-			if e_act == "dodge":
-				var def: int = d20() + int(maxf(0.0, float(e["acc"])))
-				var atk: int = d20() + int(s["nav"])
-				if def >= atk:
+			var af: Dictionary = e["affix"]
+			# Carapace: armour takes a slice off a single shot (not a volley).
+			if float(e["dr"]) > 0.0 and dmg > 0.0 and act != "volley":
+				dmg = maxf(1.0, float(Js.round(dmg * (1.0 - float(e["dr"])))))
+				out["armour"] = e["drName"]
+			# Ironclad: sometimes soaks a third.
+			if af.has("damageTakenMult") and dmg > 0.0 and Dice.next() < float(Js.nz(af.get("damageTakenChance"), 1.0)):
+				dmg = maxf(1.0, float(Js.round(dmg * float(af["damageTakenMult"]))))
+				out["ironclad"] = true
+			# A phase that shrugs some blows off.
+			var ph: Dictionary = _phase(e)
+			if ph.get("damageTakenMult") != null and dmg > 0.0 and not (ph.get("damageTakenVolleyBypass") == true and act == "volley") and Dice.next() < float(Js.nz(ph.get("damageTakenChance"), 1.0)):
+				dmg = maxf(1.0, float(Js.round(dmg * float(ph["damageTakenMult"]))))
+			var walled: bool = not (e["aegis"] as Dictionary).is_empty()
+			# The enemy's dodge stance (not behind the Last Wall, not frozen).
+			if e_act == "dodge" and not walled and not e.get("frozenNow", false):
+				var dodged: bool
+				if float(e["foresight"]) > 0.0:
+					dodged = true
+					out["foresight"] = true
+				else:
+					var def: int = d20() + int(maxf(0.0, float(e["acc"])))
+					var atk: int = d20() + int(s["nav"])
+					dodged = def >= atk
+					if dodged and float(fx.get("dodgePierce", 0.0)) > 0.0 and Dice.next() < float(fx["dodgePierce"]):
+						dodged = false
+						out["pierced"] = true
+						if fx.get("pierceCrit", false) and not crit_shot:
+							dmg = floor(roll_shot("critical", float(s["shipMin"]), float(s["power"])) * mult)
+							crit_shot = true
+							out["aim"] = "critical"
+				if dodged:
+					var would: float = dmg
 					dmg = 0.0
 					out["dodged"] = true
-				else:
+					# The riposte: a parry that cuts back, or the Riposte affix.
+					if float(e["parry"]) > 0.0 and Dice.next() < float(e["parry"]):
+						var cut: float = maxf(1.0, floor(float(rand_int(int(e["min"]), int(e["maxDmg"]))) * float(e["parryPct"])))
+						_hit_seat(b, si, cut, ev, "parry", str(e["parryName"]))
+					elif af.has("riposteReflectPct") and would > 0.0:
+						_hit_seat(b, si, maxf(1.0, float(Js.round(would * float(af["riposteReflectPct"])))), ev, "parry", "Riposte")
+				elif not out.get("pierced", false):
 					dmg = maxf(1.0, floor(dmg * 0.3))
 					out["partial"] = true
+			# The Last Wall: nothing through; each blow cracks it (a volley twice).
+			if walled and not out.get("dodged", false):
+				out["walled"] = true
+				out["dmg"] = 0.0
+				out["enemyHp"] = e["hp"]
+				ev.append(out)
+				_aegis_hit(b, 2.0 if act == "volley" else 1.0, ev)
+				return
 			# The enemy's shield.
 			var to_hull: float = dmg
 			if dmg > 0.0 and float(e["shield"]) > 0.0 and float(e["markPierce"]) <= 0.0:
@@ -571,16 +849,52 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 				e["shield"] = float(e["shield"]) - absorbed
 				to_hull = maxf(0.0, dmg - ceil(absorbed / float(e_mods["shieldTaken"])))
 				out["shielded"] = absorbed
-			e["hp"] = maxf(0.0, float(e["hp"]) - to_hull)
+			var before: float = float(e["hp"])
+			e["hp"] = _ward_floor(b, float(e["hp"]) - to_hull, ev)
 			out["dmg"] = to_hull
 			out["enemyHp"] = e["hp"]
 			ev.append(out)
+			if dmg > 0.0 and float(e["hp"]) > 0.0:
+				_on_hit(b, si, dmg, crit_shot, ev)
+			# Reflective: a slice of the blow comes back.
+			if dmg > 0.0 and af.has("reflectPct") and Dice.next() < float(Js.nz(af.get("reflectChance"), 1.0)):
+				_hit_seat(b, si, maxf(1.0, float(Js.round(dmg * float(af["reflectPct"])))), ev, "reflect", "Reflective")
 			if float(e["hp"]) <= 0.0:
+				# Volatile: the wreck goes up as it sinks.
+				if af.has("deathBurnRemainingPct") and (e["phases"] as Array).size() < int(e["phase"]):
+					var boom: float = minf(maxf(1.0, float(Js.round(float(s["hp"]) * float(af["deathBurnRemainingPct"])))), float(s["hp"]) - 1.0)
+					if boom > 0.0:
+						s["hp"] = float(s["hp"]) - boom
+						ev.append({ "t": "volatile", "seat": si, "dmg": boom, "hp": s["hp"] })
 				_enemy_down(b, ev, false)
 
 
 static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Array, ev: Array) -> void:
 	var e: Dictionary = b["enemy"]
+	if float(e["foresight"]) > 0.0:
+		e["foresight"] = float(e["foresight"]) - 1.0
+	if float(e["ward"]) > 0.0:
+		e["ward"] = float(e["ward"]) - 1.0
+	if e.get("frozenNow", false):
+		ev.append({ "t": "eFrozen" })
+		return
+	# The boss's off-turn ability, once a phase, two to four turns in.
+	var abl: Dictionary = _ability_now(e)
+	if not abl.is_empty() and not e["abUsed"]:
+		e["abTurn"] = float(e["abTurn"]) + 1.0
+		if float(e["abOn"]) <= 0.0:
+			e["abOn"] = 2.0 + floor(Dice.next() * 3.0)
+		if float(e["abTurn"]) >= float(e["abOn"]):
+			e["abUsed"] = true
+			_boss_ability(b, abl, ev)
+			if alive(b).is_empty():
+				return
+	# Resilient: now and then it patches itself up.
+	var af: Dictionary = e["affix"]
+	if af.has("turnStartHealChance") and float(e["hp"]) > 0.0 and float(e["hp"]) < float(e["max"]) and Dice.next() < float(af["turnStartHealChance"]):
+		var h: float = minf(maxf(maxf(1.0, float(Js.nz(af.get("turnStartHealBase"), 5.0))), float(Js.round(float(e["max"]) * float(Js.nz(af.get("turnStartHealMaxPct"), 0.05))))), float(e["max"]) - float(e["hp"]))
+		e["hp"] = float(e["hp"]) + h
+		ev.append({ "t": "eHeal", "hp": e["hp"], "heal": h, "why": "Resilient" })
 	# A re-price: a ship that stripped its charges earlier this round.
 	var cost: float = float(e["mag"]) if act == "ultimate" else (float(VOLLEY_COST) if act == "volley" else (1.0 if act == "fire" else 0.0))
 	if float(e["charges"]) < cost:
@@ -593,7 +907,11 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 			ev.append({ "t": "eDodge" })
 		"special":
 			var sp: Dictionary = Js.obj(e.get("special"))
-			if sp.get("status") != null:
+			if sp.get("aimAttack") != null:
+				var tg0: int = _target(b, -1)
+				if tg0 >= 0:
+					b["seats"][tg0]["afflict"] = { "kind": sp["aimAttack"], "passes": Js.nz(sp.get("aimPasses"), 2.0) }
+			elif sp.get("status") != null:
 				if str(sp.get("target", "player")) == "self":
 					apply_status(e["statuses"], str(sp["status"]), Js.nz(sp.get("magnitude"), 0.0), Js.nz(sp.get("turns"), 1.0))
 				else:
@@ -627,6 +945,10 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 					var ti: int = _target(b, -1) if focus else _target_new(b, hit)
 					hit.append(ti)
 					_enemy_shot(b, act, ti, e_mods, plans, ev, k == 0)
+				# Frenzied: sometimes a second gun goes off.
+				var af2: Dictionary = e["affix"]
+				if act != "ultimate" and af2.has("doubleFireChance") and not alive(b).is_empty() and Dice.next() < float(af2["doubleFireChance"]):
+					_enemy_shot(b, "fire", _target(b, -1), e_mods, plans, ev, false, false, true)
 
 
 ## Does this attack hit every ship (a boss's volley or ultimate, or the
@@ -666,7 +988,7 @@ static func _target(b: Dictionary, not_i: int) -> int:
 	return pool[int(floor(Dice.next() * pool.size()))]
 
 
-static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary, plans: Array, ev: Array, main: bool, all: bool = false) -> void:
+static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary, plans: Array, ev: Array, main: bool, all: bool = false, frenzy: bool = false) -> void:
 	if ti < 0:
 		return
 	var e: Dictionary = b["enemy"]
@@ -681,13 +1003,18 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 		dmg = maxf(1.0, floor(dmg * float(e_mods["dealt"])))
 	if int(e["phase"]) >= 2:
 		dmg = maxf(1.0, floor(dmg * float(e["phases"][int(e["phase"]) - 2].get("damageMult", 1.0))))
-	var eff_crit: float = 0.0 if act == "ultimate" else float(e["crit"])
+	if float(e["wardBuff"]) > 0.0:
+		dmg = maxf(1.0, floor(dmg * (1.0 + float(e["wardBuff"]))))
+	var af: Dictionary = e["affix"]
+	var eff_crit: float = 0.0 if act == "ultimate" else minf(1.0, float(e["crit"]) * float(Js.nz(af.get("critMult"), 1.0)))
 	var crit: bool = Dice.next() < eff_crit
 	if crit:
 		dmg = floor(dmg * 1.5)
-	var out: Dictionary = { "t": "eShot", "action": act, "target": ti, "crit": crit, "extra": not main, "all": all }
-	# The target's dodge stance.
-	if str(Js.obj(plans[ti]).get("action", "")) == "dodge":
+	var out: Dictionary = { "t": "eShot", "action": act, "target": ti, "crit": crit, "extra": not main, "all": all, "frenzy": frenzy }
+	var ta: Dictionary = tide_agg(t, e["boss"])
+	# The target's dodge stance (a frozen ship cannot; the Frenzied shot
+	# comes in under it).
+	if str(Js.obj(plans[ti]).get("action", "")) == "dodge" and not t.get("frozenNow", false) and not frenzy:
 		if float(t["dodgeToken"]) > 0.0:
 			t["dodgeToken"] = float(t["dodgeToken"]) - 1.0
 			dmg = 0.0
@@ -695,21 +1022,47 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 		else:
 			var def: int = d20() + int(t["nav"])
 			var atk: int = d20() + int(maxf(0.0, float(e["acc"])))
-			if def >= atk:
+			var ok: bool = def >= atk
+			var db: float = float(ta["dodgeBonus"])
+			if db > 0.0 and not ok and Dice.next() < db:
+				ok = true
+			elif db < 0.0 and ok and Dice.next() < -db:
+				ok = false
+			if ok:
+				var would: float = dmg
 				dmg = 0.0
 				out["dodged"] = true
+				# An astrolabe's parry throws some of it back.
+				var tfx: Dictionary = Js.obj(t.get("fx"))
+				if float(tfx.get("parry", 0.0)) > 0.0 and float(tfx.get("parryReflect", 0.0)) > 0.0 and Dice.next() < float(tfx["parry"]):
+					_reflect(b, ti, maxf(1.0, floor(would * float(tfx["parryReflect"]))), ev, "Parry")
 			else:
 				dmg = maxf(1.0, floor(dmg * 0.3))
 				out["partial"] = true
+	var tfx2: Dictionary = Js.obj(t.get("fx"))
+	# The first blow of a fight, turned aside outright.
+	if dmg > 0.0 and not t.get("firstBlow", false):
+		t["firstBlow"] = true
+		if float(tfx2.get("firstBlowParry", 0.0)) > 0.0 and Dice.next() < float(tfx2["firstBlowParry"]):
+			if float(tfx2.get("parryReflect", 0.0)) > 0.0:
+				_reflect(b, ti, maxf(1.0, floor(dmg * float(tfx2["parryReflect"]))), ev, "Aegis")
+			dmg = 0.0
+			out["parried"] = true
 	if dmg > 0.0:
-		var taken: float = float(mods(t["statuses"])["taken"])
+		var taken: float = float(mods(t["statuses"])["taken"]) * (1.0 if frenzy else float(ta["inDmg"])) * float(tfx2.get("inMult", 1.0))
 		if taken != 1.0:
 			dmg = maxf(1.0, floor(dmg * taken))
 		var br: Dictionary = t["brace"]
-		if not br.is_empty() and (not crit or br.get("crits", false)):
+		if not frenzy and not br.is_empty() and (not crit or br.get("crits", false)):
 			dmg = maxf(1.0, float(Js.round(dmg * (1.0 - float(br["pct"])))))
 			t["brace"] = {}
 			out["braced"] = true
+		# The dampener: a big hit cut back to a share of the hull.
+		if float(tfx2.get("maxHitPct", 0.0)) > 0.0:
+			var cap: float = maxf(1.0, float(Js.round(float(t["max"]) * float(tfx2["maxHitPct"]))))
+			if dmg > cap and Dice.next() < (float(tfx2["maxHitChance"]) if float(tfx2.get("maxHitChance", 0.0)) > 0.0 else 1.0):
+				dmg = cap
+				out["dampened"] = true
 		if float(t["shield"]) > 0.0:
 			var soaked: float = minf(float(t["shield"]), dmg)
 			t["shield"] = float(t["shield"]) - soaked
@@ -719,6 +1072,29 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 	out["dmg"] = dmg
 	out["hp"] = t["hp"]
 	ev.append(out)
+	if dmg <= 0.0:
+		return
+	# Being hit feeds the guns.
+	if float(tfx2.get("chargeOnHit", 0.0)) > 0.0 and Dice.next() < float(tfx2["chargeOnHit"]) and float(t["charges"]) < float(t["maxCharges"]):
+		t["charges"] = float(t["charges"]) + 1.0
+		ev.append({ "t": "loaded", "seat": ti, "charges": t["charges"] })
+	# The shark's bite: a landed shot knocks a ball out of the rack.
+	if not frenzy and float(e["bite"]) > 0.0 and float(t["charges"]) > 0.0 and Dice.next() < minf(1.0, float(e["bite"])):
+		t["charges"] = float(t["charges"]) - 1.0
+		ev.append({ "t": "bite", "seat": ti, "charges": t["charges"] })
+	# Scorching, else Glacial.
+	if float(t["hp"]) > 0.0:
+		if af.has("burnChance") and Dice.next() < float(af["burnChance"]):
+			t["burn"] = { "turns": 2.0, "dmg": maxf(1.0, minf(float(Js.round(dmg * 0.10)), float(Js.round(float(t["max"]) * 0.10)))) }
+			ev.append({ "t": "ablaze", "seat": ti })
+		elif af.has("freezeChance") and Dice.next() < float(af["freezeChance"]):
+			t["freeze"] = 1.0
+			ev.append({ "t": "iced", "seat": ti })
+	# Vampiric: it drinks some of it back.
+	if af.has("lifestealPct") and float(e["hp"]) < float(e["max"]) and Dice.next() < float(Js.nz(af.get("lifestealChance"), 1.0)):
+		var h: float = minf(float(e["max"]) - float(e["hp"]), maxf(1.0, float(Js.round(dmg * float(af["lifestealPct"])))))
+		e["hp"] = float(e["hp"]) + h
+		ev.append({ "t": "eHeal", "hp": e["hp"], "heal": h, "why": "Vampiric" })
 
 
 ## The enemy at 0: a phase left revives it (the round ends); else it is sunk.
@@ -730,10 +1106,24 @@ static func _enemy_down(b: Dictionary, ev: Array, by_ability: bool) -> void:
 		e["phase"] = float(ph + 1)
 		e["idx"] = 0.0
 		e["feint"] = 0.0
+		e["abTurn"] = 0.0
+		e["abOn"] = 0.0
+		e["abUsed"] = false
+		for s9: Dictionary in b["seats"]:
+			if Js.obj(s9.get("fx")).get("ambush", false):
+				s9["shots"] = 0.0
 		e["hp"] = maxf(1.0, floor(float(e["max"]) * float(nc["revivePct"])))
 		if by_ability:
 			e["shield"] = float(Js.round(float(e["max"]) * Js.nz(nc.get("shieldPct"), 0.0)))
-		ev.append({ "t": "phase", "phase": e["phase"], "line": nc.get("dialogueLine", ""), "hp": e["hp"] })
+			e["ward"] = 0.0
+			e["wardBuff"] = 0.0
+			e["foresight"] = 0.0
+		elif nc.get("shieldPct") != null:
+			e["shield"] = float(Js.round(float(e["max"]) * float(nc["shieldPct"])))
+		e["aegis"] = {}
+		if nc.get("aegis") is Dictionary:
+			e["aegis"] = { "name": nc["aegis"].get("name", "The Last Wall"), "left": float(nc["aegis"]["hitsToBreak"]), "of": float(nc["aegis"]["hitsToBreak"]) }
+		ev.append({ "t": "phase", "phase": e["phase"], "line": nc.get("dialogueLine", ""), "hp": e["hp"], "badge": nc.get("badge", ""), "aegis": e["aegis"] })
 		if nc.get("check") != null:
 			_arm_check(b, nc["check"], ev)
 		b["revived"] = true
@@ -781,6 +1171,8 @@ static func _check_fail(b: Dictionary, ev: Array) -> void:
 		match str(c["kind"]):
 			"damagePctMaxHp":
 				s["hp"] = maxf(0.0, float(s["hp"]) - maxf(1.0, float(Js.round(float(s["max"]) * float(c["value"])))))
+			"burnDot":
+				s["burn"] = { "turns": float(c["turns"]), "dmg": maxf(1.0, float(Js.round(float(s["max"]) * float(c["pctPerTurn"])))) }
 			"status":
 				apply_status(s["statuses"], str(c["status"]), float(c["magnitude"]), float(c["turns"]))
 				if c.get("dmgPct") != null:
@@ -795,7 +1187,20 @@ static func _check_fail(b: Dictionary, ev: Array) -> void:
 
 static func _finish(b: Dictionary, ev: Array) -> Array:
 	var e: Dictionary = b["enemy"]
-	# Deaths, and the Vengeance ward's cheat.
+	_deaths(b, ev)
+	if alive(b).is_empty():
+		b["state"] = "lost"
+		ev.append({ "t": "lost" })
+		return ev
+	if float(e["hp"]) <= 0.0:
+		b["state"] = "won"
+		ev.append({ "t": "won" })
+		return ev
+	return _round_end(b, ev)
+
+
+## Deaths, and the Vengeance ward's cheat.
+static func _deaths(b: Dictionary, ev: Array) -> void:
 	for i: int in (b["seats"] as Array).size():
 		var s: Dictionary = b["seats"][i]
 		if s.get("sunk", false) or float(s["hp"]) > 0.0:
@@ -807,18 +1212,21 @@ static func _finish(b: Dictionary, ev: Array) -> Array:
 			if w.get("cleanse", false):
 				_cleanse(s)
 			s["ward"] = {}
+			_cheated(s)
 			ev.append({ "t": "cheat", "seat": i, "hp": s["hp"] })
+		elif float(s.get("saves", 0.0)) > 0.0 and not s.get("anchorUsed", false):
+			s["saves"] = float(s["saves"]) - 1.0
+			s["anchorUsed"] = true
+			s["hp"] = 1.0
+			_cheated(s)
+			ev.append({ "t": "cheat", "seat": i, "hp": 1.0, "anchor": true })
 		else:
 			s["sunk"] = true
 			ev.append({ "t": "sunk", "seat": i })
-	if alive(b).is_empty():
-		b["state"] = "lost"
-		ev.append({ "t": "lost" })
-		return ev
-	if float(e["hp"]) <= 0.0:
-		b["state"] = "won"
-		ev.append({ "t": "won" })
-		return ev
+
+
+static func _round_end(b: Dictionary, ev: Array) -> Array:
+	var e: Dictionary = b["enemy"]
 	b["turn"] = float(b["turn"]) + 1.0
 	# The mechanic check's countdown.
 	var ck: Dictionary = e["check"]
@@ -855,7 +1263,43 @@ static func _finish(b: Dictionary, ev: Array) -> Array:
 	tick_statuses(e["statuses"])
 	if float(e["markPierce"]) > 0.0:
 		e["markPierce"] = float(e["markPierce"]) - 1.0
+	# A flare barrage every third turn (Flare Barrage, by tier).
+	var tier: int = int(e["decoy"])
+	if tier > 0 and int(b["turn"]) % 3 == 0:
+		var per: float = float(Js.round(maxf(float(Js.round(float(e["min"]) * 0.7)), 0.0) * float(e["flareDmg"])))
+		b["flares"] = {
+			"name": e["decoyName"], "count": 3 + tier * 2, "feint": 0.22 if tier >= 3 else 0.0, "cluster": 0.34 if tier >= 2 else 0.20,
+			"fuse": (0.9 if tier >= 3 else (1.02 if tier == 2 else 1.18)) * float(e["flareFuse"]), "per": per,
+		}
+		ev.append({ "t": "flares", "name": e["decoyName"], "count": b["flares"]["count"] })
 	ev.append({ "t": "end", "turn": b["turn"] })
+	return ev
+
+
+## The flare barrage's toll, once every captain has played it: each real
+## flare let through costs perMiss (at least 3.2% of their hull), each live
+## shell tapped 1.4 times that, straight off the hull. results: per seat
+## { missed, feints }.
+static func flares_land(b: Dictionary, results: Array) -> Array:
+	var ev: Array = []
+	var fl: Dictionary = Js.obj(b.get("flares"))
+	b.erase("flares")
+	if fl.is_empty():
+		return ev
+	for i: int in (b["seats"] as Array).size():
+		var s: Dictionary = b["seats"][i]
+		if s.get("sunk", false) or i >= results.size():
+			continue
+		var r: Dictionary = Js.obj(results[i])
+		var per: float = float(Js.round(maxf(float(fl["per"]), float(Js.round(float(s["max"]) * 0.032)))))
+		var dmg: float = float(r.get("missed", 0.0)) * per + float(r.get("feints", 0.0)) * float(Js.round(per * 1.4))
+		if dmg > 0.0:
+			s["hp"] = maxf(0.0, float(s["hp"]) - dmg)
+		ev.append({ "t": "flareHit", "seat": i, "dmg": dmg, "hp": s["hp"], "missed": r.get("missed", 0.0) })
+	_deaths(b, ev)
+	if alive(b).is_empty():
+		b["state"] = "lost"
+		ev.append({ "t": "lost" })
 	return ev
 
 
@@ -867,6 +1311,8 @@ static func next_fight(b: Dictionary) -> Dictionary:
 	var raid: Dictionary = raid_def(str(b["raidId"]))
 	var n: int = Js.list(raid.get("sequence")).size()
 	var r: int = int(b["fight"]) + 1
+	for s0: Dictionary in b["seats"]:
+		s0["tfx"] = expire_tides(Js.list(s0.get("tfx")))
 	if r > n:
 		b["state"] = "done"
 		return { "done": true }
@@ -877,3 +1323,399 @@ static func next_fight(b: Dictionary) -> Dictionary:
 			s["used"] = []
 	start_fight(b, r)
 	return { "done": false, "rest": rest, "boss": fight_at(raid, r)["boss"] }
+
+
+# ══ The boss's ways (BossAbility, the ward, the Last Wall) ════════════════════
+
+static func _phase(e: Dictionary) -> Dictionary:
+	var ph: int = int(e["phase"])
+	return Js.obj(e["phases"][ph - 2]) if ph >= 2 else {}
+
+
+## The ability of the phase it is in (phase 1: phaseAbility).
+static func _ability_now(e: Dictionary) -> Dictionary:
+	if int(e["phase"]) >= 2:
+		return Js.obj(_phase(e).get("ability"))
+	return Js.obj(e.get("phaseAbility"))
+
+
+## A boss's off-turn ability (RaidCombat, BossAbility), before its action.
+static func _boss_ability(b: Dictionary, a: Dictionary, ev: Array) -> void:
+	var e: Dictionary = b["enemy"]
+	var pm: float = float(Js.nz(_phase(e).get("damageMult"), 1.0))
+	var out: Dictionary = { "t": "bossAbility", "kind": a["kind"], "name": a.get("name", ""), "image": a.get("summonImage", ""), "color": a.get("summonColor", "#a78bfa"), "hits": [] }
+	match str(a["kind"]):
+		"leviathan":
+			# One great blow at a ship, no dodge, through its shield.
+			var ti: int = _target(b, -1)
+			if ti >= 0:
+				var d: float = maxf(1.0, float(Js.round(float(e["maxDmg"]) * 1.5 * float(Js.nz(a.get("value"), 1.0)) * pm)))
+				(out["hits"] as Array).append(_soak_seat(b, ti, d))
+		"blitz":
+			# A flurry, fiercer the lower the ship is, at every ship afloat.
+			for i: int in (b["seats"] as Array).size():
+				var s: Dictionary = b["seats"][i]
+				if s.get("sunk", false) or float(s["hp"]) <= 0.0:
+					continue
+				var frenzy: float = 1.0 + (1.0 - float(s["hp"]) / float(s["max"])) * float(Js.nz(a.get("value"), 0.3))
+				var tot: float = 0.0
+				for k: int in int(Js.nz(a.get("shots"), 4.0)):
+					tot += maxf(1.0, float(Js.round(float(e["min"]) * 0.42 * frenzy * pm)))
+				(out["hits"] as Array).append(_soak_seat(b, i, tot))
+		"abyssal_tide":
+			var h: float = maxf(1.0, float(Js.round(float(e["max"]) * float(Js.nz(a.get("value"), 0.14)))))
+			e["hp"] = minf(float(e["max"]), float(e["hp"]) + h)
+			var sh: float = maxf(1.0, float(Js.round(float(e["max"]) * float(Js.nz(a.get("shieldValue"), 0.08)))))
+			e["shield"] = float(e["shield"]) + sh
+			out["heal"] = h
+			out["shield"] = sh
+		"foresight":
+			e["foresight"] = Js.nz(a.get("turns"), 2.0)
+		"vengeance":
+			e["ward"] = Js.nz(a.get("turns"), 4.0)
+		"requiem":
+			for s2: Dictionary in alive(b):
+				apply_status(s2["statuses"], "marked", Js.nz(a.get("value"), 0.3), Js.nz(a.get("turns"), 3.0))
+	out["enemyHp"] = e["hp"]
+	ev.append(out)
+
+
+## Damage straight at a ship through its shield (a boss ability, a parry).
+static func _soak_seat(b: Dictionary, ti: int, dmg: float) -> Dictionary:
+	var t: Dictionary = b["seats"][ti]
+	var soaked: float = minf(float(t["shield"]), dmg)
+	t["shield"] = float(t["shield"]) - soaked
+	t["hp"] = maxf(0.0, float(t["hp"]) - (dmg - soaked))
+	return { "seat": ti, "dmg": dmg - soaked, "shielded": soaked, "hp": t["hp"] }
+
+
+## A riposte or a reflection back at a ship (through its taken multiplier
+## and its shield).
+static func _hit_seat(b: Dictionary, ti: int, dmg: float, ev: Array, kind: String, name: String) -> void:
+	var t: Dictionary = b["seats"][ti]
+	var taken: float = float(mods(t["statuses"])["taken"]) * float(tide_agg(t)["inDmg"])
+	if taken != 1.0:
+		dmg = maxf(1.0, floor(dmg * taken))
+	var h: Dictionary = _soak_seat(b, ti, dmg)
+	h["t"] = kind
+	h["name"] = name
+	ev.append(h)
+
+
+## wardFloor: the boss's vengeance ward holds it up once, at a fifth of its
+## hull, and it hits a quarter harder for the rest of the phase.
+static func _ward_floor(b: Dictionary, hp: float, ev: Array) -> float:
+	var e: Dictionary = b["enemy"]
+	if hp <= 0.0 and float(e["ward"]) > 0.0:
+		e["ward"] = 0.0
+		e["wardBuff"] = 0.25
+		var up: float = maxf(1.0, float(Js.round(float(e["max"]) * 0.20)))
+		ev.append({ "t": "wardSurge", "hp": up })
+		return up
+	return maxf(0.0, hp)
+
+
+## The Last Wall takes a blow (a volley counts twice); at none left it falls.
+static func _aegis_hit(b: Dictionary, n: float, ev: Array) -> void:
+	var e: Dictionary = b["enemy"]
+	var ag: Dictionary = e["aegis"]
+	if ag.is_empty():
+		return
+	ag["left"] = float(ag["left"]) - n
+	if float(ag["left"]) <= 0.0:
+		e["aegis"] = {}
+		ev.append({ "t": "aegisBreak", "name": ag["name"] })
+	else:
+		ev.append({ "t": "aegisHit", "left": ag["left"], "of": ag["of"] })
+
+
+# ══ Tides (lib/tides) ═════════════════════════════════════════════════════════
+#
+# Each captain chooses their own: a tide's effects ride on their ship (s.tfx),
+# and the ones that shrink the next enemy multiply across the line.
+
+## drawTides: one tier-2 at most (55%), the rest tier 1, shuffled.
+static func draw_tides(n: int, max_tier: int) -> Array:
+	var pool: Array = Js.list(Js.obj(Rules.data().get("tides")).get("pool"))
+	var t1: Array = _shuffle(pool.filter(func(t: Dictionary) -> bool: return int(t["tier"]) == 1))
+	var t2: Array = _shuffle(pool.filter(func(t: Dictionary) -> bool: return int(t["tier"]) >= 2 and int(t["tier"]) <= max_tier))
+	var picks: Array = []
+	if not t2.is_empty() and Dice.next() < 0.55:
+		picks.append(t2[0])
+	for t: Dictionary in t1:
+		if picks.size() >= n:
+			break
+		picks.append(t)
+	for k: int in range(1, t2.size()):
+		if picks.size() >= n:
+			break
+		picks.append(t2[k])
+	return _shuffle(picks).slice(0, n)
+
+
+static func _shuffle(a: Array) -> Array:
+	var out: Array = a.duplicate()
+	for i: int in range(out.size() - 1, 0, -1):
+		var j: int = int(floor(Dice.next() * (i + 1)))
+		var tmp: Variant = out[i]
+		out[i] = out[j]
+		out[j] = tmp
+	return out
+
+
+## The tide due after this kill (a non-boss fight won), or {}.
+static func tide_due(b: Dictionary) -> Dictionary:
+	var raid: Dictionary = raid_def(str(b["raidId"]))
+	var slots: Array = Js.list(Js.obj(raid.get("tides")).get("slots"))
+	var kills: int = int(b["fight"]) + 1
+	var at: int = -1
+	for k: int in slots.size():
+		if int(slots[k]) == kills:
+			at = k
+	if at < 0 or (b["tideFired"] as Array).has(at) or at >= (b["tides"] as Array).size():
+		return {}
+	(b["tideFired"] as Array).append(at)
+	return b["tides"][at]
+
+
+## The Throne's reprieve before its boss, once (PRE_BOSS_REPRIEVE), or {}.
+static func reprieve_due(b: Dictionary) -> Dictionary:
+	var raid: Dictionary = raid_def(str(b["raidId"]))
+	if raid.get("preBossReprieve") != true or b.get("reprieved", false):
+		return {}
+	var n: int = Js.list(raid.get("sequence")).size()
+	if int(b["fight"]) + 1 != n:
+		return {}
+	b["reprieved"] = true
+	return Js.obj(Js.obj(Rules.data().get("tides")).get("reprieve"))
+
+
+## A captain's choice: an instant heal lands now, the rest ride on their ship.
+static func tide_pick(b: Dictionary, si: int, tide: Dictionary, choice_id: String) -> Dictionary:
+	var s: Dictionary = b["seats"][si]
+	var out: Dictionary = { "seat": si, "heal": 0.0 }
+	for c: Dictionary in Js.list(tide.get("choices")):
+		if c["id"] != choice_id:
+			continue
+		out["label"] = c.get("label", "")
+		for fx: Dictionary in Js.list(c.get("effects")):
+			match str(fx["kind"]):
+				"instantHeal":
+					out["heal"] = float(out["heal"]) + _heal(s, float(fx["n"]))
+				"instantHealPct":
+					out["heal"] = float(out["heal"]) + _heal(s, float(Js.round(float(fx["pct"]) * float(s["max"]))))
+				"fullHeal":
+					out["heal"] = float(out["heal"]) + _heal(s, float(s["max"]))
+				"refreshAbility":
+					var spent: Array = Js.list(s.get("used"))
+					if not spent.is_empty():
+						var k: int = int(floor(Dice.next() * spent.size()))
+						out["refreshed"] = spent[k]
+						spent.remove_at(k)
+				_:
+					var keep: Dictionary = fx.duplicate()
+					(s["tfx"] as Array).append(keep)
+	return out
+
+
+## expireAfterFight: what a tide meant for the next fight goes.
+static func expire_tides(fx: Array) -> Array:
+	var out: Array = []
+	for e: Dictionary in fx:
+		var k: String = str(e["kind"])
+		var scope: String = str(e.get("scope", ""))
+		if k == "guaranteedDodge":
+			continue
+		if scope == "nextFight" and k in ["enemyHpScale", "enemyStartChargesDelta", "startCharges", "startHpDelta", "startHpPctDelta", "incomingDmgMult", "dodgeBonus"]:
+			continue
+		if k == "speedDelta" and scope == "next2Fights":
+			var left: float = Js.nz(e.get("_fights"), 2.0) - 1.0
+			if left > 0.0:
+				var e2: Dictionary = e.duplicate()
+				e2["_fights"] = left
+				out.append(e2)
+			continue
+		out.append(e)
+	return out
+
+
+## A captain's tides, added up (multipliers multiply, the rest add).
+static func tide_agg(s: Dictionary, boss: bool = false) -> Dictionary:
+	var a: Dictionary = {
+		"dmgMult": 1.0, "fireMult": 1.0, "volleyMult": 1.0, "bossMult": 1.0, "bossVolMult": 1.0, "critBonus": 0.0, "critZone": 1.0,
+		"inDmg": 1.0, "speed": 0.0, "reloadChance": 0.0, "reloadBonus": 0.0, "dodgeBonus": 0.0, "startHpPct": 0.0, "startHealPct": 0.0,
+		"startCharges": 0.0, "enemyHpScale": 1.0, "guaranteedDodge": 0.0, "doubloonsAtEnd": 0.0,
+	}
+	for e: Dictionary in Js.list(s.get("tfx")):
+		var scope: String = str(e.get("scope", ""))
+		match str(e["kind"]):
+			"damageMult": a["dmgMult"] = float(a["dmgMult"]) * float(e["mult"])
+			"fireDmgMult": a["fireMult"] = float(a["fireMult"]) * float(e["mult"])
+			"volleyDmgMult": a["volleyMult"] = float(a["volleyMult"]) * float(e["mult"])
+			"bossDamageMult": a["bossMult"] = float(a["bossMult"]) * float(e["mult"])
+			"bossVolleyDmgMult": a["bossVolMult"] = float(a["bossVolMult"]) * float(e["mult"])
+			"critChanceBonus": a["critBonus"] = float(a["critBonus"]) + float(e["chance"])
+			"critZoneScale": a["critZone"] = float(a["critZone"]) * float(e["mult"])
+			"incomingDmgMult": a["inDmg"] = float(a["inDmg"]) * float(e["mult"])
+			"speedDelta": a["speed"] = float(a["speed"]) + float(e["n"])
+			"reloadProc":
+				a["reloadChance"] = minf(1.0, float(a["reloadChance"]) + float(e["chance"]))
+				a["reloadBonus"] = float(a["reloadBonus"]) + float(Js.nz(e.get("bonusCharges"), 1.0))
+			"dodgeBonus": a["dodgeBonus"] = float(a["dodgeBonus"]) + float(e["chance"])
+			"startHpPctDelta":
+				if scope != "boss" or boss:
+					a["startHpPct"] = float(a["startHpPct"]) + float(e["pct"])
+			"startOfFightHealPct": a["startHealPct"] = float(a["startHealPct"]) + float(e["pctMax"])
+			"startCharges":
+				a["startCharges"] = 0.0 if float(e["n"]) <= -10.0 else float(a["startCharges"]) + float(e["n"])
+			"enemyHpScale": a["enemyHpScale"] = float(a["enemyHpScale"]) * float(e["mult"])
+			"guaranteedDodge": a["guaranteedDodge"] = float(a["guaranteedDodge"]) + float(e["n"])
+			"doubloonsAtRaidEnd": a["doubloonsAtEnd"] = float(a["doubloonsAtEnd"]) + float(e["n"])
+	return a
+
+
+# ══ Raid items (lib/raidItems effects) ═════════════════════════════════════════
+
+## An item list's effects, folded the way RaidCombat reads each type:
+## products for multipliers, sums for the ward, crit upgrades, lifesteal and
+## saves, the best for chances.
+static func item_fx(ids: Array) -> Dictionary:
+	var fx: Dictionary = {
+		"bossMult": 1.0, "nonbossMult": 1.0, "critMult": 1.0, "noncritMult": 1.0, "inMult": 1.0, "maxHp": 1.0,
+		"firstShot": 1.0, "afflicted": 1.0, "avengeElite": 1.0, "ramp": 0.0, "critUpgrade": 0.0, "lifesteal": 0.0,
+		"wardPct": 0.0, "lethalSave": 0.0, "offensive": false,
+	}
+	var best: Array = ["burn", "freeze", "parry", "parryReflect", "firstBlowParry", "maxHitPct", "maxHitChance", "chargeOnHit",
+		"reloadCharge", "navSpeed", "startCharge", "extraStart", "critStrip", "dodgePierce", "wardRefill", "weaken", "corrode",
+		"feeble", "critSpread", "critRamp"]
+	for k: String in best:
+		fx[k] = 0.0
+	var key: Dictionary = {
+		"burn_chance": "burn", "freeze_chance": "freeze", "parry_chance": "parry", "parry_reflect_pct": "parryReflect",
+		"first_blow_parry_chance": "firstBlowParry", "max_hit_chance": "maxHitChance", "charge_on_hit_chance": "chargeOnHit",
+		"reload_charge_chance": "reloadCharge", "speed_roll_nav_pct": "navSpeed", "start_charge_chance": "startCharge",
+		"extra_start_charge_chance": "extraStart", "crit_strip_charge": "critStrip", "dodge_pierce_chance": "dodgePierce",
+		"ward_refill_pct": "wardRefill", "weaken_on_hit": "weaken", "corrode_on_hit": "corrode", "feeble_on_hit": "feeble",
+		"crit_spread_chance": "critSpread", "crit_ramp_turns": "critRamp",
+	}
+	var offensive: Array = ["boss_damage_mult", "crit_damage_mult", "noncrit_damage_mult", "nonboss_damage_mult", "ramp_damage_per_turn", "burn_chance", "freeze_chance", "parry_chance", "parry_reflect_pct"]
+	for id: Variant in ids:
+		var it: Dictionary = Armory.item(str(id))
+		for e: Dictionary in Js.list(it.get("effects")):
+			var t: String = str(e["type"])
+			var v: float = float(e["value"])
+			if offensive.has(t):
+				fx["offensive"] = true
+			match t:
+				"boss_damage_mult": fx["bossMult"] = float(fx["bossMult"]) * v
+				"nonboss_damage_mult": fx["nonbossMult"] = float(fx["nonbossMult"]) * v
+				"crit_damage_mult": fx["critMult"] = float(fx["critMult"]) * v
+				"noncrit_damage_mult": fx["noncritMult"] = float(fx["noncritMult"]) * v
+				"incoming_damage_mult": fx["inMult"] = float(fx["inMult"]) * v
+				"max_hp_mult": fx["maxHp"] = float(fx["maxHp"]) * v
+				"first_shot_mult": fx["firstShot"] = float(fx["firstShot"]) * v
+				"afflicted_damage_mult": fx["afflicted"] = float(fx["afflicted"]) * v
+				"avenge_elite_mult": fx["avengeElite"] = float(fx["avengeElite"]) * v
+				"ramp_damage_per_turn": fx["ramp"] = float(fx["ramp"]) + v
+				"crit_upgrade_chance": fx["critUpgrade"] = float(fx["critUpgrade"]) + v
+				"lifesteal_pct": fx["lifesteal"] = float(fx["lifesteal"]) + v
+				"ward_pct": fx["wardPct"] = float(fx["wardPct"]) + v
+				"lethal_save": fx["lethalSave"] = float(fx["lethalSave"]) + v
+				"max_hit_pct":
+					fx["maxHitPct"] = v if float(fx["maxHitPct"]) == 0.0 else minf(float(fx["maxHitPct"]), v)
+				"pierce_crit": fx["pierceCrit"] = true
+				"ambush_each_phase": fx["ambush"] = true
+				"ward_refill_on_save": fx["wardOnSave"] = true
+				_:
+					if key.has(t):
+						fx[key[t]] = maxf(float(fx[key[t]]), v)
+	return fx
+
+
+## A death cheated: the Drowned Crown's vengeance arms, the Standing Wall
+## raises the palisade again.
+static func _cheated(s: Dictionary) -> void:
+	s["cheated"] = true
+	if Js.obj(s.get("fx")).get("wardOnSave", false):
+		s["shield"] = maxf(float(s["shield"]), float(s.get("wardMax", 0.0)))
+
+
+## Thrown back at the enemy (a parry): through its shield and its ward.
+static func _reflect(b: Dictionary, si: int, dmg: float, ev: Array, name: String) -> void:
+	var e: Dictionary = b["enemy"]
+	if not (e["aegis"] as Dictionary).is_empty():
+		return
+	var absorbed: float = minf(float(e["shield"]), dmg)
+	e["shield"] = float(e["shield"]) - absorbed
+	e["hp"] = _ward_floor(b, float(e["hp"]) - (dmg - absorbed), ev)
+	ev.append({ "t": "reflect", "seat": si, "dmg": dmg - absorbed, "enemyHp": e["hp"], "name": name })
+	if float(e["hp"]) <= 0.0:
+		_enemy_down(b, ev, false)
+
+
+## A shot that landed and left it afloat: the items' riders (crit strip,
+## lifesteal, fire and ice, the rack's spread, the Leviathan's stoking).
+static func _on_hit(b: Dictionary, si: int, dmg: float, crit: bool, ev: Array) -> void:
+	var s: Dictionary = b["seats"][si]
+	var e: Dictionary = b["enemy"]
+	var fx: Dictionary = Js.obj(s.get("fx"))
+	if fx.is_empty():
+		return
+	if crit and float(e["charges"]) > 0.0 and float(fx.get("critStrip", 0.0)) > 0.0 and Dice.next() < float(fx["critStrip"]):
+		e["charges"] = float(e["charges"]) - 1.0
+		ev.append({ "t": "strip", "seat": si, "charges": e["charges"] })
+	var rate: float = minf(0.35, float(fx.get("lifesteal", 0.0)))
+	if rate > 0.0 and float(s["hp"]) > 0.0:
+		var heal: float = float(Js.round(minf(float(Js.round(float(s["max"]) * rate * 2.0)), maxf(1.0, float(Js.round(dmg * rate))))))
+		var got: float = _heal(s, heal)
+		if got > 0.0:
+			ev.append({ "t": "leech", "seat": si, "heal": got, "hp": s["hp"] })
+	if float(fx.get("burn", 0.0)) > 0.0 and Dice.next() < minf(0.20, float(fx["burn"])):
+		e["burn"] = { "turns": 2.0, "dmg": maxf(1.0, float(Js.round(dmg * 0.10))) }
+		ev.append({ "t": "eAblaze", "seat": si, "dmg": e["burn"]["dmg"] })
+	if float(fx.get("freeze", 0.0)) > 0.0 and Dice.next() < minf(0.20, float(fx["freeze"])):
+		e["freeze"] = 1.0
+		ev.append({ "t": "eIced", "seat": si })
+	var rack: float = maxf(float(fx.get("weaken", 0.0)), maxf(float(fx.get("corrode", 0.0)), float(fx.get("feeble", 0.0))))
+	var fired: bool = rack > 0.0 and Dice.next() < rack
+	if not fired and rack > 0.0 and crit and float(fx.get("critSpread", 0.0)) > 0.0 and Dice.next() < float(fx["critSpread"]):
+		fired = true
+	if fired:
+		var landed: Array = []
+		if float(fx.get("weaken", 0.0)) > 0.0:
+			apply_status(e["statuses"], "weaken", 0.20, 2.0)
+			landed.append("weaken")
+		if float(fx.get("corrode", 0.0)) > 0.0:
+			apply_status(e["statuses"], "corrode", 0.30, 2.0)
+			landed.append("corrode")
+		if float(fx.get("feeble", 0.0)) > 0.0:
+			apply_status(e["statuses"], "feeble", 0.20, 2.0)
+			landed.append("feeble")
+		ev.append({ "t": "rack", "seat": si, "landed": landed })
+	if crit and float(fx.get("critRamp", 0.0)) > 0.0:
+		s["critRamp"] = float(s.get("critRamp", 0.0)) + float(fx["critRamp"])
+
+
+## The drum (War Drum, Thunder Drum, the drums forged from them): once a
+## raid, a free beat that may bring a spent crew order back.
+static func drum_of(s: Dictionary) -> Dictionary:
+	for id: Variant in Js.list(s.get("items")):
+		var it: Dictionary = Armory.item(str(id))
+		if it.get("activated") is Dictionary:
+			return it
+	return {}
+
+
+static func use_drum(b: Dictionary, si: int) -> Dictionary:
+	var s: Dictionary = b["seats"][si]
+	var it: Dictionary = drum_of(s)
+	if it.is_empty() or s.get("drum", false):
+		return { "error": "No drum to beat" }
+	s["drum"] = true
+	var spent: Array = Js.list(s.get("used"))
+	var out: Dictionary = { "t": "drum", "seat": si, "name": it["name"] }
+	if not spent.is_empty() and Dice.next() < float(it["activated"]["chance"]):
+		var k: int = int(floor(Dice.next() * spent.size()))
+		out["refreshed"] = spent[k]
+		spent.remove_at(k)
+	return out

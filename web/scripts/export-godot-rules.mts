@@ -42,7 +42,10 @@ import { SCENE_BACKDROPS, RAID_MAP, RAID_CHAPTERS } from '../lib/raidMap'
 import { BAYS, HUB, HUB_R, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, FOG_BANKS, SPANS, WARGATE, MAELSTROMS, PORTAL_HOME, PORTAL_REACH, bayCentre, opensBay, bayShutLine, encounterAt, dockAt, isleAt, bankAt, chainSpan, RETURN_PORTALS, portalAt, hullFor, portraitFor, encArt } from '../app/(app)/sea/raidWaters'
 import { plateFor } from '../lib/islandPlates'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '../lib/expeditions'
-import { RAID_ITEMS } from '../lib/raidItems'
+import { RAID_ITEMS, FORGE_RECIPES } from '../lib/raidItems'
+import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST } from '../lib/shipBerth'
+import { AFFIXES, ALL_AFFIX_IDS, ELITE_HP_MULT, ELITE_DMG_MULT } from '../lib/raidAffixes'
+import { TIDE_POOL, PRE_BOSS_REPRIEVE } from '../lib/tides'
 import { SHIP_CLASSES, SHIP_CLASS_LINES, SHIP_CLASS_CHAPTER_ORDER, SHIP_REFIT_COST } from '../lib/shipClasses'
 import { LANDMARKS, WORLD_CHART_COMPLETION_BONUS } from '../lib/worldChart'
 import { MATCH_COLS, MATCH_ROWS, MATCH_TYPES, MATCH_MOVES, MATCH_TARGET, MATCH_MAX_POINTS, MATCH_TIERS, WILD_DROP_CHANCE } from '../app/(app)/charting/constants'
@@ -221,7 +224,10 @@ const rules = {
     portals: RETURN_PORTALS.map((pt: any) => ({ ...pt, at: portalAt(pt) })),
   },
   raids: Object.fromEntries(ALL_RAIDS.map(r => [r.raidId, JSON.parse(JSON.stringify(r))])),
+  raidAffixes: { affixes: AFFIXES, all: ALL_AFFIX_IDS, eliteHp: ELITE_HP_MULT, eliteDmg: ELITE_DMG_MULT },
+  tides: { pool: TIDE_POOL, reprieve: PRE_BOSS_REPRIEVE },
   raidItems: RAID_ITEMS.map(({ emoji: _e, ...it }) => it),
+  forgeRecipes: FORGE_RECIPES, sixthBerthCost: SIXTH_BERTH_COST, armoryExpansionCost: ARMORY_EXPANSION_COST,
   shipClasses: { classes: SHIP_CLASSES, lines: SHIP_CLASS_LINES, chapterOrder: SHIP_CLASS_CHAPTER_ORDER, refitCost: SHIP_REFIT_COST },
   shipCombat: Object.fromEntries(Object.entries(EXPEDITION_SHIP_STATS).map(([t, v]) => [t, { ...v, itemSlots: raidItemSlotsForTier(Number(t)) }])),
   crewSkins: CREW_SKINS.map(k => ({ ...k, crewTier: FISH_GROUPS.findIndex(g => g.has(k.slug)) })),

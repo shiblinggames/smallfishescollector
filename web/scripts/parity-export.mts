@@ -30,7 +30,7 @@ import { equipTackleRod, buyBait, purchaseRod, sellRod, buyReel, buyHook, upgrad
 import { marketSellFish, sellEntireHold, sellToResident } from '../lib/core/selling'
 import { localSellData } from '../lib/data/local/sellLocal'
 import { localHarbourData } from '../lib/data/local/harbourLocal'
-import { buyShipyardTier, equipRod } from '../lib/core/ship'
+import { buyShipyardTier, equipRod, saveEquippedRaidItems, buySixthBerth, buyArmoryExpansion } from '../lib/core/ship'
 import { localShipData } from '../lib/data/local/shipLocal'
 import { FOLK } from '../lib/seaFolk'
 import { ISLES } from '../lib/seaIsles'
@@ -1345,6 +1345,28 @@ const campaignSessions = [
     await view()
   })); return out })()),
 ]
+// The armory: loadouts on a small hull and a Man-o-War, items not held,
+// two grades of a family, a forged item beside its ingredients, the finale's
+// mount, the class and armory mounts; the berth and the armory bought.
+campaignSessions.push(await scripted('the armory', 64, captainWith(64, 40, 2, { doubloons: 500, ship_tier: 3 }), async x => {
+  const sd = localShipData(x.save)
+  const save = (ids: string[]) => x.call('saveEquippedRaidItems', [ids], async () => { await saveEquippedRaidItems(sd, x.uid, ids); return { equipped: x.save.profile.equipped_raid_items } })
+  await x.patchProfile({ raid_items: ['corsair_cannon', 'corsair_prime_cannon', 'navigators_compass', 'tollmasters_primer', 'vanguards_chronometer', 'gunners_sight', 'reinforced_hull', 'borrowed_jaw', 'war_drum', 'krusts_carapace'] })
+  await save(['corsair_cannon', 'navigators_compass', 'gunners_sight'])
+  await save(['nope', 'corsair_cannon'])
+  await x.patchProfile({ ship_tier: 6 })
+  await save(['corsair_cannon', 'corsair_prime_cannon', 'navigators_compass', 'gunners_sight', 'reinforced_hull'])
+  await save(['vanguards_chronometer', 'navigators_compass', 'tollmasters_primer', 'war_drum', 'krusts_carapace'])
+  await save(['borrowed_jaw', 'war_drum', 'gunners_sight', 'reinforced_hull', 'krusts_carapace', 'corsair_cannon'])
+  await x.patchProfile({ has_armory_expansion: true, ship_classes: { thread: 'master_gunner' } })
+  await save(['war_drum', 'gunners_sight', 'reinforced_hull', 'krusts_carapace', 'corsair_cannon', 'navigators_compass'])
+  await x.patchProfile({ has_armory_expansion: false, has_sixth_berth: false })
+  for (const f of [buySixthBerth, buyArmoryExpansion]) await x.call(f.name, [], () => f(sd, x.uid))
+  await x.patchSave({ clears: ['the_blockade', 'the_throne'] })
+  for (const f of [buySixthBerth, buyArmoryExpansion]) await x.call(f.name, [], () => f(sd, x.uid))
+  await x.patchProfile({ doubloons: 2_500_000 })
+  for (const f of [buySixthBerth, buyArmoryExpansion, buySixthBerth, buyArmoryExpansion]) await x.call(f.name, [], () => f(sd, x.uid))
+}))
 write('campaign.json', { sessions: campaignSessions })
 console.log(`  ${campaignSessions.length} campaign sessions, ${campaignSessions.reduce((n, s) => n + s.ops.length, 0)} calls`)
 
