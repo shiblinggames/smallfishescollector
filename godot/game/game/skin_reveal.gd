@@ -5,7 +5,7 @@ extends Control
 ## dark and trembles, its glow climbing through the tiers it could still be,
 ## stopping on the one it is; it flips, and the painting is there with a
 ## burst of its tier's colour. A chase skin gets more: rays turning behind
-## it and its sheen. Press anywhere once it has landed to put it away.
+## it and its own signature effect (ChaseFx). Press anywhere once it has landed to put it away.
 ## Rules: core/skins.gd (the roll is made before this plays).
 
 signal done
@@ -84,12 +84,9 @@ func _ready() -> void:
 	var skin: Dictionary = Js.obj(result.get("skin"))
 	_face.texture = Skipper.tex("card-arts/%s.webp" % str(skin.get("filename", "")).get_basename())
 	_face.visible = false
-	if tier == "chase":
-		var m: ShaderMaterial = ShaderMaterial.new()
-		m.shader = preload("res://game/fx/chase_sheen.gdshader")
-		m.set_shader_parameter("tint", Color(str(skin.get("color", "#ffd27a"))))
-		_face.material = m
 	_card.add_child(_face)
+	# A chase skin plays its own signature, bold (game/chase_fx.gd).
+	ChaseFx.over(_face, skin, true)
 	_words = VBoxContainer.new()
 	_words.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_words.offset_left = -360

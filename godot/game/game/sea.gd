@@ -1149,7 +1149,12 @@ func _open_finn() -> void:
 		session.persist()
 		_finn_refresh())
 	sc.paid.connect(func(xp: float, from: Vector2) -> void: _hud.story_pour(xp, from))
+	var moment: Array = [0]
+	sc.chapter_done.connect(func(n: int) -> void: moment[0] = n)
 	sc.closed.connect(func() -> void:
+		# A chapter closed: the sea round her answers (game/finn_moment.gd).
+		if moment[0] > 0:
+			FinnMoment.play(_world, _boat.position, _field, moment[0], _boat.z_index + 1)
 		_finn_refresh()
 		_hud.after_story.call_deferred())
 	_hud.hold_for(sc)

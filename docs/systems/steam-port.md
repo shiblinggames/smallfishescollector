@@ -650,7 +650,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   THE REVEAL (game/skin_reveal.gd): the sealed card shows the voucher's painting and trembles
   while its glow climbs the tiers to the one it is, a tick a tier; it flips to the skin on its
   tier's colour with a ring breaking out; legendary and chase add turning rays, and a chase
-  skin's painting carries a sweeping sheen (game/fx/chase_sheen.gdshader, the web's ChaseSkinFx).
+  skin plays its OWN SIGNATURE (game/chase_fx.gd, a port of the web's ChaseSkinFx: Tempest's
+  lightning flash and sparks, Kraken Hunter's caustics and bubbles, Galaxy's nebula, stars and
+  shooting stars, Fossil's glyph rings and motes, Hunter's Bane's reticle and lock, the Idol's
+  aureole), ambient on tiles, roster cards and pages, bold on the reveal. A sweeping sheen was
+  tried first and cut: shines on cards are a rejected look.
   tests/skins_check.gd.
 - THE PARLOR, BUILT (2026-10-03). Port-native rules, no parity (the web's Parlor is weekly
   and generated; the port's settled shape is not): core/parlor.gd, with the web's tables
@@ -783,8 +787,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (catch_hotspot) and a trophy (catch_trophy). The last three count off profile.finn_tally,
   bumped by Finn.on_catch after every reelIn from profile.finn_cast_at (the castLine spot),
   port only; every job measures from its snapshot like the web's. tests/finn_check.gd works
-  all 40 and checks the wrong catches do not count. NOT YET: the per-chapter moments on the
-  water.
+  all 40 and checks the wrong catches do not count. A CHAPTER CLOSES ON THE WATER (Kong,
+  2026-10-03; game/finn_moment.gd, played round your boat when Finn's scene closes after a
+  chapter's last job, each its own): I a ring of little fish leaps all round you; II flying
+  fish skip across your bow; III a marlin clears your boat in one leap; IV lights rise out of
+  the dark and break the surface (the music muffles under them); V six gold rings open round
+  you one by one with a rising tick each, and a megalodon's shadow passes beneath. Flat
+  things drawn on the water (foreshortened by the World's squash), leaping things un-squashed;
+  every splash also rings the sea's field. tests/shot.gd finnmoment (FINN_CH).
 - NORTH OF THE REEF, PLACES FIRST (Kong, 2026-10-02): game/north.gd, a port of chart.ts's
   reef, anchorage and Sea Gate and SeaMap's reefRocks/anchorageRocks (same seeds, so the same
   rock). THE PORT'S OWN ROCK (Kong, 2026-10-02: the web's pale side-on crags did not fit the

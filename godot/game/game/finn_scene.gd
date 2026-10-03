@@ -12,6 +12,9 @@ extends Control
 ## tells you the next piece of the story, with the next slip after it.
 
 signal closed
+## A chapter's last job handed back (its number): the sea answers once the
+## scene is closed (FinnMoment).
+signal chapter_done(number: int)
 ## Something changed (a job set or handed back): the sea redraws the mark and
 ## the story line.
 signal changed
@@ -302,6 +305,7 @@ func _turn_in() -> void:
 					all_done = false
 			if all_done:
 				await _chapter(hch, true)
+				chapter_done.emit(int(hch.get("number", 1)))
 		if nq is Dictionary:
 			_offer(nq)
 		else:

@@ -339,6 +339,7 @@ func _trunk_room() -> void:
 	_body.add_child(vrow)
 	for kind: String in Skins.KINDS:
 		vrow.add_child(_voucher(kind))
+	Paper.text(_body, "A legendary roll can land on a chase skin (a Legendary crew's animated one): about 1 in %d." % int(round(1.0 / maxf(0.01, Skins.chase_share()))), "small", Paper.ink_soft(), true)
 	var owned: Array = Js.list(_skins.get("owned"))
 	var eq: Dictionary = Js.obj(_skins.get("equipped"))
 	var aboard: Array = Js.list(_skins.get("crewSlugs"))
@@ -408,7 +409,6 @@ func _voucher(kind: String) -> Control:
 		if float(w.get(tier, 0.0)) > 0.0:
 			var pc: float = float(w[tier])
 			odds.append("%s %s%%" % [TIER_NAMES[tier], str(int(pc)) if pc == floorf(pc) else str(pc)])
-	odds.append("about 1 legendary in %d is a chase skin" % int(round(1.0 / maxf(0.01, Skins.chase_share()))))
 	Paper.text(t, ", ".join(PackedStringArray(odds)), "small", col.lightened(0.25), true)
 	Paper.text(t, str(d.get("from", "")), "small", Paper.ink_soft(), true)
 	var b: Pane.PaneButton = Paper.button("Open", n > 0)
@@ -476,12 +476,9 @@ func _skin_tile(k: Dictionary, have: bool, worn: bool) -> Control:
 		m.shader = preload("res://game/fx/greyed.gdshader")
 		m.set_shader_parameter("strength", 0.35)
 		pic.material = m
-	elif tier == "chase":
-		var m2: ShaderMaterial = ShaderMaterial.new()
-		m2.shader = preload("res://game/fx/chase_sheen.gdshader")
-		m2.set_shader_parameter("tint", Color(str(k.get("color", "#ffd27a"))))
-		pic.material = m2
 	holder.add_child(pic)
+	if have:
+		ChaseFx.over(holder, k)
 	if _pick_kind == "skin" and _pick.get("id") == k["id"]:
 		var ring: Panel = Panel.new()
 		var sb: StyleBoxFlat = StyleBoxFlat.new()
@@ -530,12 +527,9 @@ func _skin_detail() -> void:
 		var m: ShaderMaterial = ShaderMaterial.new()
 		m.shader = preload("res://game/fx/greyed.gdshader")
 		pic.material = m
-	elif tier == "chase":
-		var m2: ShaderMaterial = ShaderMaterial.new()
-		m2.shader = preload("res://game/fx/chase_sheen.gdshader")
-		m2.set_shader_parameter("tint", Color(str(k.get("color", "#ffd27a"))))
-		pic.material = m2
 	holder.add_child(pic)
+	if have:
+		ChaseFx.over(holder, k)
 	Paper.text(_detail, "%s %s" % [k["name"], crew_name], "title", Paper.ink() if have else Paper.ink_soft())
 	Paper.text(_detail, "%s skin" % TIER_NAMES[tier], "body_strong", col.lightened(0.15))
 	Paper.text(_detail, str(k.get("blurb", "")), "note", Paper.ink_soft(), true)
@@ -564,6 +558,11 @@ func _equip(slug: String, id: Variant) -> void:
 	Sound.seal(false)
 	Rumble.tap(12)
 	_load()
+
+
+## The skin a crew member wears ({} for the plain card).
+func _worn(c: Dictionary) -> Dictionary:
+	return Skins.by_id(Js.obj(_skins.get("equipped")).get(str(c.get("slug", ""))))
 
 
 ## On a roster card: the skins this crew owns, the plain one first; press
@@ -651,6 +650,8 @@ func _card(c: Dictionary, kind: String) -> Control:
 	if kind == "board" and c.get("recruited") == true:
 		pic.modulate = Color(1, 1, 1, 0.35)
 	holder.add_child(pic)
+	if kind == "roster":
+		ChaseFx.over(holder, _worn(c))
 	var on: bool = _pick.get("id") == c.get("id") and _pick_kind == kind
 	if on:
 		var ring: Panel = Panel.new()
@@ -716,6 +717,8 @@ func _draw_detail() -> void:
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	holder.add_child(pic)
+	if _pick_kind == "roster":
+		ChaseFx.over(holder, _worn(c))
 	Paper.text(_detail, str(c.get("name", "")), "title", Paper.ink())
 	var cls: Dictionary = Crew.class_of(str(c.get("slug", "")))
 	Paper.text(_detail, "%s%s" % [RARITY_NAMES[rar - 1], ("  ·  " + str(cls["name"])) if not cls.is_empty() else ""], "body_strong", rc.lightened(0.15))
