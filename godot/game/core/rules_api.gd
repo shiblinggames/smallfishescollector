@@ -40,7 +40,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 
 
 ## Calls that change nothing.
-const READS: Array = ["getCasinoState", "getSlotStats", "getSlotsJackpot", "getRouletteState", "resumeHand", "finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState"]
+const READS: Array = ["parlorState", "getCasinoState", "getSlotStats", "getSlotsJackpot", "getRouletteState", "resumeHand", "finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState"]
 
 
 static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
@@ -90,6 +90,17 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"buyShipyardTier": return Shipyard.buy_tier(db, uid, a[0])
 		"equipRod": return Shipyard.equip_rod(db, uid, float(a[0]))
 		"folkState": return Folk.state(db, uid)
+		"parlorState": return Parlor.state(db, uid)
+		"boardReveal": return Parlor.board_reveal(db, uid, str(a[0]))
+		"boardAnswer": return Parlor.board_answer(db, uid, str(a[0]), float(a[1]))
+		"kingStart": return Parlor.king_start(db, uid)
+		"kingAnswer": return Parlor.king_answer(db, uid, float(a[0]), float(a[1]))
+		"kingFifty": return Parlor.king_fifty(db, uid)
+		"kingWalk": return Parlor.king_walk(db, uid)
+		"capstanSpin": return Parlor.capstan_spin(db, uid, float(a[0]))
+		"capstanConsonant": return Parlor.capstan_letter(db, uid, float(a[0]), str(a[1]), false)
+		"capstanVowel": return Parlor.capstan_letter(db, uid, float(a[0]), str(a[1]), true)
+		"capstanSolve": return Parlor.capstan_solve(db, uid, float(a[0]), str(a[1]))
 		"getCasinoState": return Casino.state(db, uid)
 		"buyInCasino": return Casino.buy_in(db, uid, a[0])
 		"cashOutCasino": return Casino.cash_out(db, uid)

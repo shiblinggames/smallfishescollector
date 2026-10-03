@@ -608,7 +608,8 @@
     "feature": {
       "market_advanced": 50,
       "den_roulette": 10,
-      "den_blackjack": 20
+      "den_blackjack": 20,
+      "parlor_king": 25
     }
   },
   "boats": [
@@ -1973,6 +1974,29 @@
         100,
         10000
       ]
+    ]
+  },
+  "_parlorPort": "THE PARLOR IN THE PORT (Kong, 2026-10-02/03, SETTLED): one Captain's Board card dealt every 8 real hours (10 sea days), a hand of 3, 4 at Fishing 30 and 5 at 60, never lost; the tier of a dealt card weighted 45/35/20; the Pirate King at Fishing 25 (levelGates.feature.parlor_king); every question drawn unseen first from content/trivia_bank.json. core/parlor.gd.",
+  "parlorPort": {
+    "dealMs": 28800000,
+    "holdByLevel": [
+      [
+        1,
+        3
+      ],
+      [
+        30,
+        4
+      ],
+      [
+        60,
+        5
+      ]
+    ],
+    "tierWeights": [
+      0.45,
+      0.35,
+      0.2
     ]
   }
 }

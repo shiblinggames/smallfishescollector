@@ -17,12 +17,12 @@ const ROWS: Array = [
 		["tackle", "Tackle Shop", "Rods, hooks, reels and bait", "Browse", "sea/tackle.png", "#67d4e8"],
 	]],
 	["Games and puzzles", [
-		["parlor", "The Parlor", "Trivia for doubloons and gems", "Sit in", "sea/parlor.png", "#dd8f79"],
+		["parlor", "The Parlor", "Trivia for doubloons", "Sit in", "sea/parlor.png", "#dd8f79"],
 		["den", "The Den", "Blackjack, slots and the wheel", "Play", "sea/den.png", "#d9534f"],
 		["chart_room", "The Chart Room", "Weekly puzzles that uncover the World Chart", "Study", "sea/charting.png", "#6fc4b4"],
 	]],
 ]
-const BUILT: Array[String] = ["market", "tackle", "den"]
+const BUILT: Array[String] = ["market", "tackle", "den", "parlor"]
 
 var _card: Pane
 var _first: Button = null

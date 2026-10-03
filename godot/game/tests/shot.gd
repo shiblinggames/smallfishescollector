@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -410,6 +410,30 @@ func _init() -> void:
 				var g: Node = den._table.get_child(den._table.get_child_count() - 1)
 				g.call("play_for_shot")
 			for f: int in int(OS.get_environment("DEN_F")) if OS.get_environment("DEN_F") != "" else 20:
+				await process_frame
+		"parlor":
+			# The Parlor. PARLOR_TAB: board, king or capstan; PARLOR_PLAY: 1
+			# turns the first card (or reveals the rung, or spins).
+			var pp: Dictionary = sea.session.profile()
+			pp["fishing_xp"] = float(Rules.data()["xpTable"][29])
+			Parlor.board(sea.session.store, sea.session.uid)
+			Parlor._p(sea.session.store, sea.session.uid)["dealt_at"] = Clock.now_ms() - 28800000.0 * 4.0
+			var pr: ParlorRoom = ParlorRoom.new()
+			pr.session = sea.session
+			pr.tab = OS.get_environment("PARLOR_TAB") if OS.get_environment("PARLOR_TAB") != "" else "board"
+			sea._room_layer.add_child(pr)
+			for f: int in 20:
+				await process_frame
+			if OS.get_environment("PARLOR_PLAY") != "":
+				match pr.tab:
+					"board":
+						var hb: Array = Parlor.board(sea.session.store, sea.session.uid)["hand"]
+						pr._turn(hb[0], pr._body.get_child(1).get_child(0))
+					"king":
+						pr._king_rung(pr._body.get_child(0).get_child(1))
+					"capstan":
+						pr._cap_spin()
+			for f: int in int(OS.get_environment("PARLOR_F")) if OS.get_environment("PARLOR_F") != "" else 30:
 				await process_frame
 		"crossing":
 			# North through the arch and back (run with --write-movie): the

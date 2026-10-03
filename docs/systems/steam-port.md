@@ -616,6 +616,23 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   every winning spot paying back, blackjack's bet and its return, solo and at the shared
   table). The roulette board draws the painted chips (the others' ringed in their colour).
   GOTCHA: a texture first loaded inside _draw is white until the next frame; load ahead.
+- THE PARLOR, BUILT (2026-10-03). Port-native rules, no parity (the web's Parlor is weekly
+  and generated; the port's settled shape is not): core/parlor.gd, with the web's tables
+  (rules.json "parlor": payouts 50/100/200, the 12 s clock and 4 s grace, the ranks, the King's
+  prizes and havens at 4 and 7, the capstan's wheel, strikes and 250 vowel). THE BANK:
+  content/trivia_bank.json, built by tools/build-trivia.mjs from the web's weeks (356), the
+  fresh fact-checked set (content/trivia_fresh.json, the trivia-bank-800 workflow) and ~450
+  questions from our own fish (the Log fact veiled, the water, the rarity); every question has a
+  stable id and a captain meets every one before any comes round again (profile.parlor.seen).
+  THE BOARD: a card every 8 hours into a hand of 3/4/5 (port_rules parlorPort), the tier
+  weighted 45/35/20; a card shows its topic and worth face down and draws its question when
+  turned. THE KING at Fishing 25, one run a week, rungs tier 1,1,1,2,2,2,2,3,3,3. THE CAPSTAN:
+  three phrases a week, unseen first, no Captain gate. RANKS ARE TITLES for now: their gem
+  rewards are retired and what they grant instead is TO SETTLE WITH KONG. The room
+  (game/parlor_room.gd): the hand fanned face down in topic colours; a turned card grows into
+  the question with a draining ring, the answers inked right or wrong and a stamp; the King's
+  ladder with the havens marked and your marker; the capstan a wooden wheel that spins down to
+  its wedge with a tick a wedge, the tiles, the letters, a solve box. tests/parlor_check.gd.
 - TRIVIA IN THE PORT (Kong, 2026-10-03, SETTLED; not built yet): the port has no server to
   generate questions nightly, so it ships a QUESTION BANK, rotated by day: the questions the web
   has already generated PLUS a freshly written set. Some bank questions double as TREASURE

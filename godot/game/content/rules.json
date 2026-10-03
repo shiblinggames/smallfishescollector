@@ -7874,6 +7874,141 @@
   "borderColor": "#c8a060",
   "mirrored": true
  },
+ "parlor": {
+  "categories": [
+   {
+    "key": "FISH",
+    "label": "Fish Facts",
+    "color": "#60a5fa"
+   },
+   {
+    "key": "DEEP",
+    "label": "The Deep",
+    "color": "#a78bfa"
+   },
+   {
+    "key": "LORE",
+    "label": "Salt & Legend",
+    "color": "#f0c040"
+   },
+   {
+    "key": "CATCH",
+    "label": "The Catch",
+    "color": "#34d399"
+   }
+  ],
+  "tierValues": [
+   50,
+   100,
+   200
+  ],
+  "answerSeconds": 12,
+  "graceMs": 4000,
+  "ranks": [
+   {
+    "at": 0,
+    "title": "Greenhorn",
+    "color": "#8a8478",
+    "gems": 0
+   },
+   {
+    "at": 15,
+    "title": "Card Hand",
+    "color": "#7fd49a",
+    "gems": 25
+   },
+   {
+    "at": 40,
+    "title": "Sharp",
+    "color": "#60a5fa",
+    "gems": 50
+   },
+   {
+    "at": 85,
+    "title": "Cardsharp",
+    "color": "#a78bfa",
+    "gems": 100
+   },
+   {
+    "at": 150,
+    "title": "Rounder",
+    "color": "#f0abfc",
+    "gems": 150
+   },
+   {
+    "at": 240,
+    "title": "Parlor Master",
+    "color": "#f0c040",
+    "gems": 225
+   },
+   {
+    "at": 360,
+    "title": "High Roller",
+    "color": "#ffa94d",
+    "gems": 325
+   },
+   {
+    "at": 520,
+    "title": "Kingpin",
+    "color": "#ff6b35",
+    "gems": 450
+   },
+   {
+    "at": 720,
+    "title": "Grandee",
+    "color": "#ff3b47",
+    "gems": 675
+   },
+   {
+    "at": 1000,
+    "title": "Parlor Legend",
+    "color": "#e879f9",
+    "gems": 1000
+   }
+  ],
+  "kingRungPoints": 1,
+  "kingCrownPoints": 8,
+  "kingPrizes": [
+   20,
+   40,
+   60,
+   100,
+   160,
+   240,
+   360,
+   520,
+   720,
+   1000
+  ],
+  "kingHavens": [
+   4,
+   7
+  ],
+  "capstanWheel": [
+   250,
+   400,
+   150,
+   "overboard",
+   500,
+   300,
+   350,
+   200,
+   650,
+   300,
+   450,
+   "lose_turn",
+   800,
+   250,
+   550,
+   150
+  ],
+  "capstanMaxStrikes": 3,
+  "capstanVowelCost": 250,
+  "capstanMaxHazardRun": 2,
+  "capstanSolvePoints": 3,
+  "capstanCleanBonus": 2,
+  "capstanPerWeek": 3
+ },
  "casino": {
   "symbols": [
    {
