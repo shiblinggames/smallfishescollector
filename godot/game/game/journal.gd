@@ -62,7 +62,6 @@ func _ready() -> void:
 	titles.add_theme_constant_override("separation", 0)
 	head.add_child(titles)
 	Paper.text(titles, "The Journal", "display", Paper.INK)
-	Paper.text(titles, "The story so far, and the people you know on the water.", "note", Paper.INK_SOFT)
 	_tabs = HBoxContainer.new()
 	_tabs.add_theme_constant_override("separation", 6)
 	_tabs.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -120,6 +119,15 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ── Story ──────────────────────────────────────────────────────────────────────
 
+## THE STORY, AS A MAIN STORY (Kong, 2026-10-03: "the journal feels like it's
+## spoiling future things; too wordy"). Pictures over paragraphs, and nothing
+## ahead of you named: the chapter you are in as a banner, the road of five
+## chapters (finished ones inked, yours lit, the rest sealed, their numeral
+## only), the job in hand as its slip, and the last thing Finn said. The
+## rest of what he has told you folds away under one button.
+var _story_open: bool = false
+
+
 func _story() -> void:
 	var st: Variant = Finn.state(session.store, session.uid)
 	if not (st is Dictionary):
@@ -127,15 +135,47 @@ func _story() -> void:
 	var s: Dictionary = st
 	var done: Array = Js.list(s.get("questsDone"))
 	var level: int = int(Js.num(s.get("fishingLevel")))
-	var top: HBoxContainer = HBoxContainer.new()
-	_body.add_child(top)
-	var t: Label = Paper.text(top, "The Long Cast", "heading", Paper.INK)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Paper.text(top, "%d of %d jobs" % [done.size(), Finn.quests().size()], "label", Paper.INK_SOFT)
-	var tier: int = Finn.standing_tier(Finn.standing(Js.num(s.get("encounters")), float(done.size())))
-	Paper.text(_body, "Finn's campaign. He sets you a job, you do it, you hand it back and he tells you the next piece. Finn thinks you are: %s." % str(Finn.d()["standingName"][tier]).to_lower(), "note", Paper.INK_SOFT, true)
+	var views: Array = Finn.chapter_views(done, level)
+	var cur: Dictionary = {}
+	for v: Dictionary in views:
+		if v["current"]:
+			cur = v
+	if cur.is_empty():
+		for v: Dictionary in views:
+			if not v["complete"]:
+				cur = v
+				break
+	var all_done: bool = cur.is_empty()
 
-	# The job in hand, as its slip.
+	# The banner: the chapter you are in.
+	var banner: VBoxContainer = VBoxContainer.new()
+	banner.add_theme_constant_override("separation", 0)
+	_body.add_child(banner)
+	var eb: Label = Paper.text(banner, "THE LONG CAST", "eyebrow", Paper.RED)
+	eb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var big: Label = Paper.text(banner, "Complete" if all_done else "Chapter %s" % str(cur["chapter"]["romanNumeral"]), "display", Paper.INK)
+	big.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	big.add_theme_font_size_override("font_size", 44)
+	if not all_done and cur["open"]:
+		var tl: Label = Paper.text(banner, str(cur["chapter"]["title"]), "heading", Paper.INK_SOFT)
+		tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	elif not all_done:
+		var wl: Label = Paper.text(banner, "Opens at Fishing %d" % int(cur["chapter"]["minLevel"]), "heading", Paper.INK_SOFT)
+		wl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	# The road of five.
+	var road: Control = Control.new()
+	road.custom_minimum_size = Vector2(0, 104)
+	var t0: float = Time.get_ticks_msec() / 1000.0
+	road.draw.connect(func() -> void: _draw_road(road, views, cur, t0))
+	_body.add_child(road)
+	var tick: Timer = Timer.new()
+	tick.wait_time = 0.05
+	tick.autostart = true
+	tick.timeout.connect(road.queue_redraw)
+	road.add_child(tick)
+
+	# The job in hand, or what is next.
 	var q: Variant = s.get("quest")
 	if q is Dictionary:
 		var holder: CenterContainer = CenterContainer.new()
@@ -145,25 +185,14 @@ func _story() -> void:
 		slip.have = float((q as Dictionary)["have"])
 		holder.add_child(slip)
 		if (q as Dictionary)["done"]:
-			Paper.text(_body, "Done. Take it back to Finn, off the Shallows, to hand it over.", "label", Paper.RED, true).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	else:
-		var msg: String
+			var back: Label = Paper.text(_body, "Done. Take it back to Finn.", "label", Paper.RED)
+			back.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	elif not all_done:
 		var nxt: Dictionary = Finn.next_quest(done, level)
-		var wait: Dictionary = Finn.waiting_on(done, level)
-		if not nxt.is_empty():
-			msg = "Finn has work for you. He is moored off the Shallows."
-		elif not wait.is_empty():
-			msg = "%s opens at Fishing %d. He will be waiting." % [wait["title"], int(wait["minLevel"])]
-		else:
-			msg = "Every job he had, done."
-		Paper.text(_body, msg, "label", Paper.RED, true)
+		var msg: Label = Paper.text(_body, "Finn has work for you" if not nxt.is_empty() else "Chapter %s opens at Fishing %d" % [str(cur["chapter"]["romanNumeral"]), int(cur["chapter"]["minLevel"])], "heading", Paper.RED)
+		msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
-	# The chapters, with their jobs as pips.
-	Paper.rule(_body)
-	for v: Dictionary in Finn.chapter_views(done, level):
-		_chapter_row(v, done)
-
-	# What he has told you, newest first.
+	# The last thing he said; the rest folded.
 	var heard: Array = []
 	for b: Dictionary in Finn.d()["beats"]:
 		if Js.list(s.get("seenBeats")).has(b["id"]):
@@ -172,49 +201,93 @@ func _story() -> void:
 		heard.append(Finn.d()["reveal"])
 	if heard.is_empty():
 		return
-	Paper.rule(_body)
-	Paper.text(_body, "What he has told you", "heading", Paper.INK)
-	heard.reverse()
-	for b: Dictionary in heard:
+	var last: Array = (heard[heard.size() - 1] as Dictionary)["lines"]
+	var quote: Label = Paper.text(_body, "\"%s\"" % _line_text(last[last.size() - 1]), "body", Paper.INK, true)
+	quote.add_theme_font_override("font", Kit.italic())
+	quote.add_theme_font_size_override("font_size", 17)
+	quote.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var sig: Label = Paper.text(_body, "Finn", "small", Paper.INK_SOFT)
+	sig.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var holder2: CenterContainer = CenterContainer.new()
+	_body.add_child(holder2)
+	var more: Pane.PaneButton = Paper.button("Hide the story so far" if _story_open else "The story so far", _story_open)
+	more.pressed.connect(func() -> void:
+		_story_open = not _story_open
+		_rebuild())
+	holder2.add_child(more)
+	if not _story_open:
+		return
+	var rev: Array = heard.duplicate()
+	rev.reverse()
+	for b: Dictionary in rev:
 		var words: Array = []
 		for l: Variant in b["lines"]:
-			words.append((str(l) if typeof(l) == TYPE_STRING else str((l as Dictionary)["text"])).replace("*", ""))
-		var p: Label = Paper.text(_body, " ".join(PackedStringArray(words)), "body", Paper.INK, true)
+			words.append(_line_text(l))
+		var p: Label = Paper.text(_body, " ".join(PackedStringArray(words)), "body", Paper.INK_SOFT, true)
 		p.add_theme_font_override("font", Kit.italic())
 		p.add_theme_font_size_override("font_size", 15)
 
 
-func _chapter_row(v: Dictionary, done: Array) -> void:
-	var ch: Dictionary = v["chapter"]
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	_body.add_child(row)
-	var num: Label = Paper.text(row, str(ch["romanNumeral"]), "display", Paper.RED if v["current"] else (Paper.INK if v["complete"] else Paper.INK_FAINT))
-	num.custom_minimum_size = Vector2(54, 0)
-	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var col: VBoxContainer = VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 2)
-	row.add_child(col)
-	var tr: HBoxContainer = HBoxContainer.new()
-	col.add_child(tr)
-	var tl: Label = Paper.text(tr, str(ch["title"]), "heading", Paper.INK if v["open"] else Paper.INK_FAINT)
-	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var state: String = "Complete" if v["complete"] else ("In progress" if v["current"] else ("Opens at Fishing %d" % int(ch["minLevel"]) if not v["open"] else "Open"))
-	Paper.text(tr, state, "label", Paper.RED if v["current"] else Paper.INK_SOFT)
-	Paper.text(col, str(ch["subtitle"]), "note", Paper.INK_SOFT if v["open"] else Paper.INK_FAINT, true)
-	# One pip a job: inked when handed back.
-	var pips: Control = Control.new()
-	pips.custom_minimum_size = Vector2(0, 16)
-	var qs: Array = Finn.chapter_quests(str(ch["id"]))
-	pips.draw.connect(func() -> void:
-		for i: int in qs.size():
-			var c: Vector2 = Vector2(8.0 + i * 20.0, 8.0)
-			if done.has(qs[i]["id"]):
-				pips.draw_circle(c, 6.0, Paper.INK)
-			else:
-				pips.draw_arc(c, 6.0, 0.0, TAU, 20, Paper.INK_FAINT, 1.5, true))
-	col.add_child(pips)
+static func _line_text(l: Variant) -> String:
+	return (str(l) if typeof(l) == TYPE_STRING else str((l as Dictionary)["text"])).replace("*", "")
+
+
+## Five medallions on a line: inked and ticked when finished, lit red and
+## breathing for the one you are in, sealed (the numeral only, faint, with the
+## level it opens at) for the rest. The chapter you are in carries its jobs
+## as pips underneath.
+func _draw_road(road: Control, views: Array, cur: Dictionary, t0: float) -> void:
+	var n: int = views.size()
+	var w: float = road.size.x
+	var y: float = 40.0
+	var step: float = (w - 120.0) / maxf(1.0, n - 1)
+	var f: Font = Kit.font("cinzel", 800)
+	var small: Font = Kit.font("karla", 700)
+	var t: float = Time.get_ticks_msec() / 1000.0 - t0
+	for i: int in n - 1:
+		var a: Vector2 = Vector2(60.0 + i * step + 26.0, y)
+		var b: Vector2 = Vector2(60.0 + (i + 1) * step - 26.0, y)
+		var finished: bool = views[i]["complete"]
+		if finished:
+			road.draw_line(a, b, Color(Paper.INK, 0.7), 2.0, true)
+		else:
+			road.draw_dashed_line(a, b, Color(Paper.INK, 0.3), 2.0, 8.0)
+	for i: int in n:
+		var v: Dictionary = views[i]
+		var c: Vector2 = Vector2(60.0 + i * step, y)
+		var num: String = str(v["chapter"]["romanNumeral"])
+		var is_cur: bool = not cur.is_empty() and v["chapter"]["id"] == cur["chapter"]["id"]
+		var col: Color
+		if v["complete"]:
+			road.draw_circle(c, 24.0, Paper.INK)
+			col = Kit.PAPER
+		elif is_cur:
+			var pulse: float = 0.5 + 0.5 * sin(t * 2.6)
+			road.draw_circle(c, 30.0 + pulse * 4.0, Color(Paper.RED, 0.12 * (1.0 - pulse) + 0.05))
+			road.draw_circle(c, 24.0, Color(1, 1, 1, 0.35))
+			road.draw_arc(c, 24.0, 0.0, TAU, 40, Paper.RED, 3.0, true)
+			col = Paper.RED
+		else:
+			road.draw_circle(c, 24.0, Color(Paper.INK, 0.05))
+			road.draw_arc(c, 24.0, 0.0, TAU, 40, Color(Paper.INK, 0.25), 1.5, true)
+			col = Color(Paper.INK, 0.35)
+		var sz: Vector2 = f.get_string_size(num, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+		road.draw_string(f, c + Vector2(-sz.x / 2.0, 7.0), num, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, col)
+		if not v["open"]:
+			var lab: String = "Fishing %d" % int(v["chapter"]["minLevel"])
+			var lsz: Vector2 = small.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+			road.draw_string(small, c + Vector2(-lsz.x / 2.0, 46.0), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(Paper.INK, 0.4))
+		elif is_cur:
+			# Its jobs, as pips under it.
+			var total: int = int(v["total"])
+			var got: int = int(v["done"])
+			var span: float = (total - 1) * 12.0
+			for k: int in total:
+				var p: Vector2 = c + Vector2(-span / 2.0 + k * 12.0, 44.0)
+				if k < got:
+					road.draw_circle(p, 4.0, Paper.RED)
+				else:
+					road.draw_arc(p, 4.0, 0.0, TAU, 14, Color(Paper.RED, 0.6), 1.2, true)
 
 
 # ── People ─────────────────────────────────────────────────────────────────────

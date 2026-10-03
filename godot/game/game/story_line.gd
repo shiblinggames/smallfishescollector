@@ -122,7 +122,7 @@ func apply(st: Dictionary) -> void:
 	var wait: Dictionary = Finn.waiting_on(done, level)
 	if not wait.is_empty():
 		_eyebrow.text = "THE LONG CAST  ·  CHAPTER %s" % str(wait["romanNumeral"])
-		_text.text = "%s opens at Fishing %d" % [str(wait["title"]), int(wait["minLevel"])]
+		_text.text = "Chapter %s opens at Fishing %d" % [str(wait["romanNumeral"]), int(wait["minLevel"])]
 		_text.add_theme_color_override("font_color", Color(Kit.INK, 0.7))
 		_count.text = ""
 		visible = true

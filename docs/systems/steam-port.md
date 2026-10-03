@@ -640,9 +640,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   one presses a wax seal with its own chime and the line turns gold, "Back to Finn"), and
   game/finn_arrow.gd (a gold chevron at the screen edge pointing to him while he has a mark).
   His state is read off the local save each second (a crewmate's Charter never sends it).
-  THE JOURNAL (game/journal.gd; the story line, or J): Story (the job's slip, the five
-  chapters with a pip per job, inked when handed back, and what he has told you, newest first,
-  only beats heard) and People (what the regulars are waiting on, handable first, then a card
+  THE JOURNAL (game/journal.gd; the story line, or J): Story, SPOILER-FREE AND PICTURES
+  OVER PARAGRAPHS (Kong, 2026-10-03: "spoiling future things; too wordy"): the chapter you
+  are in as a banner, a road of five medallions (finished inked, yours lit red with its jobs
+  as pips, the rest sealed: numeral and opening level only, never a title), the job's slip,
+  the last thing Finn said, and the rest of what he has told you folded under one button.
+  Future chapter titles appear nowhere (the story line says "Chapter II opens at Fishing 15") and People (what the regulars are waiting on, handable first, then a card
   each with their face, standing and a red dot when there is a reason to sail out; unmet ones
   are question marks with their water). CHAPTER CARDS (game/chapter_card.gd): parchment over
   everything when a chapter's first job is offered, and when its last is handed back
