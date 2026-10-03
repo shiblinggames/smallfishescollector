@@ -653,8 +653,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   each with their face, standing and a red dot when there is a reason to sail out; unmet ones
   are question marks with their water). CHAPTER CARDS (game/chapter_card.gd): parchment over
   everything when a chapter's first job is offered, and when its last is handed back
-  ("Complete. 6 jobs for Finn, 560 XP."). NOT YET: the port-only job types and the per-chapter
-  moments on the water.
+  ("Complete. 8 jobs for Finn, 755 XP."). PORT-ONLY JOBS (Kong, 2026-10-03; port_rules
+  finn.portJobs, p1-p8, two in each of chapters I to IV, slotted after a named web job;
+  Finn.quests() builds the ladder, 40 jobs, and the web's 32 alone under parity): the fish he
+  describes (catch_species: the Log's fun fact with its name veiled, Clues.veil, on the slip
+  and at the end of what he says; Walleye in the Shallows, Turbot in the Deep), the light or
+  weather at the cast's spot (catch_condition: golden, storm, night, fog), a shoal
+  (catch_hotspot) and a trophy (catch_trophy). The last three count off profile.finn_tally,
+  bumped by Finn.on_catch after every reelIn from profile.finn_cast_at (the castLine spot),
+  port only; every job measures from its snapshot like the web's. tests/finn_check.gd works
+  all 40 and checks the wrong catches do not count. NOT YET: the per-chapter moments on the
+  water.
 - NORTH OF THE REEF, PLACES FIRST (Kong, 2026-10-02): game/north.gd, a port of chart.ts's
   reef, anchorage and Sea Gate and SeaMap's reefRocks/anchorageRocks (same seeds, so the same
   rock). THE PORT'S OWN ROCK (Kong, 2026-10-02: the web's pale side-on crags did not fit the

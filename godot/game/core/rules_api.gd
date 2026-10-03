@@ -16,7 +16,13 @@ extends RefCounted
 ## Run one call. Returns the result (a dictionary, or null where the TS returned
 ## nothing), or the string "not ported".
 static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
+	# Where the line went in, for Finn's port jobs (the weather, the light and
+	# the patch at that spot). Port rules; never under the parity run.
+	if op == "castLine" and not Rules.web_only and a.size() > 2 and a[2] is Dictionary:
+		db.me(uid)["finn_cast_at"] = { "x": Js.num((a[2] as Dictionary).get("x")), "y": Js.num((a[2] as Dictionary).get("y")) }
 	var out: Variant = _run(db, uid, op, a)
+	if op == "reelIn" and out is Dictionary and (out as Dictionary).get("caught") == true and not Rules.web_only:
+		Finn.on_catch(db, uid, out)
 	# A catch may answer a treasure hunt's step (port rules).
 	if op == "reelIn" and out is Dictionary and (out as Dictionary).get("caught") == true and Clues.on():
 		var fish: Dictionary = Js.obj((out as Dictionary).get("fish"))

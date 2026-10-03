@@ -360,7 +360,7 @@ func _init() -> void:
 			# The Journal (JOURNAL_TAB story or people), or a chapter card
 			# (CARD_CLOSING set for the closing one), on a captain partway in.
 			var sv2: Dictionary = sea.session.save
-			sv2["profile"]["finn_quests_done"] = ["q1", "q2", "q3", "q21", "q22", "q23", "q4"]
+			sv2["profile"]["finn_quests_done"] = Array(OS.get_environment("FINN_DONE").split(",")) if OS.get_environment("FINN_DONE") != "" else ["q1", "q2", "q3", "q21", "q22", "q23", "q4"]
 			sv2["profile"]["finn_seen_beats"] = ["e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8"]
 			sv2["profile"]["finn_encounters"] = 14
 			sv2["profile"]["finn_quest"] = null

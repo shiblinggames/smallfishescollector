@@ -43,6 +43,11 @@ func _ready() -> void:
 	col.add_child(rule)
 	var label: Label = Kit.text(col, str(job.get("label", q.get("label", ""))), "title", Paper.INK, true)
 	label.add_theme_font_size_override("font_size", 22)
+	if q.has("hint"):
+		var hint: Label = Kit.text(col, "\"%s\"" % q["hint"], "body", Paper.INK_SOFT, true)
+		hint.add_theme_font_override("font", Kit.italic())
+		hint.add_theme_font_size_override("font_size", 15)
+		hint.custom_minimum_size = Vector2(W - 40.0, 0)
 	# How far along: the job's own words, and a ruled bar.
 	var target: float = float(job.get("target", q.get("target", 1)))
 	_fill = clampf(have / maxf(1.0, target), 0.0, 1.0)

@@ -20,8 +20,92 @@ static func d() -> Dictionary:
 	return Rules.data()["finn"]
 
 
+## The ladder: the web's jobs, with the port's own (port_rules finn.portJobs,
+## never under parity) each slotted in after the job it names.
+static var _ladder: Array = []
+static var _ladder_key: String = ""
+
+
 static func quests() -> Array:
-	return d()["quests"]
+	var extra: Array = Js.list(d().get("portJobs"))
+	var key: String = "%s:%d" % [Rules.web_only, extra.size()]
+	if key == _ladder_key and not _ladder.is_empty():
+		return _ladder
+	var out: Array = []
+	for q: Dictionary in d()["quests"]:
+		out.append(q)
+		for e: Dictionary in extra:
+			if e.get("after") == q["id"]:
+				out.append(_dress(e))
+	_ladder = out
+	_ladder_key = key
+	return _ladder
+
+
+## A port job made ready: the fish he describes gets the Log's words, with
+## its name veiled (Clues.veil), as its hint and at the end of what he says.
+static func _dress(e: Dictionary) -> Dictionary:
+	var q: Dictionary = e.duplicate(true)
+	if q["type"] == "catch_species":
+		var f: Dictionary = _species(float(q["speciesId"]))
+		if not f.is_empty():
+			var said: String = Clues.veil(str(f.get("fun_fact") if f.get("fun_fact") != null else f.get("description", "")).strip_edges(), str(f["name"]))
+			q["hint"] = said
+			q["give"] = "%s \"%s\"" % [q["give"], said]
+	return q
+
+
+static var _all_species: Array = []
+
+
+static func _species(id: float) -> Dictionary:
+	if _all_species.is_empty():
+		_all_species = JsJson.parse(FileAccess.get_file_as_string("res://content/fish_species.json"))
+	for f: Dictionary in _all_species:
+		if float(f["id"]) == id:
+			return f
+	return {}
+
+
+## Where a port job's catches are counted (profile.finn_tally).
+static func tally_key(q: Dictionary) -> String:
+	match q["type"]:
+		"catch_condition":
+			return "cond:%s:%s" % [q["cond"], q["zone"]]
+		"catch_hotspot":
+			return "hot:%s:%s" % [q["spot"], q["zone"]]
+		"catch_trophy":
+			return "trophy:%s" % q["zone"]
+	return ""
+
+
+## A CATCH, COUNTED FOR THE PORT'S JOBS (RulesApi, after reelIn; never under
+## parity): the conditions at the cast's spot (dawn or dusk, a storm, night,
+## fog), the patch it was in, and whether it was trophy size, each by the
+## water the fish came from.
+static func on_catch(db: CaptainStore, uid: String, out: Dictionary) -> void:
+	var fish: Dictionary = Js.obj(out.get("fish"))
+	if not fish.has("habitat"):
+		return
+	var zone: String = str(fish["habitat"])
+	var prof: Dictionary = db.me(uid)
+	var tally: Dictionary = Js.obj(prof.get("finn_tally")).duplicate()
+	var keys: Array = []
+	var at: Variant = prof.get("finn_cast_at")
+	var now: float = Clock.now_ms()
+	if at is Dictionary:
+		var p: Vector2 = Vector2(Js.num((at as Dictionary).get("x")), Js.num((at as Dictionary).get("y")))
+		for c: String in FishBias.conditions(p, now):
+			keys.append("cond:%s:%s" % [c, zone])
+		var spot: Dictionary = Hotspots.at_point(p.x, p.y, now)
+		if spot.has("kind"):
+			keys.append("hot:%s:%s" % [spot["kind"], zone])
+	if str(out.get("sizeTier", "")) == "trophy":
+		keys.append("trophy:%s" % zone)
+	for k: String in keys:
+		tally[k] = Js.num(tally.get(k)) + 1.0
+	if not keys.is_empty():
+		db.update_profile(uid, { "finn_tally": tally })
 
 
 static func chapters() -> Array:
@@ -170,7 +254,7 @@ static func catches_where(db: CaptainStore, uid: String, zone: Variant, min_rari
 static func _snapshot(db: CaptainStore, uid: String, q: Dictionary, perf_now: float, zp: Dictionary) -> Dictionary:
 	var zone: Variant = q.get("zone")
 	var rar: Variant = q.get("minRarity")
-	return {
+	var snap: Dictionary = {
 		"id": q["id"],
 		"at": Js.iso(Clock.now_ms()),
 		"catch0": lifetime_catches(db, uid),
@@ -179,6 +263,16 @@ static func _snapshot(db: CaptainStore, uid: String, q: Dictionary, perf_now: fl
 		"rare0": catches_where(db, uid, zone, rar) if rar != null and float(rar) != 0.0 else 0.0,
 		"zperf0": Js.num(zp.get(str(zone))) if zone != null else 0.0,
 	}
+	if q["type"] == "catch_species":
+		snap["spec0"] = _lifetime_of(db, float(q["speciesId"]))
+	elif tally_key(q) != "":
+		snap["tally0"] = Js.num(Js.obj(db.me(uid).get("finn_tally")).get(tally_key(q)))
+	return snap
+
+
+static func _lifetime_of(db: CaptainStore, id: float) -> float:
+	var r: Variant = (db.save["lifetime"] as Dictionary).get(Js.key(id))
+	return Js.num((r as Dictionary).get("n")) if r is Dictionary else 0.0
 
 
 static func progress(db: CaptainStore, uid: String, q: Dictionary, stored: Dictionary, row: Dictionary) -> float:
@@ -200,6 +294,10 @@ static func progress(db: CaptainStore, uid: String, q: Dictionary, stored: Dicti
 		"catch_ancient":
 			var wall: Array = Js.list(row.get("ancient_catches"))
 			return 1.0 if q.get("ancientId") != null and Js.includes(wall, q["ancientId"]) else 0.0
+		"catch_species":
+			return _lifetime_of(db, float(q["speciesId"])) - Js.num(stored.get("spec0"))
+		"catch_condition", "catch_hotspot", "catch_trophy":
+			return Js.num(Js.obj(db.me(uid).get("finn_tally")).get(tally_key(q))) - Js.num(stored.get("tally0"))
 	return 0.0
 
 
