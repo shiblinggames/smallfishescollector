@@ -721,8 +721,6 @@ func _night_water(dark: float, at: Vector2) -> void:
 		for k: String in list:
 			var w: Wanderer = list[k]
 			add_lamp.call(w.position + keel, 12.0, 0.18, Color(1.0, 0.74, 0.45))
-	if _finn != null:
-		add_lamp.call(_finn.position + keel, 18.0, 0.32, Color(1.0, 0.8, 0.42))
 	if _portal.live:
 		add_lamp.call(_portal.position + Vector2(0, 120), 60.0, 0.22, Color(str(Portal.tier_def(_portal.tier).get("accent", "#7fc8de"))))
 	_water.set_shader_parameter("u_lamps", lamps)

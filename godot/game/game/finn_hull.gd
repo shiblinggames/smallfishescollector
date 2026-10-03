@@ -27,7 +27,6 @@ var catch_names: Array = []
 ## A fish landed: the sea rings the water where it came out.
 signal splashed(at: Vector2)
 var _float: Node2D
-var _lantern: Node2D
 var _next_catch: float = 12.0
 
 
@@ -42,7 +41,7 @@ func _ready() -> void:
 	super._ready()
 	_mark_holder = Node2D.new()
 	_mark_holder.scale = Vector2(1.0, 1.0 / Chart.GROUND)
-	_mark_holder.position = Vector2(-14.0, -150.0 / Chart.GROUND)
+	_mark_holder.position = Vector2(-4.0, -96.0 / Chart.GROUND)
 	_mark_holder.z_index = 6
 	add_child(_mark_holder)
 	_mark_l = Label.new()
@@ -68,6 +67,8 @@ func _ready() -> void:
 	glow.name = "Glow"
 	_mark_holder.add_child(glow)
 	_paint_mark(false)
+	var look: Dictionary = Finn.d()["look"]
+	skipper.set_look({ "color": look["characterColor"], "boat": look["boatId"], "hat": look["hatId"], "rodSlug": look["rodSlug"], "hook": look["hook"], "pet": "parrot_green" })
 	skipper.set_frame("wait")
 	# The float on his line, upright over the water.
 	_float = Node2D.new()
@@ -79,18 +80,6 @@ func _ready() -> void:
 		_float.draw_circle(Vector2(0, -3.5), 4.2, Color(0.82, 0.16, 0.12))
 		_float.draw_line(Vector2(0, -7), Vector2(0, -12), Color(0.2, 0.15, 0.1), 1.2, true))
 	add_child(_float)
-	# The lantern on its pole at the stern.
-	_lantern = Node2D.new()
-	_lantern.scale = Vector2(1.0, 1.0 / Chart.GROUND)
-	_lantern.z_index = 1
-	_lantern.draw.connect(func() -> void:
-		_lantern.draw_line(Vector2(0, 0), Vector2(0, -66), Color(0.3, 0.2, 0.12), 3.0, true)
-		_lantern.draw_line(Vector2(0, -66), Vector2(-9, -66), Color(0.3, 0.2, 0.12), 2.0, true)
-		var lit: Color = Color(1.0, 0.82, 0.42)
-		_lantern.draw_circle(Vector2(-9, -54), 12.0, Color(lit, 0.18))
-		_lantern.draw_rect(Rect2(-14, -62, 10, 13), Color(0.22, 0.15, 0.08))
-		_lantern.draw_rect(Rect2(-12.5, -60, 7, 9), lit))
-	add_child(_lantern)
 	_next_catch = 8.0 + randf() * 14.0
 
 
@@ -120,11 +109,6 @@ func _place(first: bool = false) -> void:
 func _process(delta: float) -> void:
 	super._process(delta)
 	_t += delta
-	# His lantern never goes out.
-	_lamp.energy = 0.3 + night * 0.9
-	_lamp.color = Color(1.0, 0.8, 0.42)
-	_lamp.position = Vector2(_facing * 40.0, -60.0 / Chart.GROUND)
-	_lantern.position = Vector2(_facing * 44.0, -14.0 / Chart.GROUND)
 	var end: Vector2 = line_end()
 	_float.position = end + Vector2(0, (sin(_t * 1.9) * 1.6) / Chart.GROUND)
 	_float.queue_redraw()
@@ -133,7 +117,7 @@ func _process(delta: float) -> void:
 		_next_catch = 24.0 + randf() * 18.0
 		_land_one()
 	if _mark_holder != null and _mark_holder.visible:
-		_mark_holder.position.y = -150.0 / Chart.GROUND - (sin(_t * 2.4) * 6.0 + 6.0) / Chart.GROUND
+		_mark_holder.position.y = -96.0 / Chart.GROUND - (sin(_t * 2.4) * 5.0 + 5.0) / Chart.GROUND
 
 
 ## Where his line meets the water, in his space.
