@@ -37,6 +37,8 @@ import { FINN_QUESTS, FINN_CHAPTERS } from '../lib/finnQuests'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOT_BONUS_MULT, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX, DEN_CAP_BASE, DEN_CAP_MAX, DEN_CAP_MAX_LEVEL, BJ_MIN_BET, BJ_MAX_BET, RL_MIN_BET, RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET, CASINO_BUY_IN_PRESETS, BJ_BET_PRESETS, RL_BET_PRESETS } from '../app/(app)/tavern/constants'
 import { PAYOUT_MULT, POCKETS } from '../lib/roulette'
 import { CREW_SKINS } from '../lib/crewSkins'
+import { ALL_RAIDS } from '../lib/raidRegistry'
+import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '../lib/expeditions'
 import { LANDMARKS, WORLD_CHART_COMPLETION_BONUS } from '../lib/worldChart'
 import { MATCH_COLS, MATCH_ROWS, MATCH_TYPES, MATCH_MOVES, MATCH_TARGET, MATCH_MAX_POINTS, MATCH_TIERS, WILD_DROP_CHANCE } from '../app/(app)/charting/constants'
 import { MINEFIELD_COLS, MINEFIELD_ROWS, MINEFIELD_MINES, MINEFIELD_POINTS } from '../app/(app)/charting/minefieldConstants'
@@ -150,7 +152,7 @@ const rules = {
     xpTable: CREW_XP_TABLE, maxLevel: CREW_MAX_LEVEL,
     groups: FISH_GROUPS.map(g => [...g]),
     classBySlug: CLASS_BY_SLUG,
-    classes: Object.fromEntries(Object.values(CLASSES).map(c => [c.id, { name: c.name, shortLabel: c.shortLabel, blurb: c.blurb, color: c.color, milestones: c.milestones.map(m => ({ unlockLevel: m.unlockLevel, desc: m.desc })) }])),
+    classes: Object.fromEntries(Object.values(CLASSES).map(c => [c.id, { name: c.name, shortLabel: c.shortLabel, blurb: c.blurb, color: c.color, milestones: c.milestones.map(m => ({ ...m })) }])),
     hallTiers: Object.values(CREW_HALL_TIERS),
     capacity: { base: BASE_CAPACITY, perLevels: PER_LEVELS, perHallTier: ROSTER_PER_HALL_TIER },
     alwaysUnlocked: [...ALWAYS_UNLOCKED_LEGENDARIES], legendaryGate: LEGENDARY_GATE,
@@ -194,6 +196,11 @@ const rules = {
     landmarks: LANDMARKS,
     completionBonus: WORLD_CHART_COMPLETION_BONUS,
   },
+  // Raid combat (lib/bossRaids via raidRegistry, lib/expeditions): every raid's
+  // config (enemies, sequence, loot, kill rewards, dialogue) and the hulls'
+  // combat stats by tier, for the port's battle engine (core/battle.gd).
+  raids: Object.fromEntries(ALL_RAIDS.map(r => [r.raidId, JSON.parse(JSON.stringify(r))])),
+  shipCombat: Object.fromEntries(Object.entries(EXPEDITION_SHIP_STATS).map(([t, v]) => [t, { ...v, itemSlots: raidItemSlotsForTier(Number(t)) }])),
   crewSkins: CREW_SKINS.map(k => ({ ...k, crewTier: FISH_GROUPS.findIndex(g => g.has(k.slug)) })),
   // The Parlor (lib/core/parlor, tavern/trivia/constants): payouts, the
   // answer clock, the ranks, the King's ladder and the capstan's wheel.

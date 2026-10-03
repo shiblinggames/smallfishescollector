@@ -75416,6 +75416,6777 @@
     }
    ],
    "end": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0042\",\"profile\":{\"id\":\"captain-00parity0042\",\"username\":\"crew_y0042\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":459000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":2,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":2,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":6920,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":50000000,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":\"2026-10-08\",\"showcase_crew_ids\":[],\"lifetime_recruits\":12,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":6,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":6,\"crew_bunks_bought\":0,\"crew_stores_level\":6,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":[\"24:10\",\"24:25\",\"23:10\",\"23:25\",\"22:10\",\"22:25\",\"18:10\",\"18:25\",\"17:10\",\"17:25\",\"16:10\",\"16:25\",\"16:40\",\"22:40\",\"22:75\",\"22:100\",\"24:40\",\"18:40\",\"24:75\",\"18:75\"],\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[{\"amount\":-15000,\"reason\":\"Crew Hall: Drill II\",\"currency\":\"doubloons\"},{\"amount\":-15000,\"reason\":\"Crew Hall: Stores II\",\"currency\":\"doubloons\"},{\"amount\":-40000,\"reason\":\"Crew Hall: Drill III\",\"currency\":\"doubloons\"},{\"amount\":-45000,\"reason\":\"Crew Hall: Stores III\",\"currency\":\"doubloons\"},{\"amount\":-120000,\"reason\":\"Crew Hall: Drill IV\",\"currency\":\"doubloons\"},{\"amount\":-130000,\"reason\":\"Crew Hall: Stores IV\",\"currency\":\"doubloons\"},{\"amount\":-350000,\"reason\":\"Crew Hall: Drill V\",\"currency\":\"doubloons\"},{\"amount\":-380000,\"reason\":\"Crew Hall: Stores V\",\"currency\":\"doubloons\"},{\"amount\":-1000000,\"reason\":\"Crew Hall: Drill VI\",\"currency\":\"doubloons\"},{\"amount\":-1000000,\"reason\":\"Crew Hall: Stores VI\",\"currency\":\"doubloons\"}],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[{\"id\":4,\"card_id\":7,\"rarity\":1,\"power\":8,\"dodge\":3,\"fortune\":2,\"effects\":[\"s:0,-2,0\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-09-30T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":5,\"card_id\":5,\"rarity\":1,\"power\":2,\"dodge\":5,\"fortune\":2,\"effects\":[\"s:0,-1,0\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-09-30T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":6,\"card_id\":1,\"rarity\":1,\"power\":4,\"dodge\":3,\"fortune\":2,\"effects\":[],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-09-30T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":10,\"card_id\":1,\"rarity\":1,\"power\":5,\"dodge\":3,\"fortune\":3,\"effects\":[\"s:0,1,0\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-01T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":11,\"card_id\":5,\"rarity\":1,\"power\":2,\"dodge\":4,\"fortune\":2,\"effects\":[\"s:-2,-2,-2\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-01T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":12,\"card_id\":1,\"rarity\":1,\"power\":4,\"dodge\":3,\"fortune\":3,\"effects\":[\"s:0,-2,-1\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-01T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":16,\"card_id\":12,\"rarity\":1,\"power\":4,\"dodge\":2,\"fortune\":2,\"effects\":[\"s:-2,-2,-2\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":32800,\"nickname\":null,\"recruited_at\":\"2026-10-02T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":17,\"card_id\":7,\"rarity\":1,\"power\":8,\"dodge\":3,\"fortune\":2,\"effects\":[\"s:0,0,-1\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":24600,\"nickname\":null,\"recruited_at\":\"2026-10-02T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":18,\"card_id\":34,\"rarity\":2,\"power\":3,\"dodge\":7,\"fortune\":3,\"effects\":[\"s:-3,2,0\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":320050,\"nickname\":null,\"recruited_at\":\"2026-10-02T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":22,\"card_id\":10,\"rarity\":1,\"power\":3,\"dodge\":5,\"fortune\":2,\"effects\":[\"s:3,-2,1\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":5000000,\"nickname\":null,\"recruited_at\":\"2026-10-03T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":23,\"card_id\":11,\"rarity\":1,\"power\":2,\"dodge\":6,\"fortune\":3,\"effects\":[\"s:-1,0,1\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":24600,\"nickname\":null,\"recruited_at\":\"2026-10-03T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":24,\"card_id\":4,\"rarity\":1,\"power\":2,\"dodge\":2,\"fortune\":6,\"effects\":[],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":319800,\"nickname\":null,\"recruited_at\":\"2026-10-03T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null}],\"recruits\":[{\"id\":72,\"slot\":0,\"source\":\"free\",\"card_id\":12,\"rarity\":1,\"power\":4,\"dodge\":3,\"fortune\":2,\"effects\":[\"s:1,0,3\"],\"recruited\":false,\"start_xp\":0},{\"id\":73,\"slot\":1,\"source\":\"free\",\"card_id\":9,\"rarity\":1,\"power\":6,\"dodge\":3,\"fortune\":3,\"effects\":[],\"recruited\":false,\"start_xp\":0},{\"id\":74,\"slot\":2,\"source\":\"free\",\"card_id\":18,\"rarity\":1,\"power\":2,\"dodge\":3,\"fortune\":7,\"effects\":[\"s:0,1,1\"],\"recruited\":false,\"start_xp\":0}],\"bunks\":[{\"id\":45,\"since\":\"2026-10-05T15:30:00.000Z\",\"crew_id\":22,\"slot\":5,\"rate_per_hour\":4100,\"cap_hours\":3}],\"nextId\":79,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}"
+  },
+  {
+   "name": "the party seats",
+   "seed": 43,
+   "start": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0043\",\"profile\":{\"id\":\"captain-00parity0043\",\"username\":\"crew_y0043\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":5000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":3,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":2,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":6920,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":50000000,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":null,\"showcase_crew_ids\":[],\"lifetime_recruits\":0,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":false,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[],\"recruits\":[],\"bunks\":[],\"nextId\":1,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}",
+   "ops": [
+    {
+     "op": "getCrewState",
+     "now": 1790769600000,
+     "args": [],
+     "rolls": 36,
+     "result": {
+      "board": [
+       {
+        "id": 1,
+        "slot": 0,
+        "source": "free",
+        "cardId": 26,
+        "name": "Ty",
+        "filename": "Tiger_Shark.png",
+        "slug": "tiger_shark",
+        "rarity": 3,
+        "power": 11,
+        "dodge": 6,
+        "fortune": 5,
+        "effects": [
+         "s:0,-3,1"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 2,
+        "slot": 1,
+        "source": "free",
+        "cardId": 14,
+        "name": "Anglerr",
+        "filename": "Anglerfish_v2.png",
+        "slug": "anglerfish",
+        "rarity": 2,
+        "power": 4,
+        "dodge": 3,
+        "fortune": 8,
+        "effects": [
+         "s:1,0,-3"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 3,
+        "slot": 2,
+        "source": "free",
+        "cardId": 6,
+        "name": "Min",
+        "filename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:0,0,1"
+        ],
+        "recruited": false,
+        "startXp": 0
+       }
+      ],
+      "roster": [],
+      "capacity": 30,
+      "navLevel": 100,
+      "hallTier": 1,
+      "doubloons": 5000,
+      "bunkedCrewIds": [],
+      "bunkLockedCrewIds": [],
+      "bunkTerms": {},
+      "drillLevel": 1,
+      "storesLevel": 1,
+      "capHours": 1
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790769600000,
+     "args": [
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 1,
+         "slot": 0,
+         "source": "free",
+         "cardId": 26,
+         "name": "Ty",
+         "filename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 2,
+         "slot": 1,
+         "source": "free",
+         "cardId": 14,
+         "name": "Anglerr",
+         "filename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 3,
+         "slot": 2,
+         "source": "free",
+         "cardId": 6,
+         "name": "Min",
+         "filename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790769600000,
+     "args": [
+      2
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 1,
+         "slot": 0,
+         "source": "free",
+         "cardId": 26,
+         "name": "Ty",
+         "filename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 2,
+         "slot": 1,
+         "source": "free",
+         "cardId": 14,
+         "name": "Anglerr",
+         "filename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 3,
+         "slot": 2,
+         "source": "free",
+         "cardId": 6,
+         "name": "Min",
+         "filename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790769600000,
+     "args": [
+      3
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 1,
+         "slot": 0,
+         "source": "free",
+         "cardId": 26,
+         "name": "Ty",
+         "filename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 2,
+         "slot": 1,
+         "source": "free",
+         "cardId": 14,
+         "name": "Anglerr",
+         "filename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 3,
+         "slot": 2,
+         "source": "free",
+         "cardId": 6,
+         "name": "Min",
+         "filename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": true,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "getCrewState",
+     "now": 1790856000000,
+     "args": [],
+     "rolls": 36,
+     "result": {
+      "board": [
+       {
+        "id": 7,
+        "slot": 0,
+        "source": "free",
+        "cardId": 18,
+        "name": "Chloe",
+        "filename": "Clownfish.png",
+        "slug": "clownfish",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 4,
+        "fortune": 6,
+        "effects": [
+         "s:-1,0,0"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 8,
+        "slot": 1,
+        "source": "free",
+        "cardId": 11,
+        "name": "Sard",
+        "filename": "Sardine_v2.png",
+        "slug": "sardine",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:3,0,0"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 9,
+        "slot": 2,
+        "source": "free",
+        "cardId": 6,
+        "name": "Min",
+        "filename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 8,
+        "fortune": 3,
+        "effects": [
+         "s:-1,0,-1"
+        ],
+        "recruited": false,
+        "startXp": 0
+       }
+      ],
+      "roster": [
+       {
+        "id": 4,
+        "cardId": 26,
+        "name": "Ty",
+        "nickname": null,
+        "filename": "Tiger_Shark.png",
+        "baseFilename": "Tiger_Shark.png",
+        "slug": "tiger_shark",
+        "rarity": 3,
+        "power": 11,
+        "dodge": 6,
+        "fortune": 5,
+        "effects": [
+         "s:0,-3,1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 5,
+        "cardId": 14,
+        "name": "Anglerr",
+        "nickname": null,
+        "filename": "Anglerfish_v2.png",
+        "baseFilename": "Anglerfish_v2.png",
+        "slug": "anglerfish",
+        "rarity": 2,
+        "power": 4,
+        "dodge": 3,
+        "fortune": 8,
+        "effects": [
+         "s:1,0,-3"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 6,
+        "cardId": 6,
+        "name": "Min",
+        "nickname": null,
+        "filename": "Minnow_v2.png",
+        "baseFilename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:0,0,1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       }
+      ],
+      "capacity": 30,
+      "navLevel": 100,
+      "hallTier": 1,
+      "doubloons": 5000,
+      "bunkedCrewIds": [],
+      "bunkLockedCrewIds": [],
+      "bunkTerms": {},
+      "drillLevel": 1,
+      "storesLevel": 1,
+      "capHours": 1
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790856000000,
+     "args": [
+      7
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 7,
+         "slot": 0,
+         "source": "free",
+         "cardId": 18,
+         "name": "Chloe",
+         "filename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 8,
+         "slot": 1,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 9,
+         "slot": 2,
+         "source": "free",
+         "cardId": 6,
+         "name": "Min",
+         "filename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790856000000,
+     "args": [
+      8
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 7,
+         "slot": 0,
+         "source": "free",
+         "cardId": 18,
+         "name": "Chloe",
+         "filename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 8,
+         "slot": 1,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 9,
+         "slot": 2,
+         "source": "free",
+         "cardId": 6,
+         "name": "Min",
+         "filename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790856000000,
+     "args": [
+      9
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 7,
+         "slot": 0,
+         "source": "free",
+         "cardId": 18,
+         "name": "Chloe",
+         "filename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 8,
+         "slot": 1,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 9,
+         "slot": 2,
+         "source": "free",
+         "cardId": 6,
+         "name": "Min",
+         "filename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "recruited": true,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "getCrewState",
+     "now": 1790942400000,
+     "args": [],
+     "rolls": 36,
+     "result": {
+      "board": [
+       {
+        "id": 13,
+        "slot": 0,
+        "source": "free",
+        "cardId": 12,
+        "name": "Toon",
+        "filename": "Tuna_v2.png",
+        "slug": "tuna",
+        "rarity": 1,
+        "power": 6,
+        "dodge": 4,
+        "fortune": 3,
+        "effects": [],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 14,
+        "slot": 1,
+        "source": "free",
+        "cardId": 10,
+        "name": "Sam",
+        "filename": "Salmon.png",
+        "slug": "salmon",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 4,
+        "fortune": 2,
+        "effects": [
+         "s:1,0,-1"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 15,
+        "slot": 2,
+        "source": "free",
+        "cardId": 8,
+        "name": "Puff",
+        "filename": "Pufferfish_v2.png",
+        "slug": "pufferfish",
+        "rarity": 1,
+        "power": 3,
+        "dodge": 3,
+        "fortune": 7,
+        "effects": [],
+        "recruited": false,
+        "startXp": 0
+       }
+      ],
+      "roster": [
+       {
+        "id": 4,
+        "cardId": 26,
+        "name": "Ty",
+        "nickname": null,
+        "filename": "Tiger_Shark.png",
+        "baseFilename": "Tiger_Shark.png",
+        "slug": "tiger_shark",
+        "rarity": 3,
+        "power": 11,
+        "dodge": 6,
+        "fortune": 5,
+        "effects": [
+         "s:0,-3,1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 5,
+        "cardId": 14,
+        "name": "Anglerr",
+        "nickname": null,
+        "filename": "Anglerfish_v2.png",
+        "baseFilename": "Anglerfish_v2.png",
+        "slug": "anglerfish",
+        "rarity": 2,
+        "power": 4,
+        "dodge": 3,
+        "fortune": 8,
+        "effects": [
+         "s:1,0,-3"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 12,
+        "cardId": 6,
+        "name": "Min",
+        "nickname": null,
+        "filename": "Minnow_v2.png",
+        "baseFilename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 8,
+        "fortune": 3,
+        "effects": [
+         "s:-1,0,-1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 11,
+        "cardId": 11,
+        "name": "Sard",
+        "nickname": null,
+        "filename": "Sardine_v2.png",
+        "baseFilename": "Sardine_v2.png",
+        "slug": "sardine",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:3,0,0"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 10,
+        "cardId": 18,
+        "name": "Chloe",
+        "nickname": null,
+        "filename": "Clownfish.png",
+        "baseFilename": "Clownfish.png",
+        "slug": "clownfish",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 4,
+        "fortune": 6,
+        "effects": [
+         "s:-1,0,0"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 6,
+        "cardId": 6,
+        "name": "Min",
+        "nickname": null,
+        "filename": "Minnow_v2.png",
+        "baseFilename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:0,0,1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       }
+      ],
+      "capacity": 30,
+      "navLevel": 100,
+      "hallTier": 1,
+      "doubloons": 5000,
+      "bunkedCrewIds": [],
+      "bunkLockedCrewIds": [],
+      "bunkTerms": {},
+      "drillLevel": 1,
+      "storesLevel": 1,
+      "capHours": 1
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790942400000,
+     "args": [
+      13
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 13,
+         "slot": 0,
+         "source": "free",
+         "cardId": 12,
+         "name": "Toon",
+         "filename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 14,
+         "slot": 1,
+         "source": "free",
+         "cardId": 10,
+         "name": "Sam",
+         "filename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 15,
+         "slot": 2,
+         "source": "free",
+         "cardId": 8,
+         "name": "Puff",
+         "filename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790942400000,
+     "args": [
+      14
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 13,
+         "slot": 0,
+         "source": "free",
+         "cardId": 12,
+         "name": "Toon",
+         "filename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 14,
+         "slot": 1,
+         "source": "free",
+         "cardId": 10,
+         "name": "Sam",
+         "filename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 15,
+         "slot": 2,
+         "source": "free",
+         "cardId": 8,
+         "name": "Puff",
+         "filename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "recruitCrew",
+     "now": 1790942400000,
+     "args": [
+      15
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 13,
+         "slot": 0,
+         "source": "free",
+         "cardId": 12,
+         "name": "Toon",
+         "filename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 14,
+         "slot": 1,
+         "source": "free",
+         "cardId": 10,
+         "name": "Sam",
+         "filename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "recruited": true,
+         "startXp": 0
+        },
+        {
+         "id": 15,
+         "slot": 2,
+         "source": "free",
+         "cardId": 8,
+         "name": "Puff",
+         "filename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "recruited": true,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "getCrewState",
+     "now": 1791028800000,
+     "args": [],
+     "rolls": 36,
+     "result": {
+      "board": [
+       {
+        "id": 19,
+        "slot": 0,
+        "source": "free",
+        "cardId": 7,
+        "name": "Perry",
+        "filename": "Piranha.png",
+        "slug": "piranha",
+        "rarity": 1,
+        "power": 6,
+        "dodge": 2,
+        "fortune": 2,
+        "effects": [
+         "s:0,0,-2"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 20,
+        "slot": 1,
+        "source": "free",
+        "cardId": 32,
+        "name": "Hammer",
+        "filename": "Hammerhead_Shark_v2.png",
+        "slug": "hammerhead_shark",
+        "rarity": 2,
+        "power": 10,
+        "dodge": 5,
+        "fortune": 3,
+        "effects": [
+         "s:-3,0,-1"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 21,
+        "slot": 2,
+        "source": "free",
+        "cardId": 11,
+        "name": "Sard",
+        "filename": "Sardine_v2.png",
+        "slug": "sardine",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 6,
+        "fortune": 3,
+        "effects": [
+         "s:0,0,1"
+        ],
+        "recruited": false,
+        "startXp": 0
+       }
+      ],
+      "roster": [
+       {
+        "id": 4,
+        "cardId": 26,
+        "name": "Ty",
+        "nickname": null,
+        "filename": "Tiger_Shark.png",
+        "baseFilename": "Tiger_Shark.png",
+        "slug": "tiger_shark",
+        "rarity": 3,
+        "power": 11,
+        "dodge": 6,
+        "fortune": 5,
+        "effects": [
+         "s:0,-3,1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 5,
+        "cardId": 14,
+        "name": "Anglerr",
+        "nickname": null,
+        "filename": "Anglerfish_v2.png",
+        "baseFilename": "Anglerfish_v2.png",
+        "slug": "anglerfish",
+        "rarity": 2,
+        "power": 4,
+        "dodge": 3,
+        "fortune": 8,
+        "effects": [
+         "s:1,0,-3"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 18,
+        "cardId": 8,
+        "name": "Puff",
+        "nickname": null,
+        "filename": "Pufferfish_v2.png",
+        "baseFilename": "Pufferfish_v2.png",
+        "slug": "pufferfish",
+        "rarity": 1,
+        "power": 3,
+        "dodge": 3,
+        "fortune": 7,
+        "effects": [],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 17,
+        "cardId": 10,
+        "name": "Sam",
+        "nickname": null,
+        "filename": "Salmon.png",
+        "baseFilename": "Salmon.png",
+        "slug": "salmon",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 4,
+        "fortune": 2,
+        "effects": [
+         "s:1,0,-1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 16,
+        "cardId": 12,
+        "name": "Toon",
+        "nickname": null,
+        "filename": "Tuna_v2.png",
+        "baseFilename": "Tuna_v2.png",
+        "slug": "tuna",
+        "rarity": 1,
+        "power": 6,
+        "dodge": 4,
+        "fortune": 3,
+        "effects": [],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 12,
+        "cardId": 6,
+        "name": "Min",
+        "nickname": null,
+        "filename": "Minnow_v2.png",
+        "baseFilename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 8,
+        "fortune": 3,
+        "effects": [
+         "s:-1,0,-1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 11,
+        "cardId": 11,
+        "name": "Sard",
+        "nickname": null,
+        "filename": "Sardine_v2.png",
+        "baseFilename": "Sardine_v2.png",
+        "slug": "sardine",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:3,0,0"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 10,
+        "cardId": 18,
+        "name": "Chloe",
+        "nickname": null,
+        "filename": "Clownfish.png",
+        "baseFilename": "Clownfish.png",
+        "slug": "clownfish",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 4,
+        "fortune": 6,
+        "effects": [
+         "s:-1,0,0"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 6,
+        "cardId": 6,
+        "name": "Min",
+        "nickname": null,
+        "filename": "Minnow_v2.png",
+        "baseFilename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:0,0,1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       }
+      ],
+      "capacity": 30,
+      "navLevel": 100,
+      "hallTier": 1,
+      "doubloons": 5000,
+      "bunkedCrewIds": [],
+      "bunkLockedCrewIds": [],
+      "bunkTerms": {},
+      "drillLevel": 1,
+      "storesLevel": 1,
+      "capHours": 1
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      4,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      5,
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      18,
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      17,
+      2
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid slot"
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      6,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      12,
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToVoyage",
+     "now": 1791028800000,
+     "args": [
+      4,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": 0,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToVoyage",
+     "now": 1791028800000,
+     "args": [
+      16,
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": 0,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": 1,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      16,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": 0,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "benchCrew",
+     "now": 1791028800000,
+     "args": [
+      4
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "benchCrew",
+     "now": 1791028800000,
+     "args": [
+      4
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      99999,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Crew not found"
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      12,
+      -1
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid slot"
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1791028800000,
+     "args": [
+      {
+       "bunks": [
+        {
+         "id": 900,
+         "crew_id": 11,
+         "slot": 0,
+         "since": "2026-09-30T12:00:00.000Z",
+         "rate_per_hour": 250,
+         "cap_hours": 1
+        }
+       ]
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791028800000,
+     "args": [
+      11,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "This crew finished their training. Collect it in the hall to free them up."
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      11,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "This crew finished their training. Collect it in the hall to free them up."
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1791036000000,
+     "args": [
+      {
+       "bunks": [],
+       "trawls": [
+        {
+         "id": 1,
+         "crew_id": 10,
+         "zone": "shallows",
+         "started_at": "2026-09-30T12:00:00.000Z"
+        }
+       ]
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      10,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "This crew is out on a trawl. Collect it first to free them up."
+     }
+    },
+    {
+     "op": "patchSave",
+     "now": 1791036000000,
+     "args": [
+      {
+       "trawls": []
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "patchProfile",
+     "now": 1791036000000,
+     "args": [
+      {
+       "ship_tier": 6,
+       "has_sixth_berth": true
+      }
+     ],
+     "rolls": 0,
+     "result": null
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      4,
+      0
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      5,
+      1
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      18,
+      2
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 2,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      17,
+      3
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 2,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 3,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      16,
+      4
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 2,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 3,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 4,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      12,
+      5
+     ],
+     "rolls": 0,
+     "result": {
+      "state": {
+       "board": [
+        {
+         "id": 19,
+         "slot": 0,
+         "source": "free",
+         "cardId": 7,
+         "name": "Perry",
+         "filename": "Piranha.png",
+         "slug": "piranha",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 2,
+         "fortune": 2,
+         "effects": [
+          "s:0,0,-2"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 20,
+         "slot": 1,
+         "source": "free",
+         "cardId": 32,
+         "name": "Hammer",
+         "filename": "Hammerhead_Shark_v2.png",
+         "slug": "hammerhead_shark",
+         "rarity": 2,
+         "power": 10,
+         "dodge": 5,
+         "fortune": 3,
+         "effects": [
+          "s:-3,0,-1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        },
+        {
+         "id": 21,
+         "slot": 2,
+         "source": "free",
+         "cardId": 11,
+         "name": "Sard",
+         "filename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 6,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "recruited": false,
+         "startXp": 0
+        }
+       ],
+       "roster": [
+        {
+         "id": 4,
+         "cardId": 26,
+         "name": "Ty",
+         "nickname": null,
+         "filename": "Tiger_Shark.png",
+         "baseFilename": "Tiger_Shark.png",
+         "slug": "tiger_shark",
+         "rarity": 3,
+         "power": 11,
+         "dodge": 6,
+         "fortune": 5,
+         "effects": [
+          "s:0,-3,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 0,
+         "xp": 0
+        },
+        {
+         "id": 5,
+         "cardId": 14,
+         "name": "Anglerr",
+         "nickname": null,
+         "filename": "Anglerfish_v2.png",
+         "baseFilename": "Anglerfish_v2.png",
+         "slug": "anglerfish",
+         "rarity": 2,
+         "power": 4,
+         "dodge": 3,
+         "fortune": 8,
+         "effects": [
+          "s:1,0,-3"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 1,
+         "xp": 0
+        },
+        {
+         "id": 18,
+         "cardId": 8,
+         "name": "Puff",
+         "nickname": null,
+         "filename": "Pufferfish_v2.png",
+         "baseFilename": "Pufferfish_v2.png",
+         "slug": "pufferfish",
+         "rarity": 1,
+         "power": 3,
+         "dodge": 3,
+         "fortune": 7,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 2,
+         "xp": 0
+        },
+        {
+         "id": 17,
+         "cardId": 10,
+         "name": "Sam",
+         "nickname": null,
+         "filename": "Salmon.png",
+         "baseFilename": "Salmon.png",
+         "slug": "salmon",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 2,
+         "effects": [
+          "s:1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 3,
+         "xp": 0
+        },
+        {
+         "id": 16,
+         "cardId": 12,
+         "name": "Toon",
+         "nickname": null,
+         "filename": "Tuna_v2.png",
+         "baseFilename": "Tuna_v2.png",
+         "slug": "tuna",
+         "rarity": 1,
+         "power": 6,
+         "dodge": 4,
+         "fortune": 3,
+         "effects": [],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 4,
+         "xp": 0
+        },
+        {
+         "id": 12,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 8,
+         "fortune": 3,
+         "effects": [
+          "s:-1,0,-1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": 5,
+         "xp": 0
+        },
+        {
+         "id": 11,
+         "cardId": 11,
+         "name": "Sard",
+         "nickname": null,
+         "filename": "Sardine_v2.png",
+         "baseFilename": "Sardine_v2.png",
+         "slug": "sardine",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:3,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 10,
+         "cardId": 18,
+         "name": "Chloe",
+         "nickname": null,
+         "filename": "Clownfish.png",
+         "baseFilename": "Clownfish.png",
+         "slug": "clownfish",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 4,
+         "fortune": 6,
+         "effects": [
+          "s:-1,0,0"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        },
+        {
+         "id": 6,
+         "cardId": 6,
+         "name": "Min",
+         "nickname": null,
+         "filename": "Minnow_v2.png",
+         "baseFilename": "Minnow_v2.png",
+         "slug": "minnow",
+         "rarity": 1,
+         "power": 2,
+         "dodge": 7,
+         "fortune": 3,
+         "effects": [
+          "s:0,0,1"
+         ],
+         "pendingTrait": null,
+         "voyageSlot": null,
+         "raidSlot": null,
+         "xp": 0
+        }
+       ],
+       "capacity": 30,
+       "navLevel": 100,
+       "hallTier": 1,
+       "doubloons": 5000,
+       "bunkedCrewIds": [],
+       "bunkLockedCrewIds": [],
+       "bunkTerms": {},
+       "drillLevel": 1,
+       "storesLevel": 1,
+       "capHours": 1
+      }
+     }
+    },
+    {
+     "op": "assignToRaid",
+     "now": 1791036000000,
+     "args": [
+      11,
+      6
+     ],
+     "rolls": 0,
+     "result": {
+      "error": "Invalid slot"
+     }
+    },
+    {
+     "op": "getCrewState",
+     "now": 1791036000000,
+     "args": [],
+     "rolls": 0,
+     "result": {
+      "board": [
+       {
+        "id": 19,
+        "slot": 0,
+        "source": "free",
+        "cardId": 7,
+        "name": "Perry",
+        "filename": "Piranha.png",
+        "slug": "piranha",
+        "rarity": 1,
+        "power": 6,
+        "dodge": 2,
+        "fortune": 2,
+        "effects": [
+         "s:0,0,-2"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 20,
+        "slot": 1,
+        "source": "free",
+        "cardId": 32,
+        "name": "Hammer",
+        "filename": "Hammerhead_Shark_v2.png",
+        "slug": "hammerhead_shark",
+        "rarity": 2,
+        "power": 10,
+        "dodge": 5,
+        "fortune": 3,
+        "effects": [
+         "s:-3,0,-1"
+        ],
+        "recruited": false,
+        "startXp": 0
+       },
+       {
+        "id": 21,
+        "slot": 2,
+        "source": "free",
+        "cardId": 11,
+        "name": "Sard",
+        "filename": "Sardine_v2.png",
+        "slug": "sardine",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 6,
+        "fortune": 3,
+        "effects": [
+         "s:0,0,1"
+        ],
+        "recruited": false,
+        "startXp": 0
+       }
+      ],
+      "roster": [
+       {
+        "id": 4,
+        "cardId": 26,
+        "name": "Ty",
+        "nickname": null,
+        "filename": "Tiger_Shark.png",
+        "baseFilename": "Tiger_Shark.png",
+        "slug": "tiger_shark",
+        "rarity": 3,
+        "power": 11,
+        "dodge": 6,
+        "fortune": 5,
+        "effects": [
+         "s:0,-3,1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": 0,
+        "xp": 0
+       },
+       {
+        "id": 5,
+        "cardId": 14,
+        "name": "Anglerr",
+        "nickname": null,
+        "filename": "Anglerfish_v2.png",
+        "baseFilename": "Anglerfish_v2.png",
+        "slug": "anglerfish",
+        "rarity": 2,
+        "power": 4,
+        "dodge": 3,
+        "fortune": 8,
+        "effects": [
+         "s:1,0,-3"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": 1,
+        "xp": 0
+       },
+       {
+        "id": 18,
+        "cardId": 8,
+        "name": "Puff",
+        "nickname": null,
+        "filename": "Pufferfish_v2.png",
+        "baseFilename": "Pufferfish_v2.png",
+        "slug": "pufferfish",
+        "rarity": 1,
+        "power": 3,
+        "dodge": 3,
+        "fortune": 7,
+        "effects": [],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": 2,
+        "xp": 0
+       },
+       {
+        "id": 17,
+        "cardId": 10,
+        "name": "Sam",
+        "nickname": null,
+        "filename": "Salmon.png",
+        "baseFilename": "Salmon.png",
+        "slug": "salmon",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 4,
+        "fortune": 2,
+        "effects": [
+         "s:1,0,-1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": 3,
+        "xp": 0
+       },
+       {
+        "id": 16,
+        "cardId": 12,
+        "name": "Toon",
+        "nickname": null,
+        "filename": "Tuna_v2.png",
+        "baseFilename": "Tuna_v2.png",
+        "slug": "tuna",
+        "rarity": 1,
+        "power": 6,
+        "dodge": 4,
+        "fortune": 3,
+        "effects": [],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": 4,
+        "xp": 0
+       },
+       {
+        "id": 12,
+        "cardId": 6,
+        "name": "Min",
+        "nickname": null,
+        "filename": "Minnow_v2.png",
+        "baseFilename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 8,
+        "fortune": 3,
+        "effects": [
+         "s:-1,0,-1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": 5,
+        "xp": 0
+       },
+       {
+        "id": 11,
+        "cardId": 11,
+        "name": "Sard",
+        "nickname": null,
+        "filename": "Sardine_v2.png",
+        "baseFilename": "Sardine_v2.png",
+        "slug": "sardine",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:3,0,0"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 10,
+        "cardId": 18,
+        "name": "Chloe",
+        "nickname": null,
+        "filename": "Clownfish.png",
+        "baseFilename": "Clownfish.png",
+        "slug": "clownfish",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 4,
+        "fortune": 6,
+        "effects": [
+         "s:-1,0,0"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       },
+       {
+        "id": 6,
+        "cardId": 6,
+        "name": "Min",
+        "nickname": null,
+        "filename": "Minnow_v2.png",
+        "baseFilename": "Minnow_v2.png",
+        "slug": "minnow",
+        "rarity": 1,
+        "power": 2,
+        "dodge": 7,
+        "fortune": 3,
+        "effects": [
+         "s:0,0,1"
+        ],
+        "pendingTrait": null,
+        "voyageSlot": null,
+        "raidSlot": null,
+        "xp": 0
+       }
+      ],
+      "capacity": 30,
+      "navLevel": 100,
+      "hallTier": 1,
+      "doubloons": 5000,
+      "bunkedCrewIds": [],
+      "bunkLockedCrewIds": [],
+      "bunkTerms": {},
+      "drillLevel": 1,
+      "storesLevel": 1,
+      "capHours": 1
+     }
+    }
+   ],
+   "end": "{\"format\":\"seasthebooty-local-save\",\"version\":13,\"savedAt\":\"2026-09-30T12:00:00.000Z\",\"save\":{\"uid\":\"captain-00parity0043\",\"profile\":{\"id\":\"captain-00parity0043\",\"username\":\"crew_y0043\",\"packs_available\":0,\"created_at\":\"2026-09-30T12:00:00.000Z\",\"packs_since_legendary\":0,\"doubloons\":5000,\"last_daily_claim\":null,\"fotd_streak\":0,\"fotd_longest_streak\":0,\"last_fotd_date\":null,\"highest_rank_claimed\":0,\"hook_tier\":0,\"username_changed\":false,\"showcase_variant_ids\":null,\"is_premium\":true,\"premium_expires_at\":null,\"ship_tier\":6,\"last_ship_claim\":null,\"last_pack_claim\":null,\"last_viewed_achievements_at\":null,\"fishing_date\":null,\"fishing_casts\":0,\"has_seen_welcome\":true,\"fishing_abyss_streak\":0,\"rod_tier\":2,\"reel_tier\":0,\"line_tier\":0,\"bait_last_topup\":null,\"gems\":0,\"fishing_xp\":6920,\"saved_crew\":[],\"highest_perfect_streak\":0,\"has_seen_fotd_intro\":false,\"has_seen_packs_intro\":false,\"has_seen_market_intro\":false,\"has_seen_fishing_tour\":false,\"has_seen_fishing_catch_tour\":false,\"last_worm_claim\":null,\"highest_streak_set_at\":null,\"zone_shallows_rewarded\":false,\"zone_open_waters_rewarded\":false,\"zone_deep_rewarded\":false,\"zone_abyss_rewarded\":false,\"ring_skin\":\"standard\",\"unlocked_ring_skins\":[],\"best_streak_zone\":null,\"ship_name\":null,\"expedition_xp\":50000000,\"is_admin\":false,\"ship_color\":null,\"has_tide_turner\":false,\"tide_turner_used\":0,\"tide_turner_date\":null,\"equipped_special\":null,\"has_phantom_hook\":false,\"ship_skins\":[],\"equipped_ship_skin\":null,\"raid_items\":[],\"equipped_raid_items\":[],\"has_seen_raid_tutorial\":false,\"prestige_levels\":{},\"ancient_catches\":[],\"has_auto_caster\":false,\"character_color\":\"default\",\"unlocked_character_colors\":[],\"has_seen_setup\":true,\"has_completed_practice_raid\":false,\"active_event\":null,\"last_event_at\":null,\"unlocked_badges\":[],\"equipped_badges\":[],\"fish_hold_tier\":8,\"equipped_boat\":null,\"unlocked_boats\":[],\"unlocked_hats\":[],\"equipped_hat\":null,\"avatar_bg_color\":null,\"avatar_border_color\":null,\"has_seen_expeditions_tour\":false,\"finn_encounters\":0,\"finn_wins\":0,\"finn_seen_beats\":[],\"finn_revealed\":false,\"finn_last_outcome\":null,\"has_seen_market_tour\":false,\"raid_node_progress\":{},\"raid_repair_owed\":0,\"equipped_repair_kit\":\"basic_repair_kit\",\"owned_repair_kits\":[\"basic_repair_kit\"],\"last_used_bait\":null,\"unlocked_avatar_specials\":[],\"profile_bg\":null,\"total_perfects\":0,\"highest_raid_damage\":0,\"fishing_jackpots\":0,\"fishing_double_catches\":0,\"fishing_snags\":0,\"fishing_crates_opened\":0,\"last_free_recruit_date\":\"2026-10-03\",\"showcase_crew_ids\":[],\"lifetime_recruits\":9,\"last_seen_at\":null,\"current_perfect_streak\":0,\"catch_pending\":false,\"ship_classes\":{},\"seen_chapter_unlocks\":[],\"force_shiny_next_perfect\":false,\"force_shiny_always\":false,\"has_seen_first_catch_celebration\":false,\"unlocked_pets\":[],\"equipped_pet\":null,\"blackjack_chips\":0,\"blackjack_session_buy_ins\":0,\"show_wait_timer\":true,\"roulette_chips\":0,\"roulette_session_buy_ins\":0,\"has_perfected_sigil\":false,\"crew_hall_tier\":1,\"casino_chips\":0,\"casino_session_buy_ins\":0,\"blackjack_session_net\":0,\"roulette_session_net\":0,\"slots_session_net\":0,\"puzzle_points\":0,\"gauntlet_last_date\":null,\"gauntlet_run_open\":false,\"gauntlet_deepest\":0,\"last_crate_claim_week\":null,\"has_auto_catcher\":false,\"pending_reroll\":null,\"pvp_wins\":0,\"pvp_losses\":0,\"last_active_at\":null,\"completionist_effects\":[],\"has_seen_forge_flourish\":false,\"gauntlet_last_run_at\":null,\"gauntlet_upgrades\":[],\"has_seen_gauntlet_intro\":false,\"gauntlet_best_depth\":0,\"gauntlet_best_depth_ms\":null,\"gauntlet_best_depth_at\":null,\"gauntlet_fathoms\":0,\"claimed_badge_rewards\":[],\"trawls_collected\":0,\"blackjack_win_streak\":0,\"blackjack_dealer_bj_streak\":0,\"slots_force_next\":null,\"gauntlet_contest_depth\":0,\"gauntlet_contest_depth_at\":null,\"has_seen_contests\":false,\"gauntlet_big_hit\":0,\"gauntlet_big_hit_at\":null,\"gauntlet_deepest_run\":null,\"manowar_augment\":null,\"gauntlet_confluences_seen\":[],\"gauntlet_run_state\":null,\"gauntlet_resumes_used\":0,\"forge_recipes_learned\":[],\"has_seen_forge_intro\":false,\"manowar_augment_build\":null,\"seen_ultimate_unlock\":false,\"gauntlet_runs_completed\":0,\"gauntlet_fathoms_earned\":0,\"gauntlet_max_hit\":0,\"gauntlet_deepest_died\":0,\"gauntlet_run_hardcore\":false,\"gauntlet_hc_squad\":null,\"gauntlet_hc_deepest\":0,\"gauntlet_hc_best_depth\":null,\"gauntlet_hc_best_depth_ms\":null,\"gauntlet_hc_best_depth_at\":null,\"gauntlet_hc_deepest_died\":0,\"gauntlet_hc_last_run_at\":null,\"fishing_renown_alloc\":{},\"nav_renown_alloc\":{},\"seen_fishing_renown_intro\":false,\"seen_nav_renown_intro\":false,\"discovered_coelacanth\":false,\"owned_crew_skins\":[],\"equipped_crew_skins\":{},\"trophy_size_catches\":0,\"blood_gems\":0,\"gauntlet_hc_runs_today\":0,\"blood_gems_earned\":0,\"gauntlet_hc_deepest_run\":null,\"manowar_schematics\":false,\"has_sixth_berth\":true,\"gauntlet_run_terms\":null,\"gauntlet_hc_best_pressure\":0,\"gauntlet_run_offer\":null,\"claimed_fishing_levels\":1,\"captains_orders_done\":false,\"gauntlet_run_paused\":false,\"legendary_unlocks\":[],\"gauntlet_upgrades_off\":[],\"pending_cast\":null,\"has_armory_expansion\":false,\"has_ancient_deep_access\":false,\"gauntlet_run_variant\":null,\"dons_gauntlet_deepest\":0,\"dons_gauntlet_best_depth\":0,\"dons_gauntlet_best_depth_ms\":null,\"dons_gauntlet_best_depth_at\":null,\"dons_gauntlet_deepest_run\":null,\"dons_gauntlet_deepest_died\":0,\"dons_gauntlet_runs_completed\":0,\"dons_gauntlet_upgrades\":[],\"dons_gauntlet_upgrades_off\":[],\"dons_stipend_claimed_at\":null,\"has_seen_check_tutorial\":false,\"gauntlet_last_run\":null,\"dons_gauntlet_last_run\":null,\"gauntlet_hc_last_run\":null,\"charting_landmarks_claimed\":[],\"has_seen_dons_gauntlet_intro\":false,\"zone_golden_boost\":{},\"fish_sold_doubloons\":0,\"parlor_streak\":0,\"parlor_best_streak\":0,\"parlor_rank_gems_awarded\":0,\"parlor_points\":0,\"current_streak_zone\":null,\"abyssal_conversion\":null,\"has_seen_crew_guide\":false,\"has_seen_ship_guide\":false,\"has_seen_den_guide\":false,\"has_seen_parlor_guide\":false,\"has_seen_charting_guide\":false,\"lifetime_species\":[],\"lifetime_species_count\":null,\"finn_spoil_free\":null,\"finn_spoil_paid\":null,\"equipped_special_2\":null,\"has_anglers_patience\":false,\"anglers_patience_xp\":0,\"borrowed_jaw_xp\":0,\"crew_drill_level\":1,\"crew_bunks_bought\":0,\"crew_stores_level\":1,\"dons_gauntlet_hc_deepest\":0,\"dons_gauntlet_hc_deepest_died\":0,\"dons_gauntlet_hc_deepest_run\":null,\"dons_gauntlet_hc_last_run\":null,\"dons_gauntlet_hc_last_run_at\":null,\"dons_gauntlet_hc_runs_today\":0,\"dons_gauntlet_hc_best_depth\":0,\"dons_gauntlet_hc_best_depth_ms\":null,\"dons_gauntlet_hc_best_depth_at\":null,\"dons_gauntlet_hc_best_pressure\":0,\"dons_gauntlet_hc_squad\":null,\"daily_challenge_sweeps\":0,\"daily_master_cleared\":0,\"voyage_booty_hauls\":0,\"crate_opens\":{},\"bait_used\":{},\"biggest_fish_sale\":0,\"fish_sold_count\":0,\"has_seen_fishing_hub_tour\":false,\"has_seen_exchange_intro\":false,\"bounty_rung_seen\":0,\"bounties_claimed\":0,\"bounty_gems_earned\":0,\"bounty_boards_cleared\":0,\"bounty_elites_claimed\":0,\"bounty_points\":0,\"bounty_milestones_claimed\":0,\"exchange_watchlist\":[],\"crew_next_roll_legendary\":false,\"renown_respecs\":0,\"crew_next_roll_legendary_slug\":null,\"gauntlet_run_active_ms\":0,\"gauntlet_run_tick_at\":null,\"ancient_vigil\":{},\"equipped_pet_bow\":null,\"badge_unlocked_at\":{},\"ship_refits_used\":0,\"rod_rack_tier\":0,\"hull_speed_tier\":0,\"rods_aboard\":[],\"sea_x\":null,\"sea_y\":null,\"sea_explored\":null,\"hull_handling_tier\":0,\"hull_accel_tier\":0,\"sea_seen_at\":null,\"finn_challenge\":null,\"has_seen_sea_tour\":false,\"sea_hints_seen\":[],\"auto_fishing_on\":false,\"sea_side\":\"fishing\",\"portal_tier\":1,\"portal_components_spent\":0,\"finn_quest\":null,\"finn_quests_done\":[],\"zone_perfects\":{},\"sea_tour_step\":0,\"lantern_tier\":0,\"portal_ports\":[],\"sea_explored_exp\":null,\"has_seen_gate_tour\":false,\"gate_tour_step\":0,\"almanac_viewed_at\":null,\"frozen\":false,\"sea_session\":null,\"has_seen_skirmish_tour\":false,\"seen_unlocks\":null,\"seen_promotions\":null,\"last_recall_fish_at\":null,\"last_recall_exp_at\":null,\"full_days\":0,\"last_full_day\":null,\"recruits_seen_on\":null},\"bait\":{\"worm\":600},\"hold\":{},\"collection\":{},\"lifetime\":{},\"bests\":{},\"shinies\":[],\"daily\":{},\"clears\":[],\"rodItems\":{},\"ledger\":[],\"anomalies\":[],\"mail\":[],\"rapport\":[],\"contests\":{},\"overrides\":{},\"deals\":[],\"market\":null,\"crew\":[{\"id\":4,\"card_id\":26,\"rarity\":3,\"power\":11,\"dodge\":6,\"fortune\":5,\"effects\":[\"s:0,-3,1\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":0,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-09-30T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":5,\"card_id\":14,\"rarity\":2,\"power\":4,\"dodge\":3,\"fortune\":8,\"effects\":[\"s:1,0,-3\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":1,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-09-30T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":6,\"card_id\":6,\"rarity\":1,\"power\":2,\"dodge\":7,\"fortune\":3,\"effects\":[\"s:0,0,1\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-09-30T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":10,\"card_id\":18,\"rarity\":1,\"power\":2,\"dodge\":4,\"fortune\":6,\"effects\":[\"s:-1,0,0\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-01T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":11,\"card_id\":11,\"rarity\":1,\"power\":2,\"dodge\":7,\"fortune\":3,\"effects\":[\"s:3,0,0\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":null,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-01T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":12,\"card_id\":6,\"rarity\":1,\"power\":2,\"dodge\":8,\"fortune\":3,\"effects\":[\"s:-1,0,-1\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":5,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-01T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":16,\"card_id\":12,\"rarity\":1,\"power\":6,\"dodge\":4,\"fortune\":3,\"effects\":[],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":4,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-02T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":17,\"card_id\":10,\"rarity\":1,\"power\":2,\"dodge\":4,\"fortune\":2,\"effects\":[\"s:1,0,-1\"],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":3,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-02T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null},{\"id\":18,\"card_id\":8,\"rarity\":1,\"power\":3,\"dodge\":3,\"fortune\":7,\"effects\":[],\"pending_trait\":null,\"voyage_slot\":null,\"raid_slot\":2,\"xp\":0,\"nickname\":null,\"recruited_at\":\"2026-10-02T12:00:00.000Z\",\"died_at\":null,\"died_on_voyage_id\":null,\"died_hardcore_depth\":null}],\"recruits\":[{\"id\":19,\"slot\":0,\"source\":\"free\",\"card_id\":7,\"rarity\":1,\"power\":6,\"dodge\":2,\"fortune\":2,\"effects\":[\"s:0,0,-2\"],\"recruited\":false,\"start_xp\":0},{\"id\":20,\"slot\":1,\"source\":\"free\",\"card_id\":32,\"rarity\":2,\"power\":10,\"dodge\":5,\"fortune\":3,\"effects\":[\"s:-3,0,-1\"],\"recruited\":false,\"start_xp\":0},{\"id\":21,\"slot\":2,\"source\":\"free\",\"card_id\":11,\"rarity\":1,\"power\":2,\"dodge\":6,\"fortune\":3,\"effects\":[\"s:0,0,1\"],\"recruited\":false,\"start_xp\":0}],\"bunks\":[],\"nextId\":22,\"voyages\":[],\"trawls\":[],\"depthBests\":{},\"gauntletRuns\":[],\"bountyEvents\":[],\"casino\":{\"buyIns\":[],\"hand\":null,\"rouletteSpins\":[],\"slots\":{\"spins\":0,\"net\":0,\"biggest_win\":0},\"pot\":{\"pot\":15000,\"seed\":15000,\"last_winner_name\":null,\"last_win_amount\":null,\"last_won_at\":null}},\"raidTokens\":[],\"raidClears\":[],\"bounty\":null,\"bountyHistory\":[],\"contestsWonAt\":{},\"trivia\":{\"board\":{},\"capstan\":{},\"ladder\":{}},\"charting\":{\"boards\":{\"match\":{},\"minefield\":{},\"sudoku\":{},\"rigging\":{}},\"match\":{},\"minefield\":{},\"rigging\":{},\"hold\":{}},\"digs\":[],\"discoveries\":[],\"homestead\":null},\"carried\":{}}"
   }
  ]
 }

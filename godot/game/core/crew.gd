@@ -82,6 +82,70 @@ static func level(xp: float) -> int:
 	return 1
 
 
+## statTicksEarned (lib/crewLevel).
+static func stat_ticks(lv: int) -> int:
+	if lv < 3:
+		return 0
+	var t: int = mini(lv, 99) / 3
+	if lv >= 50:
+		t += 1
+	if lv >= 100:
+		t += 2
+	return t
+
+
+## A crew member's stats for a fight (crewResolve): the level's ticks shared
+## out by their own stats (largest remainder, at least one each from three),
+## then the trait, each at least 1.
+static func leveled_stats(c: Dictionary) -> Dictionary:
+	var base: Array = [Js.num(c.get("power")), Js.num(c.get("dodge")), Js.num(c.get("fortune"))]
+	var add: Array = [0, 0, 0]
+	var xp: float = Js.num(c.get("xp"))
+	var total: int = stat_ticks(level(xp)) if xp > 0.0 else 0
+	if total > 0:
+		var w: Array = base.map(func(v: float) -> float: return maxf(0.0, v))
+		var sw: float = float(w[0]) + float(w[1]) + float(w[2])
+		if sw <= 0.0:
+			var each: int = total / 3
+			var rem: int = total - each * 3
+			add = [each + (1 if rem > 0 else 0), each + (1 if rem > 1 else 0), each]
+		else:
+			var fr: Array = []
+			var assigned: int = 0
+			for k: int in 3:
+				var sh: float = float(w[k]) / sw * total
+				add[k] = int(floor(sh))
+				assigned += add[k]
+				fr.append([k, sh - floor(sh)])
+			# A stable sort, largest fraction first (ties keep stat order).
+			var sorted: Array = []
+			for f: Array in fr:
+				var at: int = sorted.size()
+				for q: int in sorted.size():
+					if f[1] > sorted[q][1]:
+						at = q
+						break
+				sorted.insert(at, f)
+			for i: int in total - assigned:
+				add[sorted[i][0]] += 1
+			if total >= 3:
+				for k: int in 3:
+					if add[k] == 0:
+						var donor: int = 0
+						for kk: int in 3:
+							if add[kk] > add[donor]:
+								donor = kk
+						if add[donor] > 1:
+							add[donor] -= 1
+							add[k] = 1
+	var tr: Array = Bunks.net_trait(Js.list(c.get("effects")))
+	return {
+		"power": maxf(1.0, float(Js.round(float(base[0]) + add[0] + float(tr[0])))),
+		"dodge": maxf(1.0, float(Js.round(float(base[1]) + add[1] + float(tr[1])))),
+		"fortune": maxf(1.0, float(Js.round(float(base[2]) + add[2] + float(tr[2])))),
+	}
+
+
 static func class_of(slug: String) -> Dictionary:
 	var id: Variant = Js.obj(t().get("classBySlug")).get(slug.to_lower())
 	return Js.obj(Js.obj(t().get("classes")).get(id)) if id != null else {}
@@ -447,6 +511,59 @@ static func dismiss(db: CaptainStore, uid: String, crew_id: float) -> Dictionary
 	if held != "":
 		return { "error": held }
 	db.save["crew"] = (db.save["crew"] as Array).filter(func(x: Dictionary) -> bool: return not (float(x["id"]) == crew_id and x.get("died_at") == null))
+	return _after(db, uid)
+
+
+## assertCanReassign: a voyage at sea, a trawl and a bunk each hold a hand.
+static func _reassign_error(db: CaptainStore, uid: String, c: Dictionary) -> String:
+	var crew_id: float = float(c["id"])
+	if c.get("voyage_slot") != null:
+		for v: Dictionary in Js.list(db.save.get("voyages")):
+			if v.get("status") == "pending" and Js.list(v.get("crew_variant_ids")).has(crew_id):
+				return "This crew is at sea right now. Wait for their voyage to return."
+	for tr: Dictionary in Js.list(db.save.get("trawls")):
+		if float(tr["crew_id"]) == crew_id:
+			return "This crew is out on a trawl. Collect it first to free them up."
+	return Bunks.hold_error(db, db.me(uid), crew_id)
+
+
+## The seats a ship has for a party (hull berths; class picks and the sixth
+## berth come with the campaign).
+static func party_slots(prof: Dictionary) -> int:
+	var tier: int = int(Js.nz(prof.get("ship_tier"), 0.0))
+	var row: Dictionary = Js.obj(Js.obj(Rules.data().get("shipCombat")).get(str(tier)))
+	return int(Js.nz(row.get("crewSlots"), 1.0)) + (1 if prof.get("has_sixth_berth") == true else 0)
+
+
+## assignToRaid / assignToVoyage / benchCrew (applyAssignment): a seat, with
+## whoever held it benched and any other copy of the same fish on that track.
+static func assign(db: CaptainStore, uid: String, crew_id: float, track: Variant, slot: Variant) -> Dictionary:
+	var c: Dictionary = {}
+	for x: Dictionary in live(db):
+		if float(x["id"]) == crew_id:
+			c = x
+	if c.is_empty():
+		return { "error": "Crew not found" }
+	var err: String = _reassign_error(db, uid, c)
+	if err != "":
+		return { "error": err }
+	if track == null or slot == null:
+		c["voyage_slot"] = null
+		c["raid_slot"] = null
+		return _after(db, uid)
+	var n: int = party_slots(db.me(uid))
+	if float(slot) < 0.0 or float(slot) >= float(n):
+		return { "error": "Invalid slot" }
+	var col: String = "voyage_slot" if track == "voyage" else "raid_slot"
+	var other: String = "raid_slot" if track == "voyage" else "voyage_slot"
+	for x: Dictionary in db.save["crew"]:
+		if x.get(col) != null and float(x[col]) == float(slot):
+			x[col] = null
+	for x: Dictionary in db.save["crew"]:
+		if float(x["card_id"]) == float(c["card_id"]) and float(x["id"]) != crew_id:
+			x[col] = null
+	c[other] = null
+	c[col] = float(slot)
 	return _after(db, uid)
 
 

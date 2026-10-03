@@ -4720,26 +4720,33 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "pctMaxHp": 0.1,
       "desc": "Heal 10% max HP."
      },
      {
       "unlockLevel": 10,
+      "pctMaxHp": 0.15,
       "desc": "Heal 15% max HP."
      },
      {
       "unlockLevel": 25,
+      "pctMaxHp": 0.25,
       "desc": "Heal 25% max HP."
      },
      {
       "unlockLevel": 40,
+      "pctMaxHp": 0.35,
       "desc": "Heal 35% max HP."
      },
      {
       "unlockLevel": 75,
+      "pctMaxHp": 0.5,
       "desc": "Heal 50% max HP."
      },
      {
       "unlockLevel": 100,
+      "pctMaxHp": 0.6,
+      "cleanseDebuff": true,
       "desc": "Heal 60% max HP and cleanse one enemy debuff."
      }
     ]
@@ -4752,26 +4759,38 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "critZoneMultiplier": 0.6,
+      "shotsBuffed": 1,
       "desc": "Next shot crit zone 60% wider."
      },
      {
       "unlockLevel": 10,
+      "critZoneMultiplier": 1,
+      "shotsBuffed": 1,
       "desc": "Next shot crit zone doubled."
      },
      {
       "unlockLevel": 25,
+      "critZoneMultiplier": 1.75,
+      "shotsBuffed": 1,
       "desc": "Next shot crit zone nearly tripled."
      },
      {
       "unlockLevel": 40,
+      "critZoneMultiplier": 2.5,
+      "shotsBuffed": 2,
       "desc": "Next 2 shots crit zone 3.5× wider."
      },
      {
       "unlockLevel": 75,
+      "critZoneMultiplier": 3,
+      "shotsBuffed": 2,
       "desc": "Next 2 shots crit zone 4× wider."
      },
      {
       "unlockLevel": 100,
+      "critZoneMultiplier": 3.5,
+      "shotsBuffed": 3,
       "desc": "Next 3 shots crit zone 4.5× wider. A clean hit almost always crits."
      }
     ]
@@ -4784,26 +4803,38 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "jamChance": 0.2,
+      "disableDodgeTurns": 2,
       "desc": "20% chance to jam enemy dodge for 2 turns."
      },
      {
       "unlockLevel": 10,
+      "jamChance": 0.3,
+      "disableDodgeTurns": 2,
       "desc": "30% chance to jam enemy dodge for 2 turns."
      },
      {
       "unlockLevel": 25,
+      "jamChance": 0.4,
+      "disableDodgeTurns": 2,
       "desc": "40% chance to jam enemy dodge for 2 turns."
      },
      {
       "unlockLevel": 40,
+      "jamChance": 0.48,
+      "disableDodgeTurns": 3,
       "desc": "48% chance to jam enemy dodge for 3 turns."
      },
      {
       "unlockLevel": 75,
+      "jamChance": 0.54,
+      "disableDodgeTurns": 4,
       "desc": "54% chance to jam enemy dodge for 4 turns."
      },
      {
       "unlockLevel": 100,
+      "jamChance": 0.6,
+      "disableDodgeTurns": 5,
       "desc": "60% chance to jam enemy dodge for 5 turns."
      }
     ]
@@ -4816,26 +4847,33 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "pctReduction": 0.2,
       "desc": "Reduce next incoming hit by 20%."
      },
      {
       "unlockLevel": 10,
+      "pctReduction": 0.3,
       "desc": "Reduce next incoming hit by 30%."
      },
      {
       "unlockLevel": 25,
+      "pctReduction": 0.45,
       "desc": "Reduce next incoming hit by 45%."
      },
      {
       "unlockLevel": 40,
+      "pctReduction": 0.6,
       "desc": "Reduce next incoming hit by 60%."
      },
      {
       "unlockLevel": 75,
+      "pctReduction": 0.8,
       "desc": "Reduce next incoming hit by 80%."
      },
      {
       "unlockLevel": 100,
+      "pctReduction": 0.95,
+      "absorbsCrits": true,
       "desc": "Reduce next incoming hit by 95% (even crits)."
      }
     ]
@@ -4848,26 +4886,38 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "oneChargeChance": 0.3,
+      "twoChargeChance": 0,
       "desc": "30% chance to gain +1 charge."
      },
      {
       "unlockLevel": 10,
+      "oneChargeChance": 0.4,
+      "twoChargeChance": 0,
       "desc": "40% chance to gain +1 charge."
      },
      {
       "unlockLevel": 25,
+      "oneChargeChance": 0.6,
+      "twoChargeChance": 0,
       "desc": "60% chance to gain +1 charge."
      },
      {
       "unlockLevel": 40,
+      "oneChargeChance": 0.8,
+      "twoChargeChance": 0,
       "desc": "80% chance to gain +1 charge."
      },
      {
       "unlockLevel": 75,
+      "oneChargeChance": 1,
+      "twoChargeChance": 0.2,
       "desc": "Always gain +1 charge. 20% chance for +2."
      },
      {
       "unlockLevel": 100,
+      "oneChargeChance": 1,
+      "twoChargeChance": 0.5,
       "desc": "Always gain +1 charge. 50% chance for +2."
      }
     ]
@@ -4880,26 +4930,39 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "pctMaxHp": 0.14,
+      "shieldPctMaxHp": 0.05,
       "desc": "Heal 14% max HP and grant a 5% max HP shield."
      },
      {
       "unlockLevel": 10,
+      "pctMaxHp": 0.2,
+      "shieldPctMaxHp": 0.08,
       "desc": "Heal 20% max HP and grant an 8% max HP shield."
      },
      {
       "unlockLevel": 25,
+      "pctMaxHp": 0.3,
+      "shieldPctMaxHp": 0.11,
       "desc": "Heal 30% max HP and grant an 11% max HP shield."
      },
      {
       "unlockLevel": 40,
+      "pctMaxHp": 0.4,
+      "shieldPctMaxHp": 0.14,
       "desc": "Heal 40% max HP and grant a 14% max HP shield."
      },
      {
       "unlockLevel": 75,
+      "pctMaxHp": 0.5,
+      "shieldPctMaxHp": 0.17,
       "desc": "Heal 50% max HP and grant a 17% max HP shield."
      },
      {
       "unlockLevel": 100,
+      "pctMaxHp": 0.6,
+      "shieldPctMaxHp": 0.2,
+      "cleanseDebuff": true,
       "desc": "Heal 60% max HP, grant a 20% max HP shield, and cleanse one enemy debuff."
      }
     ]
@@ -4912,26 +4975,50 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "dmgMult": 0.32,
+      "mobPenaltyPct": 0.45,
+      "bossBonusPct": 0.2,
+      "autoCrit": true,
       "desc": "Fire 1 heavy crit shot. −45% vs regular hulls, +20% vs bosses and elites."
      },
      {
       "unlockLevel": 10,
+      "dmgMult": 0.45,
+      "mobPenaltyPct": 0.45,
+      "bossBonusPct": 0.25,
+      "autoCrit": true,
       "desc": "Fire 1 heavy crit shot. −45% vs regular hulls, +25% vs bosses and elites."
      },
      {
       "unlockLevel": 25,
+      "dmgMult": 0.6,
+      "mobPenaltyPct": 0.45,
+      "bossBonusPct": 0.35,
+      "autoCrit": true,
       "desc": "Fire 1 heavy crit shot. −45% vs regular hulls, +35% vs bosses and elites."
      },
      {
       "unlockLevel": 40,
+      "dmgMult": 0.8,
+      "mobPenaltyPct": 0.45,
+      "bossBonusPct": 0.45,
+      "autoCrit": true,
       "desc": "Fire 1 heavy crit shot. −45% vs regular hulls, +45% vs bosses and elites."
      },
      {
       "unlockLevel": 75,
+      "dmgMult": 1.05,
+      "mobPenaltyPct": 0.45,
+      "bossBonusPct": 0.55,
+      "autoCrit": true,
       "desc": "Fire 1 bigger heavy crit shot. −45% vs regular hulls, +55% vs bosses and elites."
      },
      {
       "unlockLevel": 100,
+      "dmgMult": 1.35,
+      "mobPenaltyPct": 0.45,
+      "bossBonusPct": 0.65,
+      "autoCrit": true,
       "desc": "Fire 1 massive heavy crit shot. −45% vs regular hulls, +65% vs bosses and elites."
      }
     ]
@@ -4944,26 +5031,44 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "shots": 2,
+      "shotDmgMult": 0.28,
+      "frenzyMaxPct": 0.15,
       "desc": "Fire a 2-shot barrage at 28% damage each. Up to +15% per shot as the target weakens."
      },
      {
       "unlockLevel": 10,
+      "shots": 3,
+      "shotDmgMult": 0.28,
+      "frenzyMaxPct": 0.2,
       "desc": "Fire a 3-shot barrage at 28% damage each. Up to +20% per shot as the target weakens."
      },
      {
       "unlockLevel": 25,
+      "shots": 4,
+      "shotDmgMult": 0.28,
+      "frenzyMaxPct": 0.25,
       "desc": "Fire a 4-shot barrage at 28% each. Up to +25% as the target weakens."
      },
      {
       "unlockLevel": 40,
+      "shots": 5,
+      "shotDmgMult": 0.28,
+      "frenzyMaxPct": 0.35,
       "desc": "Fire a 5-shot barrage at 28% each. Up to +35% as the target weakens."
      },
      {
       "unlockLevel": 75,
+      "shots": 6,
+      "shotDmgMult": 0.3,
+      "frenzyMaxPct": 0.45,
       "desc": "Fire a 6-shot barrage at 30% each. Up to +45% as the target weakens."
      },
      {
       "unlockLevel": 100,
+      "shots": 8,
+      "shotDmgMult": 0.3,
+      "frenzyMaxPct": 0.6,
       "desc": "Fire an 8-shot barrage at 30% each. Up to +60% per shot as the target weakens."
      }
     ]
@@ -4976,26 +5081,38 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "revealMoves": 1,
+      "dodgeRefreshChance": 0,
       "desc": "See the enemy's next move."
      },
      {
       "unlockLevel": 10,
+      "revealMoves": 1,
+      "dodgeRefreshChance": 0,
       "desc": "See the enemy's next move."
      },
      {
       "unlockLevel": 25,
+      "revealMoves": 2,
+      "dodgeRefreshChance": 0,
       "desc": "See the enemy's next 2 moves."
      },
      {
       "unlockLevel": 40,
+      "revealMoves": 2,
+      "dodgeRefreshChance": 0.3,
       "desc": "See the next 2 moves; 30% chance to refresh your dodge."
      },
      {
       "unlockLevel": 75,
+      "revealMoves": 3,
+      "dodgeRefreshChance": 0.5,
       "desc": "See the next 3 moves; 50% chance to refresh your dodge."
      },
      {
       "unlockLevel": 100,
+      "revealMoves": 3,
+      "dodgeRefreshChance": 1,
       "desc": "See the next 3 moves and always refresh your dodge."
      }
     ]
@@ -5008,26 +5125,39 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "healPctMaxHp": 0.18,
+      "dmgBuffPct": 0.1,
       "desc": "Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 18% max HP, gain +10% damage for the rest of the fight."
      },
      {
       "unlockLevel": 10,
+      "healPctMaxHp": 0.25,
+      "dmgBuffPct": 0.15,
       "desc": "Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 25% max HP, gain +15% damage for the rest of the fight."
      },
      {
       "unlockLevel": 25,
+      "healPctMaxHp": 0.25,
+      "dmgBuffPct": 0.2,
       "desc": "Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 25% max HP, gain +20% damage for the rest of the fight."
      },
      {
       "unlockLevel": 40,
+      "healPctMaxHp": 0.35,
+      "dmgBuffPct": 0.25,
       "desc": "Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 35% max HP, gain +25% damage for the rest of the fight."
      },
      {
       "unlockLevel": 75,
+      "healPctMaxHp": 0.35,
+      "dmgBuffPct": 0.3,
       "desc": "Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 35% max HP, gain +30% damage for the rest of the fight."
      },
      {
       "unlockLevel": 100,
+      "healPctMaxHp": 0.5,
+      "dmgBuffPct": 0.35,
+      "cleanseDebuff": true,
       "desc": "Arm the ward for 3 turns. Cheat a killing blow while it burns: heal 50% max HP, gain +35% damage for the rest of the fight, and cleanse every debuff."
      }
     ]
@@ -5040,26 +5170,39 @@
     "milestones": [
      {
       "unlockLevel": 1,
+      "markMag": 0.1,
+      "markTurns": 2,
       "desc": "Mark the enemy for 2 turns. It takes +10% damage from all sources."
      },
      {
       "unlockLevel": 10,
+      "markMag": 0.15,
+      "markTurns": 2,
       "desc": "Mark the enemy for 2 turns. It takes +15% damage from all sources."
      },
      {
       "unlockLevel": 25,
+      "markMag": 0.18,
+      "markTurns": 2,
       "desc": "Mark the enemy for 2 turns. It takes +18% damage from all sources."
      },
      {
       "unlockLevel": 40,
+      "markMag": 0.22,
+      "markTurns": 3,
       "desc": "Mark the enemy for 3 turns. It takes +22% damage from all sources."
      },
      {
       "unlockLevel": 75,
+      "markMag": 0.25,
+      "markTurns": 3,
       "desc": "Mark the enemy for 3 turns. It takes +25% damage from all sources."
      },
      {
       "unlockLevel": 100,
+      "markMag": 0.25,
+      "markTurns": 3,
+      "pierceShield": true,
       "desc": "Mark the enemy for 3 turns. It takes +25% damage from all sources, and its shield is ignored while marked."
      }
     ]
@@ -8309,6 +8452,6303 @@
    }
   ],
   "completionBonus": 2000
+ },
+ "raids": {
+  "reef_skirmish": {
+   "raidId": "reef_skirmish",
+   "raidTitle": "Reef Skirmish",
+   "bossDefeatedText": "",
+   "atmosphere": "sunset",
+   "zone": "shallows",
+   "enemies": {
+    "brute": {
+     "id": "brute",
+     "name": "Reef Raider",
+     "hpBase": 20,
+     "minDmg": 2,
+     "maxDmg": 5,
+     "shipSpeed": 4,
+     "actionMs": 4500,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.025,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/reefraider.webp"
+    }
+   },
+   "sequence": [],
+   "bossId": "brute",
+   "loot": [],
+   "skirmish": true,
+   "killRewards": {
+    "brute": {
+     "gold": 20,
+     "xp": 20
+    }
+   }
+  },
+  "corsairs_reckoning": {
+   "raidId": "corsairs_reckoning",
+   "enemyAccuracy": 4,
+   "raidTitle": "The Corsair's Reckoning",
+   "bossDefeatedText": "Barnacle Pete Defeated",
+   "atmosphere": "sunset",
+   "zone": "shallows",
+   "enemies": {
+    "brute": {
+     "id": "brute",
+     "name": "Reef Raider",
+     "hpBase": 20,
+     "minDmg": 2,
+     "maxDmg": 5,
+     "shipSpeed": 4,
+     "actionMs": 4500,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.025,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/reefraider.webp"
+    },
+    "sniper": {
+     "id": "sniper",
+     "name": "Crow's Nest Marksman",
+     "hpBase": 25,
+     "minDmg": 2,
+     "maxDmg": 8,
+     "shipSpeed": 3,
+     "actionMs": 5500,
+     "pattern": [
+      "reload",
+      "dodge",
+      "fire",
+      "reload",
+      "reload",
+      "reload",
+      "volley"
+     ],
+     "critChance": 0.1,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/crowsnestmarksman.webp"
+    },
+    "corsair": {
+     "id": "corsair",
+     "name": "Saltwater Corsair",
+     "hpBase": 32,
+     "minDmg": 5,
+     "maxDmg": 8,
+     "shipSpeed": 7,
+     "actionMs": 3500,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "dodge",
+      "reload",
+      "reload",
+      "volley",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.05,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/saltwatercorsair.webp"
+    },
+    "pete": {
+     "id": "pete",
+     "name": "Barnacle Pete",
+     "hpBase": 46,
+     "minDmg": 7,
+     "maxDmg": 12,
+     "shipSpeed": 6,
+     "actionMs": 4500,
+     "pattern": [
+      "reload",
+      "dodge",
+      "reload",
+      "dodge",
+      "reload",
+      "dodge",
+      "volley",
+      "reload",
+      "fire",
+      "reload",
+      "reload",
+      "reload",
+      "volley"
+     ],
+     "critChance": 0.075,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/enemy-arts/barnacle_pete.webp"
+    }
+   },
+   "sequence": [
+    "brute",
+    "brute",
+    "sniper",
+    "corsair"
+   ],
+   "bossId": "pete",
+   "loot": [
+    {
+     "id": "doubloons_300",
+     "label": "+300 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 32
+    },
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 20
+    },
+    {
+     "id": "gems_25",
+     "label": "25 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 15
+    },
+    {
+     "id": "pack",
+     "label": "100 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 5
+    },
+    {
+     "id": "finndicate_hull",
+     "label": "Finndicate Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 3,
+     "shipSkinId": "finndicate_hull"
+    },
+    {
+     "id": "corsair_cannon",
+     "label": "Corsair Cannon",
+     "image": "/corsaircannon-v2.png",
+     "emoji": "💣",
+     "rarity": "epic",
+     "weight": 20
+    },
+    {
+     "id": "corsair_prime_cannon",
+     "label": "Corsair's Prime Cannon",
+     "image": "/corsairsprimecannon.png",
+     "emoji": "💣",
+     "rarity": "legendary",
+     "weight": 5
+    }
+   ],
+   "killRewards": {
+    "brute": {
+     "gold": 20,
+     "xp": 20
+    },
+    "sniper": {
+     "gold": 25,
+     "xp": 30
+    },
+    "corsair": {
+     "gold": 35,
+     "xp": 45
+    },
+    "pete": {
+     "gold": 180,
+     "xp": 180
+    }
+   },
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "A weathered ship slides out of the fog. Barnacle-crusted hull, patched sails, and cannons aimed at your ship already."
+    },
+    {
+     "speaker": "boss",
+     "text": "So another pup thinks they can take old Barnie. Many have tried... none've sailed home."
+    },
+    {
+     "speaker": "boss",
+     "text": "I've been raiding these waters longer than you've been alive. Don't matter. You'll be back where you started before long."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Doby",
+      "portrait": "/card-arts/Doby_Mick_v2.webp"
+     },
+     "text": "Don't let Pete scare you. He's all bark... or whatever sound it is that he makes."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "He's cocky only because he's never had a real challenge before."
+    },
+    {
+     "speaker": "boss",
+     "text": "What're ya waiting for, lil pup? Got cold fins now that you've seen me in the flesh?"
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "You love hearing yourself talk don't ya, Pete. Let's take him down cap'n. Can't stand to hear him talk anymore."
+    },
+    {
+     "speaker": "boss",
+     "text": "Ready your guns. This is where your story ends.",
+     "pause": 600,
+     "fx": "shake"
+    }
+   ]
+  },
+  "captain_krust": {
+   "raidId": "captain_krust",
+   "enemyAccuracy": 9,
+   "raidTitle": "Krust's Consignment",
+   "bossDefeatedText": "Captain Krust Defeated",
+   "atmosphere": "overcast",
+   "zone": "shallows",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "Bilge Runner",
+     "hpBase": 40,
+     "minDmg": 4,
+     "maxDmg": 8,
+     "shipSpeed": 5,
+     "actionMs": 4200,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.03,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/krust_worker.png",
+     "damageReduction": 0.15,
+     "abilityName": "Carapace"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "Brine Deckhand",
+     "hpBase": 52,
+     "minDmg": 5,
+     "maxDmg": 11,
+     "shipSpeed": 5,
+     "actionMs": 4600,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.06,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/krust_soldier.png",
+     "damageReduction": 0.15,
+     "abilityName": "Carapace"
+    },
+    "brute": {
+     "id": "brute",
+     "name": "Hull Breaker",
+     "hpBase": 70,
+     "minDmg": 9,
+     "maxDmg": 14,
+     "shipSpeed": 4,
+     "actionMs": 5200,
+     "pattern": [
+      "reload",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.05,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/krust_brute.png",
+     "damageReduction": 0.15,
+     "abilityName": "Carapace"
+    },
+    "elite": {
+     "id": "elite",
+     "name": "Krust Overseer",
+     "hpBase": 64,
+     "minDmg": 6,
+     "maxDmg": 13,
+     "shipSpeed": 6,
+     "actionMs": 3400,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.1,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/krust_overseer.png",
+     "damageReduction": 0.15,
+     "abilityName": "Carapace"
+    },
+    "krust": {
+     "id": "krust",
+     "name": "Captain Krust",
+     "hpBase": 110,
+     "minDmg": 12,
+     "maxDmg": 22,
+     "shipSpeed": 7,
+     "actionMs": 4200,
+     "pattern": [
+      "reload",
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.09,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/Captainkrust.png",
+     "damageReduction": 0.2,
+     "abilityName": "Carapace"
+    }
+   },
+   "sequence": [
+    "scout",
+    "scout",
+    "reg",
+    "reg",
+    "brute",
+    "elite"
+   ],
+   "bossId": "krust",
+   "loot": [
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 32
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 20
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 15
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 5
+    },
+    {
+     "id": "finndicate_hull",
+     "label": "Finndicate Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 3,
+     "shipSkinId": "finndicate_hull"
+    },
+    {
+     "id": "krusts_carapace",
+     "label": "Krust's Carapace",
+     "image": "/captainshull.png",
+     "emoji": "🛡️",
+     "rarity": "epic",
+     "weight": 20
+    },
+    {
+     "id": "captains_carapace",
+     "label": "Captain's Carapace",
+     "image": "/captainscarapace.png",
+     "emoji": "🛡️",
+     "rarity": "legendary",
+     "weight": 5
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 40,
+     "xp": 40
+    },
+    "reg": {
+     "gold": 55,
+     "xp": 60
+    },
+    "brute": {
+     "gold": 75,
+     "xp": 80
+    },
+    "elite": {
+     "gold": 90,
+     "xp": 100
+    },
+    "krust": {
+     "gold": 350,
+     "xp": 350
+    }
+   },
+   "dialogueAccent": "#7dd3fc",
+   "preFightDialogue": [
+    {
+     "speaker": "boss",
+     "text": "So you're the little hook that's been snagging my freight. Wondered why my couriers've been late."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Doby",
+      "portrait": "/card-arts/Doby_Mick_v2.webp"
+     },
+     "text": "Captain Krusty was it? I see why you got that name."
+    },
+    {
+     "speaker": "boss",
+     "text": "Don't you dare disrespect me. I own these straits. You lot are meddling in business where you don't belong."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mako",
+      "portrait": "/card-arts/Mako_Shark.webp"
+     },
+     "text": "You may run these straits, but I run these streets."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "That didn't come out as hard as you'd think, Mako."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mako",
+      "portrait": "/card-arts/Mako_Shark.webp"
+     },
+     "text": "Regrets."
+    },
+    {
+     "speaker": "narrator",
+     "text": "Krust looks annoyed. But you weren't trying to be friends anyway."
+    },
+    {
+     "speaker": "boss",
+     "text": "You've cost me enough time. It's time to pay up.",
+     "pause": 500
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "Someone above you. There is always someone above. This whole sea is just fish too frightened to look up, captain. Let us give this one a reason to."
+    },
+    {
+     "speaker": "boss",
+     "text": "Strike your colors or strike your guns. Either way this consignment sails on without you."
+    }
+   ]
+  },
+  "cartographer": {
+   "raidId": "cartographer",
+   "enemyAccuracy": 14,
+   "raidTitle": "The Cartographer's Survey",
+   "bossDefeatedText": "The Cartographer Defeated",
+   "atmosphere": "fog",
+   "zone": "open_waters",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "Drift Scout",
+     "hpBase": 48,
+     "minDmg": 5,
+     "maxDmg": 10,
+     "shipSpeed": 7,
+     "actionMs": 4000,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.05,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/driftscout.webp",
+     "aimFogDensity": 0.4,
+     "aimFogName": "Mist Veil"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "Sounding Hand",
+     "hpBase": 66,
+     "minDmg": 7,
+     "maxDmg": 13,
+     "shipSpeed": 5,
+     "actionMs": 4600,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "fire",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.07,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/enemy-arts/soundinghand.webp",
+     "aimFogDensity": 0.45,
+     "aimFogName": "Mist Veil"
+    },
+    "brute": {
+     "id": "brute",
+     "name": "Wakebreaker",
+     "hpBase": 96,
+     "minDmg": 10,
+     "maxDmg": 17,
+     "shipSpeed": 3,
+     "actionMs": 5400,
+     "pattern": [
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.06,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/enemy-arts/wakebreaker.webp",
+     "aimFogDensity": 0.45,
+     "aimFogName": "Mist Veil"
+    },
+    "elite": {
+     "id": "elite",
+     "name": "The Surveyor",
+     "hpBase": 84,
+     "minDmg": 8,
+     "maxDmg": 16,
+     "shipSpeed": 8,
+     "actionMs": 3400,
+     "pattern": [
+      "reload",
+      "reload",
+      "fire",
+      "fire",
+      "reload",
+      "reload",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.11,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/enemy-arts/thesurveyor.webp",
+     "aimFogDensity": 0.55,
+     "aimFogName": "Mist Veil"
+    },
+    "cartographer": {
+     "id": "cartographer",
+     "name": "The Cartographer",
+     "hpBase": 150,
+     "minDmg": 14,
+     "maxDmg": 26,
+     "shipSpeed": 6,
+     "actionMs": 4400,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "fire",
+      "fire",
+      "reload",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.1,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/enemy-arts/thecartographer.webp",
+     "aimFogDensity": 0.7,
+     "aimFogName": "Mist Veil",
+     "parryChance": 0.3,
+     "parryDamagePct": 0.25,
+     "parryName": "Riposte"
+    }
+   },
+   "sequence": [
+    "scout",
+    "reg",
+    "scout",
+    "brute",
+    "elite",
+    "reg",
+    "brute",
+    "elite"
+   ],
+   "bossId": "cartographer",
+   "tides": {
+    "slots": [
+     3,
+     6
+    ],
+    "maxTier": 1
+   },
+   "loot": [
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 30
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 20
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 15
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 5
+    },
+    {
+     "id": "chartmaker_hull",
+     "label": "Chartmaker Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 5,
+     "shipSkinId": "chartmaker_hull"
+    },
+    {
+     "id": "cartographers_astrolabe",
+     "label": "Cartographer's Astrolabe",
+     "image": "/cartographersastrolabe.png",
+     "emoji": "🧭",
+     "rarity": "epic",
+     "weight": 20
+    },
+    {
+     "id": "captains_astrolabe",
+     "label": "Mastercraft Astrolabe",
+     "image": "/mastercraftastrolabe.png",
+     "emoji": "🧭",
+     "rarity": "legendary",
+     "weight": 5
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 50,
+     "xp": 50
+    },
+    "reg": {
+     "gold": 70,
+     "xp": 75
+    },
+    "brute": {
+     "gold": 95,
+     "xp": 105
+    },
+    "elite": {
+     "gold": 120,
+     "xp": 130
+    },
+    "cartographer": {
+     "gold": 450,
+     "xp": 450
+    }
+   },
+   "dialogueAccent": "#9aaecc",
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "The fog thickens until sea and sky blur into dull gray. Out of it, a slow-built ship glides up. Decks stacked with rolled charts and brass-bound sextants."
+    },
+    {
+     "speaker": "boss",
+     "text": "I heard a young captain was reading my routes."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Dole",
+      "portrait": "/card-arts/Dole.webp"
+     },
+     "text": "It's him. The Finndicate's chartmaker."
+    },
+    {
+     "speaker": "boss",
+     "text": "I prefer to be called The Cartographer. Has a nicer ring to it. You cut off my supply line from Krust. It's unfortunate, he was easy to work with. If a bit naive."
+    },
+    {
+     "speaker": "boss",
+     "text": "No matter. The charts are nearly complete. I won't have time to entertain you any longer."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Doby",
+      "portrait": "/card-arts/Doby_Mick_v2.webp"
+     },
+     "text": "Entertain us? We were just about to show YOU a good time."
+    },
+    {
+     "speaker": "boss",
+     "text": "Me? You won't even be able to reach me. That's us chartmakers... always playing the background."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Dole",
+      "portrait": "/card-arts/Dole.webp"
+     },
+     "text": "Why are you working for the Finndicate at all?"
+    },
+    {
+     "speaker": "boss",
+     "text": "Mm... we've got bigger goals than the tiny brains of yours can even comprehend. Now if you'll excuse me.",
+     "pause": 500
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "We're not letting him get away. Let's show him that pen and paper can't do what a cannon can."
+    }
+   ]
+  },
+  "tollmasters_cut": {
+   "raidId": "tollmasters_cut",
+   "enemyAccuracy": 19,
+   "raidTitle": "The Tollmaster's Cut",
+   "bossDefeatedText": "Tollmaster Spet Defeated",
+   "atmosphere": "overcast",
+   "zone": "open_waters",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "Silverdart",
+     "hpBase": 60,
+     "minDmg": 6,
+     "maxDmg": 12,
+     "shipSpeed": 8,
+     "actionMs": 3600,
+     "pattern": [
+      "fire",
+      "reload",
+      "reload",
+      "fire",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.06,
+     "startCharges": 1,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/raid4_silverdart.png"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "Snapjaw",
+     "hpBase": 84,
+     "minDmg": 8,
+     "maxDmg": 15,
+     "shipSpeed": 6,
+     "actionMs": 4400,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "volley",
+      "fire",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.08,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/raid4_snapjaw.png"
+    },
+    "brute": {
+     "id": "brute",
+     "name": "Gulletmaw",
+     "hpBase": 122,
+     "minDmg": 11,
+     "maxDmg": 19,
+     "shipSpeed": 3,
+     "actionMs": 5400,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "reload",
+      "volley"
+     ],
+     "critChance": 0.06,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid4_gulletmaw.png"
+    },
+    "elite": {
+     "id": "elite",
+     "name": "The Exactor",
+     "hpBase": 106,
+     "minDmg": 10,
+     "maxDmg": 18,
+     "shipSpeed": 9,
+     "actionMs": 3200,
+     "pattern": [
+      "fire",
+      "reload",
+      "reload",
+      "fire",
+      "fire",
+      "reload",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.12,
+     "startCharges": 1,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid4_theexactor.png"
+    },
+    "spet": {
+     "id": "spet",
+     "name": "Tollmaster Spet",
+     "hpBase": 215,
+     "minDmg": 18,
+     "maxDmg": 32,
+     "shipSpeed": 7,
+     "actionMs": 4200,
+     "pattern": [
+      "fire",
+      "fire",
+      "reload",
+      "reload",
+      "reload",
+      "volley",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.11,
+     "startCharges": 2,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid4_tollmasterspet.png"
+    }
+   },
+   "sequence": [
+    "scout",
+    "reg",
+    "scout",
+    "brute",
+    "elite",
+    "reg",
+    "brute",
+    "elite"
+   ],
+   "bossId": "spet",
+   "tides": {
+    "slots": [
+     3,
+     6
+    ],
+    "maxTier": 1
+   },
+   "loot": [
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 30
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 20
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 15
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 5
+    },
+    {
+     "id": "chartmaker_hull",
+     "label": "Chartmaker Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 9,
+     "shipSkinId": "chartmaker_hull"
+    },
+    {
+     "id": "spets_primer",
+     "label": "Spet's Primer",
+     "image": "/spetsprimer.png",
+     "emoji": "🧨",
+     "rarity": "epic",
+     "weight": 20
+    },
+    {
+     "id": "tollmasters_primer",
+     "label": "Tollmaster's Primer",
+     "image": "/tollmastersprimer.png",
+     "emoji": "🧨",
+     "rarity": "legendary",
+     "weight": 5
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 60,
+     "xp": 60
+    },
+    "reg": {
+     "gold": 85,
+     "xp": 90
+    },
+    "brute": {
+     "gold": 115,
+     "xp": 125
+    },
+    "elite": {
+     "gold": 140,
+     "xp": 150
+    },
+    "spet": {
+     "gold": 520,
+     "xp": 520
+    }
+   },
+   "dialogueAccent": "#8fa76b",
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "You sailed into the Gullet and brought down ranks of low barracuda hulls to arrive at the Tollmaster himself."
+    },
+    {
+     "speaker": "boss",
+     "text": "You've come a long way down my channel, captain. I see that you've become a bit too familiar with the finances of the Finndicate. That's my sea to sail. Not yours."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Doby",
+      "portrait": "/card-arts/Doby_Mick_v2.webp"
+     },
+     "text": "Tollmaster Spet... I presume. Why do all the operations go through you? What's the purpose of the Gullet?"
+    },
+    {
+     "speaker": "boss",
+     "text": "I handle the Finndicate's accounting. Sounds boring, but it gives me a ton of power. And control. You've messed with our bottom line by sinking some of our best. And that's not something that we just write off."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "The Finndicate doesn't just do normal business anymore, it seems. What are you guys really up to?"
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mako",
+      "portrait": "/card-arts/Mako_Shark.webp"
+     },
+     "text": "You've got captains feeding you stolen resources. A cartographer supplying you charts to... who knows where. None of this makes sense... at least in any good way."
+    },
+    {
+     "speaker": "boss",
+     "text": "Who determines what's good? I just make sure everything balances out."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Dole",
+      "portrait": "/card-arts/Dole.webp"
+     },
+     "text": "Then surely you know that there's some illegal activity going on within the Finndicate!"
+    },
+    {
+     "speaker": "boss",
+     "text": "No one audits me. I say what's illegal or not. And the only thing I know that is illegal is your trespassing into my territory.",
+     "pause": 500
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mako",
+      "portrait": "/card-arts/Mako_Shark.webp"
+     },
+     "text": "I've never met an accountant that could fight."
+    },
+    {
+     "speaker": "boss",
+     "text": "You're a fool then. Our battles are done with numbers.",
+     "pause": 600
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "Let's show Spet who's putting up the real numbers."
+    }
+   ]
+  },
+  "coffers_fleet": {
+   "raidId": "coffers_fleet",
+   "enemyAccuracy": 24,
+   "raidTitle": "The Harbor Fleet",
+   "bossDefeatedText": "Admiral Ruse Defeated",
+   "atmosphere": "harbor",
+   "zone": "deep",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "Plume",
+     "hpBase": 110,
+     "minDmg": 8,
+     "maxDmg": 15,
+     "shipSpeed": 8,
+     "actionMs": 3500,
+     "pattern": [
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "fire",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.07,
+     "decoyCount": 1,
+     "decoyName": "False Colors",
+     "zoneSpeedMult": 1.6,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/raid5_feint.png"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "Fantail",
+     "hpBase": 145,
+     "minDmg": 10,
+     "maxDmg": 18,
+     "shipSpeed": 6,
+     "actionMs": 4400,
+     "pattern": [
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "fire",
+      "reload",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.08,
+     "decoyCount": 1,
+     "decoyName": "False Colors",
+     "zoneSpeedMult": 1.9,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid5_sham.png"
+    },
+    "brute": {
+     "id": "brute",
+     "name": "Bristle",
+     "hpBase": 212,
+     "minDmg": 14,
+     "maxDmg": 24,
+     "shipSpeed": 3,
+     "actionMs": 5400,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "reload",
+      "dodge",
+      "volley",
+      "fire"
+     ],
+     "critChance": 0.06,
+     "decoyCount": 2,
+     "decoyName": "False Colors",
+     "zoneSpeedMult": 2.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid5_bulwark.png"
+    },
+    "elite": {
+     "id": "elite",
+     "name": "Barb",
+     "hpBase": 185,
+     "minDmg": 13,
+     "maxDmg": 22,
+     "shipSpeed": 9,
+     "actionMs": 3300,
+     "pattern": [
+      "fire",
+      "dodge",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "fire",
+      "reload",
+      "dodge",
+      "fire"
+     ],
+     "critChance": 0.13,
+     "decoyCount": 2,
+     "decoyName": "False Colors",
+     "zoneSpeedMult": 1.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid5_mirage.png"
+    },
+    "admiral": {
+     "id": "admiral",
+     "name": "Admiral Ruse",
+     "hpBase": 670,
+     "minDmg": 20,
+     "maxDmg": 36,
+     "shipSpeed": 7,
+     "actionMs": 4200,
+     "pattern": [
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "fire",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.12,
+     "decoyCount": 3,
+     "decoyName": "False Colors",
+     "phase2": {
+      "revivePct": 0.5,
+      "damageMult": 1.2,
+      "pattern": [
+       "fire",
+       "reload",
+       "volley",
+       "dodge",
+       "fire",
+       "reload",
+       "fire",
+       "dodge",
+       "fire"
+      ],
+      "dialogueLine": "Enough games. Run out the real guns."
+     },
+     "zoneSpeedMult": 1.9,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid5_admiralruse.png"
+    }
+   },
+   "sequence": [
+    "scout",
+    "reg",
+    "scout",
+    "brute",
+    "elite",
+    "reg",
+    "brute",
+    "elite"
+   ],
+   "bossId": "admiral",
+   "tides": {
+    "slots": [
+     3,
+     6
+    ],
+    "maxTier": 2
+   },
+   "loot": [
+    {
+     "id": "coffers_hull",
+     "label": "Coffers Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 5,
+     "shipSkinId": "coffers_hull"
+    },
+    {
+     "id": "tell_tale_glass",
+     "label": "Tell-Tale Glass",
+     "image": "/telltaleglass.png",
+     "emoji": "🔭",
+     "rarity": "epic",
+     "weight": 20
+    },
+    {
+     "id": "admirals_eye",
+     "label": "Admiral's Eye",
+     "image": "/admiralseye.png",
+     "emoji": "👁️",
+     "rarity": "legendary",
+     "weight": 5
+    },
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 28
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 18
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 16
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 8
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 75,
+     "xp": 75
+    },
+    "reg": {
+     "gold": 100,
+     "xp": 110
+    },
+    "brute": {
+     "gold": 135,
+     "xp": 150
+    },
+    "elite": {
+     "gold": 165,
+     "xp": 180
+    },
+    "admiral": {
+     "gold": 600,
+     "xp": 600
+    }
+   },
+   "dialogueAccent": "#dca494",
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "Past the harbor wall the Coffers open up: a drowned market ringed by guns, and a line of Galleons already coming about to meet you."
+    },
+    {
+     "speaker": "boss",
+     "text": "Far enough, captain. Nobody sails into the Coffers uninvited and lives to count the take."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "You're a long way from the docks for a harbormaster."
+    },
+    {
+     "speaker": "boss",
+     "text": "Admiral, to you. I keep this wall, and my gunners fly whatever colors the market needs. You'll never know which gun is the live one until it's already in you."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Dole",
+      "portrait": "/card-arts/Dole.webp"
+     },
+     "text": "A fleet that lies about which gun is loaded. How quaint. I have already told the captain which of yours are bluffing, admiral. Do keep pretending."
+    },
+    {
+     "speaker": "boss",
+     "text": "Run out your guns. *Mine are already lying to you.*",
+     "pause": 700
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Laz",
+      "portrait": "/card-arts/Coelacanth.webp"
+     },
+     "text": "Everything in this drowned market lies. I came back from its floor to say so, admiral. Your painted colors do not frighten a dead man."
+    }
+   ]
+  },
+  "the_quartermaster": {
+   "raidId": "the_quartermaster",
+   "enemyAccuracy": 28,
+   "raidTitle": "The Quartermaster",
+   "bossDefeatedText": "The Quartermaster Defeated",
+   "atmosphere": "vault",
+   "zone": "deep",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "The Leech",
+     "hpBase": 180,
+     "minDmg": 12,
+     "maxDmg": 22,
+     "shipSpeed": 10,
+     "actionMs": 3000,
+     "pattern": [
+      "fire",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "dodge",
+      "fire",
+      "reload"
+     ],
+     "critChance": 0.2,
+     "affix": "vampiric",
+     "zoneSpeedMult": 2.7,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/raid6_theleech.png"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "The Breaker",
+     "hpBase": 400,
+     "minDmg": 18,
+     "maxDmg": 32,
+     "shipSpeed": 2,
+     "actionMs": 5200,
+     "pattern": [
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.06,
+     "affix": "ironclad",
+     "zoneSpeedMult": 3,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid6_thebreaker.png"
+    },
+    "quartermaster": {
+     "id": "quartermaster",
+     "name": "The Quartermaster",
+     "hpBase": 570,
+     "minDmg": 22,
+     "maxDmg": 38,
+     "shipSpeed": 7,
+     "actionMs": 4200,
+     "pattern": [
+      "reload",
+      "reload",
+      "fire",
+      "volley",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge",
+      "fire",
+      "reload"
+     ],
+     "critChance": 0.12,
+     "repossess": true,
+     "repossessName": "Repossession",
+     "phases": [
+      {
+       "revivePct": 0.85,
+       "damageMult": 1.15,
+       "badge": "Called In",
+       "pattern": [
+        "reload",
+        "fire",
+        "volley",
+        "dodge",
+        "reload",
+        "fire",
+        "dodge",
+        "fire",
+        "reload"
+       ],
+       "dialogueLine": "You cracked the ledger. You have not cleared the debt.",
+       "check": {
+        "id": "big_gun",
+        "name": "The Big Gun",
+        "chargeTurns": 2,
+        "telegraph": "The Quartermaster hauls the reserve cannon onto the rail and swings the muzzle toward you.",
+        "hint": "A shot this heavy has to be met with a crew ability. A defensive one that gets something between you and the muzzle before it fires. Your own brace/dodge won’t turn it aside.",
+        "responses": [
+         "brace",
+         "shield"
+        ],
+        "counteredLine": "The big shot slams into your cover and glances wide.",
+        "failLine": "The reserve cannon speaks, and nothing turned it aside.",
+        "consequence": {
+         "kind": "damagePctMaxHp",
+         "value": 0.75
+        }
+       }
+      },
+      {
+       "revivePct": 0.72,
+       "damageMult": 1.3,
+       "badge": "Reserve Deck",
+       "pattern": [
+        "reload",
+        "reload",
+        "volley",
+        "dodge",
+        "fire",
+        "volley",
+        "dodge",
+        "fire",
+        "reload"
+       ],
+       "dialogueLine": "You think the shelves are bare? I keep a reserve deck for captains like you.",
+       "check": {
+        "id": "cooking_books",
+        "name": "Cooking the Books",
+        "chargeTurns": 2,
+        "telegraph": "The Quartermaster ducks low behind the counter and starts working the ledger, fast.",
+        "hint": "Don't let him finish the tally. Fire a crew ability to break it. Something disrupting to foul his concentration, or a heavy-hitting one to overpower him before the count closes, or he balances the ledger in his favor.",
+        "responses": [
+         "snare",
+         "burst"
+        ],
+        "counteredLine": "You break his tally before it can close.",
+        "failLine": "The ledger balances in his favor.",
+        "consequence": {
+         "kind": "enemyHealPctMaxHp",
+         "value": 0.3
+        }
+       }
+      },
+      {
+       "revivePct": 0.6,
+       "damageMult": 1.5,
+       "badge": "Empty Shelves",
+       "pattern": [
+        "fire",
+        "volley",
+        "dodge",
+        "reload",
+        "fire",
+        "fire",
+        "volley",
+        "fire"
+       ],
+       "dialogueLine": "Nothing left to sell. Then I sink you and take the lot back myself.",
+       "check": {
+        "id": "fire_sale",
+        "name": "Fire Sale",
+        "chargeTurns": 2,
+        "telegraph": "The Quartermaster touches a torch to the stock and the whole Cache goes up in flame.",
+        "hint": "The whole stock goes up at once and sets your hull ablaze. Fire a crew ability before it catches, a recovery one or a defensive one, and if it does catch, only a crew heal puts the fire out.",
+        "responses": [
+         "heal",
+         "shield"
+        ],
+        "counteredLine": "You smother the blaze before it can spread.",
+        "failLine": "The fire sale catches, and your hull goes up in flame.",
+        "consequence": {
+         "kind": "burnDot",
+         "pctPerTurn": 0.18,
+         "turns": 3
+        }
+       }
+      }
+     ],
+     "zoneSpeedMult": 2,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid6_thequartermaster.png"
+    }
+   },
+   "sequence": [
+    "scout",
+    "reg"
+   ],
+   "bossId": "quartermaster",
+   "loot": [
+    {
+     "id": "coffers_hull",
+     "label": "Coffers Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 8,
+     "shipSkinId": "coffers_hull"
+    },
+    {
+     "id": "war_drum",
+     "label": "War Drum",
+     "image": "/wardrum.png",
+     "emoji": "🥁",
+     "rarity": "epic",
+     "weight": 20
+    },
+    {
+     "id": "thunder_drum",
+     "label": "Thunder Drum",
+     "image": "/thunderdrum.png",
+     "emoji": "🥁",
+     "rarity": "legendary",
+     "weight": 5
+    },
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 33
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 28
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 16
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 3
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 130,
+     "xp": 140
+    },
+    "reg": {
+     "gold": 180,
+     "xp": 200
+    },
+    "quartermaster": {
+     "gold": 1400,
+     "xp": 1600
+    }
+   },
+   "dialogueAccent": "#dc2626",
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "The Cache's shutters roll up into a gun-deck, and the keeper stands behind a counter of run-out cannon, smiling like he's already counted your coin."
+    },
+    {
+     "speaker": "boss",
+     "text": "Every captain who ever beat me bought the means to do it off my own shelf. *You included.*",
+     "pause": 600
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mako",
+      "portrait": "/card-arts/Mako_Shark.webp"
+     },
+     "text": "Then I will beat you with the one thing I never bought off your shelf, keeper. My teeth."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Laz",
+      "portrait": "/card-arts/Coelacanth.webp"
+     },
+     "text": "Then we'll sink you with your own goods. Hold still."
+    },
+    {
+     "speaker": "boss",
+     "text": "Your goods? Everything you carry was a loan, captain. *And I am calling one back.*",
+     "pause": 500,
+     "fx": "shake"
+    },
+    {
+     "speaker": "boss",
+     "text": "Let's see how bold you sail once I reach across the counter and take back the piece you leaned on most.",
+     "pause": 400
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "Take your trinkets back, keeper. The one thing you never sold this captain is the crew standing on her deck. Good luck reaching across the counter for us."
+    }
+   ]
+  },
+  "the_quartermasters_ghost": {
+   "raidId": "the_quartermasters_ghost",
+   "uniqueShare": 0.5,
+   "enemyAccuracy": 30,
+   "raidTitle": "The Quartermaster's Ghost",
+   "bossDefeatedText": "The Ghost Dispersed",
+   "atmosphere": "vault",
+   "zone": "abyss",
+   "enemies": {
+    "ghost": {
+     "id": "ghost",
+     "name": "The Quartermaster's Ghost",
+     "hpBase": 1250,
+     "minDmg": 26,
+     "maxDmg": 44,
+     "shipSpeed": 9,
+     "actionMs": 3600,
+     "pattern": [
+      "reload",
+      "fire",
+      "volley",
+      "dodge",
+      "reload",
+      "fire",
+      "fire",
+      "dodge",
+      "reload",
+      "volley"
+     ],
+     "critChance": 0.16,
+     "affix": "ledger",
+     "repossess": false,
+     "phases": [
+      {
+       "revivePct": 0.6,
+       "damageMult": 1,
+       "badge": "The Plating",
+       "pattern": [
+        "reload",
+        "fire",
+        "dodge",
+        "volley",
+        "reload",
+        "fire",
+        "dodge",
+        "fire"
+       ],
+       "dialogueLine": "Sink me? Lad, I have been at the bottom for years. Try taking something off me instead.",
+       "check": {
+        "id": "the_salvage",
+        "name": "The Salvage",
+        "telegraph": "He swings a crane over the rail and hauls up the reinforced plating you never came back for. He means to wear it.",
+        "hint": "Disrupt him. He cannot bolt it on if he cannot work.",
+        "chargeTurns": 2,
+        "responses": [
+         "snare",
+         "burst"
+        ],
+        "counteredLine": "The crane fouls and the plating goes back over the side. He does not take that well.",
+        "failLine": "He bolts your plating over his own ribs and the holes close up.",
+        "consequence": {
+         "kind": "enemyHealPctMaxHp",
+         "value": 0.3
+        }
+       }
+      },
+      {
+       "revivePct": 0.48,
+       "damageMult": 1.12,
+       "badge": "The Powder",
+       "pattern": [
+        "fire",
+        "reload",
+        "volley",
+        "fire",
+        "dodge",
+        "reload",
+        "fire",
+        "volley"
+       ],
+       "dialogueLine": "You left the fire-shot on my counter. I have had a long time to think about where to put it.",
+       "check": {
+        "id": "the_long_burn",
+        "name": "The Long Burn",
+        "telegraph": "He packs the incendiary you passed over and stands there holding a lit match, in no hurry at all.",
+        "hint": "Survive it. Get a barrier up, or be ready to put the fire out.",
+        "chargeTurns": 2,
+        "responses": [
+         "shield",
+         "heal"
+        ],
+        "counteredLine": "The shot bursts against the barrier and burns itself out on open water.",
+        "failLine": "Your own fire-shot goes through the deck and the ship starts to cook.",
+        "consequence": {
+         "kind": "burnDot",
+         "pctPerTurn": 0.08,
+         "turns": 4
+        }
+       }
+      },
+      {
+       "revivePct": 0.8,
+       "damageMult": 1.2,
+       "badge": "The Glass",
+       "pattern": [
+        "reload",
+        "reload",
+        "fire",
+        "volley",
+        "fire",
+        "dodge",
+        "reload",
+        "volley"
+       ],
+       "dialogueLine": "Every captain I ever armed, I watched sink. I always did keep the good glass back.",
+       "check": {
+        "id": "the_called_shot",
+        "name": "The Called Shot",
+        "telegraph": "He raises your Gunner's Sight to a dead eye, takes the bearing off your own compass, and holds it. He does not need to hurry.",
+        "hint": "Defend. Put something between you and a shot that is already aimed.",
+        "chargeTurns": 2,
+        "responses": [
+         "brace",
+         "shield"
+        ],
+        "counteredLine": "The shot lands where your hull was and finds a braced wall instead. He mutters something about waste.",
+        "failLine": "He fires down your own sights. The shot goes exactly where he meant it to.",
+        "consequence": {
+         "kind": "damagePctMaxHp",
+         "value": 0.45
+        }
+       }
+      }
+     ],
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/quartermasterghost.png"
+    }
+   },
+   "sequence": [],
+   "bossId": "ghost",
+   "loot": [
+    {
+     "id": "quartermasters_anchor",
+     "label": "Quartermaster's Anchor",
+     "image": "/quartermastersanchor.png",
+     "emoji": "⚓",
+     "rarity": "epic",
+     "weight": 10
+    },
+    {
+     "id": "navigators_compass",
+     "label": "Navigator's Compass",
+     "image": "/navigatorscompass.png",
+     "emoji": "🧭",
+     "rarity": "epic",
+     "weight": 10
+    },
+    {
+     "id": "gunners_sight",
+     "label": "Gunner's Sight",
+     "image": "/gunnerssight.png",
+     "emoji": "🎯",
+     "rarity": "epic",
+     "weight": 10
+    },
+    {
+     "id": "reinforced_hull",
+     "label": "Reinforced Hull",
+     "image": "/reinforcedhull.png",
+     "emoji": "🛠️",
+     "rarity": "epic",
+     "weight": 10
+    },
+    {
+     "id": "incendiary_cannonball",
+     "label": "Incendiary Cannonball",
+     "image": "/incendiarycannonball.png",
+     "emoji": "🔥",
+     "rarity": "epic",
+     "weight": 10
+    },
+    {
+     "id": "frozen_cannonball",
+     "label": "Frozen Cannonball",
+     "image": "/frozencannonball.png",
+     "emoji": "❄️",
+     "rarity": "epic",
+     "weight": 10
+    },
+    {
+     "id": "crows_nest_rigging",
+     "label": "Crow's-Nest Rigging",
+     "image": "/crowsnestrigging.png",
+     "emoji": "🗼",
+     "rarity": "epic",
+     "weight": 10
+    },
+    {
+     "id": "trade_wind_sails",
+     "label": "Trade-Wind Sails",
+     "image": "/tradewindsails.png",
+     "emoji": "⛵",
+     "rarity": "epic",
+     "weight": 10
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 48
+    },
+    {
+     "id": "gems_25",
+     "label": "25 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 12
+    }
+   ],
+   "killRewards": {
+    "ghost": {
+     "gold": 900,
+     "xp": 1000
+    }
+   },
+   "dialogueAccent": "#c9a7ff",
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "The gun-deck is exactly as you left it, down to the lantern oil. The counter is still stocked. The keeper is still behind it, and you can see the shutters through him.",
+     "pause": 700
+    },
+    {
+     "speaker": "boss",
+     "text": "Dead men keep better books than living ones. Everything you left on my counter, everything you melted down since. I have it all, and I have *all the time there is*.",
+     "pause": 600
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mako",
+      "portrait": "/card-arts/Mako_Shark.webp"
+     },
+     "text": "Then you'll not mind us taking it back off you. Twice, if it comes to that."
+    },
+    {
+     "speaker": "boss",
+     "text": "*They always come back.* That is the one thing I could ever count on.",
+     "pause": 800
+    }
+   ]
+  },
+  "the_blockade": {
+   "raidId": "the_blockade",
+   "enemyAccuracy": 34,
+   "raidTitle": "The Blockade",
+   "bossDefeatedText": "Sal Brackwater Defeated",
+   "atmosphere": "brackwater",
+   "zone": "abyss",
+   "enemies": {
+    "picket": {
+     "id": "picket",
+     "name": "The Scute",
+     "hpBase": 275,
+     "minDmg": 20,
+     "maxDmg": 34,
+     "shipSpeed": 9,
+     "actionMs": 3400,
+     "magazineSize": 4,
+     "shieldPct": 0.1,
+     "critDrift": 0.24,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "fire",
+      "reload",
+      "dodge",
+      "fire",
+      "reload",
+      "fire",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.2,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid7_thescute.png"
+    },
+    "bosun": {
+     "id": "bosun",
+     "name": "The Bank",
+     "hpBase": 305,
+     "minDmg": 21,
+     "maxDmg": 35,
+     "shipSpeed": 6,
+     "actionMs": 3600,
+     "magazineSize": 4,
+     "shieldPct": 0.11,
+     "critDrift": 0.32,
+     "critDriftName": "Rolling Plate",
+     "special": {
+      "name": "Dig In",
+      "status": "fortify",
+      "magnitude": 0.25,
+      "turns": 2,
+      "target": "self",
+      "line": "The Bank drops his weight into the silt and settles, and the shot just thumps into mud."
+     },
+     "pattern": [
+      "reload",
+      "fire",
+      "special",
+      "reload",
+      "volley",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.11,
+     "zoneSpeedMult": 2.3,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid7_thebank.png"
+    },
+    "netter": {
+     "id": "netter",
+     "name": "The Mangrove",
+     "hpBase": 330,
+     "minDmg": 22,
+     "maxDmg": 36,
+     "shipSpeed": 6,
+     "actionMs": 3800,
+     "magazineSize": 4,
+     "shieldPct": 0.13,
+     "special": {
+      "name": "Deadwood",
+      "status": "slowed",
+      "magnitude": 3,
+      "turns": 2,
+      "target": "player",
+      "line": "Root and deadwood come up under the hull and wrap the rudder, and the wheel goes dead in your hands."
+     },
+     "critDrift": 0.38,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.1,
+     "zoneSpeedMult": 2.4,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid7_themangrove.png"
+    },
+    "chainman": {
+     "id": "chainman",
+     "name": "The Rasp",
+     "hpBase": 350,
+     "minDmg": 24,
+     "maxDmg": 38,
+     "shipSpeed": 7,
+     "actionMs": 3600,
+     "magazineSize": 4,
+     "shieldPct": 0.15,
+     "special": {
+      "name": "Chain-Shot",
+      "status": "weaken",
+      "magnitude": 0.2,
+      "turns": 2,
+      "target": "player",
+      "line": "Chain-shot screams through your powder line and your guns cough where they roared."
+     },
+     "critDrift": 0.5,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "fire",
+      "special",
+      "reload",
+      "fire",
+      "volley",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.5,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid7_therasp.png"
+    },
+    "cracksman": {
+     "id": "cracksman",
+     "name": "The Wedge",
+     "hpBase": 370,
+     "minDmg": 24,
+     "maxDmg": 40,
+     "shipSpeed": 5,
+     "actionMs": 4200,
+     "magazineSize": 4,
+     "shieldPct": 0.15,
+     "special": {
+      "name": "Hull-Cracker",
+      "status": "feeble",
+      "magnitude": 0.22,
+      "turns": 2,
+      "target": "player",
+      "line": "A cracker round splits your seams wide open, and every blow after it will find the gap."
+     },
+     "critDrift": 0.5,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "reload",
+      "special",
+      "volley",
+      "reload",
+      "fire",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.1,
+     "zoneSpeedMult": 2.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid7_thewedge.png"
+    },
+    "purser": {
+     "id": "purser",
+     "name": "Old Scar",
+     "hpBase": 380,
+     "minDmg": 25,
+     "maxDmg": 39,
+     "shipSpeed": 7,
+     "actionMs": 3800,
+     "magazineSize": 4,
+     "shieldPct": 0.17,
+     "critDrift": 0.62,
+     "critDriftName": "Rolling Plate",
+     "special": {
+      "name": "Old Wounds",
+      "status": "regen",
+      "magnitude": 16,
+      "turns": 3,
+      "target": "self",
+      "line": "Old Scar takes the hit the way he has taken every other one, and the hole closes while you watch."
+     },
+     "pattern": [
+      "special",
+      "reload",
+      "fire",
+      "reload",
+      "fire",
+      "volley",
+      "reload",
+      "dodge"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid7_oldscar.png"
+    },
+    "muzzle": {
+     "id": "muzzle",
+     "name": "The Muzzle",
+     "hpBase": 385,
+     "minDmg": 26,
+     "maxDmg": 40,
+     "shipSpeed": 8,
+     "actionMs": 3600,
+     "magazineSize": 4,
+     "shieldPct": 0.17,
+     "special": {
+      "name": "Gag Order",
+      "status": "silence",
+      "magnitude": 1,
+      "turns": 2,
+      "target": "player",
+      "line": "The gag order comes down, and your crew go quiet mid-shout."
+     },
+     "critDrift": 0.7,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "fire",
+      "volley",
+      "reload",
+      "dodge"
+     ],
+     "critChance": 0.14,
+     "zoneSpeedMult": 2.7,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid7_themuzzle.png"
+    },
+    "saltie": {
+     "id": "saltie",
+     "name": "Sal Brackwater",
+     "hpBase": 645,
+     "minDmg": 28,
+     "maxDmg": 46,
+     "shipSpeed": 8,
+     "actionMs": 4000,
+     "magazineSize": 4,
+     "shieldPct": 0.2,
+     "special": {
+      "name": "Still Water",
+      "status": "enrage",
+      "magnitude": 0.25,
+      "turns": 2,
+      "target": "self",
+      "line": "Sal stops moving. The chop goes flat around him, and every gun on the line goes quiet."
+     },
+     "critDrift": 0.88,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "volley",
+      "dodge",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.14,
+     "phases": [
+      {
+       "revivePct": 0.8,
+       "damageMult": 1.35,
+       "badge": "The Death Roll",
+       "pattern": [
+        "special",
+        "fire",
+        "reload",
+        "volley",
+        "fire",
+        "dodge",
+        "reload",
+        "volley"
+       ],
+       "dialogueLine": "The don said bring him your colors. He never said in one piece.",
+       "check": {
+        "id": "death_roll",
+        "name": "The Death Roll",
+        "chargeTurns": 2,
+        "telegraph": "Sal takes your hull in his teeth, sets his feet against the swell, and starts to turn.",
+        "hint": "He is going to roll, and he will not let go. Only a crew ability gets something between your hull and that grip. Your own brace or dodge does nothing here.",
+        "responses": [
+         "brace",
+         "shield"
+        ],
+        "counteredLine": "He rolls against braced timber, tears off a mouthful of nothing, and lets go spitting splinters.",
+        "failLine": "He rolls, and he keeps rolling, and your hull comes apart along the grain.",
+        "consequence": {
+         "kind": "damagePctMaxHp",
+         "value": 0.7
+        }
+       }
+      },
+      {
+       "revivePct": 0.45,
+       "damageMult": 1.5,
+       "badge": "The Last Wall",
+       "pattern": [
+        "reload",
+        "fire",
+        "special",
+        "reload",
+        "volley",
+        "fire",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "You want the don? Then come through my back. Nothing you carry goes through my back. Not one shot of it.",
+       "aegis": {
+        "name": "The Last Wall",
+        "hitsToBreak": 6
+       }
+      }
+     ],
+     "zoneSpeedMult": 2.1,
+     "image": "/enemychapter4man-o-war.png",
+     "portrait": "/raid7_salbrackwater.png"
+    }
+   },
+   "sequence": [
+    "picket",
+    "bosun",
+    "netter",
+    "chainman",
+    "cracksman",
+    "purser",
+    "muzzle"
+   ],
+   "bossId": "saltie",
+   "tides": {
+    "slots": [
+     3,
+     6
+    ],
+    "maxTier": 2
+   },
+   "loot": [
+    {
+     "id": "last_fathom_hull",
+     "label": "Last Fathom Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 8,
+     "shipSkinId": "last_fathom_hull"
+    },
+    {
+     "id": "chain_shot",
+     "label": "Chain-Shot Rack",
+     "image": null,
+     "emoji": "⛓️",
+     "rarity": "epic",
+     "weight": 16
+    },
+    {
+     "id": "brackwater_rack",
+     "label": "Brackwater Rack",
+     "image": null,
+     "emoji": "⛓️",
+     "rarity": "legendary",
+     "weight": 5
+    },
+    {
+     "id": "doubloons_800",
+     "label": "+800 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 30
+    },
+    {
+     "id": "doubloons_1500",
+     "label": "+1,500 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 22
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 20
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 12
+    }
+   ],
+   "killRewards": {
+    "picket": {
+     "gold": 170,
+     "xp": 190
+    },
+    "bosun": {
+     "gold": 180,
+     "xp": 200
+    },
+    "netter": {
+     "gold": 190,
+     "xp": 210
+    },
+    "chainman": {
+     "gold": 210,
+     "xp": 230
+    },
+    "cracksman": {
+     "gold": 230,
+     "xp": 250
+    },
+    "purser": {
+     "gold": 245,
+     "xp": 265
+    },
+    "muzzle": {
+     "gold": 260,
+     "xp": 280
+    },
+    "saltie": {
+     "gold": 1700,
+     "xp": 2000
+    }
+   },
+   "dialogueAccent": "#a3833f",
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "The blockade line rides the swell ahead: the don's own escort armada, lanterns doused, gunports open. At the center of it, something long and low sits *so still in the water you take it for a spar*.",
+     "pause": 700
+    },
+    {
+     "speaker": "boss",
+     "text": "Far enough, captain. The don's water starts where your charts stop."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "Then we're exactly where we mean to be. Move your line."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Doby",
+      "portrait": "/card-arts/Doby_Mick_v2.webp"
+     },
+     "text": "Move it, or be moved with it. I have shifted reefs that argued less than you, enforcer."
+    },
+    {
+     "speaker": "boss",
+     "text": "The Quartermaster talked too much and kept too little. I do not talk, and *I do not let go*. Ask anyone who ever got this far.",
+     "pause": 500
+    },
+    {
+     "speaker": "boss",
+     "text": "You will not see me move. *You will only notice I have you.*",
+     "pause": 1100,
+     "fx": "shake"
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mira",
+      "portrait": "/card-arts/Mira.webp"
+     },
+     "text": "I noticed you an hour ago, love. A thing that lies that still is a thing afraid to move first. Let us find out what it is afraid of."
+    }
+   ]
+  },
+  "the_throne": {
+   "raidId": "the_throne",
+   "enemyAccuracy": 36,
+   "raidTitle": "The Throne",
+   "bossDefeatedText": "Don Finleone Defeated",
+   "atmosphere": "vault",
+   "zone": "ancient_deep",
+   "enemies": {
+    "court_herald": {
+     "id": "court_herald",
+     "name": "The Ripper",
+     "hpBase": 340,
+     "minDmg": 22,
+     "maxDmg": 36,
+     "shipSpeed": 8,
+     "actionMs": 3400,
+     "magazineSize": 4,
+     "shieldPct": 0.15,
+     "chargeBiteChance": 0.35,
+     "ultimate": {
+      "name": "Broadside Royale",
+      "mult": 2.4,
+      "line": "Every gun on the deck speaks at once, in the don’s name."
+     },
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "reload",
+      "ultimate",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.3,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid8_theripper.png"
+    },
+    "the_mirage": {
+     "id": "the_mirage",
+     "name": "The Render",
+     "hpBase": 380,
+     "minDmg": 24,
+     "maxDmg": 38,
+     "shipSpeed": 10,
+     "actionMs": 3400,
+     "magazineSize": 4,
+     "shieldPct": 0.18,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "False Court",
+      "aimAttack": "decoys",
+      "aimPasses": 2,
+      "line": "Lantern-rigs bloom down his rail, a court of false colors with only one throne among them."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "dodge",
+      "fire",
+      "special",
+      "reload"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.5,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid8_therender.png"
+    },
+    "the_doorman": {
+     "id": "the_doorman",
+     "name": "The Gnash",
+     "hpBase": 420,
+     "minDmg": 24,
+     "maxDmg": 40,
+     "shipSpeed": 5,
+     "actionMs": 4200,
+     "magazineSize": 4,
+     "shieldPct": 0.24,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "Iron Etiquette",
+      "aimAttack": "hardened",
+      "aimPasses": 2,
+      "line": "Iron shutters slam over every line you’d take. Nobody reaches the don in one knock."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "reload",
+      "fire",
+      "volley",
+      "reload",
+      "special",
+      "fire"
+     ],
+     "critChance": 0.1,
+     "zoneSpeedMult": 2.2,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid8_thegnash.png"
+    },
+    "the_stormcaller": {
+     "id": "the_stormcaller",
+     "name": "The Gorge",
+     "hpBase": 440,
+     "minDmg": 26,
+     "maxDmg": 40,
+     "shipSpeed": 9,
+     "actionMs": 3600,
+     "magazineSize": 4,
+     "shieldPct": 0.2,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "Kingmaker’s Gale",
+      "aimAttack": "squall",
+      "aimPasses": 2,
+      "line": "He whistles a wind out of dead water, and your gun-deck pitches with it."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "fire",
+      "volley",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.14,
+     "zoneSpeedMult": 2.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid8_thegorge.png"
+    },
+    "the_left_hand": {
+     "id": "the_left_hand",
+     "name": "The Reaper",
+     "hpBase": 480,
+     "minDmg": 26,
+     "maxDmg": 42,
+     "shipSpeed": 8,
+     "actionMs": 3800,
+     "magazineSize": 4,
+     "shieldPct": 0.24,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "Omertà",
+      "status": "silence",
+      "magnitude": 1,
+      "turns": 2,
+      "target": "player",
+      "line": "The left hand draws a line across his throat, and your crew’s shouts die in the wind."
+     },
+     "ultimate": {
+      "name": "The Quiet Word",
+      "mult": 2.5,
+      "line": "What the don whispers, the guns repeat."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "reload",
+      "reload",
+      "ultimate",
+      "fire",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.14,
+     "zoneSpeedMult": 2.7,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid8_thereaper.png"
+    },
+    "the_consigliere": {
+     "id": "the_consigliere",
+     "name": "The Closer",
+     "hpBase": 520,
+     "minDmg": 28,
+     "maxDmg": 44,
+     "shipSpeed": 7,
+     "actionMs": 4000,
+     "magazineSize": 4,
+     "shieldPct": 0.26,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "Marked for the Don",
+      "status": "feeble",
+      "magnitude": 0.22,
+      "turns": 2,
+      "target": "player",
+      "line": "He reads your name off a short list, and every gun in the court knows where to aim."
+     },
+     "ultimate": {
+      "name": "Final Counsel",
+      "mult": 2.6,
+      "line": "His advice, delivered all at once."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "reload",
+      "volley",
+      "reload",
+      "reload",
+      "ultimate",
+      "dodge"
+     ],
+     "critChance": 0.12,
+     "phase2": {
+      "revivePct": 0.55,
+      "damageMult": 1.3,
+      "pattern": [
+       "special",
+       "reload",
+       "reload",
+       "volley",
+       "reload",
+       "fire",
+       "reload",
+       "reload",
+       "ultimate",
+       "dodge"
+      ],
+      "dialogueLine": "You do not close an account by sinking it once, captain. Let me show you the interest.",
+      "badge": "The Reckoning"
+     },
+     "zoneSpeedMult": 2.5,
+     "image": "/enemychapter4man-o-war.png",
+     "portrait": "/raid8_thecloser.png"
+    },
+    "don_finleone": {
+     "id": "don_finleone",
+     "name": "Don Finleone",
+     "hpBase": 880,
+     "minDmg": 30,
+     "maxDmg": 50,
+     "shipSpeed": 9,
+     "actionMs": 4000,
+     "magazineSize": 4,
+     "shieldPct": 0.3,
+     "chargeBiteChance": 0.35,
+     "startCharges": 2,
+     "special": {
+      "name": "Court of Crowns",
+      "aimAttack": "decoys",
+      "aimPasses": 2,
+      "line": "The court closes around the throne. A dozen crowns, and only one that bleeds."
+     },
+     "ultimate": {
+      "name": "The Deep Verdict",
+      "mult": 2.8,
+      "line": "The don passes sentence, and the water carries it out."
+     },
+     "pattern": [
+      "special",
+      "fire",
+      "reload",
+      "reload",
+      "ultimate",
+      "dodge",
+      "fire",
+      "reload"
+     ],
+     "critChance": 0.15,
+     "openingCheck": {
+      "id": "the_court",
+      "name": "The Don’s Court",
+      "chargeTurns": 2,
+      "telegraph": "The whole drowned court trains its guns on your hull at once, waiting on the don’s nod.",
+      "hint": "You cannot out-gun a whole court. Weather the opening volley. A brace, a shield, or a big heal will all ride it out.",
+      "responses": [
+       "brace",
+       "shield",
+       "heal"
+      ],
+      "counteredLine": "Your crew answers first, and the court’s opening volley scatters wide.",
+      "failLine": "Nobody stands with you, and the whole court fires as one.",
+      "consequence": {
+       "kind": "damagePctMaxHp",
+       "value": 0.55
+      }
+     },
+     "phases": [
+      {
+       "revivePct": 0.72,
+       "damageMult": 1.25,
+       "badge": "The Maw",
+       "pattern": [
+        "special",
+        "fire",
+        "reload",
+        "reload",
+        "ultimate",
+        "volley",
+        "dodge",
+        "reload"
+       ],
+       "dialogueLine": "You came for a don. The deep sent you something older. Look at the WIDTH of what you’ve been bargaining with.",
+       "check": {
+        "id": "the_maw",
+        "name": "The Maw",
+        "chargeTurns": 2,
+        "telegraph": "The don’s hull ROLLS, and keeps rolling, a jaw the size of your broadside opening under the waterline.",
+        "hint": "A bite that wide can’t be weaved. Harden the hull with a brace, or blast the jaw apart with a big shot before it shuts.",
+        "responses": [
+         "brace",
+         "burst"
+        ],
+        "counteredLine": "Your crew throws the maw off its line and it grinds iron instead of deck.",
+        "failLine": "The maw closes on your hull and something structural gives. Every blow after this one finds the gap.",
+        "consequence": {
+         "kind": "status",
+         "status": "feeble",
+         "magnitude": 0.5,
+         "turns": 4,
+         "dmgPct": 0.35
+        }
+       }
+      },
+      {
+       "revivePct": 0.6,
+       "damageMult": 1.35,
+       "badge": "Blood in the Water",
+       "pattern": [
+        "fire",
+        "special",
+        "reload",
+        "fire",
+        "reload",
+        "ultimate",
+        "volley",
+        "dodge"
+       ],
+       "dialogueLine": "There it is. The blood. Now the whole ocean knows where you are.",
+       "check": {
+        "id": "blood_water",
+        "name": "Blood in the Water",
+        "chargeTurns": 2,
+        "telegraph": "He rakes a long gash down your hull and circles wide, the sea reddening with every pass at the smell of it.",
+        "hint": "The wound is what keeps drawing him. Close it with a heal, or snare him off the blood-trail before he circles back in.",
+        "responses": [
+         "heal",
+         "snare"
+        ],
+        "counteredLine": "Your crew answers the wound and the blood-trail goes cold; he loses the scent.",
+        "failLine": "He follows the blood straight in, tears the gash wider, and the wound feeds him.",
+        "consequence": {
+         "kind": "enemyHealPctMaxHp",
+         "value": 0.3
+        }
+       }
+      },
+      {
+       "revivePct": 0.5,
+       "damageMult": 1.45,
+       "badge": "The Sounding",
+       "pattern": [
+        "special",
+        "fire",
+        "reload",
+        "reload",
+        "ultimate",
+        "fire",
+        "volley",
+        "dodge"
+       ],
+       "dialogueLine": "Enough court. Enough colors. The Finndicate was never the family, captain. It was the FEEDING.",
+       "check": {
+        "id": "the_sounding",
+        "name": "The Sounding",
+        "chargeTurns": 2,
+        "telegraph": "The megalodon SOUNDS. The whole sea dips as he goes deep, gathering water for a breach that will land on your deck.",
+        "hint": "You can’t block a falling mountain. You have to break the dive itself. Snare him out of it, or blast him up early with a big shot.",
+        "responses": [
+         "snare",
+         "burst"
+        ],
+        "counteredLine": "The dive breaks. He breaches early, wide, and the wave takes the blow for you.",
+        "failLine": "The sea goes still. Then it goes UP, and the breach leaves your ship reeling and slow to answer.",
+        "consequence": {
+         "kind": "status",
+         "status": "slowed",
+         "magnitude": 12,
+         "turns": 4,
+         "dmgPct": 0.4
+        }
+       }
+      },
+      {
+       "revivePct": 0.42,
+       "damageMult": 1.55,
+       "badge": "The Undertow",
+       "pattern": [
+        "special",
+        "fire",
+        "fire",
+        "reload",
+        "reload",
+        "ultimate",
+        "volley",
+        "reload"
+       ],
+       "dialogueLine": "Down here, captain, EVERYTHING feeds the family. Even you.",
+       "check": {
+        "id": "the_undertow",
+        "name": "The Undertow",
+        "chargeTurns": 2,
+        "telegraph": "He circles fast and low and the whole drowned court fires down the whirlpool at once, a wall of iron closing on your hull.",
+        "hint": "No brace holds against a wall this wide. Raise a shield to break it, or out-heal what gets through.",
+        "responses": [
+         "shield",
+         "heal"
+        ],
+        "counteredLine": "The barrage breaks on your crew’s answer in a wall of spray.",
+        "failLine": "The undertow drags your broadside off true, and the court’s iron rakes you while your guns swing wild.",
+        "consequence": {
+         "kind": "status",
+         "status": "weaken",
+         "magnitude": 0.45,
+         "turns": 4,
+         "dmgPct": 0.35
+        }
+       }
+      },
+      {
+       "revivePct": 0.34,
+       "damageMult": 1.7,
+       "badge": "The Last Bite",
+       "pattern": [
+        "fire",
+        "special",
+        "reload",
+        "ultimate",
+        "fire",
+        "reload",
+        "volley",
+        "dodge"
+       ],
+       "dialogueLine": "You crossed the WHOLE family to get here. Let me show you what the family is FOR.",
+       "check": {
+        "id": "the_last_bite",
+        "name": "The Last Bite",
+        "chargeTurns": 2,
+        "telegraph": "The megalodon rears his whole bulk from the water for one final lunge. And for one breath his throat hangs open above your deck.",
+        "hint": "The throat hangs open for one breath. Fire everything down it with a big shot, or throw up a brace or shield and ride out the lunge.",
+        "responses": [
+         "burst",
+         "brace",
+         "shield"
+        ],
+        "counteredLine": "Your crew fires straight down his throat and the last bite dies in the water.",
+        "failLine": "The last bite comes down, and the deep finally closes over you.",
+        "consequence": {
+         "kind": "damagePctMaxHp",
+         "value": 0.9
+        }
+       }
+      }
+     ],
+     "zoneSpeedMult": 2.4,
+     "image": "/enemychapter4man-o-war.png",
+     "portrait": "/raid8_donfinleone.png"
+    }
+   },
+   "sequence": [
+    "court_herald",
+    "the_mirage",
+    "the_doorman",
+    "the_stormcaller",
+    "the_left_hand",
+    "the_consigliere"
+   ],
+   "bossId": "don_finleone",
+   "tides": {
+    "slots": [
+     2,
+     5
+    ],
+    "maxTier": 2
+   },
+   "preBossReprieve": true,
+   "loot": [
+    {
+     "id": "last_fathom_hull",
+     "label": "Last Fathom Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 8,
+     "shipSkinId": "last_fathom_hull"
+    },
+    {
+     "id": "court_fang",
+     "label": "The Court's Fang",
+     "image": "/thecourtsfang.png",
+     "emoji": "🦈",
+     "rarity": "epic",
+     "weight": 20
+    },
+    {
+     "id": "dons_signet",
+     "label": "The Don’s Signet",
+     "image": "/thedonssignet.png",
+     "emoji": "💍",
+     "rarity": "legendary",
+     "weight": 5
+    },
+    {
+     "id": "doubloons_800",
+     "label": "+800 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 28
+    },
+    {
+     "id": "doubloons_1500",
+     "label": "+1,500 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 24
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 22
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 16
+    }
+   ],
+   "killRewards": {
+    "court_herald": {
+     "gold": 200,
+     "xp": 220
+    },
+    "the_mirage": {
+     "gold": 220,
+     "xp": 240
+    },
+    "the_doorman": {
+     "gold": 240,
+     "xp": 260
+    },
+    "the_stormcaller": {
+     "gold": 260,
+     "xp": 280
+    },
+    "the_left_hand": {
+     "gold": 290,
+     "xp": 310
+    },
+    "the_consigliere": {
+     "gold": 320,
+     "xp": 340
+    },
+    "don_finleone": {
+     "gold": 2500,
+     "xp": 3000
+    }
+   },
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "Past the thrown gates the water goes still and black, and the don’s flagship sits at anchor in the middle of it. Lit like a feast, silent like a courtroom."
+    },
+    {
+     "speaker": "boss",
+     "text": "Sit down, captain. You’ve crossed my whole family to reach this table. The least I can do is hear your last request.",
+     "pause": 500
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mira",
+      "portrait": "/card-arts/Mira.webp"
+     },
+     "text": "We read your books, Finleone. Every coin accounted for. Almost every coin."
+    },
+    {
+     "speaker": "boss",
+     "text": "...So. *You found the margin.*",
+     "pause": 1200
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Dole",
+      "portrait": "/card-arts/Dole.webp"
+     },
+     "text": "We found it, don. The account your whole empire was really paying into. You were never the top of this, and you know it. Does that frighten you as much as it frightens your books?"
+    },
+    {
+     "speaker": "boss",
+     "text": "Then you know why *nobody* leaves this water. Guns out, captain. The court is in session.",
+     "pause": 600,
+     "fx": "shake"
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Mira",
+      "portrait": "/card-arts/Mira.webp"
+     },
+     "text": "Look at him, captain. The biggest name in the whole sea, and he is afraid of a single letter. That is the only thing in this room worth knowing."
+    }
+   ]
+  },
+  "the_sunken_hand": {
+   "raidId": "the_sunken_hand",
+   "enemyAccuracy": 40,
+   "raidTitle": "The Sunken Hand",
+   "bossDefeatedText": "Finn Defeated",
+   "aimStyle": "dial",
+   "defeatSequence": {
+    "lines": [
+     "Heh.",
+     "All that patience. And it was you at the end of the line.",
+     "The dark goes out of the water. The morning comes back the way it left, from him outward."
+    ]
+   },
+   "critStreak": {
+    "perStack": 0.07,
+    "maxStacks": 14,
+    "label": "Perfect Streak",
+    "pierceAt": 5
+   },
+   "atmosphere": "vault",
+   "zone": "ancient_deep",
+   "enemies": {
+    "finn": {
+     "id": "finn",
+     "name": "Finn",
+     "hpBase": 880,
+     "minDmg": 30,
+     "maxDmg": 50,
+     "shipSpeed": 11,
+     "actionMs": 4000,
+     "magazineSize": 4,
+     "shieldPct": 0.22,
+     "startCharges": 2,
+     "ultimate": {
+      "name": "The Long Line",
+      "mult": 2.8,
+      "line": "All that patience, paid out at once."
+     },
+     "pattern": [
+      "fire",
+      "reload",
+      "reload",
+      "fire",
+      "reload",
+      "dodge",
+      "fire"
+     ],
+     "critChance": 0.15,
+     "image": "/enemy_finnship.png",
+     "portrait": "/finn_final.png",
+     "phaseBgImage": "/finn_bg1.jpg",
+     "phaseAbility": {
+      "kind": "foresight",
+      "name": "From the Wrong Water",
+      "summonImage": "/fish/plesiosaurus.png",
+      "summonColor": "#a78bfa",
+      "turns": 2
+     },
+     "phases": [
+      {
+       "revivePct": 1,
+       "damageMult": 1.08,
+       "badge": "Old Armour",
+       "bgImage": "/finn_bg2.jpg",
+       "pattern": [
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "Plate that outlived its own bones. Do you know how long I waited to wear this?",
+       "ability": {
+        "kind": "abyssal_tide",
+        "name": "Old Armour",
+        "summonImage": "/fish/dunkleosteus.png",
+        "summonColor": "#9fb2c8",
+        "value": 0.1,
+        "shieldValue": 0.2
+       }
+      },
+      {
+       "revivePct": 1,
+       "damageMult": 1.16,
+       "badge": "Wake of the Drowned",
+       "bgImage": "/finn_bg3.jpg",
+       "pattern": [
+        "fire",
+        "reload",
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "You have never once been fast enough. Let me show you what fast is.",
+       "ability": {
+        "kind": "blitz",
+        "name": "Wake of the Drowned",
+        "summonImage": "/fish/mosasaurus.png",
+        "summonColor": "#67e8f9",
+        "shots": 4,
+        "value": 1
+       }
+      },
+      {
+       "revivePct": 1,
+       "damageMult": 1.24,
+       "badge": "Still Going",
+       "bgImage": "/finn_bg4.jpg",
+       "pattern": [
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "reload",
+        "volley",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "You have put more iron through me than most captains see in a lifetime. Look at me.",
+       "ability": {
+        "kind": "vengeance",
+        "name": "Still Going",
+        "summonImage": "/fish/basilosaurus.png",
+        "summonColor": "#94a3b8",
+        "turns": 3
+       }
+      },
+      {
+       "revivePct": 1,
+       "damageMult": 1.32,
+       "badge": "All That Tonnage",
+       "bgImage": "/finn_bg5.jpg",
+       "pattern": [
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "reload",
+        "volley",
+        "reload",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "I have been reading you since your first cast. There is nothing left of you I have not written down.",
+       "ability": {
+        "kind": "requiem",
+        "name": "All That Tonnage",
+        "summonImage": "/fish/shastasaurus.png",
+        "summonColor": "#7dd3fc",
+        "turns": 3,
+        "value": 0.3
+       }
+      },
+      {
+       "revivePct": 1,
+       "damageMult": 1.42,
+       "badge": "The Primeval Maw",
+       "bgImage": "/finn_bg6.jpg",
+       "pattern": [
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "reload",
+        "ultimate",
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "One last ride, captain. You landed this one yourself. Let us see you do it twice.",
+       "ability": {
+        "kind": "leviathan",
+        "name": "The Primeval Maw",
+        "summonImage": "/fish/megalodon.png",
+        "summonColor": "#f87171",
+        "value": 1.4
+       }
+      }
+     ]
+    }
+   },
+   "sequence": [],
+   "bossId": "finn",
+   "loot": [
+    {
+     "id": "anglers_patience",
+     "label": "The Primeval Eye",
+     "image": "/primevileye.png",
+     "emoji": "🎣",
+     "rarity": "ancient",
+     "weight": 2.5
+    },
+    {
+     "id": "borrowed_jaw",
+     "label": "The Primeval Maw",
+     "image": "/primevilmaw.png",
+     "emoji": "🦈",
+     "rarity": "ancient",
+     "weight": 2.5
+    },
+    {
+     "id": "sunken_hand_hull",
+     "label": "Sunken Hand Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 3,
+     "shipSkinId": "sunken_hand_hull"
+    },
+    {
+     "id": "drowned_giant_hull",
+     "label": "Tundra Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 2,
+     "shipSkinId": "drowned_giant_hull"
+    },
+    {
+     "id": "last_cast_hull",
+     "label": "Volcanic Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 2,
+     "shipSkinId": "last_cast_hull"
+    },
+    {
+     "id": "doubloons_1500",
+     "label": "+1,500 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 28
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 24
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 20
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 16
+    }
+   ],
+   "killRewards": {
+    "finn": {
+     "gold": 12000,
+     "xp": 12000
+    }
+   },
+   "preFightDialogue": [
+    {
+     "speaker": "narrator",
+     "text": "The water ahead is flat and wrong, and the ship sitting on it is flying his colors."
+    },
+    {
+     "speaker": "boss",
+     "text": "You came. *Of course* you came."
+    },
+    {
+     "speaker": "boss",
+     "text": "Six of them in your hold and you still brought the ship. That is the thing about you, captain. You have never once done the sensible thing."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Doby",
+      "portrait": "/card-arts/Doby_Mick_v2.webp"
+     },
+     "text": "He has every one of them in him now. Whatever he throws at us, captain, we taught it to him."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Kat",
+      "portrait": "/card-arts/Catfish.webp"
+     },
+     "text": "Then we know exactly what is coming."
+    },
+    {
+     "speaker": "boss",
+     "text": "Let us find out what all that practice was for.",
+     "pause": 600,
+     "fx": "shake"
+    }
+   ]
+  },
+  "corsairs_reckoning_challenge": {
+   "raidId": "corsairs_reckoning_challenge",
+   "enemyAccuracy": 4,
+   "raidTitle": "Challenge: The Corsair's Reckoning",
+   "bossDefeatedText": "Barnacle Pete Defeated",
+   "atmosphere": "sunset",
+   "zone": "shallows",
+   "enemies": {
+    "brute": {
+     "id": "brute",
+     "name": "Reef Raider",
+     "hpBase": 26,
+     "minDmg": 2,
+     "maxDmg": 6,
+     "shipSpeed": 4,
+     "actionMs": 4500,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.025,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/reefraider.webp"
+    },
+    "sniper": {
+     "id": "sniper",
+     "name": "Crow's Nest Marksman",
+     "hpBase": 33,
+     "minDmg": 2,
+     "maxDmg": 9,
+     "shipSpeed": 3,
+     "actionMs": 5500,
+     "pattern": [
+      "reload",
+      "dodge",
+      "fire",
+      "reload",
+      "reload",
+      "reload",
+      "volley"
+     ],
+     "critChance": 0.1,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/crowsnestmarksman.webp"
+    },
+    "corsair": {
+     "id": "corsair",
+     "name": "Saltwater Corsair",
+     "hpBase": 42,
+     "minDmg": 6,
+     "maxDmg": 9,
+     "shipSpeed": 7,
+     "actionMs": 3500,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "dodge",
+      "reload",
+      "reload",
+      "volley",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.05,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/saltwatercorsair.webp"
+    },
+    "pete": {
+     "id": "pete",
+     "name": "Barnacle Pete",
+     "hpBase": 69,
+     "minDmg": 8,
+     "maxDmg": 14,
+     "shipSpeed": 6,
+     "actionMs": 4500,
+     "pattern": [
+      "reload",
+      "dodge",
+      "reload",
+      "dodge",
+      "reload",
+      "dodge",
+      "volley",
+      "reload",
+      "fire",
+      "reload",
+      "reload",
+      "reload",
+      "volley"
+     ],
+     "critChance": 0.075,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/enemy-arts/barnacle_pete.webp",
+     "phase2": {
+      "revivePct": 0.5,
+      "damageMult": 1.25,
+      "pattern": [
+       "reload",
+       "fire",
+       "reload",
+       "fire",
+       "reload",
+       "reload",
+       "reload",
+       "volley",
+       "reload",
+       "volley"
+      ],
+      "dialogueLine": "On your feet, old captain. We're not done yet."
+     }
+    }
+   },
+   "sequence": [
+    "brute",
+    "brute",
+    "sniper",
+    "sniper",
+    "corsair",
+    "corsair"
+   ],
+   "bossId": "pete",
+   "loot": [
+    {
+     "id": "doubloons_300",
+     "label": "+300 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 16
+    },
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 9
+    },
+    {
+     "id": "gems_25",
+     "label": "25 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 7
+    },
+    {
+     "id": "pack",
+     "label": "100 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 2
+    },
+    {
+     "id": "finndicate_hull",
+     "label": "Finndicate Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 6,
+     "shipSkinId": "finndicate_hull"
+    },
+    {
+     "id": "corsair_cannon",
+     "label": "Corsair Cannon",
+     "image": "/corsaircannon-v2.png",
+     "emoji": "💣",
+     "rarity": "epic",
+     "weight": 40
+    },
+    {
+     "id": "corsair_prime_cannon",
+     "label": "Corsair's Prime Cannon",
+     "image": "/corsairsprimecannon.png",
+     "emoji": "💣",
+     "rarity": "legendary",
+     "weight": 20
+    }
+   ],
+   "killRewards": {
+    "brute": {
+     "gold": 30,
+     "xp": 30
+    },
+    "sniper": {
+     "gold": 38,
+     "xp": 45
+    },
+    "corsair": {
+     "gold": 53,
+     "xp": 68
+    },
+    "pete": {
+     "gold": 270,
+     "xp": 270
+    }
+   }
+  },
+  "captain_krust_challenge": {
+   "raidId": "captain_krust_challenge",
+   "enemyAccuracy": 9,
+   "raidTitle": "Challenge: Krust's Consignment",
+   "bossDefeatedText": "Captain Krust Defeated",
+   "atmosphere": "overcast",
+   "zone": "shallows",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "Bilge Runner",
+     "hpBase": 52,
+     "minDmg": 5,
+     "maxDmg": 9,
+     "shipSpeed": 5,
+     "actionMs": 4200,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.03,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/krust_worker.png",
+     "damageReduction": 0.15,
+     "abilityName": "Carapace"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "Brine Deckhand",
+     "hpBase": 68,
+     "minDmg": 6,
+     "maxDmg": 13,
+     "shipSpeed": 5,
+     "actionMs": 4600,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.06,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/krust_soldier.png",
+     "damageReduction": 0.15,
+     "abilityName": "Carapace"
+    },
+    "brute": {
+     "id": "brute",
+     "name": "Hull Breaker",
+     "hpBase": 91,
+     "minDmg": 10,
+     "maxDmg": 16,
+     "shipSpeed": 4,
+     "actionMs": 5200,
+     "pattern": [
+      "reload",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.05,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/krust_brute.png",
+     "damageReduction": 0.15,
+     "abilityName": "Carapace"
+    },
+    "elite": {
+     "id": "elite",
+     "name": "Krust Overseer",
+     "hpBase": 83,
+     "minDmg": 7,
+     "maxDmg": 15,
+     "shipSpeed": 6,
+     "actionMs": 3400,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.1,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/krust_overseer.png",
+     "damageReduction": 0.15,
+     "abilityName": "Carapace"
+    },
+    "krust": {
+     "id": "krust",
+     "name": "Captain Krust",
+     "hpBase": 165,
+     "minDmg": 14,
+     "maxDmg": 26,
+     "shipSpeed": 7,
+     "actionMs": 4200,
+     "pattern": [
+      "reload",
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.09,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/Captainkrust.png",
+     "damageReduction": 0.2,
+     "abilityName": "Carapace",
+     "phase2": {
+      "revivePct": 0.5,
+      "damageMult": 1,
+      "pattern": [
+       "reload",
+       "reload",
+       "fire",
+       "reload",
+       "reload",
+       "fire",
+       "dodge"
+      ],
+      "dialogueLine": "Down? Plate's still warm. Try again.",
+      "damageTakenChance": 0.5,
+      "damageTakenMult": 0.7,
+      "damageTakenVolleyBypass": true
+     }
+    }
+   },
+   "sequence": [
+    "scout",
+    "scout",
+    "reg",
+    "reg",
+    "brute",
+    "brute",
+    "elite",
+    "elite"
+   ],
+   "bossId": "krust",
+   "loot": [
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 16
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 9
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 7
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 2
+    },
+    {
+     "id": "finndicate_hull",
+     "label": "Finndicate Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 6,
+     "shipSkinId": "finndicate_hull"
+    },
+    {
+     "id": "krusts_carapace",
+     "label": "Krust's Carapace",
+     "image": "/captainshull.png",
+     "emoji": "🛡️",
+     "rarity": "epic",
+     "weight": 40
+    },
+    {
+     "id": "captains_carapace",
+     "label": "Captain's Carapace",
+     "image": "/captainscarapace.png",
+     "emoji": "🛡️",
+     "rarity": "legendary",
+     "weight": 20
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 60,
+     "xp": 60
+    },
+    "reg": {
+     "gold": 83,
+     "xp": 90
+    },
+    "brute": {
+     "gold": 113,
+     "xp": 120
+    },
+    "elite": {
+     "gold": 135,
+     "xp": 150
+    },
+    "krust": {
+     "gold": 525,
+     "xp": 525
+    }
+   },
+   "dialogueAccent": "#7dd3fc"
+  },
+  "cartographer_challenge": {
+   "raidId": "cartographer_challenge",
+   "enemyAccuracy": 14,
+   "raidTitle": "Challenge: The Cartographer's Survey",
+   "bossDefeatedText": "The Cartographer Defeated",
+   "atmosphere": "fog",
+   "zone": "open_waters",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "Drift Scout",
+     "hpBase": 62,
+     "minDmg": 6,
+     "maxDmg": 12,
+     "shipSpeed": 7,
+     "actionMs": 4000,
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.05,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/enemy-arts/driftscout.webp",
+     "aimFogDensity": 0.4,
+     "aimFogName": "Mist Veil"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "Sounding Hand",
+     "hpBase": 86,
+     "minDmg": 8,
+     "maxDmg": 15,
+     "shipSpeed": 5,
+     "actionMs": 4600,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "fire",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.07,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/enemy-arts/soundinghand.webp",
+     "aimFogDensity": 0.45,
+     "aimFogName": "Mist Veil"
+    },
+    "brute": {
+     "id": "brute",
+     "name": "Wakebreaker",
+     "hpBase": 125,
+     "minDmg": 12,
+     "maxDmg": 20,
+     "shipSpeed": 3,
+     "actionMs": 5400,
+     "pattern": [
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.06,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/enemy-arts/wakebreaker.webp",
+     "aimFogDensity": 0.45,
+     "aimFogName": "Mist Veil"
+    },
+    "elite": {
+     "id": "elite",
+     "name": "The Surveyor",
+     "hpBase": 109,
+     "minDmg": 9,
+     "maxDmg": 18,
+     "shipSpeed": 8,
+     "actionMs": 3400,
+     "pattern": [
+      "reload",
+      "reload",
+      "fire",
+      "fire",
+      "reload",
+      "reload",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.11,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/enemy-arts/thesurveyor.webp",
+     "aimFogDensity": 0.55,
+     "aimFogName": "Mist Veil"
+    },
+    "cartographer": {
+     "id": "cartographer",
+     "name": "The Cartographer",
+     "hpBase": 225,
+     "minDmg": 17,
+     "maxDmg": 31,
+     "shipSpeed": 6,
+     "actionMs": 4400,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "fire",
+      "fire",
+      "reload",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.1,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/enemy-arts/thecartographer.webp",
+     "aimFogDensity": 0.7,
+     "aimFogName": "Mist Veil",
+     "parryChance": 0.3,
+     "parryDamagePct": 0.25,
+     "parryName": "Riposte",
+     "phase2": {
+      "revivePct": 0.5,
+      "damageMult": 1.2,
+      "pattern": [
+       "reload",
+       "fire",
+       "reload",
+       "volley",
+       "fire",
+       "reload",
+       "fire",
+       "dodge"
+      ],
+      "dialogueLine": "You sketched one chart of me. There's always a deeper sounding."
+     }
+    }
+   },
+   "sequence": [
+    "scout",
+    "reg",
+    "scout",
+    "brute",
+    "elite",
+    "reg",
+    "brute",
+    "elite"
+   ],
+   "bossId": "cartographer",
+   "tides": {
+    "slots": [
+     3,
+     6
+    ],
+    "maxTier": 1
+   },
+   "loot": [
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 13
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 9
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 6
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 2
+    },
+    {
+     "id": "chartmaker_hull",
+     "label": "Chartmaker Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 10,
+     "shipSkinId": "chartmaker_hull"
+    },
+    {
+     "id": "cartographers_astrolabe",
+     "label": "Cartographer's Astrolabe",
+     "image": "/cartographersastrolabe.png",
+     "emoji": "🧭",
+     "rarity": "epic",
+     "weight": 40
+    },
+    {
+     "id": "captains_astrolabe",
+     "label": "Mastercraft Astrolabe",
+     "image": "/mastercraftastrolabe.png",
+     "emoji": "🧭",
+     "rarity": "legendary",
+     "weight": 20
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 75,
+     "xp": 75
+    },
+    "reg": {
+     "gold": 105,
+     "xp": 113
+    },
+    "brute": {
+     "gold": 143,
+     "xp": 158
+    },
+    "elite": {
+     "gold": 180,
+     "xp": 195
+    },
+    "cartographer": {
+     "gold": 675,
+     "xp": 675
+    }
+   },
+   "dialogueAccent": "#9aaecc"
+  },
+  "tollmasters_cut_challenge": {
+   "raidId": "tollmasters_cut_challenge",
+   "enemyAccuracy": 19,
+   "raidTitle": "Challenge: The Tollmaster's Cut",
+   "bossDefeatedText": "Tollmaster Spet Defeated",
+   "atmosphere": "overcast",
+   "zone": "open_waters",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "Silverdart",
+     "hpBase": 78,
+     "minDmg": 7,
+     "maxDmg": 14,
+     "shipSpeed": 8,
+     "actionMs": 3600,
+     "pattern": [
+      "fire",
+      "reload",
+      "reload",
+      "fire",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.06,
+     "startCharges": 1,
+     "image": "/ship-hero/sloop_v3.png",
+     "portrait": "/raid4_silverdart.png"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "Snapjaw",
+     "hpBase": 109,
+     "minDmg": 9,
+     "maxDmg": 17,
+     "shipSpeed": 6,
+     "actionMs": 4400,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "volley",
+      "fire",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.08,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/raid4_snapjaw.png"
+    },
+    "brute": {
+     "id": "brute",
+     "name": "Gulletmaw",
+     "hpBase": 159,
+     "minDmg": 13,
+     "maxDmg": 22,
+     "shipSpeed": 3,
+     "actionMs": 5400,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "reload",
+      "volley"
+     ],
+     "critChance": 0.06,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid4_gulletmaw.png"
+    },
+    "elite": {
+     "id": "elite",
+     "name": "The Exactor",
+     "hpBase": 138,
+     "minDmg": 12,
+     "maxDmg": 21,
+     "shipSpeed": 9,
+     "actionMs": 3200,
+     "pattern": [
+      "fire",
+      "reload",
+      "reload",
+      "fire",
+      "fire",
+      "reload",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.12,
+     "startCharges": 1,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid4_theexactor.png"
+    },
+    "spet": {
+     "id": "spet",
+     "name": "Tollmaster Spet",
+     "hpBase": 323,
+     "minDmg": 22,
+     "maxDmg": 38,
+     "shipSpeed": 7,
+     "actionMs": 4200,
+     "pattern": [
+      "fire",
+      "fire",
+      "reload",
+      "reload",
+      "reload",
+      "volley",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.11,
+     "startCharges": 2,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid4_tollmasterspet.png",
+     "phase2": {
+      "revivePct": 0.5,
+      "damageMult": 1.2,
+      "pattern": [
+       "reload",
+       "reload",
+       "fire",
+       "fire",
+       "reload",
+       "volley",
+       "fire",
+       "dodge"
+      ],
+      "dialogueLine": "You think the bill's settled? I always collect twice."
+     }
+    }
+   },
+   "sequence": [
+    "scout",
+    "reg",
+    "scout",
+    "brute",
+    "elite",
+    "reg",
+    "brute",
+    "elite"
+   ],
+   "bossId": "spet",
+   "tides": {
+    "slots": [
+     3,
+     6
+    ],
+    "maxTier": 1
+   },
+   "loot": [
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 9
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 6
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 5
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 2
+    },
+    {
+     "id": "chartmaker_hull",
+     "label": "Chartmaker Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 18,
+     "shipSkinId": "chartmaker_hull"
+    },
+    {
+     "id": "spets_primer",
+     "label": "Spet's Primer",
+     "image": "/spetsprimer.png",
+     "emoji": "🧨",
+     "rarity": "epic",
+     "weight": 40
+    },
+    {
+     "id": "tollmasters_primer",
+     "label": "Tollmaster's Primer",
+     "image": "/tollmastersprimer.png",
+     "emoji": "🧨",
+     "rarity": "legendary",
+     "weight": 20
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 90,
+     "xp": 90
+    },
+    "reg": {
+     "gold": 128,
+     "xp": 135
+    },
+    "brute": {
+     "gold": 173,
+     "xp": 188
+    },
+    "elite": {
+     "gold": 210,
+     "xp": 225
+    },
+    "spet": {
+     "gold": 780,
+     "xp": 780
+    }
+   },
+   "dialogueAccent": "#8fa76b"
+  },
+  "coffers_fleet_challenge": {
+   "raidId": "coffers_fleet_challenge",
+   "enemyAccuracy": 24,
+   "raidTitle": "Challenge: The Harbor Fleet",
+   "bossDefeatedText": "Admiral Ruse Defeated",
+   "atmosphere": "harbor",
+   "zone": "deep",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "Plume",
+     "hpBase": 143,
+     "minDmg": 9,
+     "maxDmg": 17,
+     "shipSpeed": 8,
+     "actionMs": 3500,
+     "pattern": [
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "fire",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.07,
+     "decoyCount": 1,
+     "decoyName": "False Colors",
+     "zoneSpeedMult": 1.6,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/raid5_feint.png",
+     "flareDmgMult": 1.4,
+     "flareFuseMult": 0.85
+    },
+    "reg": {
+     "id": "reg",
+     "name": "Fantail",
+     "hpBase": 189,
+     "minDmg": 12,
+     "maxDmg": 21,
+     "shipSpeed": 6,
+     "actionMs": 4400,
+     "pattern": [
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "fire",
+      "reload",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.08,
+     "decoyCount": 1,
+     "decoyName": "False Colors",
+     "zoneSpeedMult": 1.9,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid5_sham.png",
+     "flareDmgMult": 1.4,
+     "flareFuseMult": 0.85
+    },
+    "brute": {
+     "id": "brute",
+     "name": "Bristle",
+     "hpBase": 276,
+     "minDmg": 16,
+     "maxDmg": 28,
+     "shipSpeed": 3,
+     "actionMs": 5400,
+     "pattern": [
+      "reload",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "reload",
+      "dodge",
+      "volley",
+      "fire"
+     ],
+     "critChance": 0.06,
+     "decoyCount": 2,
+     "decoyName": "False Colors",
+     "zoneSpeedMult": 2.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid5_bulwark.png",
+     "flareDmgMult": 1.4,
+     "flareFuseMult": 0.85
+    },
+    "elite": {
+     "id": "elite",
+     "name": "Barb",
+     "hpBase": 241,
+     "minDmg": 15,
+     "maxDmg": 25,
+     "shipSpeed": 9,
+     "actionMs": 3300,
+     "pattern": [
+      "fire",
+      "dodge",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "fire",
+      "reload",
+      "dodge",
+      "fire"
+     ],
+     "critChance": 0.13,
+     "decoyCount": 2,
+     "decoyName": "False Colors",
+     "zoneSpeedMult": 1.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid5_mirage.png",
+     "flareDmgMult": 1.4,
+     "flareFuseMult": 0.85
+    },
+    "admiral": {
+     "id": "admiral",
+     "name": "Admiral Ruse",
+     "hpBase": 1005,
+     "minDmg": 24,
+     "maxDmg": 43,
+     "shipSpeed": 7,
+     "actionMs": 4200,
+     "pattern": [
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "fire",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.12,
+     "decoyCount": 3,
+     "decoyName": "False Colors",
+     "phase2": {
+      "revivePct": 0.5,
+      "damageMult": 1.2,
+      "pattern": [
+       "fire",
+       "reload",
+       "volley",
+       "dodge",
+       "fire",
+       "reload",
+       "fire",
+       "dodge",
+       "fire"
+      ],
+      "dialogueLine": "Enough games. Run out the real guns."
+     },
+     "zoneSpeedMult": 1.9,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid5_admiralruse.png",
+     "flareDmgMult": 1.4,
+     "flareFuseMult": 0.85
+    }
+   },
+   "sequence": [
+    "scout",
+    "reg",
+    "scout",
+    "brute",
+    "elite",
+    "reg",
+    "brute",
+    "elite"
+   ],
+   "bossId": "admiral",
+   "tides": {
+    "slots": [
+     3,
+     6
+    ],
+    "maxTier": 2
+   },
+   "loot": [
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 12
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 8
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 7
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 3
+    },
+    {
+     "id": "coffers_hull",
+     "label": "Coffers Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 10,
+     "shipSkinId": "coffers_hull"
+    },
+    {
+     "id": "tell_tale_glass",
+     "label": "Tell-Tale Glass",
+     "image": "/telltaleglass.png",
+     "emoji": "🔭",
+     "rarity": "epic",
+     "weight": 40
+    },
+    {
+     "id": "admirals_eye",
+     "label": "Admiral's Eye",
+     "image": "/admiralseye.png",
+     "emoji": "👁️",
+     "rarity": "legendary",
+     "weight": 20
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 113,
+     "xp": 113
+    },
+    "reg": {
+     "gold": 150,
+     "xp": 165
+    },
+    "brute": {
+     "gold": 203,
+     "xp": 225
+    },
+    "elite": {
+     "gold": 248,
+     "xp": 270
+    },
+    "admiral": {
+     "gold": 900,
+     "xp": 900
+    }
+   },
+   "dialogueAccent": "#dca494"
+  },
+  "the_quartermaster_challenge": {
+   "raidId": "the_quartermaster_challenge",
+   "enemyAccuracy": 28,
+   "raidTitle": "Challenge: The Quartermaster",
+   "bossDefeatedText": "The Quartermaster Defeated",
+   "atmosphere": "vault",
+   "zone": "deep",
+   "enemies": {
+    "scout": {
+     "id": "scout",
+     "name": "The Leech",
+     "hpBase": 234,
+     "minDmg": 14,
+     "maxDmg": 25,
+     "shipSpeed": 10,
+     "actionMs": 3000,
+     "pattern": [
+      "fire",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge",
+      "reload",
+      "dodge",
+      "fire",
+      "reload"
+     ],
+     "critChance": 0.2,
+     "affix": "vampiric",
+     "zoneSpeedMult": 2.7,
+     "image": "/ship-hero/schooner_v3.png",
+     "portrait": "/raid6_theleech.png"
+    },
+    "reg": {
+     "id": "reg",
+     "name": "The Breaker",
+     "hpBase": 520,
+     "minDmg": 21,
+     "maxDmg": 37,
+     "shipSpeed": 2,
+     "actionMs": 5200,
+     "pattern": [
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "reload",
+      "volley",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.06,
+     "affix": "ironclad",
+     "zoneSpeedMult": 3,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid6_thebreaker.png"
+    },
+    "quartermaster": {
+     "id": "quartermaster",
+     "name": "The Quartermaster",
+     "hpBase": 855,
+     "minDmg": 26,
+     "maxDmg": 46,
+     "shipSpeed": 7,
+     "actionMs": 4200,
+     "pattern": [
+      "reload",
+      "reload",
+      "fire",
+      "volley",
+      "dodge",
+      "reload",
+      "fire",
+      "dodge",
+      "fire",
+      "reload"
+     ],
+     "critChance": 0.12,
+     "repossess": true,
+     "repossessName": "Repossession",
+     "phases": [
+      {
+       "revivePct": 0.85,
+       "damageMult": 1.15,
+       "badge": "Called In",
+       "pattern": [
+        "reload",
+        "fire",
+        "volley",
+        "dodge",
+        "reload",
+        "fire",
+        "dodge",
+        "fire",
+        "reload"
+       ],
+       "dialogueLine": "You cracked the ledger. You have not cleared the debt.",
+       "check": {
+        "id": "big_gun",
+        "name": "The Big Gun",
+        "chargeTurns": 2,
+        "telegraph": "The Quartermaster hauls the reserve cannon onto the rail and swings the muzzle toward you.",
+        "hint": "A shot this heavy has to be met with a crew ability. A defensive one that gets something between you and the muzzle before it fires. Your own brace/dodge won’t turn it aside.",
+        "responses": [
+         "brace",
+         "shield"
+        ],
+        "counteredLine": "The big shot slams into your cover and glances wide.",
+        "failLine": "The reserve cannon speaks, and nothing turned it aside.",
+        "consequence": {
+         "kind": "damagePctMaxHp",
+         "value": 0.75
+        }
+       }
+      },
+      {
+       "revivePct": 0.72,
+       "damageMult": 1.3,
+       "badge": "Reserve Deck",
+       "pattern": [
+        "reload",
+        "reload",
+        "volley",
+        "dodge",
+        "fire",
+        "volley",
+        "dodge",
+        "fire",
+        "reload"
+       ],
+       "dialogueLine": "You think the shelves are bare? I keep a reserve deck for captains like you.",
+       "check": {
+        "id": "cooking_books",
+        "name": "Cooking the Books",
+        "chargeTurns": 2,
+        "telegraph": "The Quartermaster ducks low behind the counter and starts working the ledger, fast.",
+        "hint": "Don't let him finish the tally. Fire a crew ability to break it. Something disrupting to foul his concentration, or a heavy-hitting one to overpower him before the count closes, or he balances the ledger in his favor.",
+        "responses": [
+         "snare",
+         "burst"
+        ],
+        "counteredLine": "You break his tally before it can close.",
+        "failLine": "The ledger balances in his favor.",
+        "consequence": {
+         "kind": "enemyHealPctMaxHp",
+         "value": 0.3
+        }
+       }
+      },
+      {
+       "revivePct": 0.6,
+       "damageMult": 1.5,
+       "badge": "Empty Shelves",
+       "pattern": [
+        "fire",
+        "volley",
+        "dodge",
+        "reload",
+        "fire",
+        "fire",
+        "volley",
+        "fire"
+       ],
+       "dialogueLine": "Nothing left to sell. Then I sink you and take the lot back myself.",
+       "check": {
+        "id": "fire_sale",
+        "name": "Fire Sale",
+        "chargeTurns": 2,
+        "telegraph": "The Quartermaster touches a torch to the stock and the whole Cache goes up in flame.",
+        "hint": "The whole stock goes up at once and sets your hull ablaze. Fire a crew ability before it catches, a recovery one or a defensive one, and if it does catch, only a crew heal puts the fire out.",
+        "responses": [
+         "heal",
+         "shield"
+        ],
+        "counteredLine": "You smother the blaze before it can spread.",
+        "failLine": "The fire sale catches, and your hull goes up in flame.",
+        "consequence": {
+         "kind": "burnDot",
+         "pctPerTurn": 0.18,
+         "turns": 3
+        }
+       }
+      },
+      {
+       "revivePct": 0.55,
+       "damageMult": 1.75,
+       "badge": "Nothing Personal",
+       "pattern": [
+        "fire",
+        "volley",
+        "dodge",
+        "fire",
+        "reload",
+        "volley",
+        "fire",
+        "dodge",
+        "fire"
+       ],
+       "dialogueLine": "You should have paid when the price was gold. Now it is your ship.",
+       "check": {
+        "id": "total_liquidation",
+        "name": "Total Liquidation",
+        "chargeTurns": 2,
+        "telegraph": "The Quartermaster runs out every gun the Cache has left and levels them all at your hull.",
+        "responses": [
+         "brace",
+         "shield"
+        ],
+        "counteredLine": "You throw up cover and the last of his stock breaks against it.",
+        "failLine": "Everything he had left lands at once.",
+        "consequence": {
+         "kind": "damagePctMaxHp",
+         "value": 0.8
+        }
+       }
+      }
+     ],
+     "zoneSpeedMult": 2,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid6_thequartermaster.png"
+    }
+   },
+   "sequence": [
+    "scout",
+    "reg"
+   ],
+   "bossId": "quartermaster",
+   "loot": [
+    {
+     "id": "doubloons_600",
+     "label": "+600 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 10
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 8
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 5
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 1
+    },
+    {
+     "id": "coffers_hull",
+     "label": "Coffers Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 16,
+     "shipSkinId": "coffers_hull"
+    },
+    {
+     "id": "war_drum",
+     "label": "War Drum",
+     "image": "/wardrum.png",
+     "emoji": "🥁",
+     "rarity": "epic",
+     "weight": 40
+    },
+    {
+     "id": "thunder_drum",
+     "label": "Thunder Drum",
+     "image": "/thunderdrum.png",
+     "emoji": "🥁",
+     "rarity": "legendary",
+     "weight": 20
+    }
+   ],
+   "killRewards": {
+    "scout": {
+     "gold": 195,
+     "xp": 210
+    },
+    "reg": {
+     "gold": 270,
+     "xp": 300
+    },
+    "quartermaster": {
+     "gold": 2100,
+     "xp": 2400
+    }
+   },
+   "dialogueAccent": "#dc2626",
+   "mergeRandomAffix": true
+  },
+  "the_blockade_challenge": {
+   "raidId": "the_blockade_challenge",
+   "enemyAccuracy": 34,
+   "raidTitle": "Challenge: The Blockade",
+   "bossDefeatedText": "Sal Brackwater Defeated",
+   "atmosphere": "brackwater",
+   "zone": "abyss",
+   "enemies": {
+    "picket": {
+     "id": "picket",
+     "name": "The Scute",
+     "hpBase": 358,
+     "minDmg": 23,
+     "maxDmg": 39,
+     "shipSpeed": 9,
+     "actionMs": 3400,
+     "magazineSize": 4,
+     "shieldPct": 0.1,
+     "critDrift": 0.24,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "fire",
+      "reload",
+      "dodge",
+      "fire",
+      "reload",
+      "fire",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.2,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid7_thescute.png"
+    },
+    "bosun": {
+     "id": "bosun",
+     "name": "The Bank",
+     "hpBase": 397,
+     "minDmg": 24,
+     "maxDmg": 40,
+     "shipSpeed": 6,
+     "actionMs": 3600,
+     "magazineSize": 4,
+     "shieldPct": 0.11,
+     "critDrift": 0.32,
+     "critDriftName": "Rolling Plate",
+     "special": {
+      "name": "Dig In",
+      "status": "fortify",
+      "magnitude": 0.25,
+      "turns": 2,
+      "target": "self",
+      "line": "The Bank drops his weight into the silt and settles, and the shot just thumps into mud."
+     },
+     "pattern": [
+      "reload",
+      "fire",
+      "special",
+      "reload",
+      "volley",
+      "reload",
+      "fire",
+      "dodge"
+     ],
+     "critChance": 0.11,
+     "zoneSpeedMult": 2.3,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid7_thebank.png"
+    },
+    "netter": {
+     "id": "netter",
+     "name": "The Mangrove",
+     "hpBase": 429,
+     "minDmg": 25,
+     "maxDmg": 41,
+     "shipSpeed": 6,
+     "actionMs": 3800,
+     "magazineSize": 4,
+     "shieldPct": 0.13,
+     "special": {
+      "name": "Deadwood",
+      "status": "slowed",
+      "magnitude": 3,
+      "turns": 2,
+      "target": "player",
+      "line": "Root and deadwood come up under the hull and wrap the rudder, and the wheel goes dead in your hands."
+     },
+     "critDrift": 0.38,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "volley",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.1,
+     "zoneSpeedMult": 2.4,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid7_themangrove.png"
+    },
+    "chainman": {
+     "id": "chainman",
+     "name": "The Rasp",
+     "hpBase": 455,
+     "minDmg": 28,
+     "maxDmg": 44,
+     "shipSpeed": 7,
+     "actionMs": 3600,
+     "magazineSize": 4,
+     "shieldPct": 0.15,
+     "special": {
+      "name": "Chain-Shot",
+      "status": "weaken",
+      "magnitude": 0.2,
+      "turns": 2,
+      "target": "player",
+      "line": "Chain-shot screams through your powder line and your guns cough where they roared."
+     },
+     "critDrift": 0.5,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "fire",
+      "special",
+      "reload",
+      "fire",
+      "volley",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.5,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid7_therasp.png"
+    },
+    "cracksman": {
+     "id": "cracksman",
+     "name": "The Wedge",
+     "hpBase": 481,
+     "minDmg": 28,
+     "maxDmg": 46,
+     "shipSpeed": 5,
+     "actionMs": 4200,
+     "magazineSize": 4,
+     "shieldPct": 0.15,
+     "special": {
+      "name": "Hull-Cracker",
+      "status": "feeble",
+      "magnitude": 0.22,
+      "turns": 2,
+      "target": "player",
+      "line": "A cracker round splits your seams wide open, and every blow after it will find the gap."
+     },
+     "critDrift": 0.5,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "reload",
+      "special",
+      "volley",
+      "reload",
+      "fire",
+      "volley",
+      "dodge"
+     ],
+     "critChance": 0.1,
+     "zoneSpeedMult": 2.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid7_thewedge.png"
+    },
+    "purser": {
+     "id": "purser",
+     "name": "Old Scar",
+     "hpBase": 494,
+     "minDmg": 29,
+     "maxDmg": 45,
+     "shipSpeed": 7,
+     "actionMs": 3800,
+     "magazineSize": 4,
+     "shieldPct": 0.17,
+     "critDrift": 0.62,
+     "critDriftName": "Rolling Plate",
+     "special": {
+      "name": "Old Wounds",
+      "status": "regen",
+      "magnitude": 16,
+      "turns": 3,
+      "target": "self",
+      "line": "Old Scar takes the hit the way he has taken every other one, and the hole closes while you watch."
+     },
+     "pattern": [
+      "special",
+      "reload",
+      "fire",
+      "reload",
+      "fire",
+      "volley",
+      "reload",
+      "dodge"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid7_oldscar.png"
+    },
+    "muzzle": {
+     "id": "muzzle",
+     "name": "The Muzzle",
+     "hpBase": 501,
+     "minDmg": 30,
+     "maxDmg": 46,
+     "shipSpeed": 8,
+     "actionMs": 3600,
+     "magazineSize": 4,
+     "shieldPct": 0.17,
+     "special": {
+      "name": "Gag Order",
+      "status": "silence",
+      "magnitude": 1,
+      "turns": 2,
+      "target": "player",
+      "line": "The gag order comes down, and your crew go quiet mid-shout."
+     },
+     "critDrift": 0.7,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "fire",
+      "volley",
+      "reload",
+      "dodge"
+     ],
+     "critChance": 0.14,
+     "zoneSpeedMult": 2.7,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid7_themuzzle.png"
+    },
+    "saltie": {
+     "id": "saltie",
+     "name": "Sal Brackwater",
+     "hpBase": 968,
+     "minDmg": 34,
+     "maxDmg": 55,
+     "shipSpeed": 8,
+     "actionMs": 4000,
+     "magazineSize": 4,
+     "shieldPct": 0.2,
+     "special": {
+      "name": "Still Water",
+      "status": "enrage",
+      "magnitude": 0.25,
+      "turns": 2,
+      "target": "self",
+      "line": "Sal stops moving. The chop goes flat around him, and every gun on the line goes quiet."
+     },
+     "critDrift": 0.88,
+     "critDriftName": "Rolling Plate",
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "volley",
+      "dodge",
+      "fire",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.14,
+     "phases": [
+      {
+       "revivePct": 0.8,
+       "damageMult": 1.35,
+       "badge": "The Death Roll",
+       "pattern": [
+        "special",
+        "fire",
+        "reload",
+        "volley",
+        "fire",
+        "dodge",
+        "reload",
+        "volley"
+       ],
+       "dialogueLine": "The don said bring him your colors. He never said in one piece.",
+       "check": {
+        "id": "death_roll",
+        "name": "The Death Roll",
+        "chargeTurns": 2,
+        "telegraph": "Sal takes your hull in his teeth, sets his feet against the swell, and starts to turn.",
+        "hint": "He is going to roll, and he will not let go. Only a crew ability gets something between your hull and that grip. Your own brace or dodge does nothing here.",
+        "responses": [
+         "brace",
+         "shield"
+        ],
+        "counteredLine": "He rolls against braced timber, tears off a mouthful of nothing, and lets go spitting splinters.",
+        "failLine": "He rolls, and he keeps rolling, and your hull comes apart along the grain.",
+        "consequence": {
+         "kind": "damagePctMaxHp",
+         "value": 0.7
+        }
+       }
+      },
+      {
+       "revivePct": 0.45,
+       "damageMult": 1.5,
+       "badge": "The Last Wall",
+       "pattern": [
+        "reload",
+        "fire",
+        "special",
+        "reload",
+        "volley",
+        "fire",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "You want the don? Then come through my back. Nothing you carry goes through my back. Not one shot of it.",
+       "aegis": {
+        "name": "The Last Wall",
+        "hitsToBreak": 6
+       }
+      }
+     ],
+     "zoneSpeedMult": 2.1,
+     "image": "/enemychapter4man-o-war.png",
+     "portrait": "/raid7_salbrackwater.png"
+    }
+   },
+   "sequence": [
+    "picket",
+    "bosun",
+    "netter",
+    "chainman",
+    "cracksman",
+    "purser",
+    "muzzle"
+   ],
+   "bossId": "saltie",
+   "tides": {
+    "slots": [
+     3,
+     6
+    ],
+    "maxTier": 2
+   },
+   "loot": [
+    {
+     "id": "doubloons_800",
+     "label": "+800 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 9
+    },
+    {
+     "id": "doubloons_1500",
+     "label": "+1,500 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 6
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 6
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 3
+    },
+    {
+     "id": "last_fathom_hull",
+     "label": "Last Fathom Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 16,
+     "shipSkinId": "last_fathom_hull"
+    },
+    {
+     "id": "chain_shot",
+     "label": "Chain-Shot Rack",
+     "image": null,
+     "emoji": "⛓️",
+     "rarity": "epic",
+     "weight": 40
+    },
+    {
+     "id": "brackwater_rack",
+     "label": "Brackwater Rack",
+     "image": null,
+     "emoji": "⛓️",
+     "rarity": "legendary",
+     "weight": 20
+    }
+   ],
+   "killRewards": {
+    "picket": {
+     "gold": 255,
+     "xp": 285
+    },
+    "bosun": {
+     "gold": 270,
+     "xp": 300
+    },
+    "netter": {
+     "gold": 285,
+     "xp": 315
+    },
+    "chainman": {
+     "gold": 315,
+     "xp": 345
+    },
+    "cracksman": {
+     "gold": 345,
+     "xp": 375
+    },
+    "purser": {
+     "gold": 368,
+     "xp": 398
+    },
+    "muzzle": {
+     "gold": 390,
+     "xp": 420
+    },
+    "saltie": {
+     "gold": 2550,
+     "xp": 3000
+    }
+   },
+   "dialogueAccent": "#a3833f"
+  },
+  "the_throne_challenge": {
+   "raidId": "the_throne_challenge",
+   "enemyAccuracy": 36,
+   "raidTitle": "Challenge: The Throne",
+   "bossDefeatedText": "Don Finleone Defeated",
+   "atmosphere": "vault",
+   "zone": "ancient_deep",
+   "enemies": {
+    "court_herald": {
+     "id": "court_herald",
+     "name": "The Ripper",
+     "hpBase": 442,
+     "minDmg": 25,
+     "maxDmg": 41,
+     "shipSpeed": 8,
+     "actionMs": 3400,
+     "magazineSize": 4,
+     "shieldPct": 0.15,
+     "chargeBiteChance": 0.35,
+     "ultimate": {
+      "name": "Broadside Royale",
+      "mult": 2.4,
+      "line": "Every gun on the deck speaks at once, in the don’s name."
+     },
+     "pattern": [
+      "reload",
+      "fire",
+      "reload",
+      "reload",
+      "ultimate",
+      "dodge",
+      "reload",
+      "fire"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.3,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid8_theripper.png"
+    },
+    "the_mirage": {
+     "id": "the_mirage",
+     "name": "The Render",
+     "hpBase": 494,
+     "minDmg": 28,
+     "maxDmg": 44,
+     "shipSpeed": 10,
+     "actionMs": 3400,
+     "magazineSize": 4,
+     "shieldPct": 0.18,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "False Court",
+      "aimAttack": "decoys",
+      "aimPasses": 2,
+      "line": "Lantern-rigs bloom down his rail, a court of false colors with only one throne among them."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "dodge",
+      "fire",
+      "special",
+      "reload"
+     ],
+     "critChance": 0.12,
+     "zoneSpeedMult": 2.5,
+     "image": "/ship-hero/brigantine_v3.png",
+     "portrait": "/raid8_therender.png"
+    },
+    "the_doorman": {
+     "id": "the_doorman",
+     "name": "The Gnash",
+     "hpBase": 546,
+     "minDmg": 28,
+     "maxDmg": 46,
+     "shipSpeed": 5,
+     "actionMs": 4200,
+     "magazineSize": 4,
+     "shieldPct": 0.24,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "Iron Etiquette",
+      "aimAttack": "hardened",
+      "aimPasses": 2,
+      "line": "Iron shutters slam over every line you’d take. Nobody reaches the don in one knock."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "reload",
+      "fire",
+      "volley",
+      "reload",
+      "special",
+      "fire"
+     ],
+     "critChance": 0.1,
+     "zoneSpeedMult": 2.2,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid8_thegnash.png"
+    },
+    "the_stormcaller": {
+     "id": "the_stormcaller",
+     "name": "The Gorge",
+     "hpBase": 572,
+     "minDmg": 30,
+     "maxDmg": 46,
+     "shipSpeed": 9,
+     "actionMs": 3600,
+     "magazineSize": 4,
+     "shieldPct": 0.2,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "Kingmaker’s Gale",
+      "aimAttack": "squall",
+      "aimPasses": 2,
+      "line": "He whistles a wind out of dead water, and your gun-deck pitches with it."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "fire",
+      "reload",
+      "fire",
+      "volley",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.14,
+     "zoneSpeedMult": 2.6,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid8_thegorge.png"
+    },
+    "the_left_hand": {
+     "id": "the_left_hand",
+     "name": "The Reaper",
+     "hpBase": 624,
+     "minDmg": 30,
+     "maxDmg": 48,
+     "shipSpeed": 8,
+     "actionMs": 3800,
+     "magazineSize": 4,
+     "shieldPct": 0.24,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "Omertà",
+      "status": "silence",
+      "magnitude": 1,
+      "turns": 2,
+      "target": "player",
+      "line": "The left hand draws a line across his throat, and your crew’s shouts die in the wind."
+     },
+     "ultimate": {
+      "name": "The Quiet Word",
+      "mult": 2.5,
+      "line": "What the don whispers, the guns repeat."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "reload",
+      "reload",
+      "ultimate",
+      "fire",
+      "dodge",
+      "reload"
+     ],
+     "critChance": 0.14,
+     "zoneSpeedMult": 2.7,
+     "image": "/ship-hero/galleon_v3.png",
+     "portrait": "/raid8_thereaper.png"
+    },
+    "the_consigliere": {
+     "id": "the_consigliere",
+     "name": "The Closer",
+     "hpBase": 676,
+     "minDmg": 32,
+     "maxDmg": 51,
+     "shipSpeed": 7,
+     "actionMs": 4000,
+     "magazineSize": 4,
+     "shieldPct": 0.26,
+     "chargeBiteChance": 0.35,
+     "special": {
+      "name": "Marked for the Don",
+      "status": "feeble",
+      "magnitude": 0.22,
+      "turns": 2,
+      "target": "player",
+      "line": "He reads your name off a short list, and every gun in the court knows where to aim."
+     },
+     "ultimate": {
+      "name": "Final Counsel",
+      "mult": 2.6,
+      "line": "His advice, delivered all at once."
+     },
+     "pattern": [
+      "reload",
+      "special",
+      "reload",
+      "volley",
+      "reload",
+      "reload",
+      "ultimate",
+      "dodge"
+     ],
+     "critChance": 0.12,
+     "phase2": {
+      "revivePct": 0.55,
+      "damageMult": 1.3,
+      "pattern": [
+       "special",
+       "reload",
+       "reload",
+       "volley",
+       "reload",
+       "fire",
+       "reload",
+       "reload",
+       "ultimate",
+       "dodge"
+      ],
+      "dialogueLine": "You do not close an account by sinking it once, captain. Let me show you the interest.",
+      "badge": "The Reckoning"
+     },
+     "zoneSpeedMult": 2.5,
+     "image": "/enemychapter4man-o-war.png",
+     "portrait": "/raid8_thecloser.png"
+    },
+    "don_finleone": {
+     "id": "don_finleone",
+     "name": "Don Finleone",
+     "hpBase": 1320,
+     "minDmg": 36,
+     "maxDmg": 60,
+     "shipSpeed": 9,
+     "actionMs": 4000,
+     "magazineSize": 4,
+     "shieldPct": 0.3,
+     "chargeBiteChance": 0.35,
+     "startCharges": 2,
+     "special": {
+      "name": "Court of Crowns",
+      "aimAttack": "decoys",
+      "aimPasses": 2,
+      "line": "The court closes around the throne. A dozen crowns, and only one that bleeds."
+     },
+     "ultimate": {
+      "name": "The Deep Verdict",
+      "mult": 2.8,
+      "line": "The don passes sentence, and the water carries it out."
+     },
+     "pattern": [
+      "special",
+      "fire",
+      "reload",
+      "reload",
+      "ultimate",
+      "dodge",
+      "fire",
+      "reload"
+     ],
+     "critChance": 0.15,
+     "openingCheck": {
+      "id": "the_court",
+      "name": "The Don’s Court",
+      "chargeTurns": 2,
+      "telegraph": "The whole drowned court trains its guns on your hull at once, waiting on the don’s nod.",
+      "hint": "You cannot out-gun a whole court. Weather the opening volley. A brace, a shield, or a big heal will all ride it out.",
+      "responses": [
+       "brace",
+       "shield",
+       "heal"
+      ],
+      "counteredLine": "Your crew answers first, and the court’s opening volley scatters wide.",
+      "failLine": "Nobody stands with you, and the whole court fires as one.",
+      "consequence": {
+       "kind": "damagePctMaxHp",
+       "value": 0.55
+      }
+     },
+     "phases": [
+      {
+       "revivePct": 0.72,
+       "damageMult": 1.25,
+       "badge": "The Maw",
+       "pattern": [
+        "special",
+        "fire",
+        "reload",
+        "reload",
+        "ultimate",
+        "volley",
+        "dodge",
+        "reload"
+       ],
+       "dialogueLine": "You came for a don. The deep sent you something older. Look at the WIDTH of what you’ve been bargaining with.",
+       "check": {
+        "id": "the_maw",
+        "name": "The Maw",
+        "chargeTurns": 2,
+        "telegraph": "The don’s hull ROLLS, and keeps rolling, a jaw the size of your broadside opening under the waterline.",
+        "hint": "A bite that wide can’t be weaved. Harden the hull with a brace, or blast the jaw apart with a big shot before it shuts.",
+        "responses": [
+         "brace",
+         "burst"
+        ],
+        "counteredLine": "Your crew throws the maw off its line and it grinds iron instead of deck.",
+        "failLine": "The maw closes on your hull and something structural gives. Every blow after this one finds the gap.",
+        "consequence": {
+         "kind": "status",
+         "status": "feeble",
+         "magnitude": 0.5,
+         "turns": 4,
+         "dmgPct": 0.35
+        }
+       }
+      },
+      {
+       "revivePct": 0.6,
+       "damageMult": 1.35,
+       "badge": "Blood in the Water",
+       "pattern": [
+        "fire",
+        "special",
+        "reload",
+        "fire",
+        "reload",
+        "ultimate",
+        "volley",
+        "dodge"
+       ],
+       "dialogueLine": "There it is. The blood. Now the whole ocean knows where you are.",
+       "check": {
+        "id": "blood_water",
+        "name": "Blood in the Water",
+        "chargeTurns": 2,
+        "telegraph": "He rakes a long gash down your hull and circles wide, the sea reddening with every pass at the smell of it.",
+        "hint": "The wound is what keeps drawing him. Close it with a heal, or snare him off the blood-trail before he circles back in.",
+        "responses": [
+         "heal",
+         "snare"
+        ],
+        "counteredLine": "Your crew answers the wound and the blood-trail goes cold; he loses the scent.",
+        "failLine": "He follows the blood straight in, tears the gash wider, and the wound feeds him.",
+        "consequence": {
+         "kind": "enemyHealPctMaxHp",
+         "value": 0.3
+        }
+       }
+      },
+      {
+       "revivePct": 0.5,
+       "damageMult": 1.45,
+       "badge": "The Sounding",
+       "pattern": [
+        "special",
+        "fire",
+        "reload",
+        "reload",
+        "ultimate",
+        "fire",
+        "volley",
+        "dodge"
+       ],
+       "dialogueLine": "Enough court. Enough colors. The Finndicate was never the family, captain. It was the FEEDING.",
+       "check": {
+        "id": "the_sounding",
+        "name": "The Sounding",
+        "chargeTurns": 2,
+        "telegraph": "The megalodon SOUNDS. The whole sea dips as he goes deep, gathering water for a breach that will land on your deck.",
+        "hint": "You can’t block a falling mountain. You have to break the dive itself. Snare him out of it, or blast him up early with a big shot.",
+        "responses": [
+         "snare",
+         "burst"
+        ],
+        "counteredLine": "The dive breaks. He breaches early, wide, and the wave takes the blow for you.",
+        "failLine": "The sea goes still. Then it goes UP, and the breach leaves your ship reeling and slow to answer.",
+        "consequence": {
+         "kind": "status",
+         "status": "slowed",
+         "magnitude": 12,
+         "turns": 4,
+         "dmgPct": 0.4
+        }
+       }
+      },
+      {
+       "revivePct": 0.42,
+       "damageMult": 1.55,
+       "badge": "The Undertow",
+       "pattern": [
+        "special",
+        "fire",
+        "fire",
+        "reload",
+        "reload",
+        "ultimate",
+        "volley",
+        "reload"
+       ],
+       "dialogueLine": "Down here, captain, EVERYTHING feeds the family. Even you.",
+       "check": {
+        "id": "the_undertow",
+        "name": "The Undertow",
+        "chargeTurns": 2,
+        "telegraph": "He circles fast and low and the whole drowned court fires down the whirlpool at once, a wall of iron closing on your hull.",
+        "hint": "No brace holds against a wall this wide. Raise a shield to break it, or out-heal what gets through.",
+        "responses": [
+         "shield",
+         "heal"
+        ],
+        "counteredLine": "The barrage breaks on your crew’s answer in a wall of spray.",
+        "failLine": "The undertow drags your broadside off true, and the court’s iron rakes you while your guns swing wild.",
+        "consequence": {
+         "kind": "status",
+         "status": "weaken",
+         "magnitude": 0.45,
+         "turns": 4,
+         "dmgPct": 0.35
+        }
+       }
+      },
+      {
+       "revivePct": 0.34,
+       "damageMult": 1.7,
+       "badge": "The Last Bite",
+       "pattern": [
+        "fire",
+        "special",
+        "reload",
+        "ultimate",
+        "fire",
+        "reload",
+        "volley",
+        "dodge"
+       ],
+       "dialogueLine": "You crossed the WHOLE family to get here. Let me show you what the family is FOR.",
+       "check": {
+        "id": "the_last_bite",
+        "name": "The Last Bite",
+        "chargeTurns": 2,
+        "telegraph": "The megalodon rears his whole bulk from the water for one final lunge. And for one breath his throat hangs open above your deck.",
+        "hint": "The throat hangs open for one breath. Fire everything down it with a big shot, or throw up a brace or shield and ride out the lunge.",
+        "responses": [
+         "burst",
+         "brace",
+         "shield"
+        ],
+        "counteredLine": "Your crew fires straight down his throat and the last bite dies in the water.",
+        "failLine": "The last bite comes down, and the deep finally closes over you.",
+        "consequence": {
+         "kind": "damagePctMaxHp",
+         "value": 0.9
+        }
+       }
+      }
+     ],
+     "zoneSpeedMult": 2.4,
+     "image": "/enemychapter4man-o-war.png",
+     "portrait": "/raid8_donfinleone.png"
+    }
+   },
+   "sequence": [
+    "court_herald",
+    "the_mirage",
+    "the_doorman",
+    "the_stormcaller",
+    "the_left_hand",
+    "the_consigliere"
+   ],
+   "bossId": "don_finleone",
+   "tides": {
+    "slots": [
+     2,
+     5
+    ],
+    "maxTier": 2
+   },
+   "preBossReprieve": true,
+   "loot": [
+    {
+     "id": "doubloons_800",
+     "label": "+800 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 8
+    },
+    {
+     "id": "doubloons_1500",
+     "label": "+1,500 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 6
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 6
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 4
+    },
+    {
+     "id": "last_fathom_hull",
+     "label": "Last Fathom Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 16,
+     "shipSkinId": "last_fathom_hull"
+    },
+    {
+     "id": "court_fang",
+     "label": "The Court's Fang",
+     "image": "/thecourtsfang.png",
+     "emoji": "🦈",
+     "rarity": "epic",
+     "weight": 40
+    },
+    {
+     "id": "dons_signet",
+     "label": "The Don’s Signet",
+     "image": "/thedonssignet.png",
+     "emoji": "💍",
+     "rarity": "legendary",
+     "weight": 20
+    }
+   ],
+   "killRewards": {
+    "court_herald": {
+     "gold": 300,
+     "xp": 330
+    },
+    "the_mirage": {
+     "gold": 330,
+     "xp": 360
+    },
+    "the_doorman": {
+     "gold": 360,
+     "xp": 390
+    },
+    "the_stormcaller": {
+     "gold": 390,
+     "xp": 420
+    },
+    "the_left_hand": {
+     "gold": 435,
+     "xp": 465
+    },
+    "the_consigliere": {
+     "gold": 480,
+     "xp": 510
+    },
+    "don_finleone": {
+     "gold": 3750,
+     "xp": 4500
+    }
+   }
+  },
+  "the_sunken_hand_challenge": {
+   "raidId": "the_sunken_hand_challenge",
+   "enemyAccuracy": 40,
+   "raidTitle": "Challenge: The Sunken Hand",
+   "bossDefeatedText": "Finn Defeated",
+   "aimStyle": "dial",
+   "defeatSequence": {
+    "lines": [
+     "Heh.",
+     "All that patience. And it was you at the end of the line.",
+     "The dark goes out of the water. The morning comes back the way it left, from him outward."
+    ]
+   },
+   "critStreak": {
+    "perStack": 0.07,
+    "maxStacks": 14,
+    "label": "Perfect Streak",
+    "pierceAt": 5
+   },
+   "atmosphere": "vault",
+   "zone": "ancient_deep",
+   "enemies": {
+    "finn": {
+     "id": "finn",
+     "name": "Finn",
+     "hpBase": 1320,
+     "minDmg": 36,
+     "maxDmg": 60,
+     "shipSpeed": 11,
+     "actionMs": 4000,
+     "magazineSize": 4,
+     "shieldPct": 0.25,
+     "startCharges": 2,
+     "ultimate": {
+      "name": "The Long Line",
+      "mult": 2.8,
+      "line": "All that patience, paid out at once."
+     },
+     "pattern": [
+      "fire",
+      "reload",
+      "reload",
+      "fire",
+      "reload",
+      "dodge",
+      "fire"
+     ],
+     "critChance": 0.15,
+     "image": "/enemy_finnship.png",
+     "portrait": "/finn_final.png",
+     "phaseBgImage": "/finn_bg1.jpg",
+     "phaseAbility": {
+      "kind": "foresight",
+      "name": "From the Wrong Water",
+      "summonImage": "/fish/plesiosaurus.png",
+      "summonColor": "#a78bfa",
+      "turns": 2
+     },
+     "phases": [
+      {
+       "revivePct": 1,
+       "damageMult": 1.08,
+       "badge": "Old Armour",
+       "bgImage": "/finn_bg2.jpg",
+       "pattern": [
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "Plate that outlived its own bones. Do you know how long I waited to wear this?",
+       "ability": {
+        "kind": "abyssal_tide",
+        "name": "Old Armour",
+        "summonImage": "/fish/dunkleosteus.png",
+        "summonColor": "#9fb2c8",
+        "value": 0.1,
+        "shieldValue": 0.2
+       },
+       "shieldPct": 0.5
+      },
+      {
+       "revivePct": 1,
+       "damageMult": 1.16,
+       "badge": "Wake of the Drowned",
+       "bgImage": "/finn_bg3.jpg",
+       "pattern": [
+        "fire",
+        "reload",
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "You have never once been fast enough. Let me show you what fast is.",
+       "ability": {
+        "kind": "blitz",
+        "name": "Wake of the Drowned",
+        "summonImage": "/fish/mosasaurus.png",
+        "summonColor": "#67e8f9",
+        "shots": 4,
+        "value": 1
+       },
+       "shieldPct": 0.65
+      },
+      {
+       "revivePct": 1,
+       "damageMult": 1.24,
+       "badge": "Still Going",
+       "bgImage": "/finn_bg4.jpg",
+       "pattern": [
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "reload",
+        "volley",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "You have put more iron through me than most captains see in a lifetime. Look at me.",
+       "ability": {
+        "kind": "vengeance",
+        "name": "Still Going",
+        "summonImage": "/fish/basilosaurus.png",
+        "summonColor": "#94a3b8",
+        "turns": 3
+       },
+       "shieldPct": 0.65
+      },
+      {
+       "revivePct": 1,
+       "damageMult": 1.32,
+       "badge": "All That Tonnage",
+       "bgImage": "/finn_bg5.jpg",
+       "pattern": [
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "reload",
+        "volley",
+        "reload",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "I have been reading you since your first cast. There is nothing left of you I have not written down.",
+       "ability": {
+        "kind": "requiem",
+        "name": "All That Tonnage",
+        "summonImage": "/fish/shastasaurus.png",
+        "summonColor": "#7dd3fc",
+        "turns": 3,
+        "value": 0.3
+       },
+       "shieldPct": 0.9
+      },
+      {
+       "revivePct": 1,
+       "damageMult": 1.42,
+       "badge": "The Primeval Maw",
+       "bgImage": "/finn_bg6.jpg",
+       "pattern": [
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "reload",
+        "ultimate",
+        "reload",
+        "fire",
+        "reload",
+        "fire",
+        "reload",
+        "reload",
+        "reload",
+        "fire"
+       ],
+       "dialogueLine": "One last ride, captain. You landed this one yourself. Let us see you do it twice.",
+       "ability": {
+        "kind": "leviathan",
+        "name": "The Primeval Maw",
+        "summonImage": "/fish/megalodon.png",
+        "summonColor": "#f87171",
+        "value": 1.4
+       },
+       "shieldPct": 0.9
+      }
+     ]
+    }
+   },
+   "sequence": [],
+   "bossId": "finn",
+   "loot": [
+    {
+     "id": "anglers_patience",
+     "label": "The Primeval Eye",
+     "image": "/primevileye.png",
+     "emoji": "🎣",
+     "rarity": "ancient",
+     "weight": 10
+    },
+    {
+     "id": "borrowed_jaw",
+     "label": "The Primeval Maw",
+     "image": "/primevilmaw.png",
+     "emoji": "🦈",
+     "rarity": "ancient",
+     "weight": 10
+    },
+    {
+     "id": "sunken_hand_hull",
+     "label": "Sunken Hand Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 6,
+     "shipSkinId": "sunken_hand_hull"
+    },
+    {
+     "id": "drowned_giant_hull",
+     "label": "Tundra Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 6,
+     "shipSkinId": "drowned_giant_hull"
+    },
+    {
+     "id": "last_cast_hull",
+     "label": "Volcanic Hull",
+     "image": null,
+     "emoji": "🚢",
+     "rarity": "cosmetic",
+     "weight": 6,
+     "shipSkinId": "last_cast_hull"
+    },
+    {
+     "id": "doubloons_1500",
+     "label": "+1,500 ⟡",
+     "image": "/dailybonus.png",
+     "emoji": "💰",
+     "rarity": "uncommon",
+     "weight": 20
+    },
+    {
+     "id": "doubloons_1200",
+     "label": "+1,200 ⟡",
+     "image": "/smallpile.png",
+     "emoji": "🪙",
+     "rarity": "common",
+     "weight": 17
+    },
+    {
+     "id": "gems_50",
+     "label": "50 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "rare",
+     "weight": 14
+    },
+    {
+     "id": "pack_2",
+     "label": "200 Gems",
+     "image": null,
+     "emoji": "◆",
+     "rarity": "epic",
+     "weight": 11
+    }
+   ],
+   "killRewards": {
+    "finn": {
+     "gold": 18000,
+     "xp": 18000
+    }
+   }
+  }
+ },
+ "shipCombat": {
+  "0": {
+   "name": "Sloop",
+   "image": "/models/sloop_v2.png",
+   "durability": 35,
+   "speed": 4,
+   "crewSlots": 1,
+   "minDamage": 4,
+   "itemSlots": 1
+  },
+  "1": {
+   "name": "Sloop",
+   "image": "/models/sloop_v2.png",
+   "durability": 35,
+   "speed": 4,
+   "crewSlots": 1,
+   "minDamage": 4,
+   "itemSlots": 1
+  },
+  "2": {
+   "name": "Sloop",
+   "image": "/models/sloop_v2.png",
+   "durability": 35,
+   "speed": 4,
+   "crewSlots": 1,
+   "minDamage": 4,
+   "itemSlots": 1
+  },
+  "3": {
+   "name": "Schooner",
+   "image": "/models/schooner_v2.png",
+   "durability": 45,
+   "speed": 5,
+   "crewSlots": 2,
+   "minDamage": 6,
+   "itemSlots": 2
+  },
+  "4": {
+   "name": "Brigantine",
+   "image": "/models/brigantine_v2.png",
+   "durability": 60,
+   "speed": 6,
+   "crewSlots": 3,
+   "minDamage": 9,
+   "itemSlots": 3
+  },
+  "5": {
+   "name": "Galleon",
+   "image": "/models/galleon_v2.png",
+   "durability": 85,
+   "speed": 8,
+   "crewSlots": 4,
+   "minDamage": 14,
+   "itemSlots": 4
+  },
+  "6": {
+   "name": "Man-o-War",
+   "image": "/models/man-o-war_v2.png",
+   "durability": 125,
+   "speed": 11,
+   "crewSlots": 5,
+   "minDamage": 20,
+   "itemSlots": 4
+  }
  },
  "crewSkins": [
   {

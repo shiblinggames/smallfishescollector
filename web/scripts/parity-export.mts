@@ -56,7 +56,7 @@ import { DIG_SITES } from '../lib/seaDigs'
 import { XP_TABLE } from '../lib/fishingLevel'
 import { getDailyChallenges } from '../lib/dailyChallenges'
 import { CRATE_FISH_ID } from '../lib/fishingRules'
-import { getCrewState, recruitCrew, upgradeCrewHall, dismissCrew, renameCrew, bunkCrew, collectBunk, buyHallUpgrade, resolveTraitOffer, checkPromotions } from '../lib/core/crew'
+import { getCrewState, recruitCrew, upgradeCrewHall, dismissCrew, renameCrew, bunkCrew, collectBunk, buyHallUpgrade, resolveTraitOffer, checkPromotions, assignToRaid, assignToVoyage, benchCrew } from '../lib/core/crew'
 import { localCrewData } from '../lib/data/local/crewLocal'
 import { getMatchState, submitMatch, getMinefieldState, revealCell, toggleFlag, getWorldChartState, claimLandmark, getHoldState, saveHoldProgress, tallyHold, submitHold, getRiggingState, saveRiggingPaths, submitRigging } from '../lib/core/chartRoom'
 import { localChartData } from '../lib/data/local/chartLocal'
@@ -1056,6 +1056,40 @@ const crewSessions = [
       await collect(ids[0]); await collect(ids[1])
       await promos()
     }
+    await st()
+  }),
+  // Seats: a raid party filled, a seat taken over, a second copy of a fish
+  // benched, a voyage seat, refusals (a bunk, a trawl, a slot past the hull),
+  // benching. Then a bigger hull's seats.
+  await scripted('the party seats', 43, captainWith(43, 30, 2, { doubloons: 5000, expedition_xp: 50_000_000, ship_tier: 3 }), async x => {
+    const crew = localCrewData(x.save)
+    const st = () => x.call('getCrewState', [], async () => cutState(await getCrewState(crew, x.uid)))
+    const rec = (id: number) => x.call('recruitCrew', [id], async () => cutResult(await recruitCrew(crew, x.uid, id)))
+    const raid = (id: number, slot: number | null) => x.call('assignToRaid', [id, slot], async () => cutResult(await assignToRaid(crew, x.uid, id, slot)))
+    const voy = (id: number, slot: number | null) => x.call('assignToVoyage', [id, slot], async () => cutResult(await assignToVoyage(crew, x.uid, id, slot)))
+    const bench = (id: number) => x.call('benchCrew', [id], async () => cutResult(await benchCrew(crew, x.uid, id)))
+    let s = await st()
+    for (let d = 0; d < 3; d++) {
+      for (const c of s.board) await rec(c.id)
+      x.advance(DAY)
+      s = await st()
+    }
+    const ids: number[] = s.roster.map((m: any) => m.id)
+    const card = (id: number) => (x.save.crew as any[]).find(c => c.id === id).card_id
+    const twin = ids.find((id, i) => ids.findIndex(j => card(j) === card(id)) !== i)
+    await raid(ids[0], 0); await raid(ids[1], 1); await raid(ids[2], 1); await raid(ids[3], 2)
+    if (twin) { await raid(twin, 0); await raid(ids.find(j => card(j) === card(twin) && j !== twin)!, 1) }
+    await voy(ids[0], 0); await voy(ids[4], 1); await raid(ids[4], 0)
+    await bench(ids[0]); await bench(ids[0]); await raid(99999, 0); await raid(ids[5], -1)
+    await x.patchSave({ bunks: [{ id: 900, crew_id: ids[6], slot: 0, since: new Date(START).toISOString(), rate_per_hour: 250, cap_hours: 1 }] })
+    await raid(ids[6], 0)
+    x.advance(2 * 3_600_000)
+    await raid(ids[6], 0)
+    await x.patchSave({ bunks: [], trawls: [{ id: 1, crew_id: ids[7], zone: 'shallows', started_at: new Date(START).toISOString() }] })
+    await raid(ids[7], 0)
+    await x.patchSave({ trawls: [] })
+    await x.patchProfile({ ship_tier: 6, has_sixth_berth: true })
+    for (let k = 0; k < 7; k++) await raid(ids[k], k)
     await st()
   }),
 ]
