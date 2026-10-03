@@ -143,6 +143,11 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"dismissCrew": return Crew.dismiss(db, uid, float(a[0]))
 		"renameCrew": return Crew.rename(db, uid, float(a[0]), str(a[1]))
 		"postNotice": return Crew.post_notice(db, uid, str(a[0]))
+		"bunkCrew": return Bunks.bunk(db, uid, float(a[0]), float(a[1]), a[2] if a.size() > 2 else null)
+		"collectBunk": return Bunks.collect(db, uid, float(a[0]))
+		"buyHallUpgrade": return Bunks.buy(db, uid, str(a[0]))
+		"resolveTraitOffer": return Bunks.answer(db, uid, float(a[0]), bool(a[1]))
+		"checkPromotions": return Bunks.promotions(db, uid)
 		"getDigState": return Explore.get_dig_state(db, uid)
 		"saveSeaPosition": return Explore.save_sea_position(db, uid, float(a[0]), float(a[1]), a[2] if a.size() > 2 else [])
 		"setSeaPos":

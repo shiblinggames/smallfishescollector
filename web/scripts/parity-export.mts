@@ -56,7 +56,7 @@ import { DIG_SITES } from '../lib/seaDigs'
 import { XP_TABLE } from '../lib/fishingLevel'
 import { getDailyChallenges } from '../lib/dailyChallenges'
 import { CRATE_FISH_ID } from '../lib/fishingRules'
-import { getCrewState, recruitCrew, upgradeCrewHall, dismissCrew, renameCrew } from '../lib/core/crew'
+import { getCrewState, recruitCrew, upgradeCrewHall, dismissCrew, renameCrew, bunkCrew, collectBunk, buyHallUpgrade, resolveTraitOffer, checkPromotions } from '../lib/core/crew'
 import { localCrewData } from '../lib/data/local/crewLocal'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'tests', 'parity')
@@ -917,7 +917,12 @@ write('shop.json', { sessions: shop })
 // and its gates, names and dismissals, refusals included. Each result is cut
 // to what the port's crew state carries (the board, the roster, capacity,
 // the hall tier, the purse and the Navigation level).
-const cutState = (st: any) => st && { board: st.board, roster: st.roster, capacity: st.capacity, navLevel: st.navLevel, hallTier: st.hallTier, doubloons: st.doubloons }
+const cutState = (st: any) => st && {
+  board: st.board, roster: st.roster, capacity: st.capacity, navLevel: st.navLevel, hallTier: st.hallTier, doubloons: st.doubloons,
+  // Slice 2: the hall's bunks and its two ladders.
+  bunkedCrewIds: st.bunkedCrewIds, bunkLockedCrewIds: st.bunkLockedCrewIds, bunkTerms: st.bunkTerms,
+  drillLevel: st.drillLevel, storesLevel: st.storesLevel, capHours: st.capHours,
+}
 const cutResult = (r: any) => ('error' in r ? r : { state: cutState(r.state) })
 const crewSessions = [
   await scripted('the crew hall', 41, captainWith(41, 30, 2, { doubloons: 5000 }), async x => {
@@ -953,6 +958,101 @@ const crewSessions = [
     x.advance(DAY)
     s = await st()
     for (const c of s.board) await rec(c.id)
+  }),
+  // Slice 2: the bunks, Drills and Stores, the Leviathan bunk's offers and the
+  // promotions. Every refusal on the way: a taken bunk, one not open, a seat or
+  // a trawl holding a hand, a hand still holding a draw, a fully trained hand
+  // in an ordinary bunk, the hall's gate on each ladder, the purse; collecting
+  // early (nothing), dismissing while training and after.
+  await scripted('the hall bunks', 42, captainWith(42, 30, 2, { doubloons: 5000, expedition_xp: 50_000_000 }), async x => {
+    const crew = localCrewData(x.save)
+    const st = () => x.call('getCrewState', [], async () => cutState(await getCrewState(crew, x.uid)))
+    const rec = (id: number) => x.call('recruitCrew', [id], async () => cutResult(await recruitCrew(crew, x.uid, id)))
+    const up = () => x.call('upgradeCrewHall', [], async () => cutResult(await upgradeCrewHall(crew, x.uid)))
+    const dis = (id: number) => x.call('dismissCrew', [id], async () => cutResult(await dismissCrew(crew, x.uid, id)))
+    const bunk = (id: number, slot: number, hours?: number) => x.call('bunkCrew', [id, slot, hours ?? null], async () => cutResult(await bunkCrew(crew, x.uid, id, slot, hours)))
+    const collect = (id: number) => x.call('collectBunk', [id], async () => {
+      const r: any = await collectBunk(crew, x.uid, id)
+      return 'error' in r ? r : { state: cutState(r.state), grants: r.grants, freed: r.freed, upgrades: r.upgrades }
+    })
+    const buy = (kind: 'drill' | 'stores') => x.call('buyHallUpgrade', [kind], async () => cutResult(await buyHallUpgrade(crew, x.uid, kind)))
+    const answer = (id: number, yes: boolean) => x.call('resolveTraitOffer', [id, yes], async () => cutResult(await resolveTraitOffer(crew, x.uid, id, yes)))
+    const promos = () => x.call('checkPromotions', [], () => checkPromotions(crew, x.uid))
+    const H = 3_600_000
+    let s = await st()
+    for (let d = 0; d < 4; d++) {
+      for (const c of s.board) await rec(c.id)
+      x.advance(DAY)
+      s = await st()
+    }
+    await promos()
+    const ids: number[] = s.roster.map((m: any) => m.id)
+    // Hall I: one bunk.
+    await bunk(ids[0], 0)
+    await bunk(ids[1], 0)
+    await bunk(ids[1], 1)
+    await bunk(99999, 0)
+    await bunk(ids[0], 0)
+    await buy('drill'); await buy('stores')
+    x.advance(30 * 60_000)
+    await collect(ids[0])
+    await dis(ids[0])
+    x.advance(H)
+    await dis(ids[0])
+    await collect(ids[0])
+    await collect(ids[0])
+    // The ladders follow the hall, and the purse.
+    await x.patchProfile({ doubloons: 3_000_000 })
+    await up()
+    await buy('drill'); await buy('drill'); await buy('stores')
+    await x.patchProfile({ doubloons: 100 })
+    await up(); await buy('stores')
+    await x.patchProfile({ doubloons: 5_000_000 })
+    for (let k = 0; k < 4; k++) { await up(); await buy('drill'); await buy('stores') }
+    await buy('drill'); await buy('stores')
+    // A seat and a trawl hold a hand.
+    await x.patchSave({ crew: (x.save.crew as any[]).map(c => c.id === ids[1] ? { ...c, raid_slot: 0 } : c) })
+    await bunk(ids[1], 1)
+    await x.patchSave({ crew: (x.save.crew as any[]).map(c => c.id === ids[1] ? { ...c, raid_slot: null } : c), trawls: [{ id: 1, crew_id: ids[2], zone: 'shallows', started_at: new Date(START).toISOString() }] })
+    await bunk(ids[2], 1)
+    await x.patchSave({ trawls: [] })
+    // A full hall, the Leviathan bunk on a short stint (and one asked too long).
+    s = await st()
+    for (let k = 0; k < 5; k++) await bunk(ids[k], k, 9)
+    await bunk(ids[5], 5, 2)
+    await bunk(ids[6], 5)
+    s = await st()
+    x.advance(2 * H)
+    await collect(ids[5])
+    await bunk(ids[5], 5, 1)
+    await answer(ids[5], true)
+    await answer(ids[5], true)
+    await bunk(ids[5], 5, 40)
+    x.advance(6 * H)
+    for (let k = 0; k < 6; k++) await collect(ids[k])
+    await promos()
+    await promos()
+    await answer(ids[5], false)
+    // A fully trained hand: turned from an ordinary bunk, welcome in the deep.
+    await x.patchSave({ crew: (x.save.crew as any[]).map(c => c.id === ids[3] ? { ...c, xp: 5_000_000 } : c) })
+    await bunk(ids[3], 0)
+    await bunk(ids[3], 5, 3)
+    await promos()
+    for (let r = 0; r < 6; r++) {
+      x.advance(3 * H)
+      await collect(ids[3])
+      await answer(ids[3], r % 2 === 0)
+      await bunk(ids[3], 5, 3)
+    }
+    // A long run of ordinary stints, past the promotions.
+    for (let r = 0; r < 12; r++) {
+      await bunk(ids[0], 0)
+      await bunk(ids[1], 1)
+      x.advance(6 * H)
+      await collect(ids[0]); await collect(ids[1])
+      await promos()
+    }
+    await st()
   }),
 ]
 write('crew.json', { sessions: crewSessions })

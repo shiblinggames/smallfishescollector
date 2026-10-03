@@ -318,7 +318,7 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 		"navLevel": float(nav),
 		"hallTier": float(clamp_hall(prof.get("crew_hall_tier"))),
 		"doubloons": Js.nz(prof.get("doubloons"), 0.0),
-	}.merged({ "notices": notices_held(prof) } if not port().is_empty() else {})
+	}.merged(Bunks.state_fields(db, prof)).merged({ "notices": notices_held(prof) } if not port().is_empty() else {})
 
 
 static func _after(db: CaptainStore, uid: String) -> Dictionary:
@@ -443,9 +443,9 @@ static func dismiss(db: CaptainStore, uid: String, crew_id: float) -> Dictionary
 	for tr: Dictionary in Js.list(db.save.get("trawls")):
 		if float(tr["crew_id"]) == crew_id:
 			return { "error": "This crew is out on a trawl. Collect it first to free them up." }
-	for b: Dictionary in Js.list(db.save.get("bunks")):
-		if float(b["crew_id"]) == crew_id:
-			return { "error": "This crew is training in the hall. Their stint has to finish first." }
+	var held: String = Bunks.hold_error(db, db.me(uid), crew_id)
+	if held != "":
+		return { "error": held }
 	db.save["crew"] = (db.save["crew"] as Array).filter(func(x: Dictionary) -> bool: return not (float(x["id"]) == crew_id and x.get("died_at") == null))
 	return _after(db, uid)
 

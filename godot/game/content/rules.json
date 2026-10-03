@@ -5139,6 +5139,219 @@
    "coelacanth": "coffers_heading",
    "moorish_idol": "throne_heading"
   },
+  "bunks": {
+   "ratePerHour": [
+    250,
+    438,
+    775,
+    1350,
+    2350,
+    4100
+   ],
+   "capHours": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "drillCost": [
+    15000,
+    40000,
+    120000,
+    350000,
+    1000000,
+    0
+   ],
+   "storesCost": [
+    15000,
+    45000,
+    130000,
+    380000,
+    1000000,
+    0
+   ],
+   "leviathanSlot": 5,
+   "deepTraits": [
+    {
+     "name": "Divine",
+     "power": 4,
+     "dodge": 4,
+     "fortune": 4
+    },
+    {
+     "name": "Ascendant",
+     "power": 4,
+     "dodge": 4,
+     "fortune": 3
+    },
+    {
+     "name": "Exalted",
+     "power": 4,
+     "dodge": 3,
+     "fortune": 3
+    },
+    {
+     "name": "Sovereign",
+     "power": 3,
+     "dodge": 3,
+     "fortune": 3
+    },
+    {
+     "name": "Brutal",
+     "power": 4,
+     "dodge": 0,
+     "fortune": 0
+    },
+    {
+     "name": "Uncatchable",
+     "power": 0,
+     "dodge": 4,
+     "fortune": 0
+    },
+    {
+     "name": "Blessed",
+     "power": 0,
+     "dodge": 0,
+     "fortune": 4
+    },
+    {
+     "name": "Ironhanded",
+     "power": 3,
+     "dodge": 1,
+     "fortune": 0
+    },
+    {
+     "name": "Slippery",
+     "power": 0,
+     "dodge": 3,
+     "fortune": 1
+    },
+    {
+     "name": "Fortunate",
+     "power": 0,
+     "dodge": 1,
+     "fortune": 3
+    },
+    {
+     "name": "Storm-Tested",
+     "power": 2,
+     "dodge": 2,
+     "fortune": 2
+    },
+    {
+     "name": "Reckless",
+     "power": 4,
+     "dodge": -2,
+     "fortune": 0
+    },
+    {
+     "name": "Gambler",
+     "power": -2,
+     "dodge": 0,
+     "fortune": 4
+    },
+    {
+     "name": "Heavyset",
+     "power": 3,
+     "dodge": -2,
+     "fortune": 1
+    },
+    {
+     "name": "Brash",
+     "power": 3,
+     "dodge": -1,
+     "fortune": -1
+    },
+    {
+     "name": "Nimble",
+     "power": -1,
+     "dodge": 3,
+     "fortune": 1
+    },
+    {
+     "name": "Cagey",
+     "power": -2,
+     "dodge": 3,
+     "fortune": 0
+    },
+    {
+     "name": "Wary",
+     "power": -1,
+     "dodge": 2,
+     "fortune": 2
+    },
+    {
+     "name": "Steady",
+     "power": 2,
+     "dodge": 2,
+     "fortune": -1
+    },
+    {
+     "name": "Chancer",
+     "power": -2,
+     "dodge": -1,
+     "fortune": 3
+    },
+    {
+     "name": "Sluggish",
+     "power": -2,
+     "dodge": -1,
+     "fortune": 0
+    },
+    {
+     "name": "Clumsy",
+     "power": -1,
+     "dodge": -3,
+     "fortune": 0
+    },
+    {
+     "name": "Leaden",
+     "power": -3,
+     "dodge": -2,
+     "fortune": 0
+    },
+    {
+     "name": "Hapless",
+     "power": 0,
+     "dodge": -2,
+     "fortune": -2
+    },
+    {
+     "name": "Broken",
+     "power": -3,
+     "dodge": -1,
+     "fortune": -1
+    },
+    {
+     "name": "Cursed",
+     "power": -2,
+     "dodge": -2,
+     "fortune": -2
+    },
+    {
+     "name": "Blighted",
+     "power": -4,
+     "dodge": -4,
+     "fortune": -4
+    },
+    {
+     "name": "Unremarkable",
+     "power": 0,
+     "dodge": 0,
+     "fortune": 0
+    }
+   ],
+   "milestoneLevels": [
+    1,
+    10,
+    25,
+    40,
+    75,
+    100
+   ]
+  },
   "traitLabels": {
    "-4,-4,-4": "Blighted",
    "-4,-4,-3": "Damned",

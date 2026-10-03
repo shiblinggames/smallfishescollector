@@ -74,8 +74,11 @@ import { SHIPS } from '../lib/ships'
 import { CREW_NAMES, STAT_BUDGET, MAG_WEIGHTS, FREE_WEIGHTS, GEM_WEIGHTS, DAILY_RECRUITS } from '../lib/crewGen'
 import { XP_TABLE as CREW_XP_TABLE, CREW_MAX_LEVEL } from '../lib/crewLevel'
 import { FISH_GROUPS } from '../lib/fishGroups'
-import { CLASS_BY_SLUG, CLASSES } from '../lib/crewClasses'
+import { CLASS_BY_SLUG, CLASSES, CLASS_MILESTONE_LEVELS } from '../lib/crewClasses'
 import { CREW_HALL_TIERS } from '../lib/crewHall'
+import { bunkRatePerHour, storesCapHours, nextDrillCost, nextStoresCost, LEVIATHAN_SLOT, DRILL_MAX_LEVEL, STORES_MAX_LEVEL } from '../lib/crewBunks'
+import { CREW_TRAITS } from '../lib/crewTraits'
+
 import { BASE_CAPACITY, PER_LEVELS, ROSTER_PER_HALL_TIER } from '../lib/crewCapacity'
 import { ALWAYS_UNLOCKED_LEGENDARIES, LEGENDARY_GATE } from '../lib/legendaryUnlocks'
 import { traitLabel } from '../lib/crewEffects'
@@ -146,6 +149,18 @@ const rules = {
     hallTiers: Object.values(CREW_HALL_TIERS),
     capacity: { base: BASE_CAPACITY, perLevels: PER_LEVELS, perHallTier: ROSTER_PER_HALL_TIER },
     alwaysUnlocked: [...ALWAYS_UNLOCKED_LEGENDARIES], legendaryGate: LEGENDARY_GATE,
+    // The hall's bunks (lib/crewBunks): XP an hour by Drills tier, a stint's
+    // hours by Stores tier, each ladder's next price, the Leviathan bunk, the
+    // deep trait table (lib/crewTraits) and the promotion levels.
+    bunks: {
+      ratePerHour: Array.from({ length: DRILL_MAX_LEVEL }, (_, i) => bunkRatePerHour(i + 1)),
+      capHours: Array.from({ length: STORES_MAX_LEVEL }, (_, i) => storesCapHours(i + 1)),
+      drillCost: Array.from({ length: DRILL_MAX_LEVEL }, (_, i) => nextDrillCost(i + 1)),
+      storesCost: Array.from({ length: STORES_MAX_LEVEL }, (_, i) => nextStoresCost(i + 1)),
+      leviathanSlot: LEVIATHAN_SLOT,
+      deepTraits: CREW_TRAITS,
+      milestoneLevels: [...CLASS_MILESTONE_LEVELS],
+    },
     traitLabels: Object.fromEntries([-4, -3, -2, -1, 0, 1, 2, 3, 4].flatMap(p => [-4, -3, -2, -1, 0, 1, 2, 3, 4].flatMap(d => [-4, -3, -2, -1, 0, 1, 2, 3, 4].map(f => [`${p},${d},${f}`, traitLabel({ power: p, dodge: d, fortune: f })])))),
   },
   // Every badge as the Achievements page lists it (the port shows the ones its systems can earn).
