@@ -62,6 +62,9 @@ func _ready() -> void:
 	_board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_board.owner_table = self
 	row.add_child(_board)
+	# The inside bets, said plainly (the edge spots only show when pointed at).
+	var hint: Label = Kit.text(v, "On the lines: between two numbers a split (pays 17 to 1), where four meet a corner (8 to 1), under a column a street of 3 (11 to 1), between two columns at the bottom a line of 6 (5 to 1).", "small", Color(Kit.WOOD_INK, 0.75), true)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	# The chip you are placing, the slip's total, and the wheel.
 	var ctl: HBoxContainer = HBoxContainer.new()
 	ctl.add_theme_constant_override("separation", 10)
@@ -236,6 +239,9 @@ func _changed() -> void:
 func play_for_shot() -> void:
 	place("color", "red")
 	place("straight", 17.0)
+	place("split", [16.0, 17.0])
+	place("corner", [13.0, 14.0, 16.0, 17.0])
+	place("street", 6.0)
 	place("dozen", 2.0)
 	spin()
 
@@ -443,6 +449,9 @@ class Board:
 	var won: Array = []
 	var result: int = -1
 	var _cells: Array = []
+	## The spot under the pointer: its numbers glow, so an edge bet shows
+	## what it covers before a chip goes down.
+	var _hover: Dictionary = {}
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_STOP
@@ -465,6 +474,25 @@ class Board:
 				_cells.append({ "r": Rect2(zero_w + i * cw, row * rh, cw, rh), "type": "straight", "target": float(n), "text": str(n), "col": DenRoulette.pocket_color(n) })
 		for row: int in 3:
 			_cells.append({ "r": Rect2(w - col_w, row * rh, col_w, rh), "type": "column", "target": float(3 - row), "text": "2 to 1", "col": Color(0, 0, 0, 0) })
+		# THE INSIDE BETS on the lines between numbers (Kong, 2026-10-03): a
+		# split on the line between two, a corner where four meet, a street
+		# on the bottom edge under its column, a line where two streets
+		# meet on that edge. Small spots, tested before the numbers.
+		var z: float = 16.0
+		for i: int in 12:
+			var x0: float = zero_w + i * cw
+			for row: int in 3:
+				var n: int = i * 3 + (3 - row)
+				if row < 2:
+					_cells.append({ "r": Rect2(x0 + cw * 0.25, (row + 1) * rh - z / 2.0, cw * 0.5, z), "type": "split", "target": [float(n - 1), float(n)], "zone": true })
+				if i < 11:
+					_cells.append({ "r": Rect2(x0 + cw - z / 2.0, row * rh + rh * 0.25, z, rh * 0.5), "type": "split", "target": [float(n), float(n + 3)], "zone": true })
+				if row < 2 and i < 11:
+					var a: int = i * 3 + 2 - row
+					_cells.append({ "r": Rect2(x0 + cw - z / 2.0, (row + 1) * rh - z / 2.0, z, z), "type": "corner", "target": [float(a), float(a + 1), float(a + 3), float(a + 4)], "zone": true })
+			_cells.append({ "r": Rect2(x0 + cw * 0.25, rh * 3.0 - z / 2.0, cw * 0.5, z), "type": "street", "target": float(i + 1), "zone": true })
+			if i < 11:
+				_cells.append({ "r": Rect2(x0 + cw - z / 2.0, rh * 3.0 - z / 2.0, z, z), "type": "line", "target": float(i + 1), "zone": true })
 		var y2: float = rh * 3.0
 		var dh: float = h * 0.19
 		for d: int in 3:
@@ -485,14 +513,32 @@ class Board:
 				return get_global_transform() * (cell["r"] as Rect2).get_center()
 		return get_global_rect().get_center()
 
+	## The spot at a point: the small edge spots first, then the rest.
+	func _cell_at(p: Vector2) -> Dictionary:
+		for cell: Dictionary in _cells:
+			if cell.get("zone", false) and (cell["r"] as Rect2).has_point(p):
+				return cell
+		for cell: Dictionary in _cells:
+			if not cell.get("zone", false) and (cell["r"] as Rect2).has_point(p):
+				return cell
+		return {}
+
 	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventMouseMotion:
+			var hc: Dictionary = _cell_at((event as InputEventMouseMotion).position)
+			if hc != _hover:
+				_hover = hc
+				queue_redraw()
 		if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-			var p: Vector2 = (event as InputEventMouseButton).position
-			for cell: Dictionary in _cells:
-				if (cell["r"] as Rect2).has_point(p):
-					owner_table.place(cell["type"], cell["target"])
-					accept_event()
-					return
+			var cell: Dictionary = _cell_at((event as InputEventMouseButton).position)
+			if not cell.is_empty():
+				owner_table.place(cell["type"], cell["target"])
+				accept_event()
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_MOUSE_EXIT and not _hover.is_empty():
+			_hover = {}
+			queue_redraw()
 
 	func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Kit.PAPER)
@@ -500,13 +546,17 @@ class Board:
 		var small: Font = Kit.font("karla", 700)
 		for cell: Dictionary in _cells:
 			var r: Rect2 = cell["r"]
+			var key: String = "%s|%s" % [cell["type"], JsJson.stringify(cell["target"])]
+			if cell.get("zone", false):
+				continue
 			var colr: Color = cell["col"]
 			if colr.a > 0.0:
 				draw_rect(r.grow(-3), Color(colr, 0.85))
-			var key: String = "%s|%s" % [cell["type"], JsJson.stringify(cell["target"])]
 			var lit: bool = won.has(key) or (cell["type"] == "straight" and int(cell["target"]) == result)
 			if lit:
 				draw_rect(r.grow(-2), Color(1.0, 0.8, 0.3, 0.55))
+			elif not _hover.is_empty() and cell["type"] == "straight" and Casino.is_winner({ "type": _hover["type"], "target": _hover["target"] }, float(cell["target"])):
+				draw_rect(r.grow(-2), Color(1.0, 0.85, 0.45, 0.28))
 			draw_rect(r, Color(Paper.INK, 0.45), false, 1.0)
 			var big: bool = cell["type"] == "straight"
 			var fnt: Font = f if big else small
@@ -514,25 +564,38 @@ class Board:
 			var tcol: Color = Color(0.98, 0.94, 0.85) if colr.a > 0.0 else Paper.INK
 			var tw: float = fnt.get_string_size(str(cell["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 			draw_string(fnt, r.get_center() + Vector2(-tw / 2.0, fs * 0.35), str(cell["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tcol)
-			# The others' chips, in their colours, a little to the left.
-			var oi: int = 0
-			for o: Dictionary in others:
-				for ob: Dictionary in o["bets"]:
-					if "%s|%s" % [ob["type"], JsJson.stringify(ob["target"])] == key:
-						var op: Vector2 = r.get_center() + Vector2(-r.size.x * 0.22 + oi * 6.0, r.size.y * 0.12)
-						draw_circle(op + Vector2(0, 1), 12.0, o["color"])
-						draw_texture_rect(DenRoom.chip_tex(float(ob["amount"])), Rect2(op - Vector2(11, 9.5), Vector2(22, 19)), false)
-						oi += 1
-			# The chips on it.
-			if bets.has(key):
-				var amt: float = float(bets[key]["amount"])
-				var cpos: Vector2 = r.get_center() + Vector2(r.size.x * 0.22, -r.size.y * 0.18)
-				var stack: int = clampi(int(amt / 25.0) + 1, 1, 5)
-				var each: Array = DenRoom.breakdown(amt, 5)
-				for s: int in each.size():
-					var sp: Vector2 = cpos + Vector2(0, -s * 4.0)
-					draw_texture_rect(DenRoom.chip_tex(float(each[s])), Rect2(sp - Vector2(14, 12), Vector2(28, 24)), false)
-				stack = each.size()
-				var at: String = Js.thousands(amt)
-				var aw: float = small.get_string_size(at, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-				draw_string(small, cpos + Vector2(-aw / 2.0, -stack * 3.0 + 4.0), at, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.25, 0.15, 0.03))
+			_chips_at(key, r, false)
+		# The edge spots over the numbers: shown only when pointed at, won,
+		# or holding chips.
+		for cell: Dictionary in _cells:
+			if not cell.get("zone", false):
+				continue
+			var zr: Rect2 = cell["r"]
+			var zk: String = "%s|%s" % [cell["type"], JsJson.stringify(cell["target"])]
+			if _hover == cell:
+				draw_circle(zr.get_center(), 6.0, Color(0.85, 0.62, 0.25, 0.9))
+			if won.has(zk):
+				draw_circle(zr.get_center(), 9.0, Color(1.0, 0.8, 0.3, 0.8))
+			_chips_at(zk, zr, true)
+
+	## The chips on a spot: the others' in their colours, then yours.
+	func _chips_at(key: String, r: Rect2, small_spot: bool) -> void:
+		var small: Font = Kit.font("karla", 700)
+		var oi: int = 0
+		for o: Dictionary in others:
+			for ob: Dictionary in o["bets"]:
+				if "%s|%s" % [ob["type"], JsJson.stringify(ob["target"])] == key:
+					var op: Vector2 = r.get_center() + (Vector2(-8.0 + oi * 6.0, 4.0) if small_spot else Vector2(-r.size.x * 0.22 + oi * 6.0, r.size.y * 0.12))
+					draw_circle(op + Vector2(0, 1), 12.0, o["color"])
+					draw_texture_rect(DenRoom.chip_tex(float(ob["amount"])), Rect2(op - Vector2(11, 9.5), Vector2(22, 19)), false)
+					oi += 1
+		if bets.has(key):
+			var amt: float = float(bets[key]["amount"])
+			var cpos: Vector2 = r.get_center() + (Vector2.ZERO if small_spot else Vector2(r.size.x * 0.22, -r.size.y * 0.18))
+			var each: Array = DenRoom.breakdown(amt, 5)
+			for st: int in each.size():
+				var sp: Vector2 = cpos + Vector2(0, -st * 4.0)
+				draw_texture_rect(DenRoom.chip_tex(float(each[st])), Rect2(sp - Vector2(14, 12), Vector2(28, 24)), false)
+			var at: String = Js.thousands(amt)
+			var aw: float = small.get_string_size(at, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			draw_string(small, cpos + Vector2(-aw / 2.0, -each.size() * 3.0 + 4.0), at, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.25, 0.15, 0.03))
