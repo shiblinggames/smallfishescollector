@@ -608,6 +608,9 @@
     "feature": {
       "market_advanced": 50,
       "den_roulette": 10,
+      "chart_minefield": 10,
+      "chart_rigging": 20,
+      "chart_hold": 30,
       "den_blackjack": 20,
       "parlor_king": 25
     }
@@ -2013,6 +2016,11 @@
     "chaseWeight": 0.75,
     "parlorCapstone": "Parlor Legend",
     "allOwnedPays": 2500
+  },
+  "_chartRoomPort": "THE CHART ROOM IN THE PORT (Kong, 2026-10-03): the web's four weekly puzzles and World Chart, rules unchanged, but a landmark pays a SKIN VOUCHER where the web paid gems (gems are retired): a Bosun's Voucher at each of the first ten, a Captain's at the last three, and one more Captain's for charting the whole sea (landmarkVouchers, completionVoucher). One puzzle opens at each of Fishing 1, 10, 20 and 30: Treasure Match, the Minefield, Lay the Rigging, the Quartermaster's Hold (levelGates.feature chart_*). core/chart_room.gd.",
+  "chartRoomPort": {
+    "landmarkVouchers": { "1": "bosun", "2": "bosun", "3": "bosun", "4": "bosun", "5": "bosun", "6": "bosun", "7": "bosun", "8": "bosun", "9": "bosun", "10": "bosun", "11": "captain", "12": "captain", "13": "captain" },
+    "completionVoucher": "captain"
   },
   "_parlorPort": "THE PARLOR IN THE PORT (Kong, 2026-10-02/03, SETTLED): one Captain's Board card dealt every 8 real hours (10 sea days), a hand of 3, 4 at Fishing 30 and 5 at 60, never lost; the tier of a dealt card weighted 45/35/20; the Pirate King at Fishing 25 (levelGates.feature.parlor_king); every question drawn unseen first from content/trivia_bank.json. core/parlor.gd.",
   "parlorPort": {

@@ -58,6 +58,10 @@ import { getDailyChallenges } from '../lib/dailyChallenges'
 import { CRATE_FISH_ID } from '../lib/fishingRules'
 import { getCrewState, recruitCrew, upgradeCrewHall, dismissCrew, renameCrew, bunkCrew, collectBunk, buyHallUpgrade, resolveTraitOffer, checkPromotions } from '../lib/core/crew'
 import { localCrewData } from '../lib/data/local/crewLocal'
+import { getMatchState, submitMatch, getMinefieldState, revealCell, toggleFlag, getWorldChartState, claimLandmark, getHoldState, saveHoldProgress, tallyHold, submitHold, getRiggingState, saveRiggingPaths, submitRigging } from '../lib/core/chartRoom'
+import { localChartData } from '../lib/data/local/chartLocal'
+import { makeRng as matchRng, initialBoard as matchBoard, resolveSwap as matchSwap, hasValidMove as matchHasMove, reshuffle as matchReshuffle, findMatches as matchFind, swap as matchSwapped } from '../app/(app)/charting/treasureMatch'
+import { matchWeekStr } from '../app/(app)/charting/constants'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'tests', 'parity')
 fs.mkdirSync(OUT, { recursive: true })
@@ -1056,6 +1060,145 @@ const crewSessions = [
   }),
 ]
 write('crew.json', { sessions: crewSessions })
+
+// ── The Chart Room ──
+//
+// Treasure Match runs (a short one, a long greedy one, another, an invalid
+// swap, too many moves, junk), the Minefield (a bust, flags, every safe tile
+// to the clear, then more), the Hold (progress and notes, tallies, a tampered
+// and a short manifest, a wrong one, each of the four solved, again), the
+// Rigging (a known board: partial, crossed, solved, again) and the World
+// Chart's claims. Then the next week, with fresh boards.
+/** A greedy Treasure Match run of up to `n` swaps: the `skip`th swap that
+ *  makes a match each turn, replayed exactly as submitMatch replays it. */
+function greedyRun(cfg: { seed: number; cols: number; rows: number; types: number; moves: number; target: number }, n: number, skip = 0): [number, number][] {
+  const rng = matchRng(cfg.seed)
+  let board = matchBoard(rng, cfg.cols, cfg.rows, cfg.types)
+  const out: [number, number][] = []
+  let score = 0, left = cfg.moves
+  for (let k = 0; k < n; k++) {
+    let mv: [number, number] | null = null
+    let seen = 0
+    for (let i = 0; i < board.length && !mv; i++) {
+      for (const j of [i + 1, i + cfg.cols]) {
+        if ((j === i + 1 && i % cfg.cols === cfg.cols - 1) || j >= board.length) continue
+        if (matchFind(matchSwapped(board, i, j), cfg.cols, cfg.rows).length) {
+          if (seen++ >= skip) { mv = [i, j]; break }
+        }
+      }
+    }
+    if (!mv) break
+    const res = matchSwap(board, mv[0], mv[1], cfg.cols, cfg.rows, cfg.types, rng, 0.01)!
+    out.push(mv)
+    board = res.finalBoard; score += res.totalGained; left--
+    if (score >= cfg.target || left <= 0) break
+    if (!matchHasMove(board, cfg.cols, cfg.rows)) board = matchReshuffle(rng, cfg.cols, cfg.rows, cfg.types)
+  }
+  return out
+}
+const chartSessions = [
+  await scripted('the chart room', 51, captainWith(51, 40, 2, { doubloons: 1000 }), async x => {
+    const ch = localChartData(x.save)
+    const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+    // A rigging board with a known solution: the snake cut into 8 runs.
+    const snake: number[] = []
+    for (let r = 0; r < 9; r++) for (let k = 0; k < 9; k++) snake.push(r * 9 + (r % 2 === 0 ? k : 8 - k))
+    const lens = [10, 10, 10, 10, 10, 10, 10, 11]
+    const segs: number[][] = []
+    let cur = 0
+    for (const L of lens) { segs.push(snake.slice(cur, cur + L)); cur += L }
+    const pairs = segs.map((sg, color) => ({ color, a: sg[0], b: sg[sg.length - 1] }))
+    const solution: Record<number, number[]> = Object.fromEntries(segs.map((sg, i) => [i, sg]))
+    for (let w = 0; w < 2; w++) {
+      const week = matchWeekStr(new Date(START + w * 7 * DAY))
+      const chs: any = x.save.charting
+      await x.patchSave({ charting: { ...chs, boards: { ...chs.boards, rigging: { ...chs.boards.rigging, [week]: { cols: 9, rows: 9, pairs } } } } })
+      // Treasure Match.
+      const ms: any = await c('getMatchState', [], () => getMatchState(ch, x.uid))
+      const cfg = { seed: ms.seed, cols: ms.cols, rows: ms.rows, types: ms.types, moves: ms.moves, target: ms.target }
+      const short = greedyRun(cfg, 3)
+      await c('submitMatch', [short], () => submitMatch(ch, x.uid, short))
+      const long = greedyRun(cfg, 25)
+      await c('submitMatch', [long], () => submitMatch(ch, x.uid, long))
+      const other = greedyRun(cfg, 25, 2)
+      await c('submitMatch', [other], () => submitMatch(ch, x.uid, other))
+      await c('submitMatch', [[[0, 40]]], () => submitMatch(ch, x.uid, [[0, 40]]))
+      const tooMany = Array.from({ length: 26 }, () => [0, 1] as [number, number])
+      await c('submitMatch', [tooMany], () => submitMatch(ch, x.uid, tooMany))
+      await c('submitMatch', [[[0, 1, 2]]], () => submitMatch(ch, x.uid, [[0, 1, 2]] as any))
+      await c('submitMatch', ['junk'], () => submitMatch(ch, x.uid, 'junk' as any))
+      await c('getMatchState', [], () => getMatchState(ch, x.uid))
+      // The Minefield.
+      await c('getMinefieldState', [], () => getMinefieldState(ch, x.uid))
+      const lay: any = (x.save.charting as any).boards.minefield[week]
+      const mines = new Set<number>(lay.mines)
+      const safe = Array.from({ length: lay.cols * lay.rows }, (_, i) => i).filter(i => !mines.has(i))
+      await c('toggleFlag', [lay.mines[0]], () => toggleFlag(ch, x.uid, lay.mines[0]))
+      await c('toggleFlag', [safe[3]], () => toggleFlag(ch, x.uid, safe[3]))
+      await c('toggleFlag', [safe[3]], () => toggleFlag(ch, x.uid, safe[3]))
+      await c('toggleFlag', [lay.opening[0]], () => toggleFlag(ch, x.uid, lay.opening[0]))
+      await c('revealCell', [lay.mines[0]], () => revealCell(ch, x.uid, lay.mines[0]))
+      await c('revealCell', [lay.mines[1]], () => revealCell(ch, x.uid, lay.mines[1]))
+      for (const i of [-1, 9999, 1.5]) await c('revealCell', [i], () => revealCell(ch, x.uid, i))
+      for (const i of safe.slice(0, 12)) await c('revealCell', [i], () => revealCell(ch, x.uid, i))
+      await c('revealCell', [lay.mines[2]], () => revealCell(ch, x.uid, lay.mines[2]))
+      for (const i of safe) await c('revealCell', [i], () => revealCell(ch, x.uid, i))
+      await c('revealCell', [safe[0]], () => revealCell(ch, x.uid, safe[0]))
+      await c('toggleFlag', [safe[0]], () => toggleFlag(ch, x.uid, safe[0]))
+      await c('getMinefieldState', [], () => getMinefieldState(ch, x.uid))
+      // The Hold.
+      await c('getHoldState', [], () => getHoldState(ch, x.uid))
+      const sets: any = (x.save.charting as any).boards.sudoku[week]
+      for (const d of ['easy', 'medium', 'hard', 'extreme'] as const) {
+        const givens: string = sets[d].givens
+        const sol: string = sets[d].solution
+        const firstBlank = givens.indexOf('.')
+        const partial = givens.slice(0, firstBlank) + sol[firstBlank] + givens.slice(firstBlank + 1)
+        const wrongDigit = sol[firstBlank] === '1' ? '2' : '1'
+        const wrongPartial = givens.slice(0, firstBlank) + wrongDigit + givens.slice(firstBlank + 1)
+        const notes = Array.from({ length: 81 }, (_, i) => (i === firstBlank ? '123' : '')).join(',')
+        await c('saveHoldProgress', [d, partial, notes], () => saveHoldProgress(ch, x.uid, d, partial, notes))
+        await c('saveHoldProgress', [d, partial, 'bad'], () => saveHoldProgress(ch, x.uid, d, partial, 'bad'))
+        await c('saveHoldProgress', [d, 'short', null], () => saveHoldProgress(ch, x.uid, d, 'short'))
+        if (d !== 'easy') await c('tallyHold', [d, wrongPartial], () => tallyHold(ch, x.uid, d, wrongPartial))
+        await c('submitHold', [d, partial], () => submitHold(ch, x.uid, d, partial))
+        const g0 = givens.indexOf(givens.match(/[1-9]/)![0])
+        const tampered = sol.slice(0, g0) + (sol[g0] === '1' ? '2' : '1') + sol.slice(g0 + 1)
+        await c('submitHold', [d, tampered], () => submitHold(ch, x.uid, d, tampered))
+        const fullWrong = sol.slice(0, firstBlank) + wrongDigit + sol.slice(firstBlank + 1)
+        if (d === 'hard') await c('submitHold', [d, fullWrong], () => submitHold(ch, x.uid, d, fullWrong))
+        await c('submitHold', [d, sol], () => submitHold(ch, x.uid, d, sol))
+        await c('submitHold', [d, sol], () => submitHold(ch, x.uid, d, sol))
+        await c('saveHoldProgress', [d, sol, null], () => saveHoldProgress(ch, x.uid, d, sol))
+      }
+      await c('submitHold', ['huge', sets.easy.solution], () => submitHold(ch, x.uid, 'huge' as any, sets.easy.solution))
+      await c('getHoldState', [], () => getHoldState(ch, x.uid))
+      // The Rigging.
+      await c('getRiggingState', [], () => getRiggingState(ch, x.uid))
+      const half = { 0: solution[0], 1: solution[1] }
+      await c('saveRiggingPaths', [half], () => saveRiggingPaths(ch, x.uid, half))
+      await c('submitRigging', [half], () => submitRigging(ch, x.uid, half))
+      const crossed = { ...solution, 0: [...solution[0]].reverse(), 1: solution[0] }
+      await c('submitRigging', [crossed], () => submitRigging(ch, x.uid, crossed))
+      await c('submitRigging', [solution], () => submitRigging(ch, x.uid, solution))
+      await c('submitRigging', [solution], () => submitRigging(ch, x.uid, solution))
+      await c('saveRiggingPaths', [half], () => saveRiggingPaths(ch, x.uid, half))
+      await c('getRiggingState', [], () => getRiggingState(ch, x.uid))
+      // The World Chart.
+      await c('getWorldChartState', [], () => getWorldChartState(ch, x.uid))
+      for (const id of [1, 2, 3, 99]) await c('claimLandmark', [id], () => claimLandmark(ch, x.uid, id))
+      if (w === 1) {
+        await x.patchProfile({ puzzle_points: 1000 })
+        for (let id = 1; id <= 13; id++) await c('claimLandmark', [id], () => claimLandmark(ch, x.uid, id))
+        await c('claimLandmark', [13], () => claimLandmark(ch, x.uid, 13))
+      }
+      x.advance(7 * DAY)
+    }
+  }),
+]
+write('chart.json', { sessions: chartSessions })
+console.log(`  ${chartSessions.length} chart sessions, ${chartSessions.reduce((n, s) => n + s.ops.length, 0)} calls`)
+
 console.log(`  ${crewSessions.length} crew sessions, ${crewSessions.reduce((n, s) => n + s.ops.length, 0)} calls`)
 {
   const cases: { now: number; x: number; y: number; bottles: unknown[] }[] = []

@@ -37,6 +37,11 @@ import { FINN_QUESTS, FINN_CHAPTERS } from '../lib/finnQuests'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOT_BONUS_MULT, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX, DEN_CAP_BASE, DEN_CAP_MAX, DEN_CAP_MAX_LEVEL, BJ_MIN_BET, BJ_MAX_BET, RL_MIN_BET, RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET, CASINO_BUY_IN_PRESETS, BJ_BET_PRESETS, RL_BET_PRESETS } from '../app/(app)/tavern/constants'
 import { PAYOUT_MULT, POCKETS } from '../lib/roulette'
 import { CREW_SKINS } from '../lib/crewSkins'
+import { LANDMARKS, WORLD_CHART_COMPLETION_BONUS } from '../lib/worldChart'
+import { MATCH_COLS, MATCH_ROWS, MATCH_TYPES, MATCH_MOVES, MATCH_TARGET, MATCH_MAX_POINTS, MATCH_TIERS, WILD_DROP_CHANCE } from '../app/(app)/charting/constants'
+import { MINEFIELD_COLS, MINEFIELD_ROWS, MINEFIELD_MINES, MINEFIELD_POINTS } from '../app/(app)/charting/minefieldConstants'
+import { HOLD_META, CLEAN_BONUS_FRACTION } from '../app/(app)/tavern/chart-room/hold/constants'
+import { RIGGING_COLS, RIGGING_ROWS, RIGGING_COLORS, RIGGING_POINTS, RIGGING_PALETTE } from '../app/(app)/tavern/chart-room/rigging/constants'
 import { TRIVIA_CATEGORIES, TRIVIA_TIER_VALUES, TRIVIA_ANSWER_SECONDS, TRIVIA_TIMER_GRACE_MS, PARLOR_RANKS, KING_RUNG_POINTS, KING_CROWN_POINTS, PIRATE_KING_PRIZES, PIRATE_KING_HAVENS, CAPSTAN_WHEEL, CAPSTAN_MAX_STRIKES, CAPSTAN_VOWEL_COST, CAPSTAN_MAX_HAZARD_RUN, CAPSTAN_SOLVE_POINTS, CAPSTAN_CLEAN_BONUS, CAPSTAN_PUZZLES_PER_WEEK } from '../app/(app)/tavern/trivia/constants'
 import { DECK_COUNT, RANKS, SUITS } from '../lib/blackjack'
 import { LOCAL_POT_SEED } from '../lib/data/local/casinoLocal'
@@ -178,6 +183,17 @@ const rules = {
   finnAvatar: FINN_AVATAR,
   // Crew skins (lib/crewSkins): every skin, with its crew's rarity tier
   // (lib/fishGroups: 1 rare, 2 epic, 3 legendary).
+  // The Chart Room (lib/core/chartRoom and its engines' constants) and the
+  // World Chart's landmarks (lib/worldChart).
+  chartRoom: {
+    match: { cols: MATCH_COLS, rows: MATCH_ROWS, types: MATCH_TYPES, moves: MATCH_MOVES, target: MATCH_TARGET, maxPoints: MATCH_MAX_POINTS, wildDropChance: WILD_DROP_CHANCE },
+    matchTiers: MATCH_TIERS,
+    minefield: { cols: MINEFIELD_COLS, rows: MINEFIELD_ROWS, mines: MINEFIELD_MINES, points: MINEFIELD_POINTS },
+    hold: { ...HOLD_META, cleanFraction: CLEAN_BONUS_FRACTION },
+    rigging: { cols: RIGGING_COLS, rows: RIGGING_ROWS, colors: RIGGING_COLORS, points: RIGGING_POINTS, palette: [...RIGGING_PALETTE] },
+    landmarks: LANDMARKS,
+    completionBonus: WORLD_CHART_COMPLETION_BONUS,
+  },
   crewSkins: CREW_SKINS.map(k => ({ ...k, crewTier: FISH_GROUPS.findIndex(g => g.has(k.slug)) })),
   // The Parlor (lib/core/parlor, tavern/trivia/constants): payouts, the
   // answer clock, the ranks, the King's ladder and the capstan's wheel.
