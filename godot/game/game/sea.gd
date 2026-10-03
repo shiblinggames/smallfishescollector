@@ -167,6 +167,13 @@ func _ready() -> void:
 		_buyers.append(b)
 	_moor_regulars()
 	_finn = FinnHull.new()
+	for sp: Dictionary in session.save["species"]:
+		if sp["habitat"] == "shallows":
+			_finn.catch_names.append(sp["name"])
+	_finn.splashed.connect(func(at: Vector2) -> void:
+		_field.ring(at, 90.0, 1.2, 0.7)
+		if at.distance_to(_boat.position) < 900.0:
+			Sound.plip())
 	_world.add_child(_finn)
 	_portal = PortalWell.new()
 	_world.add_child(_portal)
@@ -714,6 +721,8 @@ func _night_water(dark: float, at: Vector2) -> void:
 		for k: String in list:
 			var w: Wanderer = list[k]
 			add_lamp.call(w.position + keel, 12.0, 0.18, Color(1.0, 0.74, 0.45))
+	if _finn != null:
+		add_lamp.call(_finn.position + keel, 18.0, 0.32, Color(1.0, 0.8, 0.42))
 	if _portal.live:
 		add_lamp.call(_portal.position + Vector2(0, 120), 60.0, 0.22, Color(str(Portal.tier_def(_portal.tier).get("accent", "#7fc8de"))))
 	_water.set_shader_parameter("u_lamps", lamps)
@@ -1094,11 +1103,17 @@ func _draw_north() -> void:
 var _finn: FinnHull
 var _finn_st: Dictionary = {}
 var _finn_t: float = 99.0
+var _finn_ring: float = 0.0
 
 
 func _finn_tick(delta: float) -> void:
 	if _finn == null:
 		return
+	# The calm round him: slow rings going out, as off nobody else.
+	_finn_ring += delta
+	if _finn_ring >= 3.2:
+		_finn_ring = 0.0
+		_field.ring(_finn.position, 170.0, 3.2, 0.32)
 	_finn_t += delta
 	if _finn_t >= 1.0:
 		_finn_t = 0.0

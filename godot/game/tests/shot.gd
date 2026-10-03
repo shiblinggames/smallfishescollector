@@ -324,6 +324,11 @@ func _init() -> void:
 				lt[k] = { "n": n0 + (5.0 if step == "half" else 8.0), "last": "2026-10-01T00:00:00.000Z" }
 			for f: int in 70:
 				await process_frame
+			if step == "catch":
+				# Finn landing one: the shot mid-arc.
+				sea._finn._next_catch = 0.0
+				for f: int in int(OS.get_environment("CATCH_F")) if OS.get_environment("CATCH_F") != "" else 62:
+					await process_frame
 			if step in ["talk", "offer", "ready", "sealed"]:
 				sea._open_finn()
 				for f: int in 40:

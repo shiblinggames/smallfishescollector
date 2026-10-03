@@ -630,7 +630,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   People tabs), the saga THE LONG CAST. Rules: core/finn.gd ports finnState, speakToFinn and
   turnInFinnQuest (+ finnQuests' ladder, chapters, standing), parity-checked by a 623-call
   session working all 32 jobs and the reveal ("finn" in shop.json). On the water:
-  game/finn_hull.gd (moored where the web moors him, widened with the sea; a gold ? when he
+  game/finn_hull.gd (moored where the web moors him, widened with the sea; LOOKS LIKE NOBODY
+  ELSE (Kong, 2026-10-03), friendly not grand: his line always out with a float that bobs and
+  dips, a small fish flipped up into his boat every 24 to 42 seconds with a splash ring (and a
+  plip when you are near), a lantern on a pole at his stern always lit with a reflection at
+  night, and slow calm rings going out from him every 3.2 seconds; a gold ? when he
   has a job your level reaches and none is open, a gold ! when one is done; gold means the
   story only), game/finn_scene.gd (his lines typed one at a time; the job as a paper slip,
   game/job_slip.gd, stamped TAKEN when taken and flown up to the story line, or sealed DONE in
