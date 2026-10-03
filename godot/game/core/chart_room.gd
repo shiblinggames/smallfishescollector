@@ -190,6 +190,7 @@ static func _pick_spawn(run: Array, a: int, b: int) -> int:
 
 static func _cascades(start: Array, cols: int, rows: int, n: int, rng: Dice.Mulberry32, wild_chance: float, a: int, b: int) -> Dictionary:
 	var steps: int = 0
+	var log: Array = []
 	var total: float = 0.0
 	var cur: Array = start
 	var cascade: int = 1
@@ -221,9 +222,10 @@ static func _cascades(start: Array, cols: int, rows: int, n: int, rng: Dice.Mulb
 		for s: int in spawns:
 			with_wilds[s] = WILD
 		cur = collapse_refill(with_wilds, cleared, cols, rows, rng, n, wild_chance)
+		log.append({ "cleared": cleared, "spawns": spawns, "gained": float(cleared.size() * 10 * cascade), "board": cur })
 		steps += 1
 		cascade += 1
-	return { "steps": steps, "gained": total, "board": cur }
+	return { "steps": steps, "gained": total, "board": cur, "log": log }
 
 
 ## resolveSwap: null for a swap that makes no match.

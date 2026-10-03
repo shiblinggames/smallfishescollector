@@ -616,6 +616,34 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   every winning spot paying back, blackjack's bet and its return, solo and at the shared
   table). The roulette board draws the painted chips (the others' ringed in their colour).
   GOTCHA: a texture first loaded inside _draw is white until the next frame; load ahead.
+- THE CHART ROOM, BUILT (2026-10-03). Rules: core/chart_room.gd ports lib/core/chartRoom,
+  lib/chartBoards, lib/worldChart, the four pure engines (charting/treasureMatch and minefield,
+  chart-room/hold/sudoku, chart-room/rigging) and chartLocal (each week's boards built from the
+  dice the first time asked for and kept in save.charting; attempts kept twelve weeks).
+  PARITY: chart.json, 371 calls over two weeks (Treasure Match runs replayed from their swaps
+  with every refusal, the Minefield to a clear with strikes and flags, all four holds with
+  notes, tallies and wrong manifests, a known Rigging board, the World Chart's thirteen claims).
+  PORT RULES (chartRoomPort): a landmark pays a SKIN VOUCHER where the web paid gems: Bosun's
+  for the first ten, Captain's for the last three, one more Captain's for charting the whole
+  sea; one puzzle opens at each of Fishing 1, 10, 20, 30 (Treasure Match, the Minefield, Lay the
+  Rigging, the Quartermaster's Hold; levelGates.feature chart_*). THE ROOM (game/chart_study.gd,
+  "Study" ashore at the Mainland, day paper): a strip with the points, the next landmark and what
+  it pays; tabs per puzzle (locked ones name their level) and the World Chart.
+  game/chart_match.gd: the seeded board runs here on the rules' own engine (the swaps are sent,
+  never the score); select or drag to swap, a swap that makes no line slides back, cleared gems
+  pop with sparks and the points rise (x2, x3 on cascades, a rising tick a level), the rest fall
+  with a bounce, a Compass glows; the tier ladder under the score; a card when the run ends.
+  game/chart_mines.gd: a harbour of swelling water tiles, sounded tiles ripple open, pennant
+  flags (right press or Flag mode), a strike blasts and resets. game/chart_rigging.gd: a plank
+  deck, iron cleats on coloured rings, ropes dragged cell to cell (a twisted lay drawn along
+  them), crossing cuts the other rope, going back takes yours up; a full board hands itself in.
+  game/chart_hold.gd: the four holds as tabs, nine bays, givens in ink and yours in teal,
+  pencil notes (and a placed lot clears its number from the notes it rules out), keyboard and
+  pad, a Tally that marks wrong cells, a full hold handed in, a STOWED stamp. game/chart_world.gd:
+  the painted map under a drifting fog (game/fx/chart_fog_holes.gdshader, noise from a
+  NoiseTexture2D: procedural hash noise showed blocks), an uncovered landmark a gold beacon
+  until claimed, a claim burning the fog back with a singed rim and lettering the name in, the
+  list with each landmark's voucher. tests/shot.gd chartroom (CHART_TAB, CHART_PTS).
 - CREW SKINS AND SKIN VOUCHERS, BUILT (Kong, 2026-10-03; reshaped the same day: "I want those
   vouchers to be item drops like how crates are", then "just two voucher types, and it should be
   hard to get any voucher"). All 75 of the web's skins (lib/crewSkins.ts) export to rules.json
