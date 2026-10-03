@@ -26,14 +26,20 @@ static func completion_bonus(raid: Dictionary) -> float:
 
 
 ## A kill, paid into one captain's save.
-static func award_kill(db: CaptainStore, uid: String, raid: Dictionary, enemy_id: String, boss: bool) -> Dictionary:
+## tier: a co-op tier's rules (Battle.tier_cfg) and share: an escort's part of
+## a kill (the tier's escortPay); Normal leaves both alone, as the web pays.
+static func award_kill(db: CaptainStore, uid: String, raid: Dictionary, enemy_id: String, boss: bool, tier: Dictionary = {}, share: float = 1.0) -> Dictionary:
 	var kr: Dictionary = Js.obj(Js.obj(raid.get("killRewards")).get(enemy_id))
 	var xp: float = Js.num(kr.get("xp")) + (completion_bonus(raid) if boss else 0.0)
+	if not tier.is_empty():
+		xp = float(Js.round(xp * float(tier["xp"]) * share))
 	# Plunder (Navigation Renown) and the class's coin; Command lifts crew XP.
 	var ren: Dictionary = Js.obj(db.me(uid).get("nav_renown_alloc"))
 	var plunder: float = 1.0 + maxf(0.0, floor(Js.num(ren.get("plunder")))) * 0.015
 	var command: float = 1.0 + maxf(0.0, floor(Js.num(ren.get("command")))) * 0.02
 	var gold: float = float(Js.round(Js.num(kr.get("gold")) * float(Campaign.class_effects(db.me(uid).get("ship_classes"))["doubloonMult"]) * plunder))
+	if not tier.is_empty():
+		gold = float(Js.round(gold * float(tier["coin"]) * share))
 	if xp > 0.0:
 		db.bump_stat(uid, "expedition_xp", xp)
 	if gold > 0.0:
@@ -50,27 +56,29 @@ static func award_kill(db: CaptainStore, uid: String, raid: Dictionary, enemy_id
 
 
 ## The boss's crate, into one captain's save.
-static func open_crate(db: CaptainStore, uid: String, raid: Dictionary, fortune: float) -> Dictionary:
+static func open_crate(db: CaptainStore, uid: String, raid: Dictionary, fortune: float, tier: Dictionary = {}) -> Dictionary:
 	if raid.get("skirmish", false) == true:
 		return {}
 	var prof: Dictionary = db.me(uid)
 	var base: float = floor(Dice.next() * 301.0 + 300.0)
 	var coin: float = minf(3000.0, floor(base * (1.0 + maxf(0.0, fortune) / 75.0)))
 	coin = float(Js.round(coin * float(Campaign.class_effects(prof.get("ship_classes"))["doubloonMult"])))
-	var challenge: bool = str(raid["raidId"]).ends_with("_challenge")
-	var flm: float = 1.0 + minf(1.0, fortune / 150.0)
-	var rarity: Dictionary = { "epic": 0.20 if challenge else 0.10, "legendary": 0.10 if challenge else 0.05, "cosmetic": 0.05 if challenge else 0.025, "ancient": 0.10 if challenge else 0.05 }
-	var owned_skins: Array = Js.list(prof.get("owned_ship_skins"))
+	if not tier.is_empty():
+		coin = float(Js.round(coin * float(tier["coin"])))
+	var rolls: int = 1 + int(Js.num(tier.get("extraRolls")))
 	var items: Array = []
+	var owned: Array = Js.list(prof.get("owned_ship_skins"))
 	for row: Dictionary in Js.list(raid.get("loot")):
-		var rid: String = str(row["id"])
-		if rid.begins_with("doubloons") or rid.begins_with("gems") or rid.begins_with("pack"):
+		# Coin rows and owned skins are passed over without a roll; every other
+		# row rolls (at 0 too), as the web's does.
+		if not rollable(row, owned):
 			continue
-		if row.get("shipSkinId") != null and owned_skins.has(row["shipSkinId"]):
-			continue
-		var p: float = minf(0.95, float(rarity.get(str(row.get("rarity", "")), 0.0)) * flm)
-		if Dice.next() < p:
-			items.append(row)
+		var p: float = item_chance(raid, row, fortune, tier, owned)
+		# A tier's extra rolls: each a fresh chance, the item at most once.
+		for k: int in rolls:
+			if Dice.next() < p:
+				items.append(row)
+				break
 	db.bump_stat(uid, "doubloons", coin)
 	db.ledger(uid, coin, "%s: the crate" % raid.get("raidTitle", "Raid"))
 	for row: Dictionary in items:
@@ -91,3 +99,50 @@ static func record_clear(db: CaptainStore, uid: String, raid_id: String, ms: Var
 		db.update_profile(uid, { "has_completed_practice_raid": true })
 		return
 	db.add_clear(uid, raid_id, ms)
+
+
+
+## One roll's chance at a crate item (0 for coin rows and owned skins): its
+## rarity's odds (a challenge raid's doubled), Fortune's lift, a co-op tier's
+## rarityMult. The web's crate for Normal.
+static func rollable(row: Dictionary, owned_skins: Array) -> bool:
+	var rid: String = str(row["id"])
+	if rid.begins_with("doubloons") or rid.begins_with("gems") or rid.begins_with("pack"):
+		return false
+	return not (row.get("shipSkinId") != null and owned_skins.has(row["shipSkinId"]))
+
+
+static func item_chance(raid: Dictionary, row: Dictionary, fortune: float, tier: Dictionary = {}, owned_skins: Array = []) -> float:
+	if not rollable(row, owned_skins):
+		return 0.0
+	var challenge: bool = str(raid["raidId"]).ends_with("_challenge")
+	var flm: float = 1.0 + minf(1.0, fortune / 150.0)
+	var rarity: Dictionary = { "epic": 0.20 if challenge else 0.10, "legendary": 0.10 if challenge else 0.05, "cosmetic": 0.05 if challenge else 0.025, "ancient": 0.10 if challenge else 0.05 }
+	return minf(0.95, float(rarity.get(str(row.get("rarity", "")), 0.0)) * flm * float(Js.nz(tier.get("rarityMult"), 1.0)))
+
+
+## The crate as the entry screen shows it: each item it can pay and the chance
+## this captain's crate holds it (all a tier's rolls together), and the coin.
+static func crate_odds(raid: Dictionary, fortune: float, tier: Dictionary = {}, owned_skins: Array = []) -> Dictionary:
+	var rolls: int = 1 + int(Js.num(tier.get("extraRolls")))
+	var out: Array = []
+	for row: Dictionary in Js.list(raid.get("loot")):
+		var p: float = item_chance(raid, row, fortune, tier, owned_skins)
+		if p > 0.0:
+			out.append({ "id": row["id"], "label": row.get("label", row["id"]), "rarity": row.get("rarity", ""), "chance": 1.0 - pow(1.0 - p, rolls), "image": row.get("image", "") })
+	var cm: float = float(Js.nz(tier.get("coin"), 1.0))
+	var lift: float = 1.0 + maxf(0.0, fortune) / 75.0
+	return { "items": out, "coinMin": float(Js.round(minf(3000.0, floor(300.0 * lift)) * cm)), "coinMax": float(Js.round(minf(3000.0, floor(600.0 * lift)) * cm)) }
+
+
+## A tier clear's record: the clear of the raid itself (the campaign reads
+## it) and the tier's own ("raid@coop"), and a Co-op Challenge clear's pennant.
+static func record_tier_clear(db: CaptainStore, uid: String, raid_id: String, tier_id: String, tier: Dictionary, ms: Variant = null) -> bool:
+	record_clear(db, uid, raid_id, ms)
+	if tier_id == "normal" or tier.is_empty():
+		return false
+	db.add_clear(uid, "%s@%s" % [raid_id, tier_id], ms)
+	if tier.get("pennant", false) and not Js.list(db.me(uid).get("coop_pennants")).has(raid_id):
+		db.add_to_list(uid, "coop_pennants", raid_id)
+		return true
+	return false

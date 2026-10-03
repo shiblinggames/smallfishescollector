@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "campaign", "puzzle"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -631,7 +631,7 @@ func _init() -> void:
 				sea._boat.position = (sea._berths["gunwharf"] as Node2D).position + Vector2(-500, 200)
 			for f: int in 60:
 				await process_frame
-			sea.start_battle(OS.get_environment("BATTLE_RAID") if OS.get_environment("BATTLE_RAID") != "" else "corsairs_reckoning")
+			sea._launch(OS.get_environment("BATTLE_RAID") if OS.get_environment("BATTLE_RAID") != "" else "corsairs_reckoning", "")
 			var bst: BattleStage = null
 			for f: int in 10:
 				await process_frame
@@ -727,6 +727,45 @@ func _init() -> void:
 						(bar as AimBar).lock()
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 10:
 				await process_frame
+		"ready":
+			# The raid's entry screen. READY_MODE "solo" (alone at Pete) or
+			# "line" (a Charter's line of three on Co-op, one not yet ready).
+			var rdb: CaptainStore = sea.session.store
+			var ru: String = sea.session.uid
+			p["expedition_xp"] = 2000.0
+			p["ship_tier"] = 4.0
+			p["coop_pennants"] = ["captain_krust", "cartographer"]
+			for d: int in 2:
+				var rst: Dictionary = RulesApi.run(rdb, ru, "getCrewState", [])
+				for c: Dictionary in rst["board"]:
+					RulesApi.run(rdb, ru, "recruitCrew", [c["id"]])
+				p["last_free_recruit_date"] = "old%d" % d
+			var rids: Array = (RulesApi.run(rdb, ru, "getCrewState", [])["roster"] as Array).map(func(m: Dictionary) -> float: return float(m["id"]))
+			for k: int in mini(4, rids.size()):
+				RulesApi.run(rdb, ru, "assignToRaid", [rids[k], float(k)])
+			var rraid: String = OS.get_environment("READY_RAID") if OS.get_environment("READY_RAID") != "" else "corsairs_reckoning"
+			var rs: ReadyScreen = ReadyScreen.new()
+			rs.sea = sea
+			if OS.get_environment("READY_MODE") == "line":
+				var rt: RaidTable = RaidTable.new()
+				root.add_child(rt)
+				var card: Dictionary = RaidTable.card_of(sea.session, rraid)
+				var card2: Dictionary = card.duplicate(true)
+				card2["face"] = { "characterColor": "blue", "hat": null }
+				card2["shipTier"] = 6.0
+				var card3: Dictionary = card.duplicate(true)
+				card3["face"] = { "characterColor": "pink", "hat": "golden" }
+				card3["crew"] = []
+				var mem: Array = [{ "key": "anna", "name": "Anna", "ready": true, "card": card }, { "key": "ben", "name": "Ben_the_Bold", "ready": true, "card": card2 }, { "key": "cal", "name": "Cal", "ready": false, "card": card3 }]
+				rt._state({ "phase": "muster", "seq": 1, "raidId": rraid, "nodeId": "pete", "by": "anna", "tier": "coop", "members": mem, "tiers": RaidTable.tiers_open(mem) })
+				rs.table = rt
+				rs.my_key = "anna"
+			else:
+				rs.raid_id = rraid
+				rs.node_id = "pete"
+			sea._hud_layer.add_child(rs)
+			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 30:
+				await process_frame
 		"coop":
 			# A Charter's raid together, as a crewmate's screen sees it: the
 			# table's states fed by hand (two ships, Ben's hull a Shipmate),
@@ -751,7 +790,9 @@ func _init() -> void:
 			s0["key"] = "anna"
 			var s1: Dictionary = Battle.seat_for(kdb, ku, "Ben")
 			s1["key"] = "ben"
-			var kb: Dictionary = Battle.begin("corsairs_reckoning", [s0, s1])
+			if OS.get_environment("COOP_TIER") != "":
+				Dice.install(Dice.Mulberry32.new(int(OS.get_environment("COOP_SEED")) if OS.get_environment("COOP_SEED") != "" else 5))
+			var kb: Dictionary = Battle.begin("corsairs_reckoning", [s0, s1], OS.get_environment("COOP_TIER") if OS.get_environment("COOP_TIER") != "" else "normal")
 			var mate: Shipmate = sea._mate("ben")
 			mate.set_mate_name("Ben")
 			mate.set_look(Skipper.look_of(p))
@@ -816,7 +857,9 @@ func _init() -> void:
 			if cs == "round":
 				for f: int in 40:
 					await process_frame
-				var ev: Array = Battle.resolve(kb, [{ "action": "reload" }, { "action": "volley" if Battle.legal(kb, kb["seats"][1])["volley"] else "reload" }])
+				for sx: Dictionary in kb["seats"]:
+					sx["charges"] = 3.0
+				var ev: Array = Battle.resolve(kb, [{ "action": "fire", "aim": "critical", "target": 1 }, { "action": "volley", "aim": "critical", "target": 1 }])
 				push.call("playing", ev, {})
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 10:
 				await process_frame

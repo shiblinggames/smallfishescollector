@@ -63,7 +63,16 @@ func _init() -> void:
 	check((await c.run(x, "raidTable", ["join", at])).has("error"), "Cal cannot join it")
 	check((await c.run(b, "raidTable", ["join", far])).has("error"), "Ben must sail to it first")
 	check(not (await c.run(b, "raidTable", ["join", at])).has("error"), "Ben joins")
-	check((await c.run(b, "raidTable", ["go"])).has("error"), "only the caller sails early")
+	check((await c.run(b, "raidTable", ["go"])).has("error"), "only the caller sails")
+	check((await c.run(a, "raidTable", ["go"])).has("error"), "not until Ben is ready")
+	check((await c.run(b, "raidTable", ["tier", "coop"])).has("error"), "only the caller picks the tier")
+	check((await c.run(a, "raidTable", ["tier", "coopc"])).has("error"), "Co-op Challenge is shut until both have cleared it on Co-op")
+	check(not (await c.run(a, "raidTable", ["tier", "coop"])).has("error") and t.state["tier"] == "coop", "Co-op opens with two")
+	await c.run(b, "raidTable", ["ready", true])
+	await c.run(a, "raidTable", ["tier", "normal"])
+	check(t.state["members"][1]["ready"] == false, "a new tier asks everyone again")
+	check(t.state["members"][1].get("card", {}).get("hull", 0.0) > 0.0, "each captain's card goes out with the state")
+	await c.run(b, "raidTable", ["ready", true])
 	var a_coin: float = Js.num(a.profile().get("doubloons"))
 	var b_coin: float = Js.num(b.profile().get("doubloons"))
 	await c.run(a, "raidTable", ["go"])
@@ -122,6 +131,7 @@ func _init() -> void:
 	# ── A flee: Ben gets away, and is paid no more ──
 	await c.run(a, "raidTable", ["call", pete.merged(at)])
 	await c.run(b, "raidTable", ["join", at])
+	await c.run(b, "raidTable", ["ready", true])
 	await c.run(a, "raidTable", ["go"])
 	var fled: bool = false
 	var after_flee_pay: int = 0
@@ -157,6 +167,50 @@ func _init() -> void:
 				await c.run(a, "raidTable", ["tide", ch2[0]["id"]])
 				await c.run(b, "raidTable", ["tide", ch2[0]["id"]])
 	check(fled, "Ben got away at last")
+
+	# ── Co-op: a field of enemies, paid for every one, the tier's clear ──
+	var a_xp: float = Js.num(a.profile().get("expedition_xp"))
+	await c.run(a, "raidTable", ["call", pete.merged(at)])
+	await c.run(b, "raidTable", ["join", at])
+	await c.run(a, "raidTable", ["tier", "coop"])
+	await c.run(b, "raidTable", ["ready", true])
+	await c.run(a, "raidTable", ["go"])
+	check(t.state["b"]["tier"] == "coop", "the raid sails on Co-op")
+	var fields: int = 0
+	var guard2: int = 0
+	seen_seq = -1
+	while t.state["phase"] != "done" and guard2 < 800:
+		guard2 += 1
+		var st3: Dictionary = t.state
+		match str(st3["phase"]):
+			"playing":
+				await c.run(a, "raidTable", ["played", st3["seq"]])
+				await c.run(b, "raidTable", ["played", st3["seq"]])
+			"plan":
+				fields = maxi(fields, Battle.foes(t._r["b"]).size())
+				for s3: Session in [a, b]:
+					var si3: int = t._seat_of(c.key_of(s3))
+					var seat3: Dictionary = t._r["b"]["seats"][si3]
+					if not Battle.alive(t._r["b"]).has(seat3) or t.state["phase"] != "plan":
+						continue
+					var lg3: Dictionary = Battle.legal(t._r["b"], seat3)
+					await c.run(s3, "raidTable", ["plan", { "action": "volley" if lg3["volley"] else ("fire" if lg3["fire"] else "reload"), "aim": "critical", "target": Battle.first_foe(t._r["b"]) }])
+			"flares":
+				await c.run(a, "raidTable", ["flares", { "missed": 0.0, "feints": 0.0 }])
+				await c.run(b, "raidTable", ["flares", { "missed": 0.0, "feints": 0.0 }])
+			"tide":
+				var ch3: Array = st3["tide"]["choices"]
+				await c.run(a, "raidTable", ["tide", ch3[0]["id"]])
+				await c.run(b, "raidTable", ["tide", ch3[0]["id"]])
+	print("  co-op Pete: %s, up to %d enemies at once" % [t.state.get("result", ""), fields])
+	check(fields >= 2, "a co-op fight fields more than one enemy")
+	check(Js.num(a.profile().get("expedition_xp")) > a_xp, "co-op kills pay")
+	if t.state.get("result") == "won":
+		check(a.store.clear_count(a.uid, "corsairs_reckoning@coop") == 1, "the Co-op clear is recorded")
+		await c.run(a, "raidTable", ["call", pete.merged(at)])
+		await c.run(b, "raidTable", ["join", at])
+		check(not (await c.run(a, "raidTable", ["tier", "coopc"])).has("error"), "and now the Challenge opens")
+		await c.run(a, "raidTable", ["leave"])
 	check(after_flee_pay == 0, "and was paid nothing after (%d)" % after_flee_pay)
 	check(int(sent[0]) > 20, "every change went out (%d)" % sent[0])
 	print("  raid table check: %s" % ("ok" if bad == 0 else "%d FAILED" % bad))

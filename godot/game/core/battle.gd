@@ -191,9 +191,9 @@ static func fight_at(raid: Dictionary, r: int) -> Dictionary:
 
 
 ## A new battle for a raid and its party (seats from seat_for).
-static func begin(raid_id: String, seats: Array) -> Dictionary:
+static func begin(raid_id: String, seats: Array, tier: String = "normal") -> Dictionary:
 	var raid: Dictionary = raid_def(raid_id)
-	var b: Dictionary = { "raidId": raid_id, "round": 0.0, "fight": 0.0, "seats": seats, "turn": 1.0, "state": "plan", "events": [] }
+	var b: Dictionary = { "raidId": raid_id, "round": 0.0, "fight": 0.0, "seats": seats, "turn": 1.0, "state": "plan", "events": [], "tier": tier }
 	var seq_n: int = Js.list(raid.get("sequence")).size()
 	# A challenge run: two of its fights are elites, each with a rolled affix;
 	# the Quartermaster's merges a second onto every baked one.
@@ -224,6 +224,44 @@ static func begin(raid_id: String, seats: Array) -> Dictionary:
 	b["tideFired"] = []
 	start_fight(b, 0)
 	return b
+
+
+## The raid's tier rules (port rules battle.tiers), empty for Normal.
+static func tier_cfg(b: Dictionary) -> Dictionary:
+	return Js.obj(Js.obj(cfg().get("tiers")).get(str(b.get("tier", "normal"))))
+
+
+## The enemy ships of this fight (one, unless a co-op tier fields more).
+static func foes(b: Dictionary) -> Array:
+	return Js.list(b.get("foes")) if b.has("foes") else [b["enemy"]]
+
+
+static func foe_up(f: Dictionary) -> bool:
+	return float(f["hp"]) > 0.0 and not f.get("down", false)
+
+
+## The first enemy still afloat (the lead, while it lives), or -1.
+static func first_foe(b: Dictionary) -> int:
+	var fs: Array = foes(b)
+	for j: int in fs.size():
+		if foe_up(fs[j]):
+			return j
+	return -1
+
+
+## A seat's target this round: its pick if that ship is still afloat.
+static func target_of(b: Dictionary, plan: Dictionary) -> int:
+	var fs: Array = foes(b)
+	var t: int = int(Js.nz(plan.get("target"), 0.0))
+	if t >= 0 and t < fs.size() and foe_up(fs[t]):
+		return t
+	return first_foe(b)
+
+
+static func _tag(ev: Array, from: int, j: int) -> void:
+	for k: int in range(from, ev.size()):
+		if not (ev[k] as Dictionary).has("foe"):
+			ev[k]["foe"] = j
 
 
 static func _affixes() -> Dictionary:
@@ -282,15 +320,34 @@ static func start_fight(b: Dictionary, r: int) -> void:
 	var hp_scale: float = 1.0
 	for s0: Dictionary in b["seats"]:
 		hp_scale *= float(tide_agg(s0)["enemyHpScale"])
-	var hp: float = maxf(1.0, float(Js.round(float(e["hpBase"]) * party_hp_mult(n) * hp_scale)))
-	var acc: float = Js.nz(e.get("accuracy"), Js.nz(raid.get("enemyAccuracy"), 0.0)) + float(e["shipSpeed"])
+	var tc: Dictionary = tier_cfg(b)
+	var hp_mult: float = party_hp_mult(n)
+	if not tc.is_empty():
+		# A field: more ships instead of a fatter one (the boss keeps some of it).
+		hp_mult = (party_hp_mult(n) * float(tc["bossHp"]) if f["boss"] else float(tc["leadHp"])) * float(tc["hpMult"])
+		e["minDmg"] = maxf(1.0, float(Js.round(float(e["minDmg"]) * float(tc["dmgMult"]))))
+		e["maxDmg"] = maxf(1.0, float(Js.round(float(e["maxDmg"]) * float(tc["dmgMult"]))))
+	var hp: float = maxf(1.0, float(Js.round(float(e["hpBase"]) * hp_mult * hp_scale)))
 	b["fight"] = float(r)
-	b["enemy"] = {
+	b["enemy"] = _make_foe(raid, e, f["boss"] and not skirmish, affix, elite, hp)
+	b["foes"] = [b["enemy"]]
+	if not tc.is_empty():
+		_escorts(b, raid, f, n, hp_scale)
+	b["turn"] = 1.0
+	b["state"] = "plan"
+	b.erase("flares")
+	_seats_into_fight(b, raid, e, f)
+
+
+## One enemy ship, ready to fight.
+static func _make_foe(raid: Dictionary, e: Dictionary, boss: bool, affix: Dictionary, elite: bool, hp: float) -> Dictionary:
+	var acc: float = Js.nz(e.get("accuracy"), Js.nz(raid.get("enemyAccuracy"), 0.0)) + float(e["shipSpeed"])
+	var foe: Dictionary = {
 		"id": e["id"], "name": e["name"], "hp": hp, "max": hp, "min": e["minDmg"], "maxDmg": e["maxDmg"],
 		"speed": e["shipSpeed"], "acc": acc, "crit": Js.nz(e.get("critChance"), 0.0), "pattern": e["pattern"],
 		"mag": float(maxi(VOLLEY_COST, int(Js.nz(e.get("magazineSize"), 3.0)))), "charges": float(clampi(int(Js.nz(e.get("startCharges"), 0.0)), 0, 99)),
 		"idx": 0.0, "statuses": {}, "dodgedLast": false, "feint": 0.0, "shield": float(Js.round(hp * Js.nz(e.get("shieldPct"), 0.0))),
-		"snare": {}, "markPierce": 0.0, "boss": f["boss"] and not skirmish, "phase": 1.0,
+		"snare": {}, "markPierce": 0.0, "boss": boss, "phase": 1.0,
 		"phases": Js.list(Js.nz(e.get("phases"), [e["phase2"]] if e.get("phase2") != null else [])),
 		"special": e.get("special"), "ultimate": e.get("ultimate"), "image": e.get("image"), "portrait": e.get("portrait"),
 		"check": {}, "action": "", "dodgeRoll": false,
@@ -306,11 +363,47 @@ static func start_fight(b: Dictionary, r: int) -> void:
 	}
 	# The opening barrier: its own, or a Warded affix's, whichever is bigger.
 	var sp: float = maxf(Js.nz(e.get("shieldPct"), 0.0), Js.nz(affix.get("shieldPctMaxHp"), 0.0))
-	b["enemy"]["shield"] = float(Js.round(hp * sp))
-	b["enemy"]["shieldMax"] = b["enemy"]["shield"]
-	b["turn"] = 1.0
-	b["state"] = "plan"
-	b.erase("flares")
+	foe["shield"] = float(Js.round(hp * sp))
+	foe["shieldMax"] = foe["shield"]
+	return foe
+
+
+## The rest of a field (a co-op tier): escorts from the raid's own crew. An
+## ordinary fight fields the party's size (sometimes one fewer; on Challenge
+## sometimes one more), the boss comes with the same, 1 to 4 ships in all.
+static func _escorts(b: Dictionary, raid: Dictionary, f: Dictionary, n: int, hp_scale: float) -> void:
+	var tc: Dictionary = tier_cfg(b)
+	var k: int = n
+	if Dice.next() < 0.4:
+		k -= 1
+	if Dice.next() < float(tc["extraFoeChance"]):
+		k += 1
+	k = clampi(k, 1, 4)
+	var seq: Array = Js.list(raid.get("sequence"))
+	for j: int in range(1, k):
+		var id: Variant = seq[int(floor(Dice.next() * seq.size()))]
+		var e: Dictionary = Js.obj(raid["enemies"][id]).duplicate(true)
+		var affix: Dictionary = {}
+		var elite: bool = false
+		if tc.get("eliteEscorts", false) and e.get("affix") == null:
+			affix = Js.obj(_affixes().get(_roll_affix())).duplicate()
+			elite = true
+		elif e.get("affix") != null:
+			affix = Js.obj(_affixes().get(e["affix"])).duplicate()
+		e["minDmg"] = maxf(1.0, float(Js.round(float(e["minDmg"]) * float(tc["dmgMult"]))))
+		e["maxDmg"] = maxf(1.0, float(Js.round(float(e["maxDmg"]) * float(tc["dmgMult"]))))
+		var hp: float = maxf(1.0, float(Js.round(float(e["hpBase"]) * float(tc["escortHp"]) * float(tc["hpMult"]) * hp_scale)))
+		var foe: Dictionary = _make_foe(raid, e, false, affix, elite, hp)
+		foe["escort"] = true
+		# Escorts carry no boss's trappings.
+		foe["phases"] = []
+		foe["decoy"] = 0.0
+		(b["foes"] as Array).append(foe)
+
+
+## The seats readied for a new fight (charges, tides, the palisade, the
+## Quartermaster's repossession), and a boss's opening check.
+static func _seats_into_fight(b: Dictionary, raid: Dictionary, e: Dictionary, f: Dictionary) -> void:
 	for s: Dictionary in b["seats"]:
 		_ready_seat(s)
 		if _out(s):
@@ -399,7 +492,13 @@ static func crit_max(ship_min: float, power: float) -> float:
 ## a drifting crit seam, the fog over the bar, the crit band (a tide), and an
 ## affliction the enemy laid on this ship (a false court of decoys, iron
 ## shutters that take a first knock, a squall), which spends one pass.
-static func aim_for(b: Dictionary, si: int) -> Dictionary:
+static func aim_for(b: Dictionary, si: int, target: int = -1) -> Dictionary:
+	if target >= 0 and target < foes(b).size():
+		var keep: Dictionary = b["enemy"]
+		b["enemy"] = foes(b)[target]
+		var out: Dictionary = aim_for(b, si)
+		b["enemy"] = keep
+		return out
 	var e: Dictionary = b["enemy"]
 	var s: Dictionary = b["seats"][si]
 	var stack: float = minf(4.0, float(e["zoneMult"]) * float(Js.nz(Js.obj(e["affix"]).get("zoneSpeedMult"), 1.0)))
@@ -676,14 +775,26 @@ static func pick_enemy(b: Dictionary) -> String:
 ## ability: { crew, target } or null }. Returns the round's events.
 static func resolve(b: Dictionary, plans: Array) -> Array:
 	var ev: Array = []
-	var e: Dictionary = b["enemy"]
-	e["jammed"] = false
-	# Crew orders first, in seat order.
+	var fs: Array = foes(b)
+	for f0: Dictionary in fs:
+		f0["jammed"] = false
+		f0["xfire"] = 0.0
+	# Crew orders first, in seat order (one aimed at an enemy goes at the
+	# captain's target).
 	for i: int in plans.size():
 		var ab: Variant = Js.obj(plans[i]).get("ability")
 		if ab is Dictionary and not _out(b["seats"][i]):
+			var tj: int = target_of(b, Js.obj(plans[i]))
+			if tj < 0:
+				break
+			b["enemy"] = fs[tj]
+			var n0: int = ev.size()
 			use_ability(b, i, ab["crew"], int(Js.nz(ab.get("target"), float(i))), ev)
-	if b["state"] != "plan":
+			_tag(ev, n0, tj)
+			if float(fs[tj]["hp"]) <= 0.0 and not b.get("revived", false):
+				fs[tj]["down"] = true
+			b.erase("revived")
+	if first_foe(b) < 0 or b["state"] != "plan":
 		return _finish(b, ev)
 	# Each ship's action as it will be taken (an illegal pick falls back), so
 	# a dodge stance is read the same whichever side acts first.
@@ -699,25 +810,34 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			p0["aim"] = "miss"
 		p0["action"] = act0
 		plans[i] = p0
-	var e_act: String = pick_enemy(b)
-	e["action"] = e_act
-	ev.append({ "t": "intent", "action": e_act, "jammed": e.get("jammed", false) })
-	# Freezes that were waiting take hold this round; burns tick.
-	e["frozenNow"] = float(e.get("freeze", 0.0)) > 0.0
-	if e["frozenNow"]:
-		e["freeze"] = float(e["freeze"]) - 1.0
-	var eb: Dictionary = e.get("burn", {})
-	if not eb.is_empty() and float(e["hp"]) > 0.0 and (e["aegis"] as Dictionary).is_empty():
-		e["hp"] = _ward_floor(b, float(e["hp"]) - float(eb["dmg"]), ev)
-		ev.append({ "t": "eBurn", "dmg": eb["dmg"], "hp": e["hp"] })
-		eb["turns"] = float(eb["turns"]) - 1.0
-		if float(eb["turns"]) <= 0.0:
-			e["burn"] = {}
-		if float(e["hp"]) <= 0.0:
-			_enemy_down(b, ev, false)
-			if b.get("revived", false):
+	# Every enemy's move; freezes take hold, burns tick.
+	for j: int in fs.size():
+		var e: Dictionary = fs[j]
+		if not foe_up(e):
+			continue
+		b["enemy"] = e
+		var n1: int = ev.size()
+		var e_act: String = pick_enemy(b)
+		e["action"] = e_act
+		ev.append({ "t": "intent", "action": e_act, "jammed": e.get("jammed", false) })
+		e["frozenNow"] = float(e.get("freeze", 0.0)) > 0.0
+		if e["frozenNow"]:
+			e["freeze"] = float(e["freeze"]) - 1.0
+		var eb: Dictionary = e.get("burn", {})
+		if not eb.is_empty() and float(e["hp"]) > 0.0 and (e["aegis"] as Dictionary).is_empty():
+			e["hp"] = _ward_floor(b, float(e["hp"]) - float(eb["dmg"]), ev)
+			ev.append({ "t": "eBurn", "dmg": eb["dmg"], "hp": e["hp"] })
+			eb["turns"] = float(eb["turns"]) - 1.0
+			if float(eb["turns"]) <= 0.0:
+				e["burn"] = {}
+			if float(e["hp"]) <= 0.0:
+				_enemy_down(b, ev, false)
+				if not b.get("revived", false):
+					e["down"] = true
 				b.erase("revived")
-			return _finish(b, ev)
+		_tag(ev, n1, j)
+	if first_foe(b) < 0:
+		return _finish(b, ev)
 	for i: int in (b["seats"] as Array).size():
 		var sf: Dictionary = b["seats"][i]
 		sf["frozenNow"] = float(sf.get("freeze", 0.0)) > 0.0 and not _out(sf)
@@ -730,17 +850,23 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			bn["turns"] = float(bn["turns"]) - 1.0
 			if float(bn["turns"]) <= 0.0:
 				sf["burn"] = {}
-	# Crossfire: the criticals landed on the bars this round.
-	var crits: Array = []
+	# Crossfire: the criticals landed on the bars this round, on ONE enemy.
+	var by_foe: Dictionary = {}
 	for i: int in plans.size():
 		var sc: Dictionary = b["seats"][i]
 		var pc: Dictionary = Js.obj(plans[i])
 		if not _out(sc) and not sc.get("frozenNow", false) and str(pc.get("action", "")) in ["fire", "volley", "mega"] and str(pc.get("aim", "")) == "critical":
-			crits.append(i)
-	b["xfire"] = float(crits.size()) if crits.size() >= 2 else 0.0
-	if crits.size() >= 2:
-		ev.append({ "t": "crossfire", "seats": crits, "mult": crossfire_mult(crits.size()) })
-	# Initiative.
+			var tj2: int = target_of(b, pc)
+			if not by_foe.has(tj2):
+				by_foe[tj2] = []
+			(by_foe[tj2] as Array).append(i)
+	for tj3: Variant in by_foe:
+		var crits: Array = by_foe[tj3]
+		if crits.size() >= 2:
+			fs[int(tj3)]["xfire"] = float(crits.size())
+			ev.append({ "t": "crossfire", "seats": crits, "mult": crossfire_mult(crits.size()), "foe": int(tj3) })
+	# Initiative: every ship and every enemy (an enemy's place is -1 - its
+	# index: -1 the lead).
 	var order: Array = []
 	for i: int in plans.size():
 		var s: Dictionary = b["seats"][i]
@@ -748,23 +874,34 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			continue
 		var roll: int = d20() + int(maxf(1.0, float(s["speed"]) + float(tide_agg(s)["speed"]) + float(mods(s["statuses"])["speed"]))) + int(floor(float(s["nav"]) * float(Js.obj(s.get("fx")).get("navSpeed", 0.0))))
 		order.append({ "who": i, "roll": roll })
-	var er: int = d20() + int(maxf(1.0, float(e["speed"]) + float(mods(e["statuses"])["speed"]))) + int(Js.nz(Js.obj(e["affix"]).get("speedBonus"), 0.0))
-	order.append({ "who": -1, "roll": er })
+	var e_mods: Array = []
+	for j: int in fs.size():
+		var e2: Dictionary = fs[j]
+		e_mods.append(mods(e2["statuses"]))
+		if not foe_up(e2):
+			continue
+		var er: int = d20() + int(maxf(1.0, float(e2["speed"]) + float(mods(e2["statuses"])["speed"]))) + int(Js.nz(Js.obj(e2["affix"]).get("speedBonus"), 0.0))
+		order.append({ "who": -1 - j, "roll": er })
 	order.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
 		if x["roll"] != y["roll"]:
 			return x["roll"] > y["roll"]
-		if (x["who"] == -1) != (y["who"] == -1):
-			return x["who"] != -1
-		return x["who"] < y["who"])
+		if (x["who"] < 0) != (y["who"] < 0):
+			return x["who"] >= 0
+		return absi(x["who"]) < absi(y["who"]))
 	ev.append({ "t": "order", "order": order.map(func(o: Dictionary) -> int: return o["who"]) })
-	# Round-start snapshots (statuses read as they stood).
-	var e_mods: Dictionary = mods(e["statuses"])
 	for o: Dictionary in order:
-		if float(e["hp"]) <= 0.0 or alive(b).is_empty():
+		if first_foe(b) < 0 or alive(b).is_empty():
 			break
 		var who: int = o["who"]
-		if who == -1:
-			_enemy_act(b, e_act, e_mods, plans, ev)
+		if who < 0:
+			var j2: int = -1 - who
+			var ef: Dictionary = fs[j2]
+			if not foe_up(ef):
+				continue
+			b["enemy"] = ef
+			var n2: int = ev.size()
+			_enemy_act(b, str(ef["action"]), e_mods[j2], plans, ev)
+			_tag(ev, n2, j2)
 		else:
 			var s2: Dictionary = b["seats"][who]
 			if _out(s2) or float(s2["hp"]) <= 0.0:
@@ -773,7 +910,16 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 				s2["last"] = ""
 				ev.append({ "t": "frozen", "seat": who })
 				continue
-			_seat_act(b, who, Js.obj(plans[who]), e_act, e_mods, ev)
+			var tj4: int = target_of(b, Js.obj(plans[who]))
+			if tj4 < 0:
+				break
+			var et: Dictionary = fs[tj4]
+			b["enemy"] = et
+			var n3: int = ev.size()
+			_seat_act(b, who, Js.obj(plans[who]), str(et["action"]), e_mods[tj4], ev)
+			_tag(ev, n3, tj4)
+			if float(et["hp"]) <= 0.0 and not b.get("revived", false):
+				et["down"] = true
 			if b.get("revived", false):
 				b.erase("revived")
 				break
@@ -833,7 +979,7 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 			tmult *= float(fx.get("fireMult", 1.0)) if act == "fire" else (float(fx.get("volleyMult", 1.0)) if act == "volley" else float(fx.get("megaMult", 1.0)))
 			var crit_shot: bool = res == "critical"
 			# Crossfire rides only on a crit landed on the bar.
-			var xf: float = crossfire_mult(int(b.get("xfire", 0.0))) if str(plan.get("aim", "")) == "critical" else 1.0
+			var xf: float = crossfire_mult(int(e.get("xfire", 0.0))) if str(plan.get("aim", "")) == "critical" else 1.0
 			var imult: float = float(fx.get("bossMult", 1.0)) if e["boss"] else float(fx.get("nonbossMult", 1.0))
 			imult *= float(fx.get("critMult", 1.0)) if crit_shot else float(fx.get("noncritMult", 1.0))
 			imult *= 1.0 + minf(1.0, float(fx.get("ramp", 0.0)) * (maxf(0.0, float(b["turn"]) - 1.0) + float(s.get("critRamp", 0.0))))
@@ -1013,6 +1159,8 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 				var sh_tab: Array = Js.list(Js.obj(cfg().get("party")).get("shots"))
 				if not sh_tab.is_empty():
 					shots = int(sh_tab[clampi((b["seats"] as Array).size(), 1, sh_tab.size()) - 1])
+				if foes(b).size() > 1:
+					shots = maxi(1, shots - 1) if e["boss"] else 1
 				var focus: bool = Js.obj(cfg().get("party")).get("focus", false) == true
 				var hit: Array = []
 				for k: int in shots:
@@ -1262,13 +1410,17 @@ static func _check_fail(b: Dictionary, ev: Array) -> void:
 # ══ The round's end ═══════════════════════════════════════════════════════════
 
 static func _finish(b: Dictionary, ev: Array) -> Array:
-	var e: Dictionary = b["enemy"]
 	_deaths(b, ev)
+	for f0: Dictionary in foes(b):
+		if float(f0["hp"]) <= 0.0:
+			f0["down"] = true
+	var lead: int = first_foe(b)
+	b["enemy"] = foes(b)[lead] if lead >= 0 else foes(b)[0]
 	if alive(b).is_empty():
 		b["state"] = "lost"
 		ev.append({ "t": "lost" })
 		return ev
-	if float(e["hp"]) <= 0.0:
+	if lead < 0:
 		b["state"] = "won"
 		ev.append({ "t": "won" })
 		return ev
@@ -1302,24 +1454,46 @@ static func _deaths(b: Dictionary, ev: Array) -> void:
 
 
 static func _round_end(b: Dictionary, ev: Array) -> Array:
-	var e: Dictionary = b["enemy"]
 	b["turn"] = float(b["turn"]) + 1.0
-	# The mechanic check's countdown.
-	var ck: Dictionary = e["check"]
-	if not ck.is_empty():
-		if ck["armed"]:
-			ck["armed"] = false
-		elif _check_met(b):
-			ev.append({ "t": "checkMet", "line": ck["def"].get("counteredLine", "") })
-			e["check"] = {}
-		else:
-			ck["left"] = float(ck["left"]) - 1.0
-			if float(ck["left"]) <= 0.0:
-				_check_fail(b, ev)
-	# The turn's change: orders, snare, regen, statuses, wards.
-	var sn: Dictionary = e["snare"]
-	if Js.nz(sn.get("turns"), 0.0) > 0.0:
-		sn["turns"] = float(sn["turns"]) - 1.0
+	var fs: Array = foes(b)
+	for j: int in fs.size():
+		var e: Dictionary = fs[j]
+		if not foe_up(e):
+			continue
+		b["enemy"] = e
+		var n0: int = ev.size()
+		# The mechanic check's countdown.
+		var ck: Dictionary = e["check"]
+		if not ck.is_empty():
+			if ck["armed"]:
+				ck["armed"] = false
+			elif _check_met(b):
+				ev.append({ "t": "checkMet", "line": ck["def"].get("counteredLine", "") })
+				e["check"] = {}
+			else:
+				ck["left"] = float(ck["left"]) - 1.0
+				if float(ck["left"]) <= 0.0:
+					_check_fail(b, ev)
+		var sn: Dictionary = e["snare"]
+		if Js.nz(sn.get("turns"), 0.0) > 0.0:
+			sn["turns"] = float(sn["turns"]) - 1.0
+		var erg: float = float(mods(e["statuses"])["regen"])
+		if erg > 0.0:
+			e["hp"] = minf(float(e["max"]), float(e["hp"]) + erg)
+		tick_statuses(e["statuses"])
+		if float(e["markPierce"]) > 0.0:
+			e["markPierce"] = float(e["markPierce"]) - 1.0
+		# A flare barrage every third turn (Flare Barrage, by tier).
+		var tier: int = int(e["decoy"])
+		if tier > 0 and int(b["turn"]) % 3 == 0 and not b.has("flares"):
+			var per: float = float(Js.round(maxf(float(Js.round(float(e["min"]) * 0.7)), 0.0) * float(e["flareDmg"])))
+			b["flares"] = {
+				"name": e["decoyName"], "count": 3 + tier * 2, "feint": 0.22 if tier >= 3 else 0.0, "cluster": 0.34 if tier >= 2 else 0.20,
+				"fuse": (0.9 if tier >= 3 else (1.02 if tier == 2 else 1.18)) * float(e["flareFuse"]), "per": per,
+			}
+			ev.append({ "t": "flares", "name": e["decoyName"], "count": b["flares"]["count"] })
+		_tag(ev, n0, j)
+	# The turn's change on the ships: orders, regen, statuses, wards.
 	for s: Dictionary in b["seats"]:
 		s["abilityThisTurn"] = false
 		if _out(s):
@@ -1333,21 +1507,8 @@ static func _round_end(b: Dictionary, ev: Array) -> Array:
 			w2["turns"] = float(w2["turns"]) - 1.0
 			if float(w2["turns"]) <= 1.0:
 				s["ward"] = {}
-	var erg: float = float(mods(e["statuses"])["regen"])
-	if erg > 0.0:
-		e["hp"] = minf(float(e["max"]), float(e["hp"]) + erg)
-	tick_statuses(e["statuses"])
-	if float(e["markPierce"]) > 0.0:
-		e["markPierce"] = float(e["markPierce"]) - 1.0
-	# A flare barrage every third turn (Flare Barrage, by tier).
-	var tier: int = int(e["decoy"])
-	if tier > 0 and int(b["turn"]) % 3 == 0:
-		var per: float = float(Js.round(maxf(float(Js.round(float(e["min"]) * 0.7)), 0.0) * float(e["flareDmg"])))
-		b["flares"] = {
-			"name": e["decoyName"], "count": 3 + tier * 2, "feint": 0.22 if tier >= 3 else 0.0, "cluster": 0.34 if tier >= 2 else 0.20,
-			"fuse": (0.9 if tier >= 3 else (1.02 if tier == 2 else 1.18)) * float(e["flareFuse"]), "per": per,
-		}
-		ev.append({ "t": "flares", "name": e["decoyName"], "count": b["flares"]["count"] })
+	var lead: int = first_foe(b)
+	b["enemy"] = fs[lead] if lead >= 0 else fs[0]
 	ev.append({ "t": "end", "turn": b["turn"] })
 	return ev
 

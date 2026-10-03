@@ -775,6 +775,40 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   orders and which are spent; right now (statuses, burn, freeze, ward, brace, an aim
   affliction, a repossessed item). KONG: the boss's crate odds are NOT on the card; they belong
   to the raid's entry screen.
+- RAID TIERS, THE FIELD, AND THE ENTRY SCREEN (2026-10-03). KONG'S CALLS (all four on the
+  recommended option): Co-op and Co-op Challenge are two new tiers for two or more captains,
+  Challenge once EVERY captain in the line has cleared that raid on Co-op; several enemies at once
+  appear on the co-op tiers ONLY (solo raids stay one at a time, as on the web); the tiers pay a
+  bigger crate, better odds and, on Challenge, a COSMETIC pennant (never power, no pay-to-win);
+  Crossfire on a field needs the criticals on the SAME enemy (focus fire is the skill).
+  THE FIELD (core/battle.gd): b["foes"], 1 to 4 ships; b["enemy"] points at whichever is acting
+  or being shot (so the old one-enemy rules run unchanged) and every event carries "foe". An
+  ordinary fight fields the party's size (40% one fewer; on Challenge 20% one more), the fight's
+  own enemy leading with escorts from the raid's crew (on Challenge every escort an elite); the
+  boss comes with escorts. No party HP scaling on a field (more ships instead), the boss keeps
+  x bossHp of it. Each enemy rolls its own move and initiative (an enemy's place in the order is
+  -1 - its index); its ordinary attack is one aimed shot (a boss a smaller volley). A plan carries
+  "target"; a target that sinks mid-round passes to the next afloat. The fight is won when the
+  field is down. Port rules battle.tiers hold every number. Balance (tests/battle_check.gd, a
+  fair bot that always focus-fires, 200 runs a size, Pete's raid): Normal 40/64/74% for 2/3/4
+  captains; Co-op 26/57/35%; Co-op Challenge about 10/24/11%.
+  PAY (core/raid_run.gd): kills x coin and x xp of the tier, escorts at escortPay of theirs; the
+  crate rolls 1 + extraRolls times (each item at most once) with rarities x rarityMult, its coin
+  x coin; clears recorded as the raid's and "raid@coop"/"raid@coopc"; a Co-op Challenge clear
+  adds the raid to coop_pennants (the ledger and the entry screen count them; NOT YET flown from
+  the mast). Normal pays exactly as the web (parity unchanged, the crate's dice in the web's order).
+  THE ENTRY SCREEN (game/ready_screen.gd; Kong: "like going into a group dungeon in Warcraft"):
+  the raid, the three tiers side by side (a shut one says why), four seats (each captain's avatar,
+  ship, Navigation, hull, seated hands, pennants, Ready / Not ready; open seats), the boss and
+  the crate's odds for this captain on this tier, and the foot (who is still to ready, the tier's
+  terms, Ready/Leave or Sail/Disband). Solo it opens before every raid but the skirmish. In a
+  Charter the table runs it (game/raid_table.gd): no clock, Ready per captain, the caller picks
+  the tier (a new pick asks everyone again) and sails when all are ready; each captain's card is
+  made on the founder's game. Crewmates not in the line see a banner with Join (lit only near).
+  ON THE WATER (game/battle_stage.gd): every enemy its own hull, aura and plate; click a hull or
+  press Tab to aim (a gold ring on the target, TARGET on its frame), click a frame for its stat
+  card. FRAMES MODE (a field, or more than two ships in the line): unit frames down the left (the
+  line, each order beside its frame) and right (the enemies), a slim name and bar over each hull.
 - THE CAMPAIGN'S WATER, BUILT (2026-10-03). RULES: core/campaign.gd ports computeRaidMap,
   chapterForNode, buildClearedSetVia and all of lib/core/raidMap (the view, chapter unlocks seen,
   tolls, story reads with the legendary gates, puzzles, the caches, the muster, events, dice,

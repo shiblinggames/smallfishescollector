@@ -60,22 +60,42 @@ func _plan(b: Dictionary, si: int, use_crew: bool) -> Dictionary:
 	return plan
 
 
-func _run(n: int, seed: int, use_crew: bool) -> Dictionary:
+## On a field: the line focuses the weakest enemy afloat (as a crew calling
+## one target would), each captain planning against it.
+func _plan_on(b: Dictionary, si: int, use_crew: bool) -> Dictionary:
+	var fs: Array = Battle.foes(b)
+	if fs.size() <= 1:
+		return _plan(b, si, use_crew)
+	var t: int = -1
+	for j: int in fs.size():
+		if Battle.foe_up(fs[j]) and (t < 0 or float(fs[j]["hp"]) < float(fs[t]["hp"])):
+			t = j
+	var keep: Dictionary = b["enemy"]
+	b["enemy"] = fs[maxi(0, t)]
+	var plan: Dictionary = _plan(b, si, use_crew)
+	b["enemy"] = keep
+	plan["target"] = t
+	return plan
+
+
+func _run(n: int, seed: int, use_crew: bool, tier: String = "normal") -> Dictionary:
 	Dice.install(Dice.Mulberry32.new(seed))
 	var seats: Array = []
 	for i: int in n:
 		seats.append(_seat("C%d" % i, 3, 14.0, 6.0, [_crew(float(i * 10 + 1), "mender", 10)]))
-	var b: Dictionary = Battle.begin("corsairs_reckoning", seats)
+	var b: Dictionary = Battle.begin("corsairs_reckoning", seats, tier)
 	var rounds: int = 0
+	var most: int = 0
 	while b["state"] != "lost" and b["state"] != "done" and rounds < 400:
+		most = maxi(most, Battle.foes(b).size())
 		var plans: Array = []
 		for i: int in n:
-			plans.append(_plan(b, i, use_crew))
+			plans.append(_plan_on(b, i, use_crew))
 		Battle.resolve(b, plans)
 		rounds += 1
 		if b["state"] == "won":
 			Battle.next_fight(b)
-	return { "won": b["state"] == "done", "rounds": rounds }
+	return { "won": b["state"] == "done", "rounds": rounds, "most": most }
 
 
 func _init() -> void:
@@ -145,6 +165,37 @@ func _init() -> void:
 			check(xev.is_empty() and flagged.is_empty(), "a crit and a hit make no crossfire")
 			xf_seen[1] += 1
 	check(is_equal_approx(Battle.crossfire_mult(4), 1.75), "four crits: +75%")
+	# THE CO-OP TIERS: a field of enemies, each its own move and initiative.
+	Dice.install(Dice.Mulberry32.new(77))
+	var bf: Dictionary = Battle.begin("corsairs_reckoning", [_seat("A", 3, 14.0, 6.0, []), _seat("B", 3, 14.0, 6.0, []), _seat("C", 3, 14.0, 6.0, [])], "coop")
+	var fs0: Array = Battle.foes(bf)
+	check(fs0.size() >= 2 and fs0.size() <= 4, "a co-op fight of three fields 2 to 4 enemies (%d)" % fs0.size())
+	check(fs0.slice(1).all(func(f: Dictionary) -> bool: return f.get("escort", false)), "the rest are escorts")
+	for sx: Dictionary in bf["seats"]:
+		sx["charges"] = 3.0
+	for fx0: Dictionary in fs0:
+		fx0["hp"] = 999.0
+		fx0["max"] = 999.0
+	var evf: Array = Battle.resolve(bf, [{ "action": "fire", "aim": "critical", "target": 1 }, { "action": "fire", "aim": "critical", "target": 1 }, { "action": "fire", "aim": "critical", "target": 0 }])
+	var ordf: Array = evf.filter(func(x: Dictionary) -> bool: return x["t"] == "order")[0]["order"]
+	check(ordf.filter(func(w: int) -> bool: return w < 0).size() == fs0.size(), "every enemy takes a turn (%s)" % str(ordf))
+	var xff: Array = evf.filter(func(x: Dictionary) -> bool: return x["t"] == "crossfire")
+	check(xff.size() == 1 and int(xff[0]["foe"]) == 1 and (xff[0]["seats"] as Array).size() == 2, "crossfire only for the two crits on the same enemy (%s)" % str(xff))
+	var shots_at: Array = evf.filter(func(x: Dictionary) -> bool: return x["t"] == "shot").map(func(x: Dictionary) -> int: return int(x["foe"]))
+	check(shots_at.count(1) == 2 and shots_at.count(0) == 1, "each shot lands on its captain's target (%s)" % str(shots_at))
+	for n2: int in [2, 3, 4]:
+		for tier: String in ["coop", "coopc"]:
+			var w2: int = 0
+			var most: int = 0
+			var rr: int = 0
+			for k: int in 200:
+				var r3: Dictionary = _run(n2, 9000 + k * 11 + n2, true, tier)
+				if r3["won"]:
+					w2 += 1
+				rr += int(r3["rounds"])
+				most = maxi(most, int(r3["most"]))
+			print("  Pete's raid on %s, %d captains: %d%% won, %.1f rounds, up to %d enemies at once" % [tier, n2, int(100.0 * w2 / 200.0), rr / 200.0, most])
+			check(most <= 4, "never more than four enemies")
 	# Pete's raid, many times.
 	for n: int in [1, 2, 3, 4]:
 		var wins: int = 0

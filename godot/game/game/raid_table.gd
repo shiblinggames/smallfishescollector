@@ -8,11 +8,16 @@ extends Node
 ## `raidTable`, caught by Charter.run); after every change the raid is sent to
 ## everyone aboard (changed), and every screen plays the same events.
 ##
-##   THE MUSTER: a captain calls a raid from its hull at anchor; everyone
-##   aboard hears it and has MUSTER seconds to join (the caller may sail at
-##   once). Only a captain whose map has reached that raid, and whose ship is
-##   at it (within NEAR of its dock), may come (Kong: "you have to be at the
-##   same raid").
+##   THE READY CHECK (Kong, 2026-10-03: "like going into a group dungeon in
+##   like Warcraft"): a captain calls a raid from its hull at anchor and the
+##   entry screen opens (game/ready_screen.gd); everyone aboard hears it. Only
+##   a captain whose map has reached that raid, and whose ship is at it
+##   (within NEAR of its dock), may join, up to four. Each captain's card
+##   (avatar, ship, hull, crew, pennants) is made here and sent with the
+##   state. The caller picks the TIER (Normal; Co-op and Co-op Challenge need
+##   two or more, Challenge once every captain has cleared the raid on Co-op;
+##   a change of tier asks everyone again), every other captain says Ready,
+##   and the caller sails. No clock: it waits for the crew.
 ##   A ROUND: each captain in the fight plans (an action, its aim judged on
 ##   their own bar, maybe a crew order, maybe aimed at a crewmate) and says
 ##   ready. NO CLOCK (Kong: the turn does not move until every captain has
@@ -78,8 +83,34 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 			return _leave(key)
 		"go":
 			if _r["phase"] != "muster" or _r.get("by") != key:
-				return { "error": "Only the captain who called it can sail early." }
+				return { "error": "Only the captain who called it can sail." }
+			if str(Js.obj(_r.get("tiers")).get(_r["tier"], "")) != "":
+				return { "error": str(_r["tiers"][_r["tier"]]) }
+			for m: Dictionary in _r["members"]:
+				if m["key"] != key and not m.get("ready", false):
+					return { "error": "Not everyone is ready." }
 			_start()
+			return { "ok": true }
+		"ready":
+			if _r["phase"] != "muster":
+				return { "error": "Not now." }
+			for m: Dictionary in _r["members"]:
+				if m["key"] == key:
+					m["ready"] = payload == true
+			_push()
+			return { "ok": true }
+		"tier":
+			if _r["phase"] != "muster" or _r.get("by") != key:
+				return { "error": "Only the captain who called it picks the tier." }
+			if not ["normal", "coop", "coopc"].has(str(payload)):
+				return { "error": "There is no such tier." }
+			if str(Js.obj(_r.get("tiers")).get(str(payload), "")) != "":
+				return { "error": str(_r["tiers"][str(payload)]) }
+			_r["tier"] = str(payload)
+			# A new tier: everyone is asked again.
+			for m: Dictionary in _r["members"]:
+				m["ready"] = false
+			_push()
 			return { "ok": true }
 		"plan":
 			return _plan(key, Js.obj(payload))
@@ -127,8 +158,8 @@ func _call(key: String, s: Session, p: Dictionary) -> Dictionary:
 		return { "error": "Your map has not reached that raid." }
 	if not near(node_id, p):
 		return { "error": "Sail to the raid to call the crew to it." }
-	_r = { "phase": "muster", "seq": int(_r["seq"]) + 1, "left": MUSTER, "raidId": raid_id, "nodeId": node_id, "by": key,
-		"members": [{ "key": key, "name": s.captain_name() }], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "tidePicks": {}, "gone": {}, "result": "" }
+	_r = { "phase": "muster", "seq": int(_r["seq"]) + 1, "left": -1.0, "raidId": raid_id, "nodeId": node_id, "by": key, "tier": "normal",
+		"members": [{ "key": key, "name": s.captain_name(), "ready": true, "card": card_of(s, raid_id) }], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "tidePicks": {}, "gone": {}, "result": "" }
 	_push()
 	return { "ok": true }
 
@@ -162,7 +193,7 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 		return { "error": "Your map has not reached that raid yet." }
 	if not near(str(_r["nodeId"]), p):
 		return { "error": "Sail to the raid to join it." }
-	mem.append({ "key": key, "name": s.captain_name() })
+	mem.append({ "key": key, "name": s.captain_name(), "ready": false, "card": card_of(s, str(_r["raidId"])) })
 	_push()
 	return { "ok": true }
 
@@ -189,7 +220,7 @@ func _start() -> void:
 		var seat: Dictionary = Battle.seat_for(s.store, s.uid, str(m["name"]))
 		seat["key"] = m["key"]
 		seats.append(seat)
-	_r["b"] = Battle.begin(str(_r["raidId"]), seats)
+	_r["b"] = Battle.begin(str(_r["raidId"]), seats, str(_r.get("tier", "normal")))
 	_began_ms = Time.get_ticks_msec()
 	_step("plan", [{ "t": "begin" }])
 
@@ -325,8 +356,8 @@ func _resolve() -> void:
 func _pay_kill() -> Array:
 	var b: Dictionary = _r["b"]
 	var raid: Dictionary = Battle.raid_def(str(_r["raidId"]))
-	var e: Dictionary = b["enemy"]
 	var boss: bool = Battle.fight_at(raid, int(b["fight"]))["boss"]
+	var tc: Dictionary = Battle.tier_cfg(b)
 	var out: Array = []
 	for s: Dictionary in Battle.alive(b):
 		var ss: Session = _session(s["key"])
@@ -335,11 +366,17 @@ func _pay_kill() -> Array:
 		# Through the Charter's book: the purse is the crew's, so the pay is
 		# lent in, earned, taken back and noted under the captain's name.
 		charter._lend(ss)
-		var paid: Dictionary = RaidRun.award_kill(ss.store, ss.uid, raid, str(e["id"]), boss)
+		var xp: float = 0.0
+		var coin: float = 0.0
+		for f: Dictionary in Battle.foes(b):
+			var esc: bool = f.get("escort", false)
+			var paid: Dictionary = RaidRun.award_kill(ss.store, ss.uid, raid, str(f["id"]), boss and not esc, tc, float(Js.nz(tc.get("escortPay"), 1.0)) if esc else 1.0)
+			xp += float(paid["xp"])
+			coin += float(paid["doubloons"])
 		charter._take(ss)
-		if float(paid["doubloons"]) > 0.0:
-			charter._note(ss.captain_name(), float(paid["doubloons"]), "%s: %s sunk" % [raid.get("raidTitle", "Raid"), e["name"]])
-		out.append({ "t": "pay", "key": s["key"], "xp": paid["xp"], "doubloons": paid["doubloons"] })
+		if coin > 0.0:
+			charter._note(ss.captain_name(), coin, "%s: %s sunk" % [raid.get("raidTitle", "Raid"), b["foes"][0]["name"] if b.has("foes") else b["enemy"]["name"]])
+		out.append({ "t": "pay", "key": s["key"], "xp": xp, "doubloons": coin })
 	_settle_saves()
 	return out
 
@@ -356,9 +393,12 @@ func _crates() -> Array:
 		if ss == null:
 			continue
 		charter._lend(ss)
-		var r: Dictionary = RaidRun.open_crate(ss.store, ss.uid, raid, float(s["fortune"]))
-		RaidRun.record_clear(ss.store, ss.uid, str(_r["raidId"]), ms)
+		var tc2: Dictionary = Battle.tier_cfg(b)
+		var r: Dictionary = RaidRun.open_crate(ss.store, ss.uid, raid, float(s["fortune"]), tc2)
+		var pennant: bool = RaidRun.record_tier_clear(ss.store, ss.uid, str(_r["raidId"]), str(b.get("tier", "normal")), tc2, ms)
 		charter._take(ss)
+		if pennant:
+			out.append({ "t": "pennant", "key": s["key"], "raidId": _r["raidId"] })
 		if Js.num(r.get("coin")) > 0.0:
 			charter._note(ss.captain_name(), float(r["coin"]), "%s: the crate" % raid.get("raidTitle", "Raid"))
 		out.append({ "t": "crate", "key": s["key"], "coin": r.get("coin", 0.0), "items": (Js.list(r.get("items"))).map(func(x: Dictionary) -> String: return str(x.get("label", x["id"]))) })
@@ -429,8 +469,6 @@ func _process(delta: float) -> void:
 		return
 	_r["left"] = -1.0
 	match str(_r["phase"]):
-		"muster":
-			_start()
 		"plan":
 			_resolve()
 		"playing":
@@ -446,6 +484,10 @@ func _process(delta: float) -> void:
 
 ## Send the raid to everyone (and to this game's own screens).
 func _push() -> void:
+	if _r["phase"] == "muster":
+		_r["tiers"] = tiers_open(Js.list(_r.get("members")))
+		if str(_r["tiers"].get(_r.get("tier", "normal"), "")) != "":
+			_r["tier"] = "normal"
 	var pub: Dictionary = _r.duplicate(true)
 	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
 		_state.rpc(pub)
@@ -504,3 +546,33 @@ func drop(key: String) -> void:
 		"tide":
 			if _all_in("tidePicks"):
 				_step("tided", [{ "t": "tided", "picks": _r["tidePicks"] }])
+
+
+
+## Why each tier is shut for this line ("" when open).
+static func tiers_open(members: Array) -> Dictionary:
+	var n: int = members.size()
+	var coop: String = "" if n >= 2 else "Needs two or more captains."
+	var coopc: String = coop
+	if coopc == "" and not members.all(func(m: Dictionary) -> bool: return Js.obj(m.get("card")).get("coopClear", false) == true):
+		coopc = "Each captain needs a Co-op clear."
+	return { "normal": "", "coop": coop, "coopc": coopc }
+
+
+## What the entry screen shows of a captain: their face, their ship, its hull
+## and Navigation, the hands seated for raids, their pennants, and whether
+## they have cleared this raid on Co-op (for the Challenge).
+static func card_of(s: Session, raid_id: String) -> Dictionary:
+	var p: Dictionary = s.profile()
+	var seat: Dictionary = Battle.seat_for(s.store, s.uid, s.captain_name())
+	var crew: Array = []
+	for c: Dictionary in Js.list(seat.get("crew")):
+		var cd: Dictionary = Js.obj(Js.obj(Crew.t().get("classes")).get(c["cls"]))
+		crew.append({ "name": c["name"], "filename": c.get("filename", ""), "color": cd.get("color", "#cccccc"), "cls": cd.get("name", "") })
+	return {
+		"face": seat.get("face"), "shipTier": seat.get("tier"), "shipSkin": seat.get("shipSkin"),
+		"hull": seat.get("max"), "nav": Loadout.nav_level_from_xp(Js.num(p.get("expedition_xp"))), "fortune": seat.get("fortune"),
+		"crew": crew, "pennants": Js.list(p.get("coop_pennants")).size(),
+		"coopClear": s.store.clear_count(s.uid, raid_id + "@coop") > 0,
+		"ownedSkins": Js.list(p.get("owned_ship_skins")),
+	}

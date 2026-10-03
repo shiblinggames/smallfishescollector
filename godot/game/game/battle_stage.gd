@@ -80,6 +80,16 @@ var _spoke: bool = false
 var _plan_until: float = 0.0
 ## A crossfire's lines from the ships to the enemy, fading (seconds left).
 var _xfire_seats: Array = []
+## A co-op tier's field: every enemy ship's hull, where it rides, its portrait;
+## the one an event is about (_cur), and this captain's target.
+var _foe_nodes: Array = []
+var _foe_pos: Array = []
+var _foe_tex: Array = []
+var _cur: int = 0
+var _target: int = 0
+var _xfire_foe: int = 0
+## Where each plate was last drawn (key: seat, or "e" and its index).
+var _plate_at: Dictionary = {}
 var _xfire_t: float = 0.0
 ## The pale trail on each plate's health bar (key: seat, or "e"), as a share.
 var _trail: Dictionary = {}
@@ -176,10 +186,17 @@ func _frame() -> void:
 	for i: int in (b["seats"] as Array).size() if not b.is_empty() else 1:
 		lo = lo.min(_at + _offset(i))
 		hi = hi.max(_at + _offset(i))
-	var span: float = absf(_enemy_at.x - lo.x) + 520.0
-	var tall: float = (hi.y - lo.y) * Chart.GROUND + 520.0
-	var z: float = clampf(minf(vp.x * 0.72 / span, vp.y * 0.62 / tall), 0.45, 1.5)
-	var mid: Vector2 = Vector2((lo.x + _enemy_at.x) / 2.0, ((lo.y + hi.y) / 2.0 + _enemy_at.y) / 2.0) - (_at + _offset(me))
+	var elo: Vector2 = _foe_at(0)
+	var ehi: Vector2 = _foe_at(0)
+	for j: int in maxi(1, _foe_pos.size()):
+		elo = elo.min(_foe_at(j))
+		ehi = ehi.max(_foe_at(j))
+	lo = lo.min(Vector2(lo.x, elo.y))
+	hi = hi.max(Vector2(hi.x, ehi.y))
+	var span: float = absf(ehi.x - lo.x) + 520.0
+	var tall: float = (hi.y - lo.y) * Chart.GROUND + 560.0
+	var z: float = clampf(minf(vp.x * 0.72 / span, vp.y * 0.6 / tall), 0.4, 1.5)
+	var mid: Vector2 = Vector2((lo.x + ehi.x) / 2.0, (lo.y + hi.y) / 2.0) - (_at + _offset(me))
 	sea.stage = { "zoom": z, "shift": Vector2(mid.x, mid.y * Chart.GROUND - 40.0) * z }
 
 
@@ -198,9 +215,13 @@ func _process(delta: float) -> void:
 			a0.shield = float(s0["shield"])
 			if i == me:
 				sea._boat.modulate = Color(0.75, 0.88, 1.0) if a0.ice else Color.WHITE
-		var ae: HullAura = _aura("e")
-		if ae != null and is_instance_valid(ae):
-			var e0: Dictionary = b["enemy"]
+		var fs0: Array = Battle.foes(b)
+		for j0: int in mini(fs0.size(), _foe_nodes.size()):
+			var ae: HullAura = _aura("e%d" % j0)
+			if ae == null or not is_instance_valid(ae):
+				continue
+			var e0: Dictionary = fs0[j0]
+			var en0: HullRig = _foe_nodes[j0]
 			ae.burn = not Js.obj(e0.get("burn")).is_empty()
 			ae.ice = e0.get("frozenNow", false) or float(e0.get("freeze", 0.0)) > 0.0
 			ae.shield = float(e0["shield"])
@@ -210,8 +231,8 @@ func _process(delta: float) -> void:
 			var ag: Dictionary = Js.obj(e0.get("aegis"))
 			ae.wall_left = float(ag.get("left", 0.0))
 			ae.wall_of = float(ag.get("of", 0.0))
-			if _enemy != null and is_instance_valid(_enemy):
-				_enemy.modulate = Color(0.75, 0.88, 1.0) if ae.ice else Color.WHITE
+			if en0 != null and is_instance_valid(en0):
+				en0.modulate = Color(0.75, 0.88, 1.0) if ae.ice else Color.WHITE
 	if _deck != null:
 		# As tall as what is on it (an order row, the aim bar, the die).
 		var dh: float = maxf(150.0, _deck_box.get_combined_minimum_size().y + 34.0)
@@ -241,7 +262,7 @@ func _screen(world_p: Vector2) -> Vector2:
 
 ## Where seat i rides in the line, from the first seat's place.
 static func _offset(i: int) -> Vector2:
-	return [Vector2.ZERO, Vector2(-300, 300), Vector2(-300, -300), Vector2(-600, 0)][clampi(i, 0, 3)]
+	return [Vector2.ZERO, Vector2(-300, 340), Vector2(-300, -340), Vector2(-600, 0)][clampi(i, 0, 3)]
 
 
 func _seat_at(i: int) -> Vector2:
@@ -276,53 +297,118 @@ func _mate_aura(i: int) -> HullAura:
 # ── The enemy ────────────────────────────────────────────────────────────────
 
 func _enemy_enters() -> void:
-	var e: Dictionary = b["enemy"]
-	if _enemy != null:
-		_enemy.queue_free()
-	_enemy = HullRig.new()
-	_enemy.tex = Skipper.tex(str(e["image"]).trim_prefix("/"))
-	_enemy.def = {}
-	_enemy.box = 400.0 if e["boss"] else 340.0
-	_enemy.face = -1.0
+	for n0: Variant in _foe_nodes:
+		if n0 != null and is_instance_valid(n0):
+			(n0 as Node).queue_free()
+	_foe_nodes = []
+	_foe_pos = []
+	_foe_tex = []
+	var fs: Array = Battle.foes(b)
 	var at_anchor: bool = _from_mark()
-	_enemy_at = mark.position if at_anchor else _at + Vector2(620, 60 if mark != null else -40)
-	_enemy.position = _enemy_at if at_anchor else _enemy_at + Vector2(900, 30)
-	_enemy.z_index = 1
-	sea._world.add_child(_enemy)
-	var ea: HullAura = HullAura.new()
-	ea.width = _enemy.box
-	ea.face = -1.0
-	_enemy.add_child(ea)
-	_auras["e"] = ea
+	var lead_at: Vector2 = mark.position if at_anchor else _at + Vector2(620, 60 if mark != null else -40)
+	var tw: Tween = null
+	for j: int in fs.size():
+		var e: Dictionary = fs[j]
+		var node: HullRig = HullRig.new()
+		node.tex = Skipper.tex(str(e["image"]).trim_prefix("/"))
+		node.def = {}
+		node.box = 400.0 if e["boss"] else (340.0 if j == 0 else 300.0)
+		node.face = -1.0
+		var at: Vector2 = lead_at + _foe_offset(j)
+		var anchored: bool = at_anchor and j == 0
+		node.position = at if anchored else at + Vector2(900, 30)
+		node.z_index = 1
+		sea._world.add_child(node)
+		var ea: HullAura = HullAura.new()
+		ea.width = node.box
+		ea.face = -1.0
+		node.add_child(ea)
+		_auras["e%d" % j] = ea
+		_foe_nodes.append(node)
+		_foe_pos.append(at)
+		_foe_tex.append(Skipper.tex(str(e.get("portrait", "")).trim_prefix("/")))
+		_shown_hp["e%d" % j] = float(e["hp"])
+		if not anchored:
+			if tw == null:
+				tw = create_tween().set_parallel()
+			tw.tween_property(node, "position", at, 1.6 + 0.2 * j).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT).set_delay(0.15 * j)
+	_target = maxi(0, Battle.first_foe(b))
+	_ctx(0)
 	if at_anchor:
-		# The hull at anchor IS this one: it swaps in place, weighing anchor.
+		# The hull at anchor IS the lead: it swaps in place, weighing anchor.
 		mark.visible = false
-		_frame()
 		for k: int in 4:
 			sea._field.ring(_enemy_at + Vector2(randf_range(-60, 60), 10), 120.0, 1.3, 0.5)
-	_portrait = Skipper.tex(str(e.get("portrait", "")).trim_prefix("/"))
-	_shown_hp["e"] = float(e["hp"])
+	_frame()
+	var e0: Dictionary = fs[0]
 	var f: Dictionary = Battle.fight_at(_raid, int(b["fight"]))
-	_say("%s%s" % [("Boss: " if e["boss"] else ("Elite: " if e.get("elite", false) else "")), e["name"]])
+	if fs.size() > 1:
+		_say("%s and %d more" % [e0["name"], fs.size() - 1])
+	else:
+		_say("%s%s" % [("Boss: " if e0["boss"] else ("Elite: " if e0.get("elite", false) else "")), e0["name"]])
 	var notes: Array = ["Fight %d of %d" % [int(b["fight"]) + 1, int(f["of"])]]
-	var af: Dictionary = e["affix"]
+	if fs.size() > 1:
+		notes.append("%d ships: click one to aim at it, or press Tab" % fs.size())
+	var af: Dictionary = e0["affix"]
 	if not af.is_empty():
 		notes.append("%s: %s" % [af.get("name", ""), af.get("description", "")])
-	if float(e["dr"]) > 0.0:
-		notes.append("%s: takes %d%% less from a single shot" % [e["drName"], int(round(float(e["dr"]) * 100.0))])
+	if float(e0["dr"]) > 0.0:
+		notes.append("%s: takes %d%% less from a single shot" % [e0["drName"], int(round(float(e0["dr"]) * 100.0))])
 	var rp: Variant = b["seats"][me].get("repossessed")
 	if rp != null:
-		notes.append("%s: %s takes back your %s for this fight" % [e["repossessName"], e["name"], Armory.item(str(rp)).get("name", "gear")])
+		notes.append("%s: %s takes back your %s for this fight" % [e0["repossessName"], e0["name"], Armory.item(str(rp)).get("name", "gear")])
 	_log_line("  ·  ".join(PackedStringArray(notes)))
-	if at_anchor:
+	if tw != null:
+		var k2: int = 0
+		for node2: Variant in _foe_nodes:
+			if node2 != null and float((node2 as Node2D).position.x) > float(_foe_pos[k2].x) + 10.0:
+				for r: int in 5:
+					var nd: Node2D = node2
+					tw.tween_callback(func() -> void:
+						if is_instance_valid(nd):
+							sea._field.ring(nd.position + Vector2(60, 10), 90.0, 1.2, 0.4)).set_delay(0.25 * r)
+			k2 += 1
+		await tw.finished
+	else:
 		await _wait(1.1)
+
+
+## Where the j-th enemy of a field rides, from the lead's place.
+static func _foe_offset(j: int) -> Vector2:
+	return [Vector2.ZERO, Vector2(260, 340), Vector2(260, -340), Vector2(520, 0)][clampi(j, 0, 3)]
+
+
+func _foe_at(j: int) -> Vector2:
+	if j >= 0 and j < _foe_nodes.size() and is_instance_valid(_foe_nodes[j]):
+		return (_foe_nodes[j] as Node2D).position
+	return _foe_pos[j] if j >= 0 and j < _foe_pos.size() else _enemy_at
+
+
+## An event is about this enemy: the hull, its place and its portrait.
+func _ctx(j: int) -> void:
+	if _foe_nodes.is_empty():
 		return
-	_frame()
-	var tw: Tween = create_tween()
-	tw.tween_property(_enemy, "position", _enemy_at, 1.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	for k: int in 6:
-		tw.parallel().tween_callback(func() -> void: sea._field.ring(_enemy.position + Vector2(60, 10), 90.0, 1.2, 0.4)).set_delay(0.25 * k)
-	await tw.finished
+	_cur = clampi(j, 0, _foe_nodes.size() - 1)
+	_enemy = _foe_nodes[_cur]
+	_enemy_at = _foe_at(_cur)
+	_portrait = _foe_tex[_cur]
+
+
+func _ek() -> String:
+	return "e%d" % _cur
+
+
+func _field() -> bool:
+	return Battle.foes(b).filter(func(f: Dictionary) -> bool: return Battle.foe_up(f)).size() > 1
+
+
+func _set_target(j: int) -> void:
+	var fs: Array = Battle.foes(b)
+	if j < 0 or j >= fs.size() or not Battle.foe_up(fs[j]) or j == _target:
+		return
+	_target = j
+	Sound.plip()
+	_log_line("Aiming at %s." % fs[j]["name"])
 
 
 ## Is this fight the hull riding at anchor (the skirmish's one raider, or a
@@ -554,13 +640,23 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		if not find_children("", "AimBar", true, false).is_empty():
 			return
-		if _enemy_hit((e as InputEventMouseButton).position):
+		var mp: Vector2 = (e as InputEventMouseButton).position
+		var pj: int = _foe_plate_hit(mp)
+		if pj >= 0:
 			get_viewport().set_input_as_handled()
-			_open_enemy_card()
+			_open_enemy_card(pj)
+			return
+		var hj: int = _foe_hull_hit(mp)
+		if hj >= 0:
+			get_viewport().set_input_as_handled()
+			if _field() and not _busy:
+				_set_target(hj)
+			else:
+				_open_enemy_card(hj)
 			return
 		# A click on a ship's plate opens that captain's ledger.
 		for i: int in (b["seats"] as Array).size():
-			var sp: Vector2 = _screen(_seat_at(i)) + Vector2(0, -215)
+			var sp: Vector2 = _plate_at.get(i, _screen(_seat_at(i)) + Vector2(0, _plate_lift(215.0)))
 			if Rect2(sp + Vector2(-121, 0), Vector2(258, 60)).has_point((e as InputEventMouseButton).position):
 				get_viewport().set_input_as_handled()
 				_open_captain_card(i)
@@ -569,6 +665,15 @@ func _unhandled_input(e: InputEvent) -> void:
 	if _busy or not (e is InputEventKey) or not (e as InputEventKey).pressed or (e as InputEventKey).echo:
 		return
 	var m: Dictionary = { KEY_1: "fire", KEY_2: "volley", KEY_3: "reload", KEY_4: "dodge", KEY_6: "mega" }
+	if (e as InputEventKey).keycode == KEY_TAB and _field():
+		get_viewport().set_input_as_handled()
+		var fs3: Array = Battle.foes(b)
+		for k3: int in range(1, fs3.size() + 1):
+			var nj: int = (_target + k3) % fs3.size()
+			if Battle.foe_up(fs3[nj]):
+				_set_target(nj)
+				break
+		return
 	if (e as InputEventKey).keycode == KEY_F:
 		get_viewport().set_input_as_handled()
 		_flee()
@@ -600,7 +705,7 @@ func _choose(act: String) -> void:
 		for c: Dictionary in s["crew"]:
 			if not ab.is_empty() and c["id"] == ab["crew"] and c["cls"] == "sharpshot":
 				sh = { "mult": c["ms"]["critZoneMultiplier"] }
-		var aim: Dictionary = Battle.aim_for(b, me)
+		var aim: Dictionary = Battle.aim_for(b, me, _target)
 		bar.crit_w = Battle.CRIT_W * (1.0 + float(sh.get("mult", 0.0))) * float(aim["critZone"])
 		bar.volley = act != "fire"
 		bar.zone_stack = float(aim["zoneStack"])
@@ -613,6 +718,7 @@ func _choose(act: String) -> void:
 		_deck_box.add_child(bar)
 		var res: String = await bar.locked
 		_plan["aim"] = res
+		_plan["target"] = _target
 		await get_tree().create_timer(0.3).timeout
 	_busy = true
 	_clear_deck()
@@ -661,7 +767,8 @@ func _play_events(ev: Array) -> void:
 
 
 func _one(x: Dictionary) -> void:
-	var e: Dictionary = b["enemy"]
+	_ctx(int(x.get("foe", 0)))
+	var e: Dictionary = Battle.foes(b)[mini(_cur, Battle.foes(b).size() - 1)]
 	match x["t"]:
 		"ability":
 			await _ability_card(x)
@@ -708,28 +815,28 @@ func _one(x: Dictionary) -> void:
 					_num(_enemy_at + Vector2(-40, -30), "-%d shield" % int(x["shielded"]), Color(0.55, 0.8, 1.0))
 			else:
 				_num(_enemy_at, "Miss", Color(0.8, 0.8, 0.8))
-			_shown_hp["e"] = float(x["enemyHp"])
+			_shown_hp[_ek()] = float(x["enemyHp"])
 			if x.has("crossfire") and not x.get("dodged", false):
 				_num(_enemy_at, "Crossfire  x%s" % str(snappedf(float(x["crossfire"]), 0.01)), Color(1.0, 0.85, 0.35))
 			await _wait(0.15)
 		"intent":
 			pass
 		"eReload":
-			_strip_lit = -1
+			_strip_lit = -1 - _cur
 			_puff(_enemy_at, "Reloads", Color(CREAM, 0.8))
 			await _wait(0.25)
 		"eDodge":
-			_strip_lit = -1
+			_strip_lit = -1 - _cur
 			_enemy.heel = -0.1
 			_puff(_enemy_at, "Evades", Color(0.75, 0.85, 1.0))
 			await _wait(0.2)
 		"eSpecial":
-			_strip_lit = -1
+			_strip_lit = -1 - _cur
 			_say(str(x.get("name", "")))
 			_log_line(str(x.get("line", "")))
 			await _wait(0.9)
 		"eShot":
-			_strip_lit = -1
+			_strip_lit = -1 - _cur
 			var ti: int = int(x["target"])
 			var land2: String = "dodge" if x.get("dodged", false) else ("crit" if x["crit"] else "hit")
 			await _fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land2, 3 if x["action"] == "volley" else 1, x["action"] != "fire")
@@ -747,7 +854,7 @@ func _one(x: Dictionary) -> void:
 			_log_line(str(x.get("line", "")))
 			if not Js.obj(x.get("aegis")).is_empty():
 				_num(_enemy_at + Vector2(-120, -80), "%s rises" % x["aegis"]["name"], Color(0.75, 0.82, 0.9), true)
-			_shown_hp["e"] = float(x["hp"])
+			_shown_hp[_ek()] = float(x["hp"])
 			Sound.horn()
 			await _wait(1.2)
 		"sunkEnemy":
@@ -783,14 +890,14 @@ func _one(x: Dictionary) -> void:
 			await _wait(0.35)
 		"eBurn":
 			_num(_enemy_at, "-%d  burning" % int(x["dmg"]), Color(1.0, 0.55, 0.25))
-			_shown_hp["e"] = float(x["hp"])
+			_shown_hp[_ek()] = float(x["hp"])
 			await _wait(0.35)
 		"frozen":
 			_strip_lit = int(x["seat"])
 			_num(_seat_at(int(x["seat"])), "Frozen solid", Color(0.75, 0.9, 1.0), true)
 			await _wait(0.6)
 		"eFrozen":
-			_strip_lit = -1
+			_strip_lit = -1 - _cur
 			_num(_enemy_at, "Frozen solid", Color(0.75, 0.9, 1.0), true)
 			await _wait(0.6)
 		"ablaze":
@@ -813,7 +920,7 @@ func _one(x: Dictionary) -> void:
 				_fx.shot(_seat_at(int(x["seat"])) + Vector2(40, -20), _enemy_at, "hit")
 				await _wait(0.35)
 				_num(_enemy_at, "%s  %d" % [x.get("name", "Parry"), int(x["dmg"])], Color(0.7, 0.9, 1.0))
-				_shown_hp["e"] = float(x["enemyHp"])
+				_shown_hp[_ek()] = float(x["enemyHp"])
 			else:
 				_fx.shot(_enemy_at + Vector2(-40, -20), _seat_at(int(x["seat"])), "hit")
 				await _wait(0.35)
@@ -838,22 +945,22 @@ func _one(x: Dictionary) -> void:
 			_num(_enemy_at + Vector2(0, -60), "The rack fires", Color(0.85, 0.75, 0.55))
 		"eHeal":
 			_num(_enemy_at + Vector2(0, -40), "%s  +%d" % [x.get("why", ""), int(x["heal"])], Color(0.6, 0.95, 0.6))
-			_shown_hp["e"] = float(x["hp"])
+			_shown_hp[_ek()] = float(x["hp"])
 			await _wait(0.25)
 		"wardSurge":
 			_say("It will not go down!")
-			_shown_hp["e"] = float(x["hp"])
+			_shown_hp[_ek()] = float(x["hp"])
 			Sound.horn()
 			await _wait(0.9)
 		"aegisHit":
-			var ea: HullAura = _aura("e")
+			var ea: HullAura = _aura(_ek())
 			if ea != null:
 				ea.crack()
 			_num(_enemy_at + Vector2(-120, -60), "The wall holds  ·  %d left" % int(x["left"]), Color(0.75, 0.82, 0.9))
 			Sound.impact(false)
 			await _wait(0.3)
 		"aegisBreak":
-			var ea2: HullAura = _aura("e")
+			var ea2: HullAura = _aura(_ek())
 			if ea2 != null:
 				ea2.shatter()
 			_say("%s breaks!" % x.get("name", "The Last Wall"))
@@ -868,6 +975,7 @@ func _one(x: Dictionary) -> void:
 			pass
 		"crossfire":
 			_xfire_seats = Js.list(x["seats"])
+			_xfire_foe = int(x.get("foe", 0))
 			_xfire_t = 2.4
 			_say("Crossfire!")
 			var who: Array = []
@@ -923,7 +1031,8 @@ func _one(x: Dictionary) -> void:
 ## A BROADSIDE: the call over the water, the enemy heeling with the recoil,
 ## a ball for every ship in the line at once.
 func _broadside(x: Dictionary, group: Array) -> void:
-	_strip_lit = -1
+	_ctx(int(x.get("foe", 0)))
+	_strip_lit = -1 - _cur
 	_say("Broadside!")
 	Rumble.buzz([0, 50, 30, 80])
 	_enemy.kick = 30.0
@@ -1005,7 +1114,7 @@ func _ability_card(x: Dictionary) -> void:
 	if x.has("dmg"):
 		_fx.burst(_enemy_at, true)
 		_num(_enemy_at, "%d!" % int(x["dmg"]), col.lightened(0.3), true)
-		_shown_hp["e"] = float(b["enemy"]["hp"])
+		_shown_hp[_ek()] = float(b["enemy"]["hp"])
 	if x.has("reveal"):
 		_log_line("Next: %s" % ", ".join(PackedStringArray(x["reveal"])))
 	await _wait(0.5)
@@ -1107,8 +1216,9 @@ func _end(won: bool, fled: bool = false) -> void:
 		if is_instance_valid(sea._mates[k2]):
 			(sea._mates[k2] as Shipmate).face_lock = 0.0
 			(sea._mates[k2] as Shipmate)._plate.visible = true
-	if _enemy != null:
-		_enemy.queue_free()
+	for n0: Variant in _foe_nodes:
+		if n0 != null and is_instance_valid(n0):
+			(n0 as Node).queue_free()
 	if mark != null:
 		mark.visible = true
 	_fx.queue_free()
@@ -1147,7 +1257,7 @@ func _draw() -> void:
 	_xfire_t = maxf(0.0, _xfire_t - get_process_delta_time())
 	if _xfire_t > 0.0 and _enemy != null and is_instance_valid(_enemy):
 		var xa: float = clampf(_xfire_t / 2.4, 0.0, 1.0)
-		var ep2: Vector2 = _screen(_enemy_at) + Vector2(0, -60)
+		var ep2: Vector2 = _screen(_foe_at(_xfire_foe)) + Vector2(0, -60)
 		for si4: Variant in _xfire_seats:
 			var sp4: Vector2 = _screen(_seat_at(int(si4))) + Vector2(30, -60)
 			draw_line(sp4, ep2, Color(1.0, 0.82, 0.35, 0.18 * xa), 14.0, true)
@@ -1174,22 +1284,66 @@ func _draw() -> void:
 		var lr: Rect2 = Rect2(vp.x / 2.0 - lw / 2.0 - 24.0, _log.position.y + _log.size.y / 2.0 - 17.0, lw + 48.0, 34.0)
 		BattleLook.draw_box(self, lr, BattleLook.box(Color(BattleLook.LACQUER_LO, 0.82 * la), Color(0, 0, 0, 0), 0, 17))
 
-	# The enemy's plate over its masthead.
-	if _enemy != null and is_instance_valid(_enemy):
-		var e: Dictionary = b["enemy"]
-		var ep: Vector2 = _screen(_enemy.position) + Vector2(0, -225)
-		var etag: String = "BOSS" if e["boss"] else ("ELITE" if e.get("elite", false) else "")
-		_plate(ep, str(e["name"]), float(_shown_hp.get("e", e["hp"])), float(e["max"]), float(e["shield"]), int(e["charges"]), int(e["mag"]), e["statuses"], true, _strip_lit == -1, "e", etag, _portrait, "", 1.0 - float(_enemy.sink))
-		if not card_seen and float(_enemy.sink) < 0.05:
-			BattleLook.say(self, Kit.font("karla", 800), ep.x + 8.0, ep.y + 78.0, "CLICK FOR STATS", 10, Color(BattleLook.GOLD, 0.6 + 0.3 * sin(_t * 3.0)), 4)
-	# Each ship's plate.
+	# Each enemy's plate over its masthead (on a field, the target marked), and
+	# each ship's; plates that would overlap are spread apart (_spread).
+	var fs2: Array = Battle.foes(b)
+	var aiming: bool = _field() and not _busy
+	var want: Array = []
+	var frames: bool = _frames_mode()
+	var row: int = 0
+	for j2: int in mini(fs2.size(), _foe_nodes.size()):
+		var en: HullRig = _foe_nodes[j2]
+		if en == null or not is_instance_valid(en) or float(en.sink) >= 0.95:
+			continue
+		if frames:
+			# A field: the enemies' frames down the right edge, a slim tag on
+			# each hull.
+			want.append(["e%d" % j2, Vector2(vp.x - 150.0, BAR + 22.0 + 76.0 * row)])
+			row += 1
+			var e1: Dictionary = fs2[j2]
+			_hull_tag(_screen(en.position) + Vector2(0, _tag_lift()), str(e1["name"]), float(_shown_hp.get("e%d" % j2, e1["hp"])) / maxf(1.0, float(e1["max"])), BattleLook.FOE, _strip_lit == -1 - j2 or (aiming and j2 == _target), 1.0 - float(en.sink))
+		else:
+			want.append(["e%d" % j2, _screen(en.position) + Vector2(0, _plate_lift(225.0))])
+	for i: int in (b["seats"] as Array).size():
+		if frames:
+			want.append([i, Vector2(150.0, BAR + 22.0 + 76.0 * i)])
+			var s1: Dictionary = b["seats"][i]
+			_hull_tag(_screen(_seat_at(i)) + Vector2(0, _tag_lift()), "You" if i == me else str(s1["name"]), float(_shown_hp.get(i, s1["hp"])) / maxf(1.0, float(s1["max"])), BattleLook.ALLY, _strip_lit == i, 1.0)
+		else:
+			want.append([i, _screen(_seat_at(i)) + Vector2(0, _plate_lift(215.0))])
+	_plate_at = want.reduce(func(acc: Dictionary, w: Array) -> Dictionary:
+		acc[w[0]] = w[1]
+		return acc, {}) if frames else _spread(want)
+	for j2: int in mini(fs2.size(), _foe_nodes.size()):
+		var en: HullRig = _foe_nodes[j2]
+		var key: String = "e%d" % j2
+		if not _plate_at.has(key):
+			continue
+		var e: Dictionary = fs2[j2]
+		var ep: Vector2 = _plate_at[key]
+		var etag: String = "TARGET" if aiming and j2 == _target else ("BOSS" if e["boss"] else ("ELITE" if e.get("elite", false) else ""))
+		if aiming and j2 == _target:
+			var hc: Vector2 = _screen(en.position) + Vector2(0, -60.0 * _z())
+			var rr: float = en.box * 0.45 * _z()
+			for q: int in 4:
+				var a0: float = TAU * q / 4.0 + _t * 0.6
+				draw_arc(hc, rr, a0 - 0.32, a0 + 0.32, 12, Color(BattleLook.GOLD, 0.9), 2.5, true)
+		_plate(ep, str(e["name"]), float(_shown_hp.get(key, e["hp"])), float(e["max"]), float(e["shield"]), int(e["charges"]), int(e["mag"]), e["statuses"], true, _strip_lit == -1 - j2, key, etag, _foe_tex[j2], "", 1.0 - float(en.sink))
+		if not card_seen and float(en.sink) < 0.05 and j2 == 0:
+			if not frames:
+				BattleLook.say(self, Kit.font("karla", 800), ep.x + 8.0, ep.y + 76.0, "CLICK FOR STATS", 10, Color(BattleLook.GOLD, 0.6 + 0.3 * sin(_t * 3.0)), 4)
+			else:
+				BattleLook.say(self, Kit.font("karla", 800), ep.x + 8.0, ep.y - 14.0, "CLICK A FRAME FOR STATS", 10, Color(BattleLook.GOLD, 0.6 + 0.3 * sin(_t * 3.0)), 4)
 	for i: int in (b["seats"] as Array).size():
 		var s: Dictionary = b["seats"][i]
-		var sp: Vector2 = _screen(_seat_at(i)) + Vector2(0, -215)
+		var sp: Vector2 = _plate_at[i]
 		var out_word: String = "SUNK" if s.get("sunk", false) else ("AWAY" if s.get("fled", false) else "")
 		_plate(sp, str(s["name"]), float(_shown_hp.get(i, s["hp"])), float(s["max"]), float(s["shield"]), int(s["charges"]), int(s["maxCharges"]), s["statuses"], false, _strip_lit == i, i, "YOU" if table != null and i == me else "", _face(i), out_word, 1.0)
 		if table != null and str(_latest.get("phase", "")) == "plan" and Battle.alive(b).has(s):
-			_order_chip(sp + Vector2(0, 66), s)
+			if frames:
+				_order_chip(sp + Vector2(136, 18), s, true)
+			else:
+				_order_chip(sp + Vector2(0, 66), s)
 	# Numbers rising off the water.
 	for n: Dictionary in _numbers:
 		var u: float = float(n["t"]) / 1.4
@@ -1297,9 +1451,11 @@ func _draw_strip(right: Vector2) -> void:
 		if lit:
 			draw_arc(c, rad + 5.0, 0.0, TAU, 40, Color(BattleLook.GOLD, 0.95), 2.0, true)
 		var nm: String
-		if who == -1:
-			nm = str(b["enemy"]["name"])
-			BattleLook.medallion(self, c, rad, _portrait, BattleLook.FOE, nm.substr(0, 1), 1.0, Vector2(0.5, 0.27), 0.25)
+		if who < 0:
+			var fj: int = -1 - who
+			var fe: Dictionary = Battle.foes(b)[mini(fj, Battle.foes(b).size() - 1)]
+			nm = str(fe["name"])
+			BattleLook.medallion(self, c, rad, _foe_tex[fj] if fj < _foe_tex.size() else _portrait, BattleLook.FOE, nm.substr(0, 1), 0.4 if not Battle.foe_up(fe) else 1.0, Vector2(0.5, 0.27), 0.25)
 		else:
 			var st: Dictionary = b["seats"][who]
 			nm = "You" if table != null and who == me else str(st["name"])
@@ -1313,7 +1469,7 @@ func _draw_strip(right: Vector2) -> void:
 
 ## A boss's summon: the creature breaches beside it, does its work, sinks.
 func _summon(x: Dictionary) -> void:
-	_strip_lit = -1
+	_strip_lit = -1 - _cur
 	var sm: BattleSummon = BattleSummon.new()
 	sm.field = sea._field
 	sm.tex = Skipper.tex(str(x.get("image", "")).trim_prefix("/"))
@@ -1339,7 +1495,7 @@ func _summon(x: Dictionary) -> void:
 		"abyssal_tide":
 			await sm.pulse()
 			_num(_enemy_at, "+%d  ·  +%d shield" % [int(x.get("heal", 0)), int(x.get("shield", 0))], Color(0.6, 0.95, 0.7), true)
-			_shown_hp["e"] = float(x["enemyHp"])
+			_shown_hp[_ek()] = float(x["enemyHp"])
 		"foresight":
 			await sm.pulse()
 			_log_line("It sees your next shots coming: it will slip any it braces for.")
@@ -1589,7 +1745,9 @@ func _phase(cur: Dictionary) -> void:
 			# The hulls show what they showed until the round says otherwise.
 			for i: int in (b["seats"] as Array).size():
 				_shown_hp[i] = float(b["seats"][i]["hp"])
-			_shown_hp["e"] = float(b["enemy"]["hp"])
+			var fs1: Array = Battle.foes(b)
+			for j1: int in fs1.size():
+				_shown_hp["e%d" % j1] = float(fs1[j1]["hp"])
 			b = (cur["b"] as Dictionary).duplicate(true)
 			_busy = true
 			_clear_deck()
@@ -1670,7 +1828,7 @@ func _waiting() -> void:
 ## A ship's order for the round, under its plate while the crew plan: what it
 ## will do, where its aim landed (a critical in gold: half a crossfire), and a
 ## crew order with who it is for. "Choosing" until it is in.
-func _order_chip(at: Vector2, s: Dictionary) -> void:
+func _order_chip(at: Vector2, s: Dictionary, beside: bool = false) -> void:
 	var pl: Dictionary = Js.obj(Js.obj(_latest.get("plans")).get(s.get("key")))
 	var txt: String = "Choosing"
 	var crit: bool = false
@@ -1683,6 +1841,8 @@ func _order_chip(at: Vector2, s: Dictionary) -> void:
 			var aim: String = str(pl.get("aim", ""))
 			crit = aim == "critical"
 			txt += "  ·  " + ("Critical" if crit else aim.capitalize())
+			if _field():
+				txt += " at %s" % Battle.foes(b)[maxi(0, Battle.target_of(b, pl))]["name"]
 		var ab: Dictionary = Js.obj(pl.get("ability"))
 		if not ab.is_empty():
 			for c: Dictionary in s["crew"]:
@@ -1693,7 +1853,7 @@ func _order_chip(at: Vector2, s: Dictionary) -> void:
 				txt += " for %s" % ("you" if ti == me else str(b["seats"][ti]["name"]))
 	var f: Font = Kit.font("karla", 800)
 	var w: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + (40.0 if kind != "" else 24.0)
-	var r: Rect2 = Rect2(at - Vector2(w / 2.0 - 8.0, 0), Vector2(w, 24))
+	var r: Rect2 = Rect2(at - Vector2(w / 2.0 - 8.0, 0), Vector2(w, 24)) if not beside else Rect2(at, Vector2(w, 24))
 	BattleLook.draw_box(self, r, BattleLook.box(Color(BattleLook.LACQUER, 0.94), Color(BattleLook.GOLD, 0.95) if crit else Color(0, 0, 0, 0), 1 if crit else 0, 12))
 	var tx: float = r.position.x + 12.0
 	if kind != "":
@@ -1713,9 +1873,13 @@ func _xfire_hint() -> void:
 	for st: Dictionary in Battle.alive(b):
 		var pl: Dictionary = Js.obj(plans.get(st.get("key")))
 		if st.get("key") != my_key and str(pl.get("aim", "")) == "critical" and str(pl.get("action", "")) in ["fire", "volley", "mega"]:
-			names.append(str(st["name"]))
+			names.append([str(st["name"]), Battle.target_of(b, pl)])
 	if not names.is_empty():
-		_log_line("%s landed a critical. Land one too for a crossfire." % " and ".join(PackedStringArray(names)))
+		if _field():
+			var fe2: Dictionary = Battle.foes(b)[maxi(0, int(names[0][1]))]
+			_log_line("%s landed a critical on %s. Land one on it too for a crossfire." % [names[0][0], fe2["name"]])
+		else:
+			_log_line("%s landed a critical. Land one too for a crossfire." % " and ".join(PackedStringArray(names.map(func(n: Array) -> String: return str(n[0])))))
 	else:
 		_log_line("Crossfire: two or more criticals in one round hit harder.")
 
@@ -1748,24 +1912,43 @@ func _face(i: int) -> Texture2D:
 # ── The enemy's stat card ────────────────────────────────────────────────────
 
 ## Is a screen point on the enemy's hull or its plate?
-func _enemy_hit(p: Vector2) -> bool:
-	if _enemy == null or not is_instance_valid(_enemy) or b.is_empty() or float(_enemy.sink) > 0.3:
-		return false
-	var at: Vector2 = _screen(_enemy.position)
-	var plate: Rect2 = Rect2(at + Vector2(-121, -225), Vector2(258, 60))
-	var hull: Rect2 = Rect2(at + Vector2(-_enemy.box * 0.5, -200), Vector2(_enemy.box, 240))
-	return plate.has_point(p) or hull.has_point(p)
+func _foe_plate_hit(p: Vector2) -> int:
+	for j: int in _foe_nodes.size():
+		var en: Variant = _foe_nodes[j]
+		if en == null or not is_instance_valid(en) or float((en as HullRig).sink) > 0.3:
+			continue
+		var pa: Vector2 = _plate_at.get("e%d" % j, _screen((en as Node2D).position) + Vector2(0, _plate_lift(225.0)))
+		if Rect2(pa + Vector2(-121, 0), Vector2(258, 60)).has_point(p):
+			return j
+	return -1
 
 
-func _open_enemy_card() -> void:
+func _foe_hull_hit(p: Vector2) -> int:
+	for j: int in _foe_nodes.size():
+		var en: Variant = _foe_nodes[j]
+		if en == null or not is_instance_valid(en) or float((en as HullRig).sink) > 0.3:
+			continue
+		var at: Vector2 = _screen((en as Node2D).position)
+		var bx: float = (en as HullRig).box
+		var z: float = _z()
+		if Rect2(at + Vector2(-bx * 0.5 * z, -200.0 * z), Vector2(bx * z, 240.0 * z)).has_point(p):
+			return j
+	return -1
+
+
+func _open_enemy_card(j: int = 0) -> void:
 	card_seen = true
 	Sound.plip()
+	var fs: Array = Battle.foes(b)
+	j = clampi(j, 0, fs.size() - 1)
+	var e: Dictionary = fs[j]
+	var tex: Texture2D = _foe_tex[j] if j < _foe_tex.size() else _portrait
 	_card = EnemyCard.new()
-	(_card as EnemyCard).e = b["enemy"]
-	(_card as EnemyCard).hp = float(_shown_hp.get("e", b["enemy"]["hp"]))
+	(_card as EnemyCard).e = e
+	(_card as EnemyCard).hp = float(_shown_hp.get("e%d" % j, e["hp"]))
 	# Its painting; an enemy with no portrait shows its ship.
-	(_card as EnemyCard).portrait = _portrait if _portrait != null else Skipper.tex(str(b["enemy"].get("image", "")).trim_prefix("/"))
-	(_card as EnemyCard).ground = _portrait != null
+	(_card as EnemyCard).portrait = tex if tex != null else Skipper.tex(str(e.get("image", "")).trim_prefix("/"))
+	(_card as EnemyCard).ground = tex != null
 	(_card as EnemyCard).where = "%s, fight %d of %d" % [_raid.get("raidTitle", ""), int(b["fight"]) + 1, int(Battle.fight_at(_raid, int(b["fight"]))["of"])]
 	add_child(_card)
 
@@ -1778,3 +1961,53 @@ func _open_captain_card(i: int) -> void:
 	c.mine = i == me
 	_card = c
 	add_child(c)
+
+
+## The camera's zoom on the fight (things drawn over the water scale with it).
+func _z() -> float:
+	return float(Js.obj(sea.stage).get("zoom", 1.0)) if sea != null and sea.stage is Dictionary else 1.0
+
+
+## How far above a hull's keel its plate sits: over the masthead, following
+## the zoom (never so low it covers the hull, nor so high it floats off).
+func _plate_lift(at_one: float) -> float:
+	return -at_one
+
+
+## A slim hull tag's height over the keel (frames mode), following the zoom.
+func _tag_lift() -> float:
+	return -clampf(200.0 * _z(), 110.0, 240.0)
+
+
+## Plates that would overlap (side by side within a plate's width, less than
+## a plate apart) are pushed down to clear the one above. Returns key: place.
+static func _spread(want: Array) -> Dictionary:
+	want.sort_custom(func(x: Array, y: Array) -> bool: return (x[1] as Vector2).y < (y[1] as Vector2).y)
+	var placed: Array = []
+	var out: Dictionary = {}
+	for w: Array in want:
+		var p: Vector2 = w[1]
+		for q: Vector2 in placed:
+			if absf(q.x - p.x) < 262.0 and p.y < q.y + 74.0 and p.y > q.y - 74.0:
+				p.y = q.y + 74.0
+		placed.append(p)
+		out[w[0]] = p
+	return out
+
+
+
+## Frames rather than plates on the water: a field of enemies, or more than
+## two ships in the line (they would crowd the water and each other).
+func _frames_mode() -> bool:
+	return not b.is_empty() and (Battle.foes(b).size() > 1 or (b["seats"] as Array).size() > 2)
+
+
+## A slim tag over a hull in frames mode: its name and a thin bar of its hull.
+func _hull_tag(at: Vector2, nm: String, share: float, col: Color, lit: bool, alpha: float) -> void:
+	if alpha <= 0.05:
+		return
+	var f: Font = Kit.font("karla", 800)
+	BattleLook.say(self, f, at.x, at.y, nm, 12, Color(BattleLook.GOLD if lit else BattleLook.CREAM, alpha), 5)
+	var r: Rect2 = Rect2(at + Vector2(-45, 6), Vector2(90, 5))
+	BattleLook.draw_box(self, r.grow(1.0), BattleLook.box(Color(0, 0, 0, 0.6 * alpha), Color(0, 0, 0, 0), 0, 3))
+	BattleLook.draw_box(self, Rect2(r.position, Vector2(maxf(3.0, r.size.x * clampf(share, 0.0, 1.0)), r.size.y)), BattleLook.box(Color(col, alpha), Color(0, 0, 0, 0), 0, 2.5))

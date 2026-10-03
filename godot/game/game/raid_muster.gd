@@ -1,11 +1,11 @@
 class_name RaidMuster
 extends Control
-## THE MUSTER CALL on the sea (a Charter's raid together, game/raid_table.gd):
-## when a captain calls a raid, everyone aboard sees a card at the top of the
-## screen with the raid, who is coming and how long until it sails; a captain
-## whose map has reached it may Join. The caller may sail at once or call it
-## off. When the line forms, every captain in it is taken to the fight.
-## The expedition side's night paper. It never blocks the sea under it.
+## THE RAID CALL on the sea (a Charter's raid together, game/raid_table.gd):
+## when a captain calls a raid, everyone in the line gets its entry screen
+## (game/ready_screen.gd); everyone else aboard sees a small banner at the top
+## (who is forming which raid, who is in) with Join, lit only near the raid.
+## When the line sails, every captain in it is taken to the fight. The banner
+## never blocks the sea under it.
 
 var sea: Sea
 var _card: Pane
@@ -15,6 +15,7 @@ var _t: float = 0.0
 var _left: Label
 var _last: Dictionary = {}
 var _opened_seq: int = -1
+var _screen: ReadyScreen = null
 var _join: Button = null
 
 
@@ -40,8 +41,18 @@ func _on_table(st: Dictionary) -> void:
 	_last = st
 	match str(st.get("phase", "")):
 		"muster":
-			_until = _t + float(Js.nz(st.get("left"), RaidTable.MUSTER))
-			_paint(st)
+			if _member(st):
+				_close()
+				# In the line: the entry screen.
+				if _screen == null or not is_instance_valid(_screen):
+					_screen = ReadyScreen.new()
+					_screen.sea = sea
+					_screen.table = RaidTable.live
+					_screen.my_key = _my_key()
+					sea._hud.hold_for(_screen)
+					sea._hud_layer.add_child(_screen)
+			else:
+				_paint(st)
 		"playing":
 			_close()
 			# The line has formed: a captain in it goes to the fight.
@@ -87,28 +98,14 @@ func _paint(st: Dictionary) -> void:
 		names.append(str(m["name"]))
 		if m["key"] == st.get("by"):
 			by = str(m["name"])
-	Kit.text(_body, "A RAID IS CALLED", "eyebrow", Kit.a(Kit.GOLD, 0.85))
+	Kit.text(_body, "%s is forming a raid" % by, "small", Dossier.SOFT)
 	Kit.text(_body, str(raid.get("raidTitle", node.get("label", "A raid"))), "title")
-	Kit.text(_body, "%s the crew to arms. Aboard: %s." % ["You call" if mine else by + " calls", ", ".join(PackedStringArray(names))], "body", Kit.INK_2, true)
-	_left = Kit.text(_body, "", "note", Kit.DIM)
+	Kit.text(_body, "In the line: %s  ·  %d of %d seats" % [", ".join(PackedStringArray(names)), names.size(), RaidTable.MAX_SEATS], "small", Dossier.SOFT, true)
+	_left = null
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	_body.add_child(row)
-	if mine:
-		var off: Button = Kit.button("Call it off", "secondary")
-		off.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		off.pressed.connect(func() -> void: sea.session.act("raidTable", ["leave"]))
-		row.add_child(off)
-		var go: Button = Kit.button("Sail now", "primary")
-		go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		go.pressed.connect(func() -> void: sea.session.act("raidTable", ["go"]))
-		row.add_child(go)
-	elif _member(st):
-		var lv: Button = Kit.button("Stay behind", "secondary")
-		lv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lv.pressed.connect(func() -> void: sea.session.act("raidTable", ["leave"]))
-		row.add_child(lv)
-	elif Js.list(st.get("members")).size() < RaidTable.MAX_SEATS:
+	if Js.list(st.get("members")).size() < RaidTable.MAX_SEATS:
 		var jn: Button = Kit.button("Join the raid", "primary")
 		jn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_join = jn
@@ -127,11 +124,8 @@ func _process(delta: float) -> void:
 
 
 func _tick() -> void:
-	if _left == null:
-		return
-	var n: int = maxi(0, ceili(_until - _t))
-	if _join != null and not _last.is_empty():
+	# Join lights only near the raid.
+	if _join != null and is_instance_valid(_join) and not _last.is_empty():
 		var at: bool = sea._boat.position.distance_to(RaidTable.dock_of(str(_last["nodeId"]))) <= RaidTable.NEAR
 		_join.disabled = not at
 		_join.text = "Join the raid" if at else "Sail to the raid to join"
-	_left.text = "Sails in %ds. Every captain in the line earns their own XP, crate and clear; the coin goes to the crew's purse." % n

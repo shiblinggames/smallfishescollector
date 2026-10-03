@@ -1461,6 +1461,21 @@ func start_battle(raid_id: String, node_id: String = "") -> void:
 		if r is Dictionary and r.has("error"):
 			_hud.toast(str(r["error"]))
 		return
+	# Alone: the entry screen first (the skirmish, a lesson, sails straight in).
+	if Battle.raid_def(raid_id).get("skirmish", false) != true:
+		var rs: ReadyScreen = ReadyScreen.new()
+		rs.sea = self
+		rs.raid_id = raid_id
+		rs.node_id = node_id
+		rs.sail.connect(func(_tier: String) -> void: _launch(raid_id, node_id))
+		_hud.hold_for(rs)
+		_hud_layer.add_child(rs)
+		return
+	_launch(raid_id, node_id)
+
+
+## Into the fight, alone.
+func _launch(raid_id: String, node_id: String) -> void:
 	var st: BattleStage = BattleStage.new()
 	st.sea = self
 	st.raid_id = raid_id
