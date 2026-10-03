@@ -7,14 +7,20 @@ extends RefCounted
 ##   BOSUN'S   from wooden, metal and gold crates and the lesser caskets.
 ##   CAPTAIN'S from diamond and ancient crates and elite caskets, and once
 ##             from the Parlor at Parlor Legend (its capstone).
-## Each kind rolls the skin's tier by its own weights (rare, epic, legendary,
-## or chase: a Legendary crew's animated skin), then a skin in that tier at
-## random. A tier you own all of is left out and the rest keep their shares,
+## Each kind rolls the skin's tier by its own weights (rare, epic, legendary),
+## then a skin in that tier. A Legendary crew's skins include its chase skins
+## (animated); within that roll a chase skin counts a little less than a
+## plain one (chaseWeight), so it is a little harder (Kong, 2026-10-03:
+## "It's already rare to get a legendary. Just have it slightly harder to
+## roll a chase if you roll a legendary"). A tier you own all of is left out
+## and the rest keep their shares,
 ## so a voucher never comes up empty; with every skin owned it pays doubloons.
 ## A skin can be for a crew not signed yet: it waits in the Trunk. Skins are
 ## worn per crew type (every copy wears it), as on the web.
 
 const TIERS: Array = ["rare", "epic", "legendary", "chase"]
+## What a voucher rolls first: chase skins are in the legendary roll.
+const ROLLS: Array = ["rare", "epic", "legendary"]
 const KINDS: Array = ["bosun", "captain"]
 
 
@@ -53,6 +59,24 @@ static func tier_of(k: Dictionary) -> String:
 		2:
 			return "epic"
 	return "rare"
+
+
+## The roll a skin is in: its tier, with chase skins in the legendary roll.
+static func roll_of(k: Dictionary) -> String:
+	return "legendary" if k.get("chase", false) else tier_of(k)
+
+
+## Of a legendary roll on a fresh collection, the share that is a chase skin.
+static func chase_share() -> float:
+	var cw: float = float(cfg().get("chaseWeight", 1.0))
+	var plain: float = 0.0
+	var chase: float = 0.0
+	for k: Dictionary in all():
+		if k.get("chase", false):
+			chase += cw
+		elif tier_of(k) == "legendary":
+			plain += 1.0
+	return chase / maxf(1.0, chase + plain)
 
 
 static func owned(prof: Dictionary) -> Array:
@@ -140,7 +164,7 @@ static func open(db: CaptainStore, uid: String, kind: String) -> Dictionary:
 	var left: Dictionary = {}
 	for k: Dictionary in all():
 		if not have.has(k["id"]):
-			var t: String = tier_of(k)
+			var t: String = roll_of(k)
 			if not left.has(t):
 				left[t] = []
 			(left[t] as Array).append(k)
@@ -152,12 +176,12 @@ static func open(db: CaptainStore, uid: String, kind: String) -> Dictionary:
 		return { "ok": true, "kind": kind, "doubloons": pay }
 	var w: Dictionary = Js.obj(kind_def(kind).get("weights"))
 	var total: float = 0.0
-	for t: String in TIERS:
+	for t: String in ROLLS:
 		if left.has(t):
 			total += float(w.get(t, 0.0))
 	var tier: String = ""
 	var r: float = Dice.next() * total
-	for t: String in TIERS:
+	for t: String in ROLLS:
 		if left.has(t) and float(w.get(t, 0.0)) > 0.0:
 			tier = t
 			r -= float(w.get(t, 0.0))
@@ -165,12 +189,24 @@ static func open(db: CaptainStore, uid: String, kind: String) -> Dictionary:
 				break
 	if tier == "":
 		# Only tiers this kind never gives are left: the lowest of them.
-		for t: String in TIERS:
+		for t: String in ROLLS:
 			if left.has(t):
 				tier = t
 				break
+	# A skin in the tier, a chase skin counting chaseWeight to a plain one's 1.
 	var pool: Array = left[tier]
-	var pick: Dictionary = pool[mini(int(floor(Dice.next() * pool.size())), pool.size() - 1)]
+	var cw: float = float(cfg().get("chaseWeight", 1.0))
+	var pw: float = 0.0
+	for k: Dictionary in pool:
+		pw += cw if k.get("chase", false) else 1.0
+	var pr: float = Dice.next() * pw
+	var pick: Dictionary = pool[pool.size() - 1]
+	for k: Dictionary in pool:
+		pr -= cw if k.get("chase", false) else 1.0
+		if pr < 0.0:
+			pick = k
+			break
+	tier = tier_of(pick)
 	var new_owned: Array = have.duplicate()
 	new_owned.append(pick["id"])
 	var patch: Dictionary = { "skin_vouchers": v, "owned_crew_skins": new_owned }

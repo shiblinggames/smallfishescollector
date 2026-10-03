@@ -404,10 +404,11 @@ func _voucher(kind: String) -> Control:
 	Paper.text(t, str(d.get("name", kind)), "body_strong", Paper.ink() if n > 0 else Paper.ink_soft())
 	var w: Dictionary = Js.obj(d.get("weights"))
 	var odds: Array = []
-	for tier: String in Skins.TIERS:
+	for tier: String in Skins.ROLLS:
 		if float(w.get(tier, 0.0)) > 0.0:
 			var pc: float = float(w[tier])
 			odds.append("%s %s%%" % [TIER_NAMES[tier], str(int(pc)) if pc == floorf(pc) else str(pc)])
+	odds.append("about 1 legendary in %d is a chase skin" % int(round(1.0 / maxf(0.01, Skins.chase_share()))))
 	Paper.text(t, ", ".join(PackedStringArray(odds)), "small", col.lightened(0.25), true)
 	Paper.text(t, str(d.get("from", "")), "small", Paper.ink_soft(), true)
 	var b: Pane.PaneButton = Paper.button("Open", n > 0)

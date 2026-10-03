@@ -1977,21 +1977,21 @@
       ]
     ]
   },
-  "_skinVouchers": "SKIN VOUCHERS (Kong, 2026-10-03, SETTLED, second shape): two kinds, found like crates and hard to get. Each rolls the skin's tier by its weights over the tiers with a skin left (a tier owned in full drops out, the rest keep their shares), then a skin in that tier at random; it can land on a crew not signed yet (it waits in the Trunk); worn at once if that crew is aboard and wears nothing. drops: chance per crate opened and per casket, by tier. The Parlor gives one Captain's Voucher, at Parlor Legend (parlorCapstone); its other ranks are titles. Every skin owned: allOwnedPays doubloons. Rough rates, ASSUMING about 45 crates and 8 caskets a month for a regular player (150 casts an hour, an hour a day): about one Bosun's Voucher a month in the middle waters, about five Captain's a year fishing the deepest. core/skins.gd.",
+  "_skinVouchers": "SKIN VOUCHERS (Kong, 2026-10-03, SETTLED, second shape): two kinds, found like crates and hard to get. Each rolls the skin's tier (rare, epic, legendary) by its weights over the tiers with a skin left; a Legendary crew's chase skins are in the legendary roll, each counting chaseWeight (0.75) to a plain skin's 1, so about 1 legendary roll in 5 is a chase skin (Kong: slightly harder to roll a chase once you roll a legendary) (a tier owned in full drops out, the rest keep their shares), then a skin in that tier at random; it can land on a crew not signed yet (it waits in the Trunk); worn at once if that crew is aboard and wears nothing. drops: chance per crate opened and per casket, by tier. The Parlor gives one Captain's Voucher, at Parlor Legend (parlorCapstone); its other ranks are titles. Every skin owned: allOwnedPays doubloons. Rough rates, ASSUMING about 45 crates and 8 caskets a month for a regular player (150 casts an hour, an hour a day): about one Bosun's Voucher a month in the middle waters, about five Captain's a year fishing the deepest. core/skins.gd.",
   "skinVouchers": {
     "kinds": {
       "bosun": {
         "name": "Bosun's Voucher",
         "color": "#c0392b",
         "art": "items/voucher-bosun.png",
-        "weights": { "rare": 60, "epic": 30, "legendary": 9, "chase": 1 },
+        "weights": { "rare": 60, "epic": 30, "legendary": 10 },
         "from": "Found in wooden, metal and gold crates and easy to hard caskets."
       },
       "captain": {
         "name": "Captain's Voucher",
         "color": "#e0b04a",
         "art": "items/voucher-captain.png",
-        "weights": { "rare": 25, "epic": 45, "legendary": 25, "chase": 5 },
+        "weights": { "rare": 25, "epic": 45, "legendary": 30 },
         "from": "Found in diamond and ancient crates and elite caskets; one at Parlor Legend."
       }
     },
@@ -2010,6 +2010,7 @@
         "elite": { "captain": 0.08 }
       }
     },
+    "chaseWeight": 0.75,
     "parlorCapstone": "Parlor Legend",
     "allOwnedPays": 2500
   },

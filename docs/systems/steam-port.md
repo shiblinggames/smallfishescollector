@@ -622,14 +622,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   "crewSkins" with crewTier (the crew's FISH_GROUPS index): 24 for Rare crew, 27 Epic, 18
   Legendary, 6 chase. Gems are retired, so skins are EARNED through two vouchers, held as counts
   (port_rules skinVouchers.kinds):
-  - BOSUN'S VOUCHER (red wax): rare 60, epic 30, legendary 9, chase 1. Drops: wooden 1.5%, metal
+  - BOSUN'S VOUCHER (red wax): rare 60, epic 30, legendary 10. Drops: wooden 1.5%, metal
     2%, gold 2.5% of crates opened; easy 3%, medium 4%, hard 6% of caskets.
-  - CAPTAIN'S VOUCHER (gold wax): rare 25, epic 45, legendary 25, chase 5. Drops: diamond 0.75%,
+  - CAPTAIN'S VOUCHER (gold wax): rare 25, epic 45, legendary 30. Drops: diamond 0.75%,
     ancient 1.25% of crates; elite 8% of caskets; and ONE at Parlor Legend (the Parlor's only
     reward; its other ranks are titles; profile.parlor_capstone_paid).
   Rates are a first guess, ASSUMING a regular player opens ~45 crates and ~8 caskets a month (150
   casts an hour, an hour a day): about one Bosun's a month in the middle waters, about five
   Captain's a year in the deepest. No real cast rates were measured; tune here.
+  CHASE SKINS ARE IN THE LEGENDARY ROLL (Kong, 2026-10-03: "It's already rare to get a
+  legendary. Just have it slightly harder to roll a chase skin if you roll a legendary"): within
+  it each chase skin counts 0.75 to a plain legendary skin's 1 (skinVouchers.chaseWeight), so
+  on a fresh collection 1 legendary roll in 5 is a chase skin: Bosun's 8% legendary and 2%
+  chase, Captain's 24% and 6%.
   THE ROLL: the tier by the kind's weights over the tiers with a skin left (a tier owned in full
   drops out and the rest keep their shares, so a voucher never comes up empty), then a skin in
   that tier at random; never one owned; every skin owned pays 2,500 doubloons. It can land on a

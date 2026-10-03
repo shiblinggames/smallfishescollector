@@ -32,6 +32,7 @@ func _init() -> void:
 	for k: Dictionary in all:
 		check(FileAccess.file_exists("res://art/card-arts/%s.webp" % str(k["filename"]).get_basename()), "art for %s" % k["id"])
 	check(all.size() == 75, "75 skins (%d)" % all.size())
+	check(absf(Skins.chase_share() - 0.2) < 0.001, "a chase skin is 1 in 5 of a legendary roll (%.3f)" % Skins.chase_share())
 	for kind: String in Skins.KINDS:
 		check(ResourceLoader.exists("res://art/%s" % Skins.kind_def(kind)["art"]), "%s painting" % kind)
 
@@ -46,9 +47,10 @@ func _init() -> void:
 			check(Skins.tier_of(r["skin"]) == r["tier"], "the skin is of its tier")
 			db.update_profile(uid, { "owned_crew_skins": [] })
 		var w: Dictionary = Skins.kind_def(kind)["weights"]
+		var want: Dictionary = { "rare": float(w["rare"]), "epic": float(w["epic"]), "legendary": float(w["legendary"]) * (1.0 - Skins.chase_share()), "chase": float(w["legendary"]) * Skins.chase_share() }
 		for t: String in Skins.TIERS:
 			var got: float = 100.0 * float(n.get(t, 0)) / float(runs)
-			check(absf(got - float(w[t])) < maxf(1.0, float(w[t]) * 0.2), "%s %s %.1f%% near %s%%" % [kind, t, got, str(w[t])])
+			check(absf(got - want[t]) < maxf(1.0, want[t] * 0.2), "%s %s %.1f%% near %.1f%%" % [kind, t, got, want[t]])
 		print("  %s: %s" % [kind, str(n)])
 	check(Skins.held(db.me(uid)) == 0, "every voucher spent")
 	check(RulesApi.run(db, uid, "openSkinVoucher", ["bosun"]).has("error"), "none left to open")
