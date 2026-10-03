@@ -933,6 +933,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     presses whatever is in reach; Space does too where there is no fishing.
   - The picker, "Where to?", with its six doors. The Market and the Tackle Shop work; the
     Tavern, the Parlor, the Den and the Chart Room say NOT BUILT YET.
+  - THE MARKET'S SIMPLE VIEW IS A FISHMONGER'S COUNTER (Kong, 2026-10-03: "too crazy;
+    selling should be ultra straightforward; show the image of the fish"): one paper sheet,
+    the purse, a tile per fish aboard (its picture, ×count, what the stack fetches) that sells
+    the stack when pressed (the tile pops, coins fly to the purse, it counts up), and "Sell
+    everything" that asks again on the button itself for 3 seconds. The Advanced board below is
+    unchanged.
   - The Market's Hold side (`game/market_room.gd`): Simple and Advanced (remembered on the
     machine), the mood, the Sea Index, the countdown, vs Normal and Recent, hold value and
     sparkline, Sell all asked twice, a Sell per stack, the trade sheet, movers, and the

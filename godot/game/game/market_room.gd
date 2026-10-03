@@ -159,14 +159,15 @@ func _build() -> void:
 		rebuild())
 	top.add_child(adv)
 
-	if _advanced:
-		_ticker(logged)
+	if not _advanced:
+		_counter(held, total, count)
+		return
+	_ticker(logged)
 	if not held.is_empty():
 		_hero(held, total, count)
 	_holdings(held)
-	if _advanced:
-		_movers(logged)
-		_browse(logged.filter(func(e: Dictionary) -> bool: return e["qty"] <= 0))
+	_movers(logged)
+	_browse(logged.filter(func(e: Dictionary) -> bool: return e["qty"] <= 0))
 	var w: HBoxContainer = HBoxContainer.new()
 	col.add_child(w)
 	var wl: Label = Room.text(w, "WALLET", 12, Color(0.75, 0.83, 0.89, 0.6))
@@ -232,6 +233,10 @@ func _tick_countdown() -> void:
 
 func _process(delta: float) -> void:
 	super._process(delta)
+	if _all_armed > 0.0:
+		_all_armed -= delta
+		if _all_armed <= 0.0:
+			rebuild()
 	if _countdown != null and is_instance_valid(_countdown):
 		_tick_countdown()
 		if Clock.now_ms() >= _next_at and _next_at > 0.0:
@@ -327,7 +332,10 @@ func _after_sale(r: Dictionary, fallback: String) -> void:
 		return
 	session.persist()
 	Rumble.buzz([0, 30, 40, 60])
-	toast("+%s ⟡" % Js.thousands(float(r["earned"])))
+	if _advanced:
+		toast("+%s ⟡" % Js.thousands(float(r["earned"])))
+	else:
+		await get_tree().create_timer(0.25).timeout
 	rebuild()
 
 
@@ -583,3 +591,182 @@ class Spark:
 		fill.append(Vector2(0, size.y))
 		draw_colored_polygon(fill, Color(color, 0.12))
 		draw_polyline(line, color, 1.6, true)
+
+
+# ── The counter (Simple) ───────────────────────────────────────────────────────
+#
+# THE FISHMONGER'S COUNTER (Kong, 2026-10-03: "simplify how the market looks;
+# selling should be ultra straightforward; show the image of the fish"). One
+# sheet of paper: your purse at the top, a tile for each fish aboard (its
+# picture, how many, what the stack fetches), and one button for the lot.
+# Press a tile and that stack is sold: the tile pops, the coins fly to your
+# purse and it counts up. "Sell everything" asks once more on the button
+# itself, nowhere else.
+
+const TILE: Vector2 = Vector2(212, 196)
+var _purse_l: Label = null
+var _purse_from: float = -1.0
+var _all_armed: float = 0.0
+
+
+func _counter(held: Array, total: float, count: float) -> void:
+	var sheet: Control = Control.new()
+	sheet.custom_minimum_size = Vector2(0, 0)
+	sheet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(sheet)
+	var pane: Pane = Kit.pane(col, { "radius": 10, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.3)], "shadow": [Color(0, 0, 0, 0.45), 20, Vector2(0, 6)], "pad": [28, 22, 28, 24], "paper": true })
+	sheet.queue_free()
+	var v: VBoxContainer = VBoxContainer.new()
+	v.add_theme_constant_override("separation", 16)
+	pane.add_child(v)
+	# The purse.
+	var top: HBoxContainer = HBoxContainer.new()
+	v.add_child(top)
+	var what: Label = Paper.text(top, "Your hold" if not held.is_empty() else "Your hold is empty", "heading", Paper.INK)
+	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Paper.text(top, "Purse", "label", Paper.INK_SOFT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var now_purse: float = Js.num(session.profile().get("doubloons"))
+	_purse_l = Paper.text(top, "%s ⟡" % Js.thousands(now_purse if _purse_from < 0.0 else _purse_from), "display", Color(0.55, 0.38, 0.04))
+	_purse_l.add_theme_font_size_override("font_size", 30)
+	if _purse_from >= 0.0 and _purse_from != now_purse:
+		var from: float = _purse_from
+		_purse_from = -1.0
+		var tw: Tween = _purse_l.create_tween()
+		tw.tween_interval(0.35)
+		tw.tween_method(func(x: float) -> void:
+			if is_instance_valid(_purse_l):
+				_purse_l.text = "%s ⟡" % Js.thousands(round(x)), from, now_purse, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_purse_from = -1.0
+	if held.is_empty():
+		Paper.text(v, "Sail out and catch something worth selling.", "body", Paper.INK_SOFT)
+		var go: Pane.PaneButton = Paper.button("Go fishing", true)
+		go.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		go.pressed.connect(close)
+		v.add_child(go)
+		return
+	Paper.text(v, "Press a fish to sell that stack at today's price.", "note", Paper.INK_SOFT)
+	var g: GridContainer = GridContainer.new()
+	g.columns = maxi(1, int((col.custom_minimum_size.x - 56.0) / (TILE.x + 12.0))) if col.custom_minimum_size.x > 0.0 else 4
+	g.add_theme_constant_override("h_separation", 12)
+	g.add_theme_constant_override("v_separation", 12)
+	v.add_child(g)
+	for e: Dictionary in held:
+		g.add_child(_tile(e))
+	# The lot.
+	var armed: bool = _all_armed > 0.0
+	var all: Button = Kit.button(("Press again to sell all %d fish for %s ⟡" if armed else "Sell everything   ·   %s ⟡") % ([int(count), Js.thousands(total)] if armed else [Js.thousands(total)]), "primary")
+	all.custom_minimum_size = Vector2(0, 58)
+	all.add_theme_font_size_override("font_size", 19)
+	all.pressed.connect(func() -> void:
+		if _all_armed > 0.0:
+			_all_armed = 0.0
+			_sell_lot(g)
+		else:
+			_all_armed = 3.0
+			rebuild())
+	v.add_child(all)
+
+
+## One fish aboard: its picture, how many, and what the stack fetches.
+func _tile(e: Dictionary) -> Control:
+	var price: float = each(e)
+	var stack: float = price * float(e["qty"])
+	var rar: Color = Paper.rarity(float(e["rarity"]))
+	var n: Dictionary = { "radius": 10, "fill": [Color(1, 1, 1, 0.28)], "border": [1, Color(Kit.PAPER_INK, 0.22)], "pad": 0 }
+	var h: Dictionary = n.duplicate()
+	h["fill"] = [Color(1, 1, 1, 0.45)]
+	h["border"] = [2, Color(rar, 0.8)]
+	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
+	b.custom_minimum_size = TILE
+	b.tooltip_text = "Sell %d %s for %s ⟡ (%s each)" % [int(e["qty"]), e["name"], Js.thousands(stack), Js.thousands(price)]
+	var v: VBoxContainer = VBoxContainer.new()
+	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.offset_left = 12
+	v.offset_right = -12
+	v.offset_top = 10
+	v.offset_bottom = -10
+	v.add_theme_constant_override("separation", 2)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(v)
+	var pic: TextureRect = TextureRect.new()
+	pic.texture = Skipper.fish_thumb(str(e["name"]))
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.custom_minimum_size = Vector2(0, 104)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pic.name = "Pic"
+	v.add_child(pic)
+	var nr: HBoxContainer = HBoxContainer.new()
+	nr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(nr)
+	var nm: Label = Paper.text(nr, str(e["name"]), "label", Paper.INK)
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nm.clip_text = true
+	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	Paper.text(nr, "×%d" % int(e["qty"]), "label", Paper.INK_SOFT)
+	var pr: Label = Paper.text(v, "%s ⟡" % Js.thousands(stack), "heading", Color(0.55, 0.38, 0.04))
+	pr.add_theme_font_size_override("font_size", 22)
+	b.pressed.connect(func() -> void: _sell_tile(b, e))
+	return b
+
+
+## A stack sold: the tile pops and goes, the coins fly to the purse.
+func _sell_tile(tile: Control, e: Dictionary) -> void:
+	if _busy:
+		return
+	_purse_from = Js.num(session.profile().get("doubloons"))
+	_coins(tile.get_global_rect().get_center(), clampi(int(float(e["qty"])) + 3, 4, 14))
+	tile.pivot_offset = tile.size / 2.0
+	var tw: Tween = tile.create_tween()
+	tw.tween_property(tile, "scale", Vector2(1.08, 1.08), 0.08)
+	tw.tween_property(tile, "scale", Vector2(0.0, 0.0), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	Sound.seal(false)
+	await _sell(float(e["id"]), float(e["qty"]))
+
+
+## The lot: every tile goes, one after another, and the coins with them.
+func _sell_lot(g: GridContainer) -> void:
+	if _busy:
+		return
+	_purse_from = Js.num(session.profile().get("doubloons"))
+	var k: int = 0
+	for t: Node in g.get_children():
+		var tile: Control = t
+		var d: float = 0.05 * k
+		get_tree().create_timer(d).timeout.connect(func() -> void:
+			if not is_instance_valid(tile):
+				return
+			_coins(tile.get_global_rect().get_center(), 5)
+			tile.pivot_offset = tile.size / 2.0
+			tile.create_tween().tween_property(tile, "scale", Vector2.ZERO, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN))
+		k += 1
+	Sound.chest(true)
+	await get_tree().create_timer(0.05 * k + 0.2).timeout
+	await _sell_all()
+
+
+## Gold coins arcing from a point up to the purse; each lands with a tick.
+func _coins(from: Vector2, n: int) -> void:
+	if _purse_l == null or not is_instance_valid(_purse_l):
+		return
+	var to: Vector2 = _purse_l.get_global_rect().get_center()
+	for i: int in n:
+		var c: TextureRect = TextureRect.new()
+		c.texture = Glow.radial(32, Color(1.0, 0.8, 0.3), false)
+		c.size = Vector2(22, 22)
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		c.top_level = true
+		add_child(c)
+		var off: Vector2 = Vector2(randf_range(-30, 30), randf_range(-20, 20))
+		var lift: float = randf_range(60, 140)
+		var fly: Callable = func(u: float) -> void:
+			var p: Vector2 = (from + off).lerp(to, u * u)
+			p.y -= sin(u * PI) * lift
+			c.position = p - c.size / 2.0
+			c.modulate.a = clampf(u * 6.0, 0.0, 1.0)
+		var tw: Tween = c.create_tween()
+		tw.tween_interval(i * 0.04)
+		tw.tween_method(fly, 0.0, 1.0, 0.55)
+		tw.tween_callback(func() -> void:
+			Sound.xp_tick()
+			c.queue_free())

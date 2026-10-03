@@ -148,6 +148,20 @@ func _init() -> void:
 		"market":
 			Prefs.set_value("market_advanced", true)
 			sea._enter_room("market")
+			# MARKET_SELL: "tile" sells the first stack, "all" the lot (the
+			# counter's animations), shot mid-way.
+			var how: String = OS.get_environment("MARKET_SELL")
+			if how != "":
+				for f: int in 20:
+					await process_frame
+				var mr: MarketRoom = sea._room_layer.get_child(0)
+				var tiles: Array = mr.find_children("*", "", true, false).filter(func(n: Node) -> bool: return n is Button and (n as Control).custom_minimum_size == MarketRoom.TILE)
+				if how == "tile":
+					mr._sell_tile(tiles[0], mr._entries().filter(func(e: Dictionary) -> bool: return e["qty"] > 0)[0])
+				else:
+					mr._sell_lot(tiles[0].get_parent())
+				for f: int in int(OS.get_environment("SELL_F")) if OS.get_environment("SELL_F") != "" else 14:
+					await process_frame
 		"tackle", "rods", "shelf":
 			sea._enter_room("tackle")
 			await process_frame
