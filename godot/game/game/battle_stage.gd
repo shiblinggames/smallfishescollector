@@ -209,8 +209,10 @@ func _await_plan() -> void:
 	_busy = false
 	_plan = {}
 	_paint_actions()
+	# The deck rises back for your turn.
+	create_tween().tween_property(self, "_drop", 0.0, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if autoplay:
-		await _wait(0.6)
+		await _wait(0.3)
 		var s: Dictionary = b["seats"][0]
 		var lg: Dictionary = Battle.legal(b, s)
 		if float(b["turn"]) == 2.0 and not (s["crew"] as Array).is_empty() and Battle.ability_ok(b, s, s["crew"][0]["id"]) == "":
@@ -219,7 +221,7 @@ func _await_plan() -> void:
 			await _wait(0.4)
 		_choose("volley" if lg["volley"] else ("fire" if lg["fire"] and Dice.next() < 0.6 else "reload"))
 		if _plan.get("action") in ["fire", "volley"]:
-			await _wait(randf_range(0.6, 1.6))
+			await _wait(randf_range(0.4, 1.0))
 			for bar: Node in find_children("", "AimBar", true, false):
 				(bar as AimBar).lock()
 
@@ -352,9 +354,11 @@ func _choose(act: String) -> void:
 		_deck_box.add_child(bar)
 		var res: String = await bar.locked
 		_plan["aim"] = res
-		await get_tree().create_timer(0.45).timeout
+		await get_tree().create_timer(0.3).timeout
 	_busy = true
 	_clear_deck()
+	# The deck dips out of the way while the round plays on the water.
+	create_tween().tween_property(self, "_drop", 190.0, 0.2).set_ease(Tween.EASE_IN)
 	_play(Battle.resolve(b, [_plan]))
 
 
@@ -384,11 +388,11 @@ func _one(x: Dictionary) -> void:
 			_strip_lit = int(x["seat"])
 			_puff(_seat_at(int(x["seat"])), "+1 ball", CREAM)
 			Sound.plip()
-			await _wait(0.45)
+			await _wait(0.25)
 		"brace":
 			_strip_lit = int(x["seat"])
 			_puff(_seat_at(int(x["seat"])), "Bracing", Color(0.7, 0.85, 1.0))
-			await _wait(0.4)
+			await _wait(0.25)
 		"shot":
 			_strip_lit = int(x["seat"])
 			var land: String = "dodge" if x.get("dodged", false) else ("miss" if x["aim"] == "miss" else ("crit" if x["aim"] == "critical" else "hit"))
@@ -404,18 +408,18 @@ func _one(x: Dictionary) -> void:
 			else:
 				_num(_enemy_at, "Miss", Color(0.8, 0.8, 0.8))
 			_shown_hp["e"] = float(x["enemyHp"])
-			await _wait(0.35)
+			await _wait(0.15)
 		"intent":
 			pass
 		"eReload":
 			_strip_lit = -1
 			_puff(_enemy_at, "Reloads", Color(CREAM, 0.8))
-			await _wait(0.4)
+			await _wait(0.25)
 		"eDodge":
 			_strip_lit = -1
 			_enemy.heel = -0.1
 			_puff(_enemy_at, "Evades", Color(0.75, 0.85, 1.0))
-			await _wait(0.35)
+			await _wait(0.2)
 		"eSpecial":
 			_strip_lit = -1
 			_say(str(x.get("name", "")))
@@ -434,7 +438,7 @@ func _one(x: Dictionary) -> void:
 					_num(_seat_at(ti) + Vector2(0, -40), "Braced", Color(0.7, 0.85, 1.0))
 				Rumble.buzz([0, 40] if not x["crit"] else [0, 60, 30, 60])
 			_shown_hp[ti] = float(x["hp"])
-			await _wait(0.35)
+			await _wait(0.15)
 		"phase":
 			_say(str(e["name"]) + " rises again!")
 			_log_line(str(x.get("line", "")))
@@ -516,7 +520,7 @@ func _ability_card(x: Dictionary) -> void:
 	var tw: Tween = card.create_tween().set_parallel()
 	tw.tween_property(card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(card, "modulate:a", 1.0, 0.2)
-	await _wait(0.6)
+	await _wait(0.45)
 	# What it did, on the water.
 	var tgt: int = int(x.get("target", x["seat"]))
 	if x.has("heal") and float(x["heal"]) > 0.0:
@@ -532,7 +536,7 @@ func _ability_card(x: Dictionary) -> void:
 		_shown_hp["e"] = float(b["enemy"]["hp"])
 	if x.has("reveal"):
 		_log_line("Next: %s" % ", ".join(PackedStringArray(x["reveal"])))
-	await _wait(0.7)
+	await _wait(0.5)
 	var out: Tween = card.create_tween()
 	out.tween_property(card, "modulate:a", 0.0, 0.25)
 	out.tween_callback(card.queue_free)

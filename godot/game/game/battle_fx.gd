@@ -46,7 +46,7 @@ static func up(p: Vector2) -> Vector2:
 ## A shot: `n` balls (a volley throws three) from `from` to `to` (World
 ## points at the waterline); `landing` is "hit", "crit", "miss" or "dodge".
 func shot(from: Vector2, to: Vector2, landing: String, n: int = 1, big: bool = false) -> void:
-	var dur: float = clampf(from.distance_to(to) / 900.0, 0.45, 0.8)
+	var dur: float = clampf(from.distance_to(to) / 1300.0, 0.38, 0.6)
 	muzzle(from, to.x > from.x)
 	Sound.cannon(n > 1)
 	for k: int in n:
