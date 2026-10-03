@@ -69,7 +69,7 @@ func _paint() -> void:
 	_body.add_child(head)
 	var tl: Label = Paper.text(head, "The Gunwharf", "display", Paper.ink())
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for t: Array in [["crew", "Raid party"], ["armory", "Armory"], ["yard", "Refits"]]:
+	for t: Array in [["crew", "Raid party"], ["armory", "Armory"], ["ultimate", "Ultimate"], ["yard", "Refits"]]:
 		var tb: Pane.PaneButton = Paper.button(t[1], _tab == t[0])
 		var id: String = t[0]
 		tb.pressed.connect(func() -> void:
@@ -82,6 +82,10 @@ func _paint() -> void:
 		return
 	if _tab == "yard":
 		_yard()
+		Paper.night = false
+		return
+	if _tab == "ultimate":
+		_ultimate()
 		Paper.night = false
 		return
 	var st: Dictionary = RulesApi.run(session.store, session.uid, "getCrewState", [])
@@ -285,3 +289,99 @@ func _yard() -> void:
 				Sound.chest(true)
 			_paint())
 		row.add_child(b)
+
+
+# ── The ultimate ──────────────────────────────────────────────────────────────
+
+func _ultimate() -> void:
+	var st: Dictionary = RulesApi.run(session.store, session.uid, "getUltimateState", [])
+	var g: Dictionary = Armory.ultimate_gates(session.store, session.uid)
+	var story: Dictionary = Armory.aug()["story"]
+	var active: Variant = st.get("active")
+	var build: Variant = st.get("build")
+	var schem: bool = st.get("schematics", false)
+	Paper.text(_body, str(story["buildKicker"]).to_upper(), "eyebrow", Paper.ink_soft())
+	Paper.text(_body, str(story["buildBlurb"]).replace("{charges}", str(int(Armory.aug()["megaCost"]))), "small", Paper.ink_soft(), true)
+	if active == null and build == null:
+		# The four requirements, ticked or not.
+		var req: HBoxContainer = HBoxContainer.new()
+		req.add_theme_constant_override("separation", 18)
+		_body.add_child(req)
+		for r: Array in [["chapter3", "The Quartermaster beaten"], ["manowar", "A Man-o-War"], ["navLevel", "Navigation %d" % int(Armory.aug()["navLevel"])], ["rack", "The Extra Cannonball Rack (the Gauntlet's Locker)"]]:
+			var ok: bool = g[r[0]]
+			Paper.text(req, ("✓  " if ok else "✗  ") + r[1], "small", Color(0.5, 0.86, 0.58) if ok else Paper.red())
+	elif build != null:
+		var left: float = maxf(0.0, Js.parse_ms(build["completesAt"]) - Clock.now_ms())
+		var line: String = str(story["retoolingLine"] if build.get("retool", false) else story["buildingLine"]).replace("{current}", str(Armory.augment(active).get("name", "")))
+		Paper.text(_body, "%s  ·  %s left" % [line, _hm(left)], "small", Paper.ink(), true)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	_body.add_child(row)
+	var gates_met: bool = g["chapter3"] and g["manowar"] and g["navLevel"] and g["rack"]
+	for a: Dictionary in Armory.aug()["list"]:
+		var id: String = a["id"]
+		var col: Color = Color(str(a["color"]))
+		var v: VBoxContainer = VBoxContainer.new()
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_theme_constant_override("separation", 4)
+		row.add_child(v)
+		var mounted: bool = active == id
+		var building: bool = build != null and build["id"] == id
+		Paper.text(v, ("MOUNTED" if mounted else ("BEING BUILT" if building else "")), "eyebrow", col)
+		Paper.text(v, str(a["name"]), "title", col.lightened(0.15))
+		Paper.text(v, _clean(str(a["tagline"])), "small", Paper.ink(), true)
+		Paper.text(v, "x%s  ·  %s" % [str(a["megaMult"]), _clean(str(a["identity"]))], "small", Paper.ink_soft(), true)
+		for perk: Variant in Js.list(a.get("perks")):
+			Paper.text(v, _clean(str(perk)), "small", Paper.ink_faint(), true)
+		var label: String = ""
+		var op: String = ""
+		if active == null and build == null:
+			label = "Build it  ·  %s ⟡" % Js.thousands(float(Armory.aug()["cost"]))
+			op = "startUltimateBuild"
+		elif build != null and not building:
+			label = "Build this instead"
+			op = "swapUltimateBuild"
+		elif active != null and not mounted and build == null:
+			if schem:
+				label = "Switch to it"
+				op = "switchUltimate"
+			else:
+				label = "Retool  ·  %s ⟡" % Js.thousands(float(Armory.aug()["retoolCost"]))
+				op = "startUltimateRetool"
+		if op != "":
+			var locked: bool = op == "startUltimateBuild" and not gates_met
+			var b: Pane.PaneButton = Paper.button(label if not locked else "Not yet", (op == "startUltimateBuild" or op == "switchUltimate") and not locked)
+			b.disabled = locked
+			b.pressed.connect(func() -> void:
+				var r: Variant = await session.act(op, [id])
+				session.persist()
+				if r is Dictionary and r.get("ok") == true:
+					Sound.horn()
+				_paint())
+			v.add_child(b)
+	if active != null and not schem:
+		Paper.rule(_body)
+		var h: HBoxContainer = HBoxContainer.new()
+		_body.add_child(h)
+		var t: VBoxContainer = VBoxContainer.new()
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(t)
+		Paper.text(t, str(story["schematicsTitle"]), "body_strong", Paper.ink())
+		Paper.text(t, str(story["schematicsBlurb"]), "small", Paper.ink_soft(), true)
+		var sb: Pane.PaneButton = Paper.button("%s ⟡" % Js.thousands(float(Armory.aug()["schematicsCost"])))
+		sb.pressed.connect(func() -> void:
+			await session.act("buyUltimateSchematics", [])
+			session.persist()
+			_paint())
+		h.add_child(sb)
+
+
+## The web's copy, without its dashes (house rule: no em-dashes).
+static func _clean(t: String) -> String:
+	t = t.strip_edges().trim_prefix("— ").trim_prefix("—")
+	return t.replace(" — ", ", ").replace(" —", ",").replace("— ", ", ").replace("—", ", ").strip_edges()
+
+
+static func _hm(ms: float) -> String:
+	var m: int = int(ms / 60000.0)
+	return "%dh %02dm" % [m / 60, m % 60]

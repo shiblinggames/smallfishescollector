@@ -30,7 +30,7 @@ import { equipTackleRod, buyBait, purchaseRod, sellRod, buyReel, buyHook, upgrad
 import { marketSellFish, sellEntireHold, sellToResident } from '../lib/core/selling'
 import { localSellData } from '../lib/data/local/sellLocal'
 import { localHarbourData } from '../lib/data/local/harbourLocal'
-import { buyShipyardTier, equipRod, saveEquippedRaidItems, buySixthBerth, buyArmoryExpansion } from '../lib/core/ship'
+import { buyShipyardTier, equipRod, saveEquippedRaidItems, buySixthBerth, buyArmoryExpansion, getUltimateState, startUltimateBuild, swapUltimateBuild, startUltimateRetool, buyUltimateSchematics, switchUltimate } from '../lib/core/ship'
 import { localShipData } from '../lib/data/local/shipLocal'
 import { FOLK } from '../lib/seaFolk'
 import { ISLES } from '../lib/seaIsles'
@@ -1366,6 +1366,35 @@ campaignSessions.push(await scripted('the armory', 64, captainWith(64, 40, 2, { 
   for (const f of [buySixthBerth, buyArmoryExpansion]) await x.call(f.name, [], () => f(sd, x.uid))
   await x.patchProfile({ doubloons: 2_500_000 })
   for (const f of [buySixthBerth, buyArmoryExpansion, buySixthBerth, buyArmoryExpansion]) await x.call(f.name, [], () => f(sd, x.uid))
+}))
+// The Man-o-War's ultimate: the gates one by one, a build, a re-pick, the day
+// passing, a retool, the Full Schematics, the free switch.
+campaignSessions.push(await scripted('the ultimate', 65, captainWith(65, 40, 2, { doubloons: 100 }), async x => {
+  const sd = localShipData(x.save)
+  const c = (op: string, args: unknown[], f: () => Promise<unknown>) => x.call(op, args, f)
+  const start = (id: string) => c('startUltimateBuild', [id], () => startUltimateBuild(sd, x.uid, id))
+  const state = () => c('getUltimateState', [], () => getUltimateState(sd, x.uid))
+  await state()
+  await start('nope'); await start('railgun')
+  await x.patchSave({ clears: ['the_quartermaster'] }); await start('railgun')
+  await x.patchProfile({ ship_tier: 6 }); await start('railgun')
+  await x.patchProfile({ expedition_xp: 9_000_000 }); await start('railgun')
+  await x.patchProfile({ gauntlet_upgrades: ['cannonball_rack'] }); await start('railgun')
+  await x.patchProfile({ doubloons: 5_000_000, manowar_schematics: false }); await start('railgun'); await start('nuke')
+  for (const id of ['nuke', 'nuke', 'nope']) await c('swapUltimateBuild', [id], () => swapUltimateBuild(sd, x.uid, id))
+  await c('startUltimateRetool', ['barrage'], () => startUltimateRetool(sd, x.uid, 'barrage'))
+  await state()
+  x.advance(25 * 3_600_000)
+  await state(); await start('barrage')
+  await c('swapUltimateBuild', ['barrage'], () => swapUltimateBuild(sd, x.uid, 'barrage'))
+  for (const id of ['nuke', 'barrage', 'barrage']) await c('startUltimateRetool', [id], () => startUltimateRetool(sd, x.uid, id))
+  for (const id of ['nuke', 'barrage']) await c('swapUltimateBuild', [id], () => swapUltimateBuild(sd, x.uid, id))
+  await c('switchUltimate', ['railgun'], () => switchUltimate(sd, x.uid, 'railgun'))
+  await c('buyUltimateSchematics', [], () => buyUltimateSchematics(sd, x.uid))
+  await c('buyUltimateSchematics', [], () => buyUltimateSchematics(sd, x.uid))
+  for (const id of ['railgun', 'railgun', 'nope']) await c('switchUltimate', [id], () => switchUltimate(sd, x.uid, id))
+  await c('startUltimateRetool', ['nuke'], () => startUltimateRetool(sd, x.uid, 'nuke'))
+  await state()
 }))
 write('campaign.json', { sessions: campaignSessions })
 console.log(`  ${campaignSessions.length} campaign sessions, ${campaignSessions.reduce((n, s) => n + s.ops.length, 0)} calls`)

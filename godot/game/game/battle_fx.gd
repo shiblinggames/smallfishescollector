@@ -16,6 +16,8 @@ var _balls: Array = []
 var _bits: Array = []
 var _puffs: Array = []
 var _rings: Array = []
+var _beams: Array = []
+var _waves: Array = []
 var _t: float = 0.0
 
 
@@ -35,6 +37,12 @@ func _process(delta: float) -> void:
 	for r: Dictionary in _rings:
 		r["t"] = float(r["t"]) + delta
 	_rings = _rings.filter(func(r: Dictionary) -> bool: return float(r["t"]) < float(r["life"]))
+	for bm: Dictionary in _beams:
+		bm["t"] = float(bm["t"]) + delta
+	_beams = _beams.filter(func(bm: Dictionary) -> bool: return float(bm["t"]) < 0.9)
+	for w: Dictionary in _waves:
+		w["t"] = float(w["t"]) + delta
+	_waves = _waves.filter(func(w: Dictionary) -> bool: return float(w["t"]) < float(w["life"]))
 	queue_redraw()
 
 
@@ -62,6 +70,33 @@ func shot(from: Vector2, to: Vector2, landing: String, n: int = 1, big: bool = f
 			splash(at + Vector2(-70.0 * signf(to.x - from.x), 40))
 		else:
 			burst(at, landing == "crit")
+
+
+## THE RAILGUN: a lance of light across the water, all at once, burning out.
+func beam(from: Vector2, to: Vector2, col: Color, grazed: bool) -> void:
+	Sound.cannon(true)
+	muzzle(from, to.x > from.x)
+	_beams.append({ "a": from + Vector2(50, -34), "b": to + (Vector2(-60, 30) if grazed else Vector2.ZERO), "t": 0.0, "c": col })
+	await get_tree().create_timer(0.12).timeout
+	burst(to, not grazed)
+	if field != null:
+		field.ring(to, 160.0, 1.0, 0.8)
+
+
+## THE NUKE: a white flash, a shockwave over the water, a column of smoke.
+func blast(at: Vector2) -> void:
+	_puffs.append({ "p": up(at) + Vector2(0, -50), "v": Vector2.ZERO, "t": 0.0, "life": 0.45, "r": 170.0, "c": Color(1.0, 0.95, 0.8), "flash": true, "world": false })
+	_waves.append({ "p": at, "t": 0.0, "life": 1.3, "r": 520.0 })
+	for k: int in 18:
+		_puffs.append({ "p": up(at) + Vector2(randf_range(-50, 50), -40 - k * 9.0), "v": Vector2(randf_range(-30, 30), randf_range(-90, -40)), "t": 0.0, "life": 2.2 + randf() * 1.2, "r": 26.0 + randf() * 26.0, "c": Color(0.25, 0.22, 0.22), "world": false })
+	for k: int in 30:
+		var a: float = randf() * TAU
+		_bits.append({ "p": up(at) + Vector2(0, -40), "v": Vector2.from_angle(a) * randf_range(200, 520) + Vector2(0, -160), "t": 0.0, "life": 1.1, "r": randf_range(2.5, 5.5), "c": Color(1.0, 0.6, 0.2) if k % 2 else Color(0.5, 0.35, 0.2), "stick": true })
+	if field != null:
+		for k: int in 3:
+			field.ring(at, 260.0 + 160.0 * k, 1.6, 1.0)
+	Sound.impact(true)
+	Rumble.buzz([0, 90, 40, 120])
 
 
 func muzzle(at: Vector2, right: bool) -> void:
@@ -99,8 +134,21 @@ func _draw() -> void:
 	for r: Dictionary in _rings:
 		var u: float = float(r["t"]) / float(r["life"])
 		draw_arc(r["p"], float(r["r"]) * (0.4 + u), 0.0, TAU, 32, Color(1, 1, 1, 0.6 * (1.0 - u)), 3.0, true)
+	# The blast's shockwave, flat on the water.
+	for w: Dictionary in _waves:
+		var u2: float = float(w["t"]) / float(w["life"])
+		draw_arc(w["p"], float(w["r"]) * (0.1 + u2), 0.0, TAU, 64, Color(1.0, 0.85, 0.6, 0.7 * (1.0 - u2)), 8.0 * (1.0 - u2) + 1.0, true)
 	# Standing up: everything else, drawn un-squashed.
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0 / GROUND))
+	for bm: Dictionary in _beams:
+		var u3: float = float(bm["t"]) / 0.9
+		var a2: Vector2 = up(bm["a"])
+		var b2: Vector2 = up(bm["b"]) + Vector2(0, -30)
+		var c: Color = bm["c"]
+		var wid: float = 22.0 * (1.0 - u3)
+		draw_line(a2, b2, Color(c, 0.25 * (1.0 - u3)), wid * 2.2, true)
+		draw_line(a2, b2, Color(c.lightened(0.4), 0.8 * (1.0 - u3)), wid, true)
+		draw_line(a2, b2, Color(1, 1, 1, 1.0 - u3), maxf(1.0, wid * 0.3), true)
 	for p: Dictionary in _puffs:
 		var u: float = float(p["t"]) / float(p["life"])
 		var pos: Vector2 = (p["p"] as Vector2) if p.get("world", true) == false else up(p["p"])

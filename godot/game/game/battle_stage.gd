@@ -137,14 +137,14 @@ func _frame() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	if not b.is_empty():
-		var a0: HullAura = _auras.get(0)
+		var a0: HullAura = _aura(0)
 		if a0 != null and is_instance_valid(a0):
 			var s0: Dictionary = b["seats"][0]
 			a0.burn = not Js.obj(s0.get("burn")).is_empty()
 			a0.ice = s0.get("frozenNow", false) or float(s0.get("freeze", 0.0)) > 0.0
 			a0.shield = float(s0["shield"])
 			sea._boat.modulate = Color(0.75, 0.88, 1.0) if a0.ice else Color.WHITE
-		var ae: HullAura = _auras.get("e")
+		var ae: HullAura = _aura("e")
 		if ae != null and is_instance_valid(ae):
 			var e0: Dictionary = b["enemy"]
 			ae.burn = not Js.obj(e0.get("burn")).is_empty()
@@ -248,8 +248,8 @@ func _from_mark() -> bool:
 func _build_deck() -> void:
 	_deck = Control.new()
 	_deck.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	_deck.offset_left = -470
-	_deck.offset_right = 470
+	_deck.offset_left = -520
+	_deck.offset_right = 520
 	_deck.offset_top = -BAR - 150
 	_deck.offset_bottom = -BAR + 6
 	_deck.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -321,6 +321,9 @@ func _paint_actions() -> void:
 	_deck_box.add_child(top)
 	var lg: Dictionary = Battle.legal(b, s)
 	var acts: Array = [["fire", "Fire", "1 ball", KEY_1], ["volley", "Volley", "3 balls, double", KEY_2], ["reload", "Reload", "+1 ball", KEY_3], ["dodge", "Dodge", "brace to slip a shot", KEY_4]]
+	var mg: Dictionary = Js.obj(s.get("mega"))
+	if not mg.is_empty():
+		acts.insert(2, ["mega", str(mg["name"]), str(mg.get("tagline", "")), KEY_6])
 	for a: Array in acts:
 		var on: bool = lg.get(a[0], false)
 		Paper.night = true
@@ -328,7 +331,7 @@ func _paint_actions() -> void:
 		Paper.night = false
 		bt.disabled = not on
 		bt.tooltip_text = a[2]
-		bt.custom_minimum_size = Vector2(150, 44)
+		bt.custom_minimum_size = Vector2(150 if acts.size() <= 4 else 118, 44)
 		var act: String = a[0]
 		bt.pressed.connect(func() -> void: _choose(act))
 		top.add_child(bt)
@@ -345,6 +348,13 @@ func _paint_actions() -> void:
 	var sp: Control = Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
+	Paper.night = true
+	var fl: Button = Paper.button("Flee  ·  F")
+	Paper.night = false
+	fl.tooltip_text = "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, 0)
+	fl.custom_minimum_size = Vector2(96, 44)
+	fl.pressed.connect(_flee)
+	top.add_child(fl)
 	var pips: Control = Control.new()
 	pips.custom_minimum_size = Vector2(120, 44)
 	pips.draw.connect(func() -> void:
@@ -425,7 +435,11 @@ func _order_card(s: Dictionary, c: Dictionary) -> Control:
 func _unhandled_input(e: InputEvent) -> void:
 	if _busy or not (e is InputEventKey) or not (e as InputEventKey).pressed or (e as InputEventKey).echo:
 		return
-	var m: Dictionary = { KEY_1: "fire", KEY_2: "volley", KEY_3: "reload", KEY_4: "dodge" }
+	var m: Dictionary = { KEY_1: "fire", KEY_2: "volley", KEY_3: "reload", KEY_4: "dodge", KEY_6: "mega" }
+	if (e as InputEventKey).keycode == KEY_F:
+		get_viewport().set_input_as_handled()
+		_flee()
+		return
 	var kc: int = (e as InputEventKey).keycode
 	if kc == KEY_5 and not Battle.drum_of(b["seats"][0]).is_empty():
 		get_viewport().set_input_as_handled()
@@ -440,7 +454,7 @@ func _choose(act: String) -> void:
 	if _busy:
 		return
 	_plan["action"] = act
-	if act == "fire" or act == "volley":
+	if act == "fire" or act == "volley" or act == "mega":
 		_busy = true
 		_clear_deck()
 		var s: Dictionary = b["seats"][0]
@@ -455,7 +469,7 @@ func _choose(act: String) -> void:
 				sh = { "mult": c["ms"]["critZoneMultiplier"] }
 		var aim: Dictionary = Battle.aim_for(b, 0)
 		bar.crit_w = Battle.CRIT_W * (1.0 + float(sh.get("mult", 0.0))) * float(aim["critZone"])
-		bar.volley = act == "volley"
+		bar.volley = act != "fire"
 		bar.zone_stack = float(aim["zoneStack"])
 		bar.needle_mult = float(aim["needleMult"])
 		bar.crit_drift = float(aim["critDrift"])
@@ -495,6 +509,8 @@ func _play(ev: Array) -> void:
 	if b.has("flares") and b["state"] == "plan":
 		await _flares()
 	match b["state"]:
+		"fled":
+			await _got_away()
 		"won":
 			await _won()
 		"lost":
@@ -522,7 +538,25 @@ func _one(x: Dictionary) -> void:
 		"shot":
 			_strip_lit = int(x["seat"])
 			var land: String = "dodge" if x.get("dodged", false) else ("miss" if x["aim"] == "miss" else ("crit" if x["aim"] == "critical" else "hit"))
-			await _fx.shot(_seat_at(int(x["seat"])) + Vector2(40, 0), _enemy_at, land, 3 if x["action"] == "volley" else 1, x["action"] == "volley")
+			var mid: String = str(x.get("mega", ""))
+			if x["action"] == "mega":
+				var mg2: Dictionary = Armory.augment(mid)
+				_say(str(mg2.get("name", "")) + "!")
+				var col: Color = Color(str(mg2.get("color", "#ffffff")))
+				match mid:
+					"railgun":
+						await _fx.beam(_seat_at(int(x["seat"])), _enemy_at, col, x.get("grazed", false))
+					"barrage":
+						for k: int in 4:
+							_fx.shot(_seat_at(int(x["seat"])) + Vector2(40, 0), _enemy_at + Vector2(randf_range(-40, 40), 0), land, 2, true)
+							await _wait(0.11)
+						await _wait(0.4)
+					_:
+						await _fx.shot(_seat_at(int(x["seat"])) + Vector2(40, 0), _enemy_at, "miss" if land in ["miss", "dodge"] else "hit", 1, true)
+						if land not in ["miss", "dodge"]:
+							_fx.blast(_enemy_at)
+			else:
+				await _fx.shot(_seat_at(int(x["seat"])) + Vector2(40, 0), _enemy_at, land, 3 if x["action"] == "volley" else 1, x["action"] == "volley")
 			if x.get("dodged", false):
 				_enemy.heel = -0.12
 				_num(_enemy_at, "Slipped it!", Color(0.85, 0.85, 0.85))
@@ -669,14 +703,14 @@ func _one(x: Dictionary) -> void:
 			Sound.horn()
 			await _wait(0.9)
 		"aegisHit":
-			var ea: HullAura = _auras.get("e")
+			var ea: HullAura = _aura("e")
 			if ea != null:
 				ea.crack()
 			_num(_enemy_at + Vector2(-120, -60), "The wall holds  ·  %d left" % int(x["left"]), Color(0.75, 0.82, 0.9))
 			Sound.impact(false)
 			await _wait(0.3)
 		"aegisBreak":
-			var ea2: HullAura = _auras.get("e")
+			var ea2: HullAura = _aura("e")
 			if ea2 != null:
 				ea2.shatter()
 			_say("%s breaks!" % x.get("name", "The Last Wall"))
@@ -685,6 +719,8 @@ func _one(x: Dictionary) -> void:
 			await _wait(1.0)
 		"bossAbility":
 			await _summon(x)
+		"refund":
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "The Maw takes nothing", Color(0.9, 0.65, 0.3))
 		"flares":
 			pass
 
@@ -859,8 +895,8 @@ func _lost() -> void:
 	_end(false)
 
 
-func _end(won: bool) -> void:
-	var a0: HullAura = _auras.get(0)
+func _end(won: bool, fled: bool = false) -> void:
+	var a0: HullAura = _aura(0)
 	if a0 != null and is_instance_valid(a0):
 		a0.queue_free()
 	sea._boat.modulate = Color.WHITE
@@ -887,7 +923,7 @@ func _end(won: bool) -> void:
 	tw.tween_property(self, "_bars", 0.0, 0.5)
 	tw.parallel().tween_property(self, "_drop", 260.0, 0.4)
 	await tw.finished
-	finished.emit(won)
+	finished.emit(won and not fled)
 	queue_free()
 
 
@@ -1132,3 +1168,76 @@ func _beat_drum() -> void:
 	else:
 		_num(_seat_at(0), "The drum goes unanswered", CREAM)
 	_paint_actions()
+
+
+# ── Flee ─────────────────────────────────────────────────────────────────────
+
+## The die for getting away, over the deck: a d20 tumbling onto the roll,
+## the face needed beside it. Away: she turns and runs. Caught: the parting shot.
+func _flee() -> void:
+	if _busy:
+		return
+	_busy = true
+	var need: int = Battle.flee_need(b, 0)
+	var ev: Array = Battle.flee(b, 0)
+	var x: Dictionary = ev[0]
+	_clear_deck()
+	Paper.night = true
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 20)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_deck_box.add_child(row)
+	var die: NodeSheet.DiceFace = NodeSheet.DiceFace.new()
+	die.custom_minimum_size = Vector2(180, 120)
+	die.final = int(x["natural"])
+	row.add_child(die)
+	var v: VBoxContainer = VBoxContainer.new()
+	row.add_child(v)
+	Paper.text(v, "MAKING A RUN FOR IT", "eyebrow", Paper.ink_soft())
+	Paper.text(v, "Need %d or better  ·  a 20 always gets away, a 1 never does" % need, "body_strong", Paper.ink())
+	var said: Label = Paper.text(v, "", "display", Paper.ink())
+	Paper.night = false
+	await die.landed
+	if x["success"]:
+		said.text = "Away!"
+		said.add_theme_color_override("font_color", Color(0.5, 0.86, 0.58))
+		Sound.horn()
+	else:
+		said.text = "Caught!"
+		said.add_theme_color_override("font_color", Color(0.93, 0.45, 0.33))
+		await _wait(0.4)
+		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(0), "hit")
+		await _wait(0.5)
+		_num(_seat_at(0), "Parting shot  -%d" % int(x.get("dmg", 0)), Color(1.0, 0.45, 0.35), true)
+		_shown_hp[0] = float(x.get("hp", b["seats"][0]["hp"]))
+	await _wait(1.0)
+	for k: int in range(1, ev.size()):
+		await _one(ev[k])
+	match b["state"]:
+		"fled":
+			await _got_away()
+		"lost":
+			await _lost()
+		_:
+			_await_plan()
+
+
+## Out of the fight: she comes about and runs for it, keeping what she earned.
+func _got_away() -> void:
+	_say("You got away")
+	_log_line("Out of the fight, with what you earned so far. The raid will be here when you come back.")
+	var away: Vector2 = sea._boat.position + Vector2(-700, 260)
+	var tw: Tween = create_tween()
+	tw.tween_property(sea._boat, "position", away, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	for k: int in 5:
+		tw.parallel().tween_callback(func() -> void: sea._field.ring(sea._boat.position, 100.0, 1.0, 0.5)).set_delay(0.3 * k)
+	await _wait(2.0)
+	_from = sea._boat.position
+	_end(true, true)
+
+
+
+## A hull's aura, or null once it has gone (the enemy's sinks with it).
+func _aura(k: Variant) -> HullAura:
+	var a: Variant = _auras.get(k)
+	return a if a != null and is_instance_valid(a) else null

@@ -29,7 +29,11 @@ static func completion_bonus(raid: Dictionary) -> float:
 static func award_kill(db: CaptainStore, uid: String, raid: Dictionary, enemy_id: String, boss: bool) -> Dictionary:
 	var kr: Dictionary = Js.obj(Js.obj(raid.get("killRewards")).get(enemy_id))
 	var xp: float = Js.num(kr.get("xp")) + (completion_bonus(raid) if boss else 0.0)
-	var gold: float = float(Js.round(Js.num(kr.get("gold")) * float(Campaign.class_effects(db.me(uid).get("ship_classes"))["doubloonMult"])))
+	# Plunder (Navigation Renown) and the class's coin; Command lifts crew XP.
+	var ren: Dictionary = Js.obj(db.me(uid).get("nav_renown_alloc"))
+	var plunder: float = 1.0 + maxf(0.0, floor(Js.num(ren.get("plunder")))) * 0.015
+	var command: float = 1.0 + maxf(0.0, floor(Js.num(ren.get("command")))) * 0.02
+	var gold: float = float(Js.round(Js.num(kr.get("gold")) * float(Campaign.class_effects(db.me(uid).get("ship_classes"))["doubloonMult"]) * plunder))
 	if xp > 0.0:
 		db.bump_stat(uid, "expedition_xp", xp)
 	if gold > 0.0:
@@ -39,8 +43,9 @@ static func award_kill(db: CaptainStore, uid: String, raid: Dictionary, enemy_id
 	for c: Dictionary in Crew.live(db):
 		if c.get("raid_slot") != null and xp > 0.0:
 			var old: float = Js.num(c.get("xp"))
-			c["xp"] = old + xp
-			crew_grants.append({ "id": c["id"], "oldLevel": float(Crew.level(old)), "newLevel": float(Crew.level(old + xp)) })
+			var cxp: float = float(Js.round(xp * command))
+			c["xp"] = old + cxp
+			crew_grants.append({ "id": c["id"], "oldLevel": float(Crew.level(old)), "newLevel": float(Crew.level(old + cxp)) })
 	return { "xp": xp, "doubloons": gold, "crew": crew_grants }
 
 

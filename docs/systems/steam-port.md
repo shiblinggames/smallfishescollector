@@ -683,7 +683,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   effect type in a fight except the Primeval Maw's charged ones; the Quartermaster repossesses
   one item a fight; the drum family's rally is a free action (key 5). The boss's pre-fight
   words play over the water as a scene. A bot with a late loadout clears the campaign's raids
-  except the Throne and the Hand (tests/battle_check.gd). NOT YET: flee, the Mega augment.
+  except the Throne and the Hand (tests/battle_check.gd). FLEE (key F): the web's d20 against 10
+  plus the enemy's speed (3 more for a boss), a 20 always away and a 1 never; a miss takes a
+  parting shot; away, she keeps what she earned. THE MEGA: the Man-o-War's ultimate built at the
+  Gunwharf's Ultimate tab (getUltimateState, startUltimateBuild, swap, retool, the Full
+  Schematics, switch; parity, campaign.json "the ultimate"); in a fight key 6: the Railgun's
+  lance of light pierces barriers and a clean dodge only grazes it, the Barrage's four blows each
+  roll the on-hit gear, the Nuke's blast leaves the wreck burning, and only a Mega breaks the
+  Last Wall. KONG 2026-10-03: the Mega waits for the gauntlets: its fourth gate, the Extra
+  Cannonball Rack, is sold only in the Gauntlet's Locker, so it shows as missing until then.
+  THE PRIMEVAL MAW rides charged (borrowed_jaw#level) with its milestone's fire, volley, Mega
+  and boss damage, the opening ball and the free crit. NAVIGATION RENOWN in a fight and its pay:
+  Might, Bulwark, Plunder, Command.
   THE LOOK (Godot over the web): fire on a hull (flames, embers, smoke, a warm light on the
   water), a frost crust and ice shards, a dome of light for a shield, the ward's runes turning
   on the water, foresight's eye over the masthead, the Last Wall as iron plates rising from

@@ -665,6 +665,24 @@ func _init() -> void:
 						en["ward"] = 2.0
 						bst.b["seats"][0]["shield"] = 20.0
 						bst.b["seats"][0]["freeze"] = 1.0
+					"mega":
+						var ms: Dictionary = bst.b["seats"][0]
+						ms["mega"] = Armory.augment(OS.get_environment("MEGA") if OS.get_environment("MEGA") != "" else "railgun")
+						ms["maxCharges"] = 4.0
+						ms["charges"] = 4.0
+						bst.b["enemy"]["pattern"] = ["reload"]
+						while bst._busy:
+							await process_frame
+						bst._choose("mega")
+						for f: int in 20:
+							await process_frame
+						for bar: Node in bst.find_children("", "AimBar", true, false):
+							(bar as AimBar)._pos = (bar as AimBar)._zone
+							(bar as AimBar).lock()
+					"flee":
+						while bst._busy:
+							await process_frame
+						bst._flee()
 					"tide":
 						bst._tide(Rules.data()["tides"]["pool"][int(OS.get_environment("TIDE_I")) if OS.get_environment("TIDE_I") != "" else 0], "A TIDE TURNS")
 					"aim":

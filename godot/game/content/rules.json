@@ -23099,6 +23099,88 @@
    "source": "Abyssal Forge: Palisade Bulwark + Last Bastion"
   }
  ],
+ "shipAugments": {
+  "list": [
+   {
+    "id": "railgun",
+    "name": "Railgun",
+    "tagline": "A piercing lance of light that always finds its mark.",
+    "flavor": "A lance of light off the gun deck. Nothing the deep can do to slip it.",
+    "color": "#5fd0ff",
+    "megaMult": 2.6,
+    "pierce": true,
+    "identity": "The sure thing. It never fully misses.",
+    "perks": [
+     "Can't be fully dodged — even a clean dodge only grazes it (still ~55% damage), never a whiff.",
+     "Armor-piercing — no plate or carapace can soak or deflect it.",
+     "The most reliable ultimate: it always lands something.",
+     "— Lowest raw multiplier of the three (that certainty is the trade)."
+    ]
+   },
+   {
+    "id": "barrage",
+    "name": "Barrage",
+    "tagline": "The whole broadside loosed at once — four hammer-blows in a heartbeat.",
+    "flavor": "The whole broadside loosed in a heartbeat. Four hammer-blows where one fell before.",
+    "color": "#ffb454",
+    "megaMult": 2.8,
+    "hits": [
+     0.4,
+     0.25,
+     0.18,
+     0.17
+    ],
+    "procFalloff": 0.3,
+    "identity": "The combo weapon. It triggers everything you carry.",
+    "perks": [
+     "Strikes four times in one blow instead of once.",
+     "Every hit re-rolls your on-hit effects (burn, freeze, sunder) — the first at full odds, the rest reduced.",
+     "Best on a proc-heavy loadout: the more on-hit gear you run, the harder it hits.",
+     "— Can be dodged, though a dodge only shaves part of the volley, not all of it."
+    ]
+   },
+   {
+    "id": "nuke",
+    "name": "Nuke",
+    "tagline": "One devastating blast that leaves the wreck burning for turns.",
+    "flavor": "You light the powder of a hundred ships at once. What it touches does not stay afloat.",
+    "color": "#ff5b5b",
+    "megaMult": 3.5,
+    "fallout": {
+     "pct": 0.08,
+     "turns": 3
+    },
+    "identity": "The finisher. Nothing else hits this hard.",
+    "perks": [
+     "By far the highest damage of the three on a clean hit.",
+     "Leaves the target burning — Fallout deals extra damage for 3 turns after the blast.",
+     "The all-out swing: your best answer to a boss you need dead now.",
+     "— All-or-nothing: it can be dodged, and a dodge wastes the entire shot."
+    ]
+   }
+  ],
+  "railgunGraze": 0.55,
+  "tier": 6,
+  "navLevel": 70,
+  "cost": 750000,
+  "megaCost": 4,
+  "retoolCost": 250000,
+  "schematicsCost": 1250000,
+  "buildMs": 86400000,
+  "story": {
+   "unlockKicker": "The Quartermaster's Plans",
+   "unlockTitle": "A Weapon Out of Legend",
+   "unlockBlurb": "The Coffers held more than doubloons. Buried in the Quartermaster's cache were schematics no honest shipwright would draw: plans for a weapon meant to end a fight in a single breath. The plans are yours now. Building one will cost a fortune and the better part of a day, but the ship that carries it answers to no one.",
+   "buildKicker": "Ultimate Weapon",
+   "buildBlurb": "Raise one signature Mega blow into your hull, forged from the Quartermaster's stolen plans. It fires above your Volley for a full magazine of {charges} cannonballs, then leaves you cold.",
+   "buildingLine": "Your shipwrights work the plans day and night. You can still change which weapon they raise until the work is done.",
+   "retoolingLine": "Your shipwrights strip the mounts and raise the new weapon. {current} stays armed until the work is done.",
+   "schematicsTitle": "The Full Schematics",
+   "schematicsBlurb": "You built one weapon from a torn page. This is the whole book: every plan the Quartermaster ever stole, cover to cover. Own it and your shipwrights can swap your ultimate freely, any weapon, any time, no cost, no wait.",
+   "schematicsUnlockKicker": "The Whole Book",
+   "schematicsUnlockLine": "Every page accounted for. The armory is yours now. Swap your ultimate whenever the fight calls for it."
+  }
+ },
  "forgeRecipes": [
   {
    "components": [
@@ -25090,6 +25172,53 @@
     "crateChanceMult": 2,
     "goldenOddsMult": 1.8,
     "perfectBaitSave": true
+   }
+  ],
+  "borrowedJaw": [
+   {
+    "level": 1,
+    "unlock": "+10% damage to bosses",
+    "bossDamageMult": 1.1
+   },
+   {
+    "level": 2,
+    "unlock": "+10% normal fire damage",
+    "bossDamageMult": 1.13,
+    "fireDamageMult": 1.1
+   },
+   {
+    "level": 3,
+    "unlock": "+10% ultimate damage",
+    "bossDamageMult": 1.16,
+    "fireDamageMult": 1.1,
+    "megaDamageMult": 1.1
+   },
+   {
+    "level": 4,
+    "unlock": "+10% volley damage",
+    "bossDamageMult": 1.19,
+    "fireDamageMult": 1.1,
+    "megaDamageMult": 1.1,
+    "volleyDamageMult": 1.1
+   },
+   {
+    "level": 5,
+    "unlock": "50% chance to start each fight with an extra cannonball, on top of any primer",
+    "bossDamageMult": 1.22,
+    "fireDamageMult": 1.1,
+    "megaDamageMult": 1.1,
+    "volleyDamageMult": 1.1,
+    "extraStartChargeChance": 0.5
+   },
+   {
+    "level": 6,
+    "unlock": "Criticals have a 50% chance to cost no cannonballs (works on normal, volleys, and ultimates)",
+    "bossDamageMult": 1.25,
+    "fireDamageMult": 1.1,
+    "megaDamageMult": 1.1,
+    "volleyDamageMult": 1.1,
+    "extraStartChargeChance": 0.5,
+    "critChargeRefundChance": 0.5
    }
   ],
   "beats": [

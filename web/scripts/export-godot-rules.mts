@@ -43,6 +43,7 @@ import { BAYS, HUB, HUB_R, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, FOG_BANKS, SPA
 import { plateFor } from '../lib/islandPlates'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '../lib/expeditions'
 import { RAID_ITEMS, FORGE_RECIPES } from '../lib/raidItems'
+import { SHIP_AUGMENTS, RAILGUN_GRAZE_PCT, MANOWAR_TIER, AUGMENT_NAV_LEVEL, AUGMENT_COST, MEGA_CHARGE_COST, RETOOL_COST, SCHEMATICS_COST, ULTIMATE_BUILD_MS, ULTIMATE_STORY } from '../lib/shipAugments'
 import { SIXTH_BERTH_COST, ARMORY_EXPANSION_COST } from '../lib/shipBerth'
 import { AFFIXES, ALL_AFFIX_IDS, ELITE_HP_MULT, ELITE_DMG_MULT } from '../lib/raidAffixes'
 import { TIDE_POOL, PRE_BOSS_REPRIEVE } from '../lib/tides'
@@ -227,6 +228,7 @@ const rules = {
   raidAffixes: { affixes: AFFIXES, all: ALL_AFFIX_IDS, eliteHp: ELITE_HP_MULT, eliteDmg: ELITE_DMG_MULT },
   tides: { pool: TIDE_POOL, reprieve: PRE_BOSS_REPRIEVE },
   raidItems: RAID_ITEMS.map(({ emoji: _e, ...it }) => it),
+  shipAugments: { list: SHIP_AUGMENTS, railgunGraze: RAILGUN_GRAZE_PCT, tier: MANOWAR_TIER, navLevel: AUGMENT_NAV_LEVEL, cost: AUGMENT_COST, megaCost: MEGA_CHARGE_COST, retoolCost: RETOOL_COST, schematicsCost: SCHEMATICS_COST, buildMs: ULTIMATE_BUILD_MS, story: ULTIMATE_STORY },
   forgeRecipes: FORGE_RECIPES, sixthBerthCost: SIXTH_BERTH_COST, armoryExpansionCost: ARMORY_EXPANSION_COST,
   shipClasses: { classes: SHIP_CLASSES, lines: SHIP_CLASS_LINES, chapterOrder: SHIP_CLASS_CHAPTER_ORDER, refitCost: SHIP_REFIT_COST },
   shipCombat: Object.fromEntries(Object.entries(EXPEDITION_SHIP_STATS).map(([t, v]) => [t, { ...v, itemSlots: raidItemSlotsForTier(Number(t)) }])),
@@ -253,7 +255,7 @@ const rules = {
   // Finn's campaign (lib/finn, lib/finnQuests, lib/seaFinn): his beats, his
   // jobs and chapters, where he is moored and how far he circles.
   finn: {
-    thresholds: FINN_ITEM_THRESHOLDS, anglersPatience: FINN_ITEMS.anglers_patience.milestones,
+    thresholds: FINN_ITEM_THRESHOLDS, anglersPatience: FINN_ITEMS.anglers_patience.milestones, borrowedJaw: FINN_ITEMS.borrowed_jaw.milestones,
     beats: FINN_BEATS, reveal: FINN_REVEAL_BEAT, idle: FINN_IDLE_LINES,
     epilogueIdle: FINN_EPILOGUE_IDLE_LINES, epilogueLore: FINN_EPILOGUE_LORE_LINES, loreChance: FINN_EPILOGUE_LORE_CHANCE,
     asks: FINN_ASKS, standingName: FINN_STANDING_NAME, standingAt: FINN_STANDING_AT,
