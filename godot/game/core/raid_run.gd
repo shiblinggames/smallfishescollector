@@ -29,7 +29,7 @@ static func completion_bonus(raid: Dictionary) -> float:
 static func award_kill(db: CaptainStore, uid: String, raid: Dictionary, enemy_id: String, boss: bool) -> Dictionary:
 	var kr: Dictionary = Js.obj(Js.obj(raid.get("killRewards")).get(enemy_id))
 	var xp: float = Js.num(kr.get("xp")) + (completion_bonus(raid) if boss else 0.0)
-	var gold: float = float(Js.round(Js.num(kr.get("gold"))))
+	var gold: float = float(Js.round(Js.num(kr.get("gold")) * float(Campaign.class_effects(db.me(uid).get("ship_classes"))["doubloonMult"])))
 	if xp > 0.0:
 		db.bump_stat(uid, "expedition_xp", xp)
 	if gold > 0.0:
@@ -51,6 +51,7 @@ static func open_crate(db: CaptainStore, uid: String, raid: Dictionary, fortune:
 	var prof: Dictionary = db.me(uid)
 	var base: float = floor(Dice.next() * 301.0 + 300.0)
 	var coin: float = minf(3000.0, floor(base * (1.0 + maxf(0.0, fortune) / 75.0)))
+	coin = float(Js.round(coin * float(Campaign.class_effects(prof.get("ship_classes"))["doubloonMult"])))
 	var challenge: bool = str(raid["raidId"]).ends_with("_challenge")
 	var flm: float = 1.0 + minf(1.0, fortune / 150.0)
 	var rarity: Dictionary = { "epic": 0.20 if challenge else 0.10, "legendary": 0.10 if challenge else 0.05, "cosmetic": 0.05 if challenge else 0.025, "ancient": 0.10 if challenge else 0.05 }
@@ -77,9 +78,11 @@ static func open_crate(db: CaptainStore, uid: String, raid: Dictionary, fortune:
 	return { "coin": coin, "items": items }
 
 
-## A raid cleared, in the captain's record (the campaign map reads it).
-static func record_clear(db: CaptainStore, uid: String, raid_id: String) -> void:
-	var prof: Dictionary = db.me(uid)
-	var clears: Dictionary = Js.obj(prof.get("raid_clears")).duplicate()
-	clears[raid_id] = Js.num(clears.get(raid_id)) + 1.0
-	db.update_profile(uid, { "raid_clears": clears })
+## A raid cleared, in the captain's record (raidLocal addClear; the campaign
+## map reads it): the clear and its time. The Reef Skirmish is not a raid
+## (recordSkirmishClear): it sets has_completed_practice_raid and nothing else.
+static func record_clear(db: CaptainStore, uid: String, raid_id: String, ms: Variant = null) -> void:
+	if raid_id == "reef_skirmish":
+		db.update_profile(uid, { "has_completed_practice_raid": true })
+		return
+	db.add_clear(uid, raid_id, ms)

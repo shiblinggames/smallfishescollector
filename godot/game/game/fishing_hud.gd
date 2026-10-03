@@ -501,8 +501,15 @@ func set_side(on_expedition: bool, animate: bool = false) -> void:
 
 ## The side she has crossed into, lettered over the water: its name large,
 ## a line under it, rising in and fading after a moment.
+var _side_banner: Control = null
+
+
 func side_banner(title: String, line: String) -> void:
+	# One at a time: a newer one takes the sky.
+	if is_instance_valid(_side_banner):
+		_side_banner.queue_free()
 	var v: VBoxContainer = VBoxContainer.new()
+	_side_banner = v
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_theme_constant_override("separation", 2)

@@ -3,11 +3,8 @@ extends Control
 ## THE GUNWHARF (Godot port; "where your ship lies at her berth, is refitted
 ## and armed for the campaign"), on the night paper. For now: your raid
 ## party's seats (who sails with you, the captain's hand first; one of each
-## fish) and, until the campaign's water is in the port, the first two fights
-## of Chapter I to sail out to from here: the Reef Skirmish and Barnacle
-## Pete's raid. Seats are Crew.assign (assignToRaid), parity-checked.
+## fish). Seats are Crew.assign (assignToRaid), parity-checked.
 
-signal sail(raid_id: String)
 signal closed
 
 var session: Session
@@ -80,25 +77,7 @@ func _paint() -> void:
 				who = mem
 		row.add_child(_seat(k, who, roster))
 	Paper.rule(_body)
-	Paper.text(_body, "SAIL OUT", "eyebrow", Paper.ink_soft())
-	Paper.text(_body, "Until the campaign's water is in the port, Chapter I's first fights leave from here.", "small", Paper.ink_soft(), true)
-	for r: Array in [["reef_skirmish", "The Reef Skirmish", "One Reef Raider. No chest."], ["corsairs_reckoning", "The Corsair's Reckoning", "Four of Pete's crew, then Barnacle Pete himself. A chest at the end."]]:
-		var h: HBoxContainer = HBoxContainer.new()
-		h.add_theme_constant_override("separation", 12)
-		_body.add_child(h)
-		var v: VBoxContainer = VBoxContainer.new()
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		v.add_theme_constant_override("separation", 0)
-		h.add_child(v)
-		var cleared: float = Js.num(Js.obj(prof.get("raid_clears")).get(r[0]))
-		Paper.text(v, "%s%s" % [r[1], ("  ·  cleared %d" % int(cleared)) if cleared > 0.0 else ""], "body_strong", Paper.ink())
-		Paper.text(v, r[2], "small", Paper.ink_soft())
-		var b: Pane.PaneButton = Paper.button("Sail out", true)
-		var rid: String = r[0]
-		b.pressed.connect(func() -> void:
-			sail.emit(rid)
-			queue_free())
-		h.add_child(b)
+	Paper.text(_body, "The campaign's water is out past the Sea Gate, due north. The Sea Gate lets her out once your right hand is seated.", "small", Paper.ink_soft(), true)
 	var x: Pane.PaneButton = Paper.button("Close  Esc")
 	x.size_flags_horizontal = Control.SIZE_SHRINK_END
 	x.pressed.connect(close)

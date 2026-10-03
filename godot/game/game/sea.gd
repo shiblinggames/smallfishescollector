@@ -22,6 +22,7 @@ var _crew_marks: CrewMarks
 ## The isles, the digs' tells, and the bottles drifting near (by key), with
 ## the bottles fished out this session; the fog cells seen and not yet saved.
 var _isles: Dictionary = {}
+var _campaign: CampaignWater
 var _digs: Dictionary = {}
 var _bottles: Dictionary = {}
 var _taken: Dictionary = {}
@@ -221,6 +222,11 @@ func _ready() -> void:
 	_boat.field = _field
 	_boat.cast_landed.connect(_life.scatter)
 	_boat.held_at_gate.connect(_held_at_gate)
+	_boat.held_at_bay.connect(_held_at_bay)
+	_campaign = CampaignWater.new()
+	_campaign.sea = self
+	_campaign.node_pressed.connect(open_node)
+	_open_sea_gate()
 	_course = Course.new()
 	_course.sea = self
 	_course.boat = _boat
@@ -235,6 +241,7 @@ func _ready() -> void:
 		_field.ring(_boat.position, 130.0, 1.1, 0.7)
 		Rumble.buzz([0, 16, 40, 22]))
 	var at: Variant = session.profile().get("sea_x")
+	add_child(_campaign)
 	_boat.position = Vector2(Js.num(at), Js.num(session.profile().get("sea_y"))) if at != null else Chart.HOME
 	_world.add_child(_boat)
 	_boat.set_look(Skipper.look_of(session.profile()))
@@ -498,7 +505,9 @@ func _reach(at: Vector2) -> void:
 			band_buyer = b
 	var docked: Dictionary = Chart.berth_at(at)
 	if docked.is_empty():
-		var found: Variant = _find_in_reach(at)
+		var found: Variant = _campaign.reach(at) if at.y < Explore.NORTH_WALL else null
+		if found == null:
+			found = _find_in_reach(at)
 		if found != null:
 			_hud.set_reach(found[0], found[1])
 			_mark.target = null
@@ -1284,7 +1293,59 @@ func _held_at_gate() -> void:
 	if now - _gate_note_t < 6.0:
 		return
 	_gate_note_t = now
-	_hud.toast("Past the Sea Gate lies the campaign. It is not in this build yet.")
+	_hud.toast("She sails with nobody aboard. Seat your raid party at the Gunwharf before you go out.")
+
+
+var _bay_note_t: float = -99.0
+
+
+## Held on a shut bay's rim: the helm says which, and what opens it.
+func _held_at_bay(line: String) -> void:
+	var now: float = Time.get_ticks_msec() / 1000.0
+	if now - _bay_note_t < 4.0:
+		return
+	_bay_note_t = now
+	Rumble.tap(12)
+	_hud.toast(line)
+
+
+## The Sea Gate opens with a captain seated to fight (an empty ship does not
+## go out: every fight past it is fought by the crew in the seats).
+func _open_sea_gate() -> void:
+	var seated: bool = false
+	for c: Dictionary in Crew.live(session.store):
+		if c.get("raid_slot") != null and float(c["raid_slot"]) == 0.0:
+			seated = true
+	North.gate_open = seated
+
+
+## Back to the Gunwharf's berth (a lost fight, a gate that held): the sea
+## dims and she is there.
+func warp_to_gunwharf() -> void:
+	if not _berths.has("gunwharf"):
+		return
+	_boat.velocity = Vector2.ZERO
+	_boat.target = null
+	_boat.position = (_berths["gunwharf"] as Node2D).position
+	_field.ring(_boat.position, 160.0, 1.4, 0.8)
+
+
+## A node of the campaign pressed at the helm: a fight is taken on from its
+## dock; anything else opens its sheet (or its scene).
+func open_node(id: String) -> void:
+	var n: Dictionary = Campaign.node(id)
+	var st: String = str(_campaign.status.get(id, "locked"))
+	if (n["type"] == "raid" or n["type"] == "skirmish") and st != "locked" and n.get("raidId") != null:
+		start_battle(str(n["raidId"]), id)
+		return
+	var sheet: NodeSheet = NodeSheet.new()
+	sheet.sea = self
+	sheet.node_id = id
+	sheet.done.connect(func() -> void:
+		_campaign.refresh()
+		_hud.refresh())
+	_hud.hold_for(sheet)
+	_hud_layer.add_child(sheet)
 
 
 func _draw_port(port: Dictionary) -> void:
@@ -1346,7 +1407,7 @@ func _dock(id: String) -> void:
 			Sound.bell()
 			var gw: GunwharfSheet = GunwharfSheet.new()
 			gw.session = session
-			gw.sail.connect(start_battle)
+			gw.closed.connect(_open_sea_gate)
 			_hud.hold_for(gw)
 			_room_layer.add_child(gw)
 		_:
@@ -1361,11 +1422,18 @@ func _dock(id: String) -> void:
 
 
 ## A FIGHT ON THE WATER (game/battle_stage.gd): the sea becomes its stage.
-func start_battle(raid_id: String) -> void:
+func start_battle(raid_id: String, node_id: String = "") -> void:
 	var st: BattleStage = BattleStage.new()
 	st.sea = self
 	st.raid_id = raid_id
-	st.finished.connect(func(_won: bool) -> void: _hud.refresh())
+	var mark: CampaignWater.Ship = _campaign.ship(node_id) if node_id != "" else null
+	if mark != null:
+		st.mark = mark
+		st.dock = mark.dock()
+	st.finished.connect(func(_won: bool) -> void:
+		_campaign.refresh()
+		_open_sea_gate()
+		_hud.refresh())
 	_hud.hold_for(st)
 	_hud_layer.add_child(st)
 

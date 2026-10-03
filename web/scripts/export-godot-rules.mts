@@ -38,7 +38,12 @@ import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOT_BONUS_MULT, SL
 import { PAYOUT_MULT, POCKETS } from '../lib/roulette'
 import { CREW_SKINS } from '../lib/crewSkins'
 import { ALL_RAIDS } from '../lib/raidRegistry'
+import { SCENE_BACKDROPS, RAID_MAP, RAID_CHAPTERS } from '../lib/raidMap'
+import { BAYS, HUB, HUB_R, ENCOUNTERS, CACHES, BEATS, RAID_ISLES, FOG_BANKS, SPANS, WARGATE, MAELSTROMS, PORTAL_HOME, PORTAL_REACH, bayCentre, opensBay, bayShutLine, encounterAt, dockAt, isleAt, bankAt, chainSpan, RETURN_PORTALS, portalAt, hullFor, portraitFor, encArt } from '../app/(app)/sea/raidWaters'
+import { plateFor } from '../lib/islandPlates'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '../lib/expeditions'
+import { RAID_ITEMS } from '../lib/raidItems'
+import { SHIP_CLASSES, SHIP_CLASS_LINES, SHIP_CLASS_CHAPTER_ORDER, SHIP_REFIT_COST } from '../lib/shipClasses'
 import { LANDMARKS, WORLD_CHART_COMPLETION_BONUS } from '../lib/worldChart'
 import { MATCH_COLS, MATCH_ROWS, MATCH_TYPES, MATCH_MOVES, MATCH_TARGET, MATCH_MAX_POINTS, MATCH_TIERS, WILD_DROP_CHANCE } from '../app/(app)/charting/constants'
 import { MINEFIELD_COLS, MINEFIELD_ROWS, MINEFIELD_MINES, MINEFIELD_POINTS } from '../app/(app)/charting/minefieldConstants'
@@ -199,7 +204,25 @@ const rules = {
   // Raid combat (lib/bossRaids via raidRegistry, lib/expeditions): every raid's
   // config (enemies, sequence, loot, kill rewards, dialogue) and the hulls'
   // combat stats by tier, for the port's battle engine (core/battle.gd).
+  // The campaign's chain (lib/raidMap): every node in campaign order, and
+  // the chapters.
+  campaign: { nodes: JSON.parse(JSON.stringify(RAID_MAP)), chapters: JSON.parse(JSON.stringify(RAID_CHAPTERS)), backdrops: SCENE_BACKDROPS },
+  // The campaign's water (app/(app)/sea/raidWaters): the bays, their isles
+  // (with plates), where every node sits, the Sounding fog bank, the harbour
+  // spans, the ways home and the maelstroms, all in world space.
+  campaignWater: {
+    hub: HUB, hubR: HUB_R, wargate: WARGATE, portalHome: PORTAL_HOME, portalReach: PORTAL_REACH, maelstroms: MAELSTROMS,
+    bays: BAYS.map((b: any) => ({ ...b, centre: bayCentre(b), opensBy: opensBay(b), shutLine: bayShutLine(b) })),
+    isles: RAID_ISLES.map((i: any) => ({ ...i, ...isleAt(i), plate: plateFor(i.id) })),
+    encounters: ENCOUNTERS.map((e: any) => { const h = hullFor(e); return { ...e, at: encounterAt(e), dock: dockAt(e), hull: h, art: h ? encArt(h) : null, portrait: portraitFor(e) } }),
+    caches: CACHES, beats: BEATS,
+    banks: FOG_BANKS.map((f: any) => ({ ...f, at: bankAt(f) })),
+    spans: SPANS.map((c: any) => ({ ...c, ends: chainSpan(c) })),
+    portals: RETURN_PORTALS.map((pt: any) => ({ ...pt, at: portalAt(pt) })),
+  },
   raids: Object.fromEntries(ALL_RAIDS.map(r => [r.raidId, JSON.parse(JSON.stringify(r))])),
+  raidItems: RAID_ITEMS.map(({ emoji: _e, ...it }) => it),
+  shipClasses: { classes: SHIP_CLASSES, lines: SHIP_CLASS_LINES, chapterOrder: SHIP_CLASS_CHAPTER_ORDER, refitCost: SHIP_REFIT_COST },
   shipCombat: Object.fromEntries(Object.entries(EXPEDITION_SHIP_STATS).map(([t, v]) => [t, { ...v, itemSlots: raidItemSlotsForTier(Number(t)) }])),
   crewSkins: CREW_SKINS.map(k => ({ ...k, crewTier: FISH_GROUPS.findIndex(g => g.has(k.slug)) })),
   // The Parlor (lib/core/parlor, tavern/trivia/constants): payouts, the

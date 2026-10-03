@@ -58,7 +58,7 @@ static func dock_label(p: Dictionary) -> String:
 ## Push a point out of every island's shore (the hull's collision): the ports
 ## and the fishing isles.
 static func off_shore(at: Vector2) -> Dictionary:
-	for p: Dictionary in ports() + (Rules.data()["isles"] as Array):
+	for p: Dictionary in ports() + (Rules.data()["isles"] as Array) + CampaignWater.solid:
 		var c: Vector2 = Vector2(float(p["x"]), float(p["y"]))
 		var shore: float = float(p["r"]) * SHORE + HULL
 		var d: Vector2 = at - c
@@ -146,10 +146,25 @@ static func sea_at(p: Vector2, darkness: float) -> Array[Color]:
 		w_sum += weight
 		for k: int in 3:
 			acc[k] += Color((w["sea"] as Array)[k]) * weight
+	# Past the Sea Gate: each campaign bay's own water, deepest at its heart
+	# and fading out over 1,600 past its rim (bayWaterCss), the anchorage's
+	# slate between them.
+	var bay_w: float = 0.0
+	var bay_c: Array[Color] = [Color(0, 0, 0, 0), Color(0, 0, 0, 0), Color(0, 0, 0, 0)]
+	if past > 0.0 and p.y < -6000.0:
+		for b: Dictionary in Rules.data()["campaignWater"]["bays"]:
+			var d: float = p.distance_to(Vector2(float(b["centre"]["x"]), float(b["centre"]["y"])))
+			var wgt: float = 1.0 - smoothstep(float(b["r"]) * 0.7, float(b["r"]) + 1600.0, d)
+			if wgt > 0.0:
+				for k: int in 3:
+					bay_c[k] += Color((b["sea"] as Array)[k]) * wgt
+				bay_w += wgt
 	var out: Array[Color] = []
 	var night: Color = Color8(6, 11, 22)
 	for k: int in 3:
 		var c: Color = (acc[k] / w_sum).lerp(Color(ANCHORAGE_SEA[k]), past)
+		if bay_w > 0.0:
+			c = c.lerp(bay_c[k] / bay_w, minf(1.0, bay_w))
 		c.a = 1.0
 		out.append(c.lerp(night, darkness * 0.78))
 	return out

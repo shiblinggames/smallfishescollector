@@ -53,6 +53,12 @@ var _shown_hp: Dictionary = {}
 ## How far the deck has sunk below its place (it rises in, sinks out).
 var _drop: float = 260.0
 var _from: Vector2
+## Out on the campaign's water: the dock she fights from, and the hull riding
+## at anchor there (it becomes the enemy it stands for: the skirmish's raider,
+## a raid's boss, who waits at anchor while their crew come at you first).
+var dock: Vector2 = Vector2.INF
+var mark: CampaignWater.Ship = null
+var _began_ms: int = 0
 
 
 func _ready() -> void:
@@ -67,7 +73,8 @@ func _ready() -> void:
 	# (until the campaign's water is in the port, its fights are sailed out
 	# to from the Gunwharf). She sails back when it is over.
 	_from = sea._boat.position
-	_at = North.SEA_GATE + Vector2(-300, -1300)
+	_began_ms = Time.get_ticks_msec()
+	_at = dock if dock != Vector2.INF else North.SEA_GATE + Vector2(-300, -1300)
 	_enemy_at = _at + Vector2(620, -40)
 	sea._boat.velocity = Vector2.ZERO
 	sea._boat.target = null
@@ -99,6 +106,8 @@ func _ready() -> void:
 	# Where she actually lies (a rock may have held her short).
 	_at = sea._boat.position
 	_enemy_at = _at + Vector2(620, -40)
+	if _from_mark():
+		_enemy_at = mark.position
 	_frame()
 	await _enemy_enters()
 	_await_plan()
@@ -152,19 +161,39 @@ func _enemy_enters() -> void:
 	_enemy.def = {}
 	_enemy.box = 400.0 if e["boss"] else 340.0
 	_enemy.face = -1.0
-	_enemy.position = _enemy_at + Vector2(900, 30)
+	var at_anchor: bool = _from_mark()
+	_enemy_at = mark.position if at_anchor else _at + Vector2(620, 60 if mark != null else -40)
+	_enemy.position = _enemy_at if at_anchor else _enemy_at + Vector2(900, 30)
 	_enemy.z_index = 1
 	sea._world.add_child(_enemy)
+	if at_anchor:
+		# The hull at anchor IS this one: it swaps in place, weighing anchor.
+		mark.visible = false
+		_frame()
+		for k: int in 4:
+			sea._field.ring(_enemy_at + Vector2(randf_range(-60, 60), 10), 120.0, 1.3, 0.5)
 	_portrait = Skipper.tex(str(e.get("portrait", "")).trim_prefix("/"))
 	_shown_hp["e"] = float(e["hp"])
 	var f: Dictionary = Battle.fight_at(_raid, int(b["fight"]))
 	_say("%s%s" % [("Boss: " if e["boss"] else ""), e["name"]])
 	_log_line("Fight %d of %d" % [int(b["fight"]) + 1, int(f["of"])])
+	if at_anchor:
+		await _wait(1.1)
+		return
+	_frame()
 	var tw: Tween = create_tween()
 	tw.tween_property(_enemy, "position", _enemy_at, 1.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	for k: int in 6:
 		tw.parallel().tween_callback(func() -> void: sea._field.ring(_enemy.position + Vector2(60, 10), 90.0, 1.2, 0.4)).set_delay(0.25 * k)
 	await tw.finished
+
+
+## Is this fight the hull riding at anchor (the skirmish's one raider, or a
+## raid's boss)?
+func _from_mark() -> bool:
+	if mark == null or b.is_empty():
+		return false
+	return _raid.get("skirmish", false) == true or Battle.fight_at(_raid, int(b["fight"]))["boss"] == true
 
 
 # ── The deck ─────────────────────────────────────────────────────────────────
@@ -627,7 +656,7 @@ func _won() -> void:
 func _crate() -> void:
 	var s: Dictionary = b["seats"][0]
 	var r: Dictionary = RaidRun.open_crate(sea.session.store, sea.session.uid, _raid, float(s["fortune"]))
-	RaidRun.record_clear(sea.session.store, sea.session.uid, raid_id)
+	RaidRun.record_clear(sea.session.store, sea.session.uid, raid_id, float(Time.get_ticks_msec() - _began_ms))
 	sea.session.persist()
 	_say(str(_raid.get("bossDefeatedText", "Victory")) if str(_raid.get("bossDefeatedText", "")) != "" else "Victory")
 	if not r.is_empty():
@@ -640,7 +669,7 @@ func _crate() -> void:
 
 func _lost() -> void:
 	_say("Your ship is going down")
-	_log_line("Sail back to the Gunwharf and try again.")
+	_log_line("She limps home to the Gunwharf. Refit and come back.")
 	Sound.slack()
 	await _wait(2.6)
 	_end(false)
@@ -649,6 +678,8 @@ func _lost() -> void:
 func _end(won: bool) -> void:
 	if _enemy != null:
 		_enemy.queue_free()
+	if mark != null:
+		mark.visible = true
 	_fx.queue_free()
 	sea.stage = null
 	sea._hud.visible = true

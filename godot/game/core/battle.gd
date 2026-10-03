@@ -80,12 +80,14 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 			"filename": Skins.filename_for(prof, slug, str(card.get("filename", ""))), "cls": cls_id,
 			"ms": _milestone(cls, Crew.level(Js.num(c.get("xp")))),
 		})
-	var max_hp: float = float(Js.round(float(hull["durability"]) + nav))
+	# The chapters' class picks (raidLoadout): hull, speed and damage.
+	var cls_fx: Dictionary = Campaign.class_effects(prof.get("ship_classes"))
+	var max_hp: float = float(Js.round((float(hull["durability"]) + nav) * float(cls_fx["hpMult"])))
 	return {
 		"uid": uid, "name": name if name != "" else str(prof.get("username", "Captain")),
-		"tier": float(tier), "hp": max_hp, "max": max_hp, "speed": float(hull["speed"]),
+		"tier": float(tier), "hp": max_hp, "max": max_hp, "speed": maxf(0.0, float(hull["speed"]) + float(cls_fx["speedFlat"])),
 		"shipMin": float(hull["minDamage"]), "power": pw + floor(nav / 5.0), "nav": dg + floor(nav / 5.0),
-		"fortune": ft + floor(nav / 5.0), "dmgMult": 1.0, "maxCharges": float(MAX_CHARGES),
+		"fortune": ft + floor(nav / 5.0), "dmgMult": float(cls_fx["damageMult"]), "maxCharges": float(MAX_CHARGES),
 		"crew": crew, "used": [], "repairKit": prof.get("equipped_repair_kit"),
 	}
 

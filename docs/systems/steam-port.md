@@ -657,8 +657,55 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   a crit; Sound.cannon and Sound.impact, synthesised with a new noise voice); numbers rise off
   the hulls; a sunk hull goes under its own waterline (the shader's cut climbs); the next enemy
   sails in; a Rest Stop refreshes the orders; the crate at the end; sunk, she sails back to the
-  Gunwharf. THE GUNWHARF (game/gunwharf_sheet.gd) seats the raid party and, until the campaign
-  water is ported, launches the Reef Skirmish and the Corsair's Reckoning.
+  Gunwharf. THE GUNWHARF (game/gunwharf_sheet.gd) seats the raid party. The class picks now
+  count in a fight (Battle.seat_for: hpMult, speedFlat, damageMult; RaidRun: doubloonMult on
+  kills and the crate), and a clear is a raidClears row with its time (raidLocal addClear); the
+  Reef Skirmish sets has_completed_practice_raid instead (recordSkirmishClear).
+- THE CAMPAIGN'S WATER, BUILT (2026-10-03). RULES: core/campaign.gd ports computeRaidMap,
+  chapterForNode, buildClearedSetVia and all of lib/core/raidMap (the view, chapter unlocks seen,
+  tolls, story reads with the legendary gates, puzzles, the caches, the muster, events, dice,
+  the scout's debt, class picks, the spoils), with commitNodeClear's one-shot guard. PARITY:
+  campaign.json, 248 calls in 3 sessions (the view as the chain clears, Captain's water, Nav and
+  the giants; the whole chain walked twice, every stop by its action, with the refusals). The
+  DPS gate's shot is PORT-NATIVE: it reads the battle seat's hit range and the class
+  multiplier (the web reads raidLoadout, not ported; no item multipliers yet). Rules export:
+  campaign {nodes, chapters, backdrops}, campaignWater (raidWaters.ts: bays with centres and
+  shut lines, the 49 isles with plates, the 11 hulls with docks and art, beats, caches, fog
+  banks, spans, portals), shipClasses, raidItems.
+  PORT DECISION: CAPTAIN'S WATER IS OPEN. Buying the game on Steam makes you a Captain (the
+  starter save is premium), so Chapter IV and the coda are everyone's; computeRaidMap's lock is
+  kept for parity and never fires in play.
+  THE WATER (game/campaign_water.gd): the Sea Gate opens once a raid captain is seated ("She
+  sails with nobody aboard" otherwise); the anchorage's wall now holds from both sides, open only
+  in the gate's mouth; the campaign's water ends at RAID_EDGE (North.hold). Each bay tints the
+  sea in its own palette (Chart.sea_at, full inside 0.7 r, gone 1,600 past the rim). A SHUT bay
+  (its chapter before not done) draws nothing; a hull inside its disc goes back to the rim, the
+  inward way removed so she slides along it, with its line ("A Bigger Fish is shut. Finish The
+  Loose Thread first."). A stop shows once it is not locked (or previews); an island carrying a
+  stop is drawn and solid only while it shows; scenery islands always. Posts and chests stand on
+  the islands (a pulsing halo on an unread one); enemy hulls ride at anchor as HullRigs with
+  their portrait floating over the masts and a dock ring on the water, gold once you are in it.
+  The next stop wears a bobbing gold "?", a cleared one a green tick; a stop coming into view
+  rises out of the water with two gold rings (NodeReveal). Sailing into a bay names its chapter
+  across the sky. The helm reads the web's verbs ("Take on X", "Settle with", "Crack", "Make the
+  call at"...). GODOT OVER THE WEB: THE HULL AT ANCHOR IS THE FIGHT. Take on a raid and the
+  battle opens where you are, from the dock: the skirmish's raider swaps in place, weighing
+  anchor; a raid's boss WAITS AT ANCHOR while their crew come at you first, then becomes the
+  enemy for the last fight. A lost fight or a gate that held puts her back at the Gunwharf.
+  THE SCENES (game/story_scene.gd): the backdrop fills the screen with a slow drift and
+  cross-fades when a line changes it; the cast on two marks standing into the dialogue plate
+  (first speaker left, next right, a third evicts the least recent), the speaker stepping
+  forward and lit, a closeup leaning in, a ghost pale; inserts drawn (the sealed letter with its
+  wax initials, the F ledger, Finn as he is); shake and flash; `*word*` in the scene's accent;
+  narrator slanted; 22 ms a character. Skip on replays only.
+  THE SHEETS (game/node_sheet.gd, night paper, sized to what is on them): a story or a berth
+  with a scene plays and the read is the clear; any other stop with a scene plays it once a
+  session as the intro, then the toll, the cache's two items (press to arm, again to take), the
+  call, the bones (a d20 tumbling onto the rules' roll), the gate (odds, fire one shot or pay),
+  the clerk's ledger, the class cards, the yard's terms, the spoils. NOT YET: the five puzzle
+  boards (game/puzzles/<kind>.gd, PuzzleBoard.make), challenge raids from the boss card, the
+  chapter unlock celebration, ways home and the Wargate, the fog bank and the gate and boom
+  spans, the fog of war, the legendary unlock overlay (a notice for now).
 - THE CHART ROOM, BUILT (2026-10-03). Rules: core/chart_room.gd ports lib/core/chartRoom,
   lib/chartBoards, lib/worldChart, the four pure engines (charting/treasureMatch and minefield,
   chart-room/hold/sudoku, chart-room/rigging) and chartLocal (each week's boards built from the

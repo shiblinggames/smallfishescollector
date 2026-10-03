@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "campaign"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -654,6 +654,59 @@ func _init() -> void:
 					for bar: Node in bst.find_children("", "AimBar", true, false):
 						(bar as AimBar).lock()
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 10:
+				await process_frame
+		"campaign":
+			# The campaign's water. CAMP_UPTO: every stop up to this node cleared
+			# (raids by their clears); CAMP_AT: the node to sit beside (its dock
+			# or its island); CAMP_OPEN: press it (its scene or its sheet);
+			# CAMP_ZOOM: the camera's zoom; SHOT_F frames after.
+			var cdb: CaptainStore = sea.session.store
+			var cu: String = sea.session.uid
+			p["expedition_xp"] = 3000000.0
+			p["doubloons"] = 60000.0
+			p["ship_tier"] = 4.0
+			var st0: Dictionary = RulesApi.run(cdb, cu, "getCrewState", [])
+			for c: Dictionary in st0["board"]:
+				RulesApi.run(cdb, cu, "recruitCrew", [c["id"]])
+			var ids3: Array = (RulesApi.run(cdb, cu, "getCrewState", [])["roster"] as Array).map(func(m: Dictionary) -> float: return float(m["id"]))
+			for k: int in mini(3, ids3.size()):
+				RulesApi.run(cdb, cu, "assignToRaid", [ids3[k], float(k)])
+			var upto: String = OS.get_environment("CAMP_UPTO")
+			if upto != "":
+				var cl: Array = []
+				for n: Dictionary in Campaign.nodes():
+					if n["type"] == "raid":
+						cdb.add_clear(cu, str(n["raidId"]), 200000.0)
+					elif n["type"] == "skirmish":
+						p["has_completed_practice_raid"] = true
+					else:
+						cl.append(n["id"])
+					if n["id"] == upto:
+						break
+				p["raid_node_progress"] = { "cleared": cl, "choices": {} }
+			sea._campaign.refresh()
+			sea._open_sea_gate()
+			var at_id: String = OS.get_environment("CAMP_AT") if OS.get_environment("CAMP_AT") != "" else "intro"
+			var where: Vector2 = North.SEA_GATE + Vector2(0, -600)
+			var shp: CampaignWater.Ship = sea._campaign.ship(at_id)
+			if shp != null:
+				where = shp.dock() + Vector2(-40, 30)
+			else:
+				for isl: Dictionary in Campaign.water()["beats"] + Campaign.water()["caches"]:
+					if isl["node"] == at_id:
+						for i: Dictionary in Campaign.water()["isles"]:
+							if i["id"] == isl["isle"]:
+								where = Vector2(float(i["x"]), float(i["y"])) + Vector2(-float(i["r"]) - 120.0, 120.0)
+			sea._boat.position = where
+			if OS.get_environment("CAMP_ZOOM") != "":
+				sea._camera.zoom = Vector2.ONE * float(OS.get_environment("CAMP_ZOOM"))
+			for f: int in 40:
+				await process_frame
+			if OS.get_environment("CAMP_OPEN") != "":
+				if OS.get_environment("CAMP_NOINTRO") != "":
+					NodeSheet._intro_seen[OS.get_environment("CAMP_OPEN")] = true
+				sea.open_node(OS.get_environment("CAMP_OPEN"))
+			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 30:
 				await process_frame
 		"chartroom":
 			# The Chart Room. CHART_TAB: match, minefield, rigging, hold, chart;

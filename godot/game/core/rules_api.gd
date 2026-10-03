@@ -40,7 +40,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 
 
 ## Calls that change nothing.
-const READS: Array = ["parlorState", "getCasinoState", "getSlotStats", "getSlotsJackpot", "getRouletteState", "resumeHand", "finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState", "skinsState"]
+const READS: Array = ["parlorState", "getCasinoState", "getSlotStats", "getSlotsJackpot", "getRouletteState", "resumeHand", "finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState", "skinsState", "getRaidMapView", "campaignView", "getDpsCheckPreview"]
 
 
 static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
@@ -138,6 +138,22 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"clueSearch": return Clues.search(db, uid, a[0])
 		"clueAnswer": return Clues.answer(db, uid, str(a[0]), float(a[1]))
 		"getCrewState": return Crew.state(db, uid)
+		"getRaidMapView": return Campaign.view(db, uid)
+		"campaignView": return Campaign.slim(Campaign.view(db, uid))
+		"markChapterUnlockSeen": return Campaign.mark_chapter_seen(db, uid, a[0])
+		"claimMilestoneNode": return Campaign.claim_milestone(db, uid, a[0])
+		"markStoryNodeRead": return Campaign.mark_story_read(db, uid, a[0])
+		"solvePuzzleNode": return Campaign.solve_puzzle(db, uid, a[0])
+		"claimQuartermasterChoice": return Campaign.claim_choice(db, uid, a[0], a[1])
+		"standForMuster": return Campaign.stand_muster(db, uid, a[0])
+		"pickRaidEventChoice": return Campaign.pick_event(db, uid, a[0], a[1])
+		"rollDiceNode": return Campaign.roll_dice(db, uid, a[0], a[1])
+		"claimScoutDebt": return Campaign.claim_scout_debt(db, uid, a[0])
+		"pickShipClass": return Campaign.pick_class(db, uid, a[0], a[1])
+		"chooseSpoil": return Campaign.choose_spoil(db, uid, a[0])
+		"buySpoil": return Campaign.buy_spoil(db, uid, a[0])
+		"getDpsCheckPreview": return Campaign.dps_preview(db, uid, a[0])
+		"resolveDpsCheck": return Campaign.resolve_dps(db, uid, a[0], a[1])
 		"recruitCrew": return Crew.recruit(db, uid, float(a[0]))
 		"upgradeCrewHall": return Crew.upgrade_hall(db, uid)
 		"dismissCrew": return Crew.dismiss(db, uid, float(a[0]))

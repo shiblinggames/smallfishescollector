@@ -55,6 +55,10 @@ const ART = [
   // The ships as the chart draws them (lib/ships.ts seaImageUrl) and the ship
   // skins' hulls (lib/shipSkins.ts imageByTier).
   'sea/rock-*.png', 'sea/north-*.png', 'den/*.png', 'items/voucher-*.png', 'match/*.png', 'chartingmap.webp', 'ship-hero/*_v3.png', 'enemychapter*.png', 'enemy_finnship.png', '*hull.png',
+  // The campaign's water: the bays' island plates, the bosses' portraits, the
+  // nodes' pictures and the story scenes' backdrops.
+  'sea/bay-*.webp', 'scenes', 'Captainkrust.png', 'quartermasterghost.png', 'raid4_tollmasterspet.png', 'raid5_*.png', 'raid6_*.png', 'raid7_*.png', 'raid8_*.png',
+  'finn_final.png', 'raidlog.png', 'bilge_eel.png', 'krust_soldier.png',
   // Achievements: every badge's art (256 px).
   'badges',
   'tackle-shop-page-bg.jpg', 'monofilament.png', 'braidedline.png', 'copolymer.png', 'fluorocarbon.png', 'titaniumwire.png', 'deepsealine.png',
@@ -122,6 +126,11 @@ const copyIfChanged = (from, to) => {
   fs.mkdirSync(path.dirname(to), { recursive: true })
   fs.writeFileSync(to, src)
   copied++
+}
+// Every raid item's picture (the caches, the crate, the loadout), by the rules.
+{
+  const rules = JSON.parse(fs.readFileSync(path.join(HERE, 'content', 'rules.json'), 'utf8'))
+  for (const it of rules.raidItems ?? []) if (it.image && !ART.includes(it.image.slice(1))) ART.push(it.image.slice(1))
 }
 for (const rel of ART) {
   if (rel.includes('*')) {
@@ -214,6 +223,7 @@ const LANDS = [
   'sea/port-charterhouse.webp', 'sea/charterhouse-v2.webp', 'sea/port-trawl-harbor.webp', 'sea/trawl-harbor-v3.webp',
   'sea/port-shipyard.webp', 'sea/shipyard-v3.webp', 'sea/isle-plate-1.webp', 'sea/isle-shallows.webp', 'sea/isle-open.webp',
   'sea/isle-deep.webp', 'sea/isle-abyss.webp', 'sea/isle-ancient.webp',
+  ...['thread', 'hand', 'coffers', 'fathom', 'ride'].flatMap(b => ['', '-2', '-3', '-4'].map(n => `sea/bay-${b}${n}.webp`)),
 ]
 const NORMALS = path.join(HERE, 'art', '.normals.json')
 const normals = fs.existsSync(NORMALS) ? JSON.parse(fs.readFileSync(NORMALS, 'utf8')) : {}

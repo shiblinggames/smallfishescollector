@@ -63,6 +63,8 @@ signal cue_changed(cue: Dictionary)
 signal surged
 ## At the Sea Gate, which holds her back (the campaign is not built yet).
 signal held_at_gate
+## Held on a shut bay's rim; the line says which, and what opens it.
+signal held_at_bay(line: String)
 var _lane: String = ""
 var _in_lane: bool = false
 var _kelp_keep: float = 1.0
@@ -377,6 +379,15 @@ func steer(input: Vector2, delta: float) -> void:
 		velocity *= 0.2
 		if held["why"] == "gate":
 			held_at_gate.emit()
+	# A shut bay of the campaign: back on its rim, sliding along it.
+	var shut: Dictionary = CampaignWater.hold(next)
+	if shut["hit"]:
+		next = shut["at"]
+		var inward: float = velocity.dot(-(shut["out"] as Vector2))
+		if inward > 0.0:
+			velocity += (shut["out"] as Vector2) * inward
+		target = null
+		held_at_bay.emit(str(shut["line"]))
 	position = next
 	var speed: float = velocity.length()
 	# How she sits: rougher further out, heeling into a turn (away from its

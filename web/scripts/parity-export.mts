@@ -60,6 +60,10 @@ import { getCrewState, recruitCrew, upgradeCrewHall, dismissCrew, renameCrew, bu
 import { localCrewData } from '../lib/data/local/crewLocal'
 import { getMatchState, submitMatch, getMinefieldState, revealCell, toggleFlag, getWorldChartState, claimLandmark, getHoldState, saveHoldProgress, tallyHold, submitHold, getRiggingState, saveRiggingPaths, submitRigging } from '../lib/core/chartRoom'
 import { localChartData } from '../lib/data/local/chartLocal'
+import { getRaidMapView, markChapterUnlockSeen, claimMilestoneNode, markStoryNodeRead, solvePuzzleNode, claimQuartermasterChoice, standForMuster, pickRaidEventChoice, rollDiceNode, claimScoutDebt, pickShipClass, chooseSpoil, buySpoil, resolveDpsCheck } from '../lib/core/raidMap'
+import { localRaidData } from '../lib/data/local/raidLocal'
+import { RAID_MAP } from '../lib/raidMap'
+import { offeredShipClassIds } from '../lib/shipClasses'
 import { makeRng as matchRng, initialBoard as matchBoard, resolveSwap as matchSwap, hasValidMove as matchHasMove, reshuffle as matchReshuffle, findMatches as matchFind, swap as matchSwapped } from '../app/(app)/charting/treasureMatch'
 import { matchWeekStr } from '../app/(app)/charting/constants'
 
@@ -1232,6 +1236,117 @@ const chartSessions = [
 ]
 write('chart.json', { sessions: chartSessions })
 console.log(`  ${chartSessions.length} chart sessions, ${chartSessions.reduce((n, s) => n + s.ops.length, 0)} calls`)
+
+// The campaign map: the view as a captain clears up the chain, the Captain's
+// water (free, then holding a Chapter IV node), Navigation and the giants, the
+// chapter celebrations seen, and an admin's view. The view is slimmed to each
+// node's id, status, claimability and lock reason (the node itself is rules).
+const slimView = (v: any) => ({ ...v, views: v.views.map((n: any) => ({ id: n.node.id, status: n.status, claimable: n.claimable, ...(n.lockReason ? { lockReason: n.lockReason } : {}) })) })
+const campaignSessions = [
+  await scripted('the campaign map', 61, captainWith(61, 30, 2, { doubloons: 400 }), async x => {
+    const rd = localRaidData(x.save)
+    const view = () => x.call('campaignView', [], async () => slimView(await getRaidMapView(rd, x.uid)))
+    const ids = RAID_MAP.map(n => n.id)
+    const upTo = (id: string) => ids.slice(0, ids.indexOf(id) + 1).filter(i => i !== 'skirmish' && RAID_MAP.find(n => n.id === i)!.type !== 'raid')
+    await view()
+    await x.patchProfile({ is_premium: false })
+    await view()
+    await x.patchProfile({ has_completed_practice_raid: true, raid_node_progress: { cleared: ['intro'], choices: {} } })
+    await view()
+    await x.patchSave({ raidClears: [{ raid_id: 'corsairs_reckoning', ms: 184000, at: '' }, { raid_id: 'corsairs_reckoning', ms: 151000, at: '' }], clears: ['corsairs_reckoning'] })
+    await view()
+    const raids = RAID_MAP.filter(n => n.type === 'raid' && n.raidId).map(n => n.raidId!)
+    await x.patchSave({ clears: raids.slice(0, 6) })
+    await x.patchProfile({ raid_node_progress: { cleared: upTo('chapter_3_class'), choices: { pete_parley: 'b' } }, doubloons: 90000 })
+    await view()
+    await x.patchProfile({ expedition_xp: 9_000_000, ancient_catches: [143, 144, 145] })
+    await view()
+    await x.patchProfile({ raid_node_progress: { cleared: [...upTo('chapter_3_class'), ids[ids.indexOf('chapter_3_class') + 1]], choices: {} }, ancient_catches: [143, 144, 145, 146, 147, 148] })
+    await view()
+    for (const ch of ['sunken_hand', 'sunken_hand', 'the_coffers']) await x.call('markChapterUnlockSeen', [ch], () => markChapterUnlockSeen(rd, x.uid, ch))
+    await x.patchProfile({ is_admin: true, raid_node_progress: null })
+    await x.patchSave({ clears: [], raidClears: [] })
+    await view()
+  }),
+  // The whole chain walked in order, each stop by its own action (a raid by
+  // its clear in the save), with the refusals on the way: a stop out of
+  // order, a toll short of coin, a second claim, a muster with no crew.
+  ...(await (async () => { const out: any[] = []; for (const [seed, call] of [[62, 'release'], [63, 'loot']] as const) out.push(await scripted(`the campaign's stops (${call})`, seed, captainWith(seed, 40, 2, { doubloons: 300, expedition_xp: 9_000_000 }), async x => {
+    const rd = localRaidData(x.save)
+    const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+    const view = () => c('campaignView', [], async () => slimView(await getRaidMapView(rd, x.uid)))
+    await c('markStoryNodeRead', ['syndicate'], () => markStoryNodeRead(rd, x.uid, 'syndicate'))
+    await c('claimMilestoneNode', ['intro'], () => claimMilestoneNode(rd, x.uid, 'intro'))
+    let k = 0
+    for (const n of RAID_MAP) {
+      k++
+      const run = async (op: string, args: unknown[], f: () => Promise<unknown>) => { await c(op, args, f) }
+      switch (n.type) {
+        case 'story': case 'berth':
+          if (n.payoff) await run('claimScoutDebt', [n.id], () => claimScoutDebt(rd, x.uid, n.id))
+          else await run('markStoryNodeRead', [n.id], () => markStoryNodeRead(rd, x.uid, n.id))
+          break
+        case 'skirmish': await x.patchProfile({ has_completed_practice_raid: true }); break
+        case 'raid': await x.patchSave({ clears: [...x.save.clears, n.raidId!] }); break
+        case 'milestone':
+          await run('claimMilestoneNode', [n.id], () => claimMilestoneNode(rd, x.uid, n.id))
+          await x.patchProfile({ doubloons: 50_000 })
+          await run('claimMilestoneNode', [n.id], () => claimMilestoneNode(rd, x.uid, n.id))
+          await run('claimMilestoneNode', [n.id], () => claimMilestoneNode(rd, x.uid, n.id))
+          break
+        case 'shop':
+          await run('claimQuartermasterChoice', [n.id, 'nope'], () => claimQuartermasterChoice(rd, x.uid, n.id, 'nope'))
+          await run('claimQuartermasterChoice', [n.id, n.choice!.items[k % 2]], () => claimQuartermasterChoice(rd, x.uid, n.id, n.choice!.items[k % 2]))
+          await run('claimQuartermasterChoice', [n.id, n.choice!.items[0]], () => claimQuartermasterChoice(rd, x.uid, n.id, n.choice!.items[0]))
+          break
+        case 'puzzle':
+          await run('solvePuzzleNode', [n.id], () => solvePuzzleNode(rd, x.uid, n.id))
+          await run('solvePuzzleNode', [n.id], () => solvePuzzleNode(rd, x.uid, n.id))
+          break
+        case 'event': {
+          const ch = n.event!.choices.find(o => o.id === call) ?? n.event!.choices[0]
+          await run('pickRaidEventChoice', [n.id, ch.id], () => pickRaidEventChoice(rd, x.uid, n.id, ch.id))
+          await run('pickRaidEventChoice', [n.id, ch.id], () => pickRaidEventChoice(rd, x.uid, n.id, ch.id))
+          break
+        }
+        case 'dice':
+          for (const o of n.dice!.options) await run('rollDiceNode', [n.id, o.id], () => rollDiceNode(rd, x.uid, n.id, o.id))
+          break
+        case 'dps_check':
+          await x.patchProfile({ doubloons: 9000 })
+          await run('resolveDpsCheck', [n.id, 'pay'], () => resolveDpsCheck(rd, x.uid, n.id, 'pay'))
+          await x.patchProfile({ doubloons: 60_000 })
+          await run('resolveDpsCheck', [n.id, 'pay'], () => resolveDpsCheck(rd, x.uid, n.id, 'pay'))
+          break
+        case 'muster':
+          await run('standForMuster', [n.id], () => standForMuster(rd, x.uid, n.id))
+          await x.patchProfile({ raid_node_progress: { ...(x.save.profile.raid_node_progress as any), cleared: [...((x.save.profile.raid_node_progress as any)?.cleared ?? []), n.id] } })
+          await run('standForMuster', [n.id], () => standForMuster(rd, x.uid, n.id))
+          break
+        case 'class_pick': {
+          const picks = (x.save.profile.ship_classes ?? {}) as Record<string, string>
+          const opts = n.classPick!.options ?? offeredShipClassIds(picks)
+          await run('pickShipClass', [n.id, 'nope'], () => pickShipClass(rd, x.uid, n.id, 'nope'))
+          await run('pickShipClass', [n.id, opts[k % opts.length]], () => pickShipClass(rd, x.uid, n.id, opts[k % opts.length]))
+          await run('pickShipClass', [n.id, opts[0]], () => pickShipClass(rd, x.uid, n.id, opts[0]))
+          break
+        }
+        case 'spoils':
+          await run('chooseSpoil', ['nav'], () => chooseSpoil(rd, x.uid, 'nav'))
+          await run('buySpoil', ['nav'], () => buySpoil(rd, x.uid, 'nav'))
+          await run('buySpoil', ['fishing'], () => buySpoil(rd, x.uid, 'fishing'))
+          await x.patchProfile({ doubloons: 3_000_000 })
+          await run('buySpoil', ['fishing'], () => buySpoil(rd, x.uid, 'fishing'))
+          await run('chooseSpoil', ['fishing'], () => chooseSpoil(rd, x.uid, 'fishing'))
+          break
+      }
+      if (n.type === 'class_pick' || k % 16 === 0) await view()
+    }
+    await view()
+  })); return out })()),
+]
+write('campaign.json', { sessions: campaignSessions })
+console.log(`  ${campaignSessions.length} campaign sessions, ${campaignSessions.reduce((n, s) => n + s.ops.length, 0)} calls`)
 
 console.log(`  ${crewSessions.length} crew sessions, ${crewSessions.reduce((n, s) => n + s.ops.length, 0)} calls`)
 {

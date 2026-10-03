@@ -33,6 +33,7 @@ func _init() -> void:
 	_fishing(species, "res://tests/parity/shop.json", "selling and the tackle shop")
 	_fishing(species, "res://tests/parity/crew.json", "the crew hall")
 	_fishing(species, "res://tests/parity/chart.json", "the chart room")
+	_fishing(species, "res://tests/parity/campaign.json", "the campaign map")
 	print("")
 	if failed > 0:
 		print("  %d FAILED" % failed)

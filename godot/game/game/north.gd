@@ -15,7 +15,7 @@ extends RefCounted
 ## the islands expeditions are run from (the Crew Hall with the Posting House
 ## and the Forge either side, the Gunwharf and the Charterhouse flanking the
 ## way out). THE SEA GATE is that way out, due north, dead opposite the arch;
-## past it is the campaign's water, not yet in the port, so it holds you back.
+## past it is the campaign's water (CampaignWater), open once a crew is seated.
 
 const GATE_X: float = -900.0
 const GATE_HALF: float = 430.0
@@ -147,10 +147,23 @@ static func rocks() -> Array:
 	return out
 
 
+## Is this point in the Sea Gate's mouth (inSeaGate)?
+static func in_sea_gate(p: Vector2) -> bool:
+	return p.distance_to(SEA_GATE) < SEA_GATE_HALF
+
+
+## Whether the Sea Gate lets her out: only with somebody seated to fight
+## (the Sea sets it from the raid party).
+static var gate_open: bool = true
+## How far out the campaign's water runs, from the anchorage's centre.
+const RAID_EDGE: float = 21000.0
+
+
 ## Where a hull moving from `from` to `to` may go: the reef stops it except in
-## the arch; the anchorage's wall stops it except at the Sea Gate, and the
-## Sea Gate holds it too (the campaign is not in the port yet).
-## { at, hit, why } with why "" / "reef" / "wall" / "gate".
+## the arch; the anchorage's wall stops it, from either side, except in the
+## Sea Gate's mouth (and there only with a crew aboard); past it, the
+## campaign's water runs to RAID_EDGE.
+## { at, hit, why } with why "" / "reef" / "wall" / "gate" / "edge".
 static func hold(from: Vector2, to: Vector2) -> Dictionary:
 	var nw: float = Explore.NORTH_WALL
 	var out: Vector2 = to
@@ -160,13 +173,24 @@ static func hold(from: Vector2, to: Vector2) -> Dictionary:
 	if crossing and absf(to.x - GATE_X) > GATE_HALF - 60.0:
 		out.y = nw + (KEEP * 0.5 if from.y >= nw else -KEEP * 0.5)
 		why = "reef"
-	# Inside the anchorage's wall.
 	if out.y < nw:
 		var d: Vector2 = out - EXP_ORIGIN
-		var lim: float = EXP_EDGE - KEEP
-		if d.length() > lim:
-			why = "gate" if out.distance_to(SEA_GATE) < SEA_GATE_HALF + KEEP else "wall"
-			out = EXP_ORIGIN + d.normalized() * lim
+		var mouth: bool = out.distance_to(SEA_GATE) < SEA_GATE_HALF + KEEP
+		if from.distance_to(EXP_ORIGIN) <= EXP_EDGE:
+			# Inside the anchorage's wall.
+			var lim: float = EXP_EDGE - KEEP
+			if d.length() > lim and not (mouth and gate_open and absf(out.x - SEA_GATE.x) < SEA_GATE_HALF - KEEP * 0.5):
+				why = "gate" if mouth else "wall"
+				out = EXP_ORIGIN + d.normalized() * lim
+		else:
+			# Out on the campaign's water: the wall from outside, and the edge.
+			var lim2: float = EXP_EDGE + KEEP
+			if d.length() < lim2 and not mouth:
+				why = "wall"
+				out = EXP_ORIGIN + d.normalized() * lim2
+			elif d.length() > RAID_EDGE:
+				why = "edge"
+				out = EXP_ORIGIN + d.normalized() * RAID_EDGE
 	return { "at": out, "hit": why != "", "why": why }
 
 

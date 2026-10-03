@@ -64,6 +64,39 @@ func has_cleared(uid: String, raid_id: String) -> bool:
 	return Js.includes(save["clears"], raid_id)
 
 
+## raidLocal addClear: a clear with its time, and the raid in the cleared list.
+func add_clear(uid: String, raid_id: String, ms: Variant) -> void:
+	me(uid)
+	if not (save.get("raidClears") is Array):
+		save["raidClears"] = []
+	(save["raidClears"] as Array).append({ "raid_id": raid_id, "ms": ms, "at": Js.iso(Clock.now_ms()) })
+	if not Js.includes(save["clears"], raid_id):
+		(save["clears"] as Array).append(raid_id)
+
+
+## raidLocal clearedRaidIds: every raid this captain has cleared.
+func cleared_raid_ids(uid: String) -> Array:
+	me(uid)
+	var out: Array = []
+	for id: Variant in Js.list(save.get("clears")):
+		if not out.has(id):
+			out.append(id)
+	for c: Dictionary in Js.list(save.get("raidClears")):
+		if not out.has(c["raid_id"]):
+			out.append(c["raid_id"])
+	return out
+
+
+## How many times a raid has been cleared (the sheets' tally).
+func clear_count(uid: String, raid_id: String) -> int:
+	me(uid)
+	var n: int = 0
+	for c: Dictionary in Js.list(save.get("raidClears")):
+		if c["raid_id"] == raid_id:
+			n += 1
+	return n
+
+
 func add_bait(uid: String, bait: String, qty: float) -> void:
 	me(uid)
 	save["bait"][bait] = Js.num((save["bait"] as Dictionary).get(bait)) + qty
