@@ -220,6 +220,7 @@ static func _score(db: CaptainStore, uid: String, right: bool, points: float) ->
 	var pts0: float = Js.num(prof.get("parlor_points"))
 	var pts1: float = pts0 + points
 	db.update_profile(uid, { "parlor_streak": cur, "parlor_best_streak": maxf(best, cur), "parlor_points": pts1 })
+	Skins.sync_parlor(db, uid)
 	return {
 		"currentStreak": cur, "brokeStreak": 0.0 if right else prev, "bestStreak": maxf(best, cur),
 		"pointsEarned": points, "newPoints": pts1,
@@ -526,6 +527,7 @@ static func capstan_solve(db: CaptainStore, uid: String, i: float, guess: String
 		var pts: float = float(c()["capstanSolvePoints"]) + (float(c()["capstanCleanBonus"]) if float(r["strikes"]) == 0.0 else 0.0)
 		var pts0: float = Js.num(db.me(uid).get("parlor_points"))
 		db.update_profile(uid, { "parlor_points": pts0 + pts })
+		Skins.sync_parlor(db, uid)
 		if float(r["earned"]) > 0.0:
 			db.bump_stat(uid, "doubloons", float(r["earned"]))
 			db.ledger(uid, float(r["earned"]), "Spin the Capstan: solved %s" % gen["category"])
@@ -545,6 +547,7 @@ static func capstan_solve(db: CaptainStore, uid: String, i: float, guess: String
 # ── Everything at once ─────────────────────────────────────────────────────────
 
 static func state(db: CaptainStore, uid: String) -> Dictionary:
+	Skins.sync_parlor(db, uid)
 	var pts: float = Js.num(db.me(uid).get("parlor_points"))
 	var rk: Dictionary = rank_of(pts)
 	return {
@@ -552,4 +555,5 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 		"points": pts, "rank": rk["rank"], "nextRank": rk["next"],
 		"streak": Js.num(db.me(uid).get("parlor_streak")), "bestStreak": Js.num(db.me(uid).get("parlor_best_streak")),
 		"seen": (_p(db, uid)["seen"] as Array).size(), "bankSize": (bank()["questions"] as Array).size(),
+		"vouchers": Skins.vouchers(db.me(uid)),
 	}

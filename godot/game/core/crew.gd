@@ -272,13 +272,13 @@ static func _candidate(r: Dictionary) -> Dictionary:
 	}
 
 
-static func _member(c: Dictionary) -> Dictionary:
+static func _member(c: Dictionary, prof: Dictionary = {}) -> Dictionary:
 	var m: Dictionary = card(float(c["card_id"]))
 	var nick: Variant = c.get("nickname")
 	return {
 		"id": c["id"], "cardId": c["card_id"],
 		"name": nick if nick != null else (display_name(str(m.get("slug", "")), str(m.get("name", ""))) if not m.is_empty() else "Unknown"),
-		"nickname": nick, "filename": str(m.get("filename", "")), "baseFilename": str(m.get("filename", "")),
+		"nickname": nick, "filename": Skins.filename_for(prof, str(m.get("slug", "")).to_lower(), str(m.get("filename", ""))), "baseFilename": str(m.get("filename", "")),
 		"slug": str(m.get("slug", "")).to_lower(),
 		"rarity": c["rarity"], "power": c["power"], "dodge": c["dodge"], "fortune": c["fortune"],
 		"effects": Js.list(c.get("effects")), "pendingTrait": c.get("pending_trait"),
@@ -313,7 +313,7 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 		return float(a["id"]) > float(b["id"]))
 	return {
 		"board": board.map(func(r: Dictionary) -> Dictionary: return _candidate(r)),
-		"roster": rows.map(func(c: Dictionary) -> Dictionary: return _member(c)),
+		"roster": rows.map(func(c: Dictionary) -> Dictionary: return _member(c, prof)),
 		"capacity": float(capacity(nav, prof.get("crew_hall_tier"))),
 		"navLevel": float(nav),
 		"hallTier": float(clamp_hall(prof.get("crew_hall_tier"))),

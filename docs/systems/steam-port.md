@@ -616,6 +616,26 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   every winning spot paying back, blackjack's bet and its return, solo and at the shared
   table). The roulette board draws the painted chips (the others' ringed in their colour).
   GOTCHA: a texture first loaded inside _draw is white until the next frame; load ahead.
+- CREW SKINS AND SKIN VOUCHERS, BUILT (Kong, 2026-10-03: "get all the skins in and set up the
+  crew roll voucher system"). All 75 of the web's skins (lib/crewSkins.ts) export to rules.json
+  "crewSkins" with crewTier (the crew's FISH_GROUPS index): 24 for Rare crew, 27 Epic, 18
+  Legendary, 6 chase. Gems are retired, so skins are EARNED: a SKIN VOUCHER opens to a skin not
+  owned, at or above its floor, weighted rare 60 / epic 28 / legendary 11 / chase 1 over what is
+  left (the lowest allowed tier is likeliest; a chase floor is chase only); the floor falls back
+  if its tiers are all owned, and with every skin owned it pays 2,500 doubloons. It CAN land on a
+  crew not signed yet: it waits in the Trunk. Worn at once if that crew is aboard and wears
+  nothing; worn per crew type (every copy), as on the web. THE PARLOR'S NINE RANKS give one each,
+  state-based (profile.parlor_vouchers_paid): Card Hand and Sharp rare+, Cardsharp and Rounder
+  epic+, Parlor Master to Grandee legendary+, Parlor Legend a chase (port_rules skinVouchers).
+  core/skins.gd; ops skinsState, openSkinVoucher, equipCrewSkin; Crew state's filename is the
+  worn skin (baseFilename the plain card). UI: the Crew Hall's THE TRUNK tab (every skin by crew,
+  the ones not found in grey pencil, vouchers waiting on top with Open, a skin's page to wear or
+  take off), a skin row on a roster hand, and the Parlor's strip opens a waiting voucher and
+  says what the next rank brings. THE REVEAL (game/skin_reveal.gd): a sealed card rises and
+  trembles while its glow climbs the tiers to the one it is, a tick a tier; it flips to the
+  painting on its tier's colour with a ring breaking out; legendary and chase add turning rays,
+  and a chase skin's painting carries a sweeping sheen (game/fx/chase_sheen.gdshader, the web's
+  ChaseSkinFx). More voucher sources are open (Kong's call). tests/skins_check.gd.
 - THE PARLOR, BUILT (2026-10-03). Port-native rules, no parity (the web's Parlor is weekly
   and generated; the port's settled shape is not): core/parlor.gd, with the web's tables
   (rules.json "parlor": payouts 50/100/200, the 12 s clock and 4 s grace, the ranks, the King's
@@ -631,8 +651,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   THE BOARD: a card every 8 hours into a hand of 3/4/5 (port_rules parlorPort), the tier
   weighted 45/35/20; a card shows its topic and worth face down and draws its question when
   turned. THE KING at Fishing 25, one run a week, rungs tier 1,1,1,2,2,2,2,3,3,3. THE CAPSTAN:
-  three phrases a week, unseen first, no Captain gate. RANKS ARE TITLES for now: their gem
-  rewards are retired and what they grant instead is TO SETTLE WITH KONG. The room
+  three phrases a week, unseen first, no Captain gate. RANKS GIVE SKIN VOUCHERS (settled
+  2026-10-03, see CREW SKINS below). The room
   (game/parlor_room.gd): the hand fanned face down in topic colours; a turned card grows into
   the question with a draining ring, the answers inked right or wrong and a stamp; the King's
   ladder with the havens marked and your marker; the capstan a wooden wheel that spins down to

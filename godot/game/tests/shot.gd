@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -611,6 +611,39 @@ func _init() -> void:
 			hud.open_guide("achievements")
 			for f: int in 40:
 				await process_frame
+		"crewtrunk", "skinreveal":
+			# Hands aboard, then the Parlor's first ranks paid and opened.
+			for d: int in 4:
+				var st: Dictionary = RulesApi.run(sea.session.store, sea.session.uid, "getCrewState", [])
+				for c: Dictionary in st["board"]:
+					RulesApi.run(sea.session.store, sea.session.uid, "recruitCrew", [c["id"]])
+				p["last_free_recruit_date"] = "old%d" % d
+			p["parlor_points"] = 400.0
+			Skins.sync_parlor(sea.session.store, sea.session.uid)
+			var keep: int = 2 if what == "crewtrunk" else 1
+			var opened: Dictionary = {}
+			while Skins.vouchers(p).size() > keep:
+				opened = Skins.open(sea.session.store, sea.session.uid, str(Skins.vouchers(p)[0]["id"]))
+			var ch: CrewHall = CrewHall.new()
+			ch.session = sea.session
+			ch.room = "trunk"
+			sea._room_layer.add_child(ch)
+			for f: int in 20:
+				await process_frame
+			if what == "crewtrunk":
+				ch._pick = opened.get("skin", {})
+				ch._pick_kind = "skin"
+				ch._draw_room()
+				for f: int in 30:
+					await process_frame
+			else:
+				var tier: String = OS.get_environment("SKIN_TIER") if OS.get_environment("SKIN_TIER") != "" else "legendary"
+				Skins.grant(sea.session.store, sea.session.uid, tier, "test")
+				var vv: Array = Skins.vouchers(p)
+				ch._open_voucher(str(vv[vv.size() - 1]["id"]))
+				var frames: int = int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 200
+				for f: int in frames:
+					await process_frame
 		"crewhall", "crewroster", "crewhalltier":
 			# A few days of boards signed, so the roster has hands in it.
 			for d: int in (6 if what != "crewhall" else 0):

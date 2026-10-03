@@ -36,6 +36,7 @@ import { FINN_ANCIENT_BEATS, FINN_AVATAR, FINN_BEATS, FINN_REVEAL_BEAT, FINN_IDL
 import { FINN_QUESTS, FINN_CHAPTERS } from '../lib/finnQuests'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOT_BONUS_MULT, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX, DEN_CAP_BASE, DEN_CAP_MAX, DEN_CAP_MAX_LEVEL, BJ_MIN_BET, BJ_MAX_BET, RL_MIN_BET, RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET, CASINO_BUY_IN_PRESETS, BJ_BET_PRESETS, RL_BET_PRESETS } from '../app/(app)/tavern/constants'
 import { PAYOUT_MULT, POCKETS } from '../lib/roulette'
+import { CREW_SKINS } from '../lib/crewSkins'
 import { TRIVIA_CATEGORIES, TRIVIA_TIER_VALUES, TRIVIA_ANSWER_SECONDS, TRIVIA_TIMER_GRACE_MS, PARLOR_RANKS, KING_RUNG_POINTS, KING_CROWN_POINTS, PIRATE_KING_PRIZES, PIRATE_KING_HAVENS, CAPSTAN_WHEEL, CAPSTAN_MAX_STRIKES, CAPSTAN_VOWEL_COST, CAPSTAN_MAX_HAZARD_RUN, CAPSTAN_SOLVE_POINTS, CAPSTAN_CLEAN_BONUS, CAPSTAN_PUZZLES_PER_WEEK } from '../app/(app)/tavern/trivia/constants'
 import { DECK_COUNT, RANKS, SUITS } from '../lib/blackjack'
 import { LOCAL_POT_SEED } from '../lib/data/local/casinoLocal'
@@ -160,6 +161,9 @@ const rules = {
   vigilDial: VIGIL_DIAL,
   finnAncientBeats: FINN_ANCIENT_BEATS,
   finnAvatar: FINN_AVATAR,
+  // Crew skins (lib/crewSkins): every skin, with its crew's rarity tier
+  // (lib/fishGroups: 1 rare, 2 epic, 3 legendary).
+  crewSkins: CREW_SKINS.map(k => ({ ...k, crewTier: FISH_GROUPS.findIndex(g => g.has(k.slug)) })),
   // The Parlor (lib/core/parlor, tavern/trivia/constants): payouts, the
   // answer clock, the ranks, the King's ladder and the capstan's wheel.
   parlor: {

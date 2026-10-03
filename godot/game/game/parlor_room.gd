@@ -19,6 +19,7 @@ var _body: VBoxContainer
 var _rank_l: Label
 var _pts_bar: Control
 var _streak_l: Label
+var _voucher_b: Button
 var _busy: bool = false
 # The card in play.
 var _q_card: Control = null
@@ -69,6 +70,11 @@ func _build() -> void:
 	note.name = "PtsNote"
 	_streak_l = Paper.text(row, "", "title", Paper.RED)
 	_streak_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	# Every rank brings a skin voucher (core/skins.gd); one waiting opens here.
+	_voucher_b = Paper.button("", true)
+	_voucher_b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_voucher_b.pressed.connect(_open_voucher)
+	row.add_child(_voucher_b)
 	_tabs = HBoxContainer.new()
 	_tabs.add_theme_constant_override("separation", 8)
 	col.add_child(_tabs)
@@ -87,6 +93,15 @@ func _paint_strip() -> void:
 	var pn: Label = _rank_l.get_parent().get_node("PtsNote")
 	pn.text = "%d Parlor points%s   ·   %d of %d questions met" % [int(_st["points"]), ("   ·   %d to %s" % [int(float(nxt["at"]) - float(_st["points"])), nxt["title"]]) if nxt != null else "", int(_st["seen"]), int(_st["bankSize"])]
 	_streak_l.text = "Streak %d" % int(_st["streak"]) if float(_st["streak"]) > 0.0 else ""
+	var vs: Array = Js.list(_st.get("vouchers"))
+	_voucher_b.visible = not vs.is_empty()
+	_voucher_b.text = "Open a skin voucher%s" % ("  ·  %d" % vs.size() if vs.size() > 1 else "")
+	var floors: Array = Js.list(Skins.cfg().get("parlorRanks"))
+	var ranks: Array = Parlor.c()["ranks"]
+	var at: int = ranks.find(_st["rank"])
+	if nxt != null and at >= 0 and at < floors.size():
+		var fl: String = str(floors[at])
+		pn.text += "   ·   next rank brings a %s skin voucher" % ("chase" if fl == "chase" else fl.capitalize() + " or better")
 	_pts_bar.queue_redraw()
 
 
@@ -347,7 +362,26 @@ func _judge(buttons: Array, chosen: int, r: Dictionary, explain: Label) -> void:
 		explain.text = ("Out of time.   " if r.get("timedOut", false) else "Not this time.   ") + str(r["explanation"])
 		_stamp("MISSED" if not r.get("timedOut", false) else "TOO LATE", WRONG)
 	if r.get("rankedUp", false):
-		toast("A new rank: %s" % Parlor.rank_of(float(r["newPoints"]))["rank"]["title"])
+		toast("A new rank: %s. A skin voucher is yours to open." % Parlor.rank_of(float(r["newPoints"]))["rank"]["title"])
+	_refresh()
+
+
+## The oldest voucher, opened right here with its reveal.
+func _open_voucher() -> void:
+	var vs: Array = Js.list(_st.get("vouchers"))
+	if vs.is_empty() or _busy:
+		return
+	_busy = true
+	var r: Variant = await session.act("openSkinVoucher", [str(vs[0]["id"])])
+	session.persist()
+	_busy = false
+	var res: Dictionary = r if r is Dictionary else {}
+	if res.has("error"):
+		toast(str(res["error"]), WRONG)
+	elif res.has("doubloons"):
+		toast("Every skin is already yours. The voucher pays %s ⟡." % Js.thousands(float(res["doubloons"])))
+	else:
+		SkinReveal.play(self, res)
 	_refresh()
 
 

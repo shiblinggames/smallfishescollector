@@ -1977,6 +1977,12 @@
       ]
     ]
   },
+  "_skinVouchers": "SKIN VOUCHERS (Kong, 2026-10-03, SETTLED): gems are retired, so the 75 crew skins are earned. A voucher opens to a skin not owned, at or above its floor (rare, epic, legendary crew, or chase), weighted by tier (weights) so the lowest allowed is likeliest; it can land on a crew not signed yet (it waits in the Trunk); worn at once if that crew is aboard and wears nothing. The Parlor's nine ranks give one each (parlorRanks, in rank order). Every skin owned: it pays allOwnedPays doubloons. core/skins.gd.",
+  "skinVouchers": {
+    "weights": { "rare": 60, "epic": 28, "legendary": 11, "chase": 1 },
+    "parlorRanks": ["rare", "rare", "epic", "epic", "legendary", "legendary", "legendary", "legendary", "chase"],
+    "allOwnedPays": 2500
+  },
   "_parlorPort": "THE PARLOR IN THE PORT (Kong, 2026-10-02/03, SETTLED): one Captain's Board card dealt every 8 real hours (10 sea days), a hand of 3, 4 at Fishing 30 and 5 at 60, never lost; the tier of a dealt card weighted 45/35/20; the Pirate King at Fishing 25 (levelGates.feature.parlor_king); every question drawn unseen first from content/trivia_bank.json. core/parlor.gd.",
   "parlorPort": {
     "dealMs": 28800000,

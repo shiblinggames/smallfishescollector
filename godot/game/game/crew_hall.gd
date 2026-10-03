@@ -11,6 +11,9 @@ extends Control
 ##            dismisses them.
 ##   THE HALL the building: its tier and painting, roster space, and the next
 ##            tier with its price and gate.
+##   THE TRUNK every crew skin (Kong, 2026-10-03), by crew, the ones not found
+##            yet in grey; skin vouchers waiting are opened here; a skin
+##            owned is worn from here or from the roster card's skin row.
 ## Every change is Crew.*, through the rules (core/crew.gd).
 
 signal closed
@@ -25,6 +28,7 @@ var room: String = "recruit"
 ## the expedition row it is the roster and the board).
 var at_hall: bool = true
 var _state: Dictionary = {}
+var _skins: Dictionary = {}
 var _pick: Dictionary = {}
 var _pick_kind: String = ""
 var _body: VBoxContainer
@@ -116,9 +120,17 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _load() -> void:
 	var r: Variant = await session.act("getCrewState")
+	var k: Variant = await session.act("skinsState")
 	session.persist()
 	if r is Dictionary:
 		_state = r
+	if k is Dictionary:
+		_skins = k
+	# A picked hand is redrawn from the fresh roster (its skin may have changed).
+	if _pick_kind == "roster":
+		for m: Dictionary in Js.list(_state.get("roster")):
+			if m["id"] == _pick.get("id"):
+				_pick = m
 	_draw_room()
 
 
@@ -171,12 +183,15 @@ func _build_room() -> void:
 	var rooms: Array = [["recruit", "Recruit%s" % ("  %d" % board_open if board_open > 0 else "")], ["roster", "Roster  %d" % Js.list(_state.get("roster")).size()]]
 	if at_hall:
 		rooms.append(["hall", "The Hall"])
+	var waiting: int = Js.list(_skins.get("vouchers")).size()
+	rooms.append(["trunk", "The Trunk  %d/%d%s" % [Js.list(_skins.get("owned")).size(), int(Js.num(_skins.get("total"))), ("  ·  %d to open" % waiting) if waiting > 0 else ""]])
 	for o: Array in rooms:
-		var b: Pane.PaneButton = Paper.button(o[1], o[0] == room)
+		var b: Pane.PaneButton = Paper.button(o[1], o[0] == room or (o[0] == "trunk" and waiting > 0 and room != "trunk"))
 		b.custom_minimum_size = Vector2(110, 34)
 		b.pressed.connect(func() -> void:
 			room = o[0]
 			_pick = {}
+			_pick_kind = ""
 			_draw_room())
 		_tabs.add_child(b)
 	for c: Node in _body.get_children():
@@ -186,6 +201,8 @@ func _build_room() -> void:
 			_recruit_room()
 		"roster":
 			_roster_room()
+		"trunk":
+			_trunk_room()
 		_:
 			_hall_room()
 	_draw_detail()
@@ -305,6 +322,280 @@ func _hall_room() -> void:
 	_body.add_child(b)
 
 
+# ── The Trunk ──────────────────────────────────────────────────────────────────
+
+const TIER_NAMES: Dictionary = { "rare": "Rare", "epic": "Epic", "legendary": "Legendary", "chase": "Chase" }
+
+
+static func tier_color(tier: String) -> Color:
+	return SkinReveal.TIER_COLORS.get(tier, Color.WHITE)
+
+
+func _trunk_room() -> void:
+	var vs: Array = Js.list(_skins.get("vouchers"))
+	if vs.is_empty():
+		Paper.text(_body, "Skin vouchers come from the Parlor: one at each rank. A voucher opens to a skin you do not own yet, at or above its tier.", "note", Paper.ink_soft(), true)
+	else:
+		var vrow: HBoxContainer = HBoxContainer.new()
+		vrow.add_theme_constant_override("separation", 10)
+		_body.add_child(vrow)
+		for v: Dictionary in vs:
+			vrow.add_child(_voucher(v))
+	var owned: Array = Js.list(_skins.get("owned"))
+	var eq: Dictionary = Js.obj(_skins.get("equipped"))
+	var aboard: Array = Js.list(_skins.get("crewSlugs"))
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(scroll)
+	var list: VBoxContainer = VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 6)
+	scroll.add_child(list)
+	# By crew: the Legendaries first, each crew's skins in a row.
+	var slugs: Array = []
+	for k: Dictionary in Skins.all():
+		if not slugs.has(k["slug"]):
+			slugs.append(k["slug"])
+	slugs.sort_custom(func(a: String, b: String) -> bool:
+		var ta: int = int(Skins.for_slug(a)[0].get("crewTier", 1))
+		var tb: int = int(Skins.for_slug(b)[0].get("crewTier", 1))
+		return ta > tb if ta != tb else a < b)
+	for slug: String in slugs:
+		var kins: Array = Skins.for_slug(slug)
+		var got: int = kins.filter(func(k: Dictionary) -> bool: return owned.has(k["id"])).size()
+		if slug != slugs[0]:
+			var gap: Control = Control.new()
+			gap.custom_minimum_size = Vector2(0, 6)
+			list.add_child(gap)
+		var head: Label = Paper.text(list, "%s  ·  %s crew  ·  %d of %d%s" % [Crew.display_name(slug, slug.capitalize()), RARITY_NAMES[int(kins[0].get("crewTier", 1))], got, kins.size(), "" if aboard.has(slug) else "  ·  not signed yet"], "body_strong", Paper.ink() if got > 0 else Paper.ink_soft())
+		head.clip_text = true
+		var row: HFlowContainer = HFlowContainer.new()
+		row.add_theme_constant_override("h_separation", 8)
+		row.add_theme_constant_override("v_separation", 8)
+		list.add_child(row)
+		for k: Dictionary in kins:
+			row.add_child(_skin_tile(k, owned.has(k["id"]), eq.get(slug) == k["id"]))
+
+
+## A sealed voucher: its floor's colour, where it came from, and Open.
+func _voucher(v: Dictionary) -> Control:
+	var tier: String = str(v["floor"])
+	var col: Color = tier_color(tier)
+	var p: Pane = Kit.pane(null, { "radius": 10, "fill": [Color("#1d1712")], "border": [2, Color(col, 0.8)], "shadow": [Color(col, 0.35), 14, Vector2.ZERO], "pad": [14, 10, 14, 10] })
+	var h: HBoxContainer = HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
+	p.add_child(h)
+	var t: VBoxContainer = VBoxContainer.new()
+	t.add_theme_constant_override("separation", 0)
+	h.add_child(t)
+	Paper.text(t, "SKIN VOUCHER", "eyebrow", col.lightened(0.2))
+	Paper.text(t, "Chase skin" if tier == "chase" else "%s or better" % TIER_NAMES[tier], "body_strong", Paper.ink())
+	Paper.text(t, str(v.get("from", "")), "small", Paper.ink_soft())
+	var b: Pane.PaneButton = Paper.button("Open", true)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(func() -> void: _open_voucher(str(v["id"])))
+	h.add_child(b)
+	# A slow breath on the border, so a voucher waiting looks alive.
+	var tw: Tween = p.create_tween().set_loops()
+	tw.tween_property(p, "modulate", Color(1.12, 1.12, 1.12), 0.9).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(p, "modulate", Color.WHITE, 0.9).set_trans(Tween.TRANS_SINE)
+	return p
+
+
+func _open_voucher(id: String) -> void:
+	if _busy:
+		return
+	_busy = true
+	var r: Variant = await session.act("openSkinVoucher", [id])
+	session.persist()
+	_busy = false
+	var res: Dictionary = r if r is Dictionary else {}
+	if res.has("error"):
+		_note(str(res["error"]))
+		return
+	if res.has("doubloons"):
+		Sound.chest(false)
+		_note("Every skin is already yours. The voucher pays %s ⟡." % Js.thousands(float(res["doubloons"])))
+		_load()
+		return
+	var show: SkinReveal = SkinReveal.play(self, res)
+	show.done.connect(func() -> void:
+		_pick = res["skin"]
+		_pick_kind = "skin"
+		_load())
+
+
+func _skin_tile(k: Dictionary, have: bool, worn: bool) -> Control:
+	var tier: String = Skins.tier_of(k)
+	var col: Color = tier_color(tier)
+	var b: Button = Button.new()
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(108, 150)
+	var v: VBoxContainer = VBoxContainer.new()
+	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.add_theme_constant_override("separation", 1)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(v)
+	var holder: Control = Control.new()
+	holder.custom_minimum_size = Vector2(0, 118)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(holder)
+	if have:
+		Paper.blot(holder, col, 0.7)
+	var pic: TextureRect = TextureRect.new()
+	pic.texture = _thumb(str(k["filename"]))
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if not have:
+		var m: ShaderMaterial = ShaderMaterial.new()
+		m.shader = preload("res://game/fx/greyed.gdshader")
+		m.set_shader_parameter("strength", 0.35)
+		pic.material = m
+	elif tier == "chase":
+		var m2: ShaderMaterial = ShaderMaterial.new()
+		m2.shader = preload("res://game/fx/chase_sheen.gdshader")
+		m2.set_shader_parameter("tint", Color(str(k.get("color", "#ffd27a"))))
+		pic.material = m2
+	holder.add_child(pic)
+	if _pick_kind == "skin" and _pick.get("id") == k["id"]:
+		var ring: Panel = Panel.new()
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = Color(0, 0, 0, 0)
+		sb.border_color = Paper.red()
+		sb.set_border_width_all(2)
+		sb.set_corner_radius_all(10)
+		ring.add_theme_stylebox_override("panel", sb)
+		ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.add_child(ring)
+	var n: Label = Paper.text(v, str(k["name"]), "small", Paper.ink() if have else Paper.ink_faint())
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	n.clip_text = true
+	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var sub: Label = Paper.text(v, "Worn" if worn else TIER_NAMES[tier], "small", col.lightened(0.15) if have else Paper.ink_faint())
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.pressed.connect(func() -> void:
+		_pick = k
+		_pick_kind = "skin"
+		Rumble.tap(8)
+		_draw_room())
+	return b
+
+
+func _skin_detail() -> void:
+	var k: Dictionary = _pick
+	var tier: String = Skins.tier_of(k)
+	var col: Color = tier_color(tier)
+	var have: bool = Js.list(_skins.get("owned")).has(k["id"])
+	var slug: String = str(k["slug"])
+	var worn: bool = Js.obj(_skins.get("equipped")).get(slug) == k["id"]
+	var aboard: bool = Js.list(_skins.get("crewSlugs")).has(slug)
+	var crew_name: String = Crew.display_name(slug, slug.capitalize())
+	var holder: Control = Control.new()
+	holder.custom_minimum_size = Vector2(360, 300)
+	_detail.add_child(holder)
+	if have:
+		Paper.blot(holder, col, 0.9)
+	var pic: TextureRect = TextureRect.new()
+	pic.texture = Skipper.tex("card-arts/%s.webp" % str(k["filename"]).get_basename())
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if not have:
+		var m: ShaderMaterial = ShaderMaterial.new()
+		m.shader = preload("res://game/fx/greyed.gdshader")
+		pic.material = m
+	elif tier == "chase":
+		var m2: ShaderMaterial = ShaderMaterial.new()
+		m2.shader = preload("res://game/fx/chase_sheen.gdshader")
+		m2.set_shader_parameter("tint", Color(str(k.get("color", "#ffd27a"))))
+		pic.material = m2
+	holder.add_child(pic)
+	Paper.text(_detail, "%s %s" % [k["name"], crew_name], "title", Paper.ink() if have else Paper.ink_soft())
+	Paper.text(_detail, "%s skin" % TIER_NAMES[tier], "body_strong", col.lightened(0.15))
+	Paper.text(_detail, str(k.get("blurb", "")), "note", Paper.ink_soft(), true)
+	Paper.rule(_detail)
+	if not have:
+		Paper.text(_detail, "Not found yet. A skin voucher can open to it.", "note", Paper.ink_faint(), true)
+	elif not aboard:
+		Paper.text(_detail, "Yours. It waits in the Trunk for the day you sign a %s." % crew_name, "note", Paper.ink_soft(), true)
+	else:
+		var b: Pane.PaneButton = Paper.button("Take it off" if worn else "Put it on your %s" % crew_name, not worn)
+		b.pressed.connect(func() -> void: _equip(slug, null if worn else k["id"]))
+		_detail.add_child(b)
+		Paper.text(_detail, "Every %s aboard wears it." % crew_name, "small", Paper.ink_faint())
+
+
+func _equip(slug: String, id: Variant) -> void:
+	if _busy:
+		return
+	_busy = true
+	var r: Variant = await session.act("equipCrewSkin", [slug, id])
+	session.persist()
+	_busy = false
+	if r is Dictionary and (r as Dictionary).has("error"):
+		_note(str(r["error"]))
+		return
+	Sound.seal(false)
+	Rumble.tap(12)
+	_load()
+
+
+## On a roster card: the skins this crew owns, the plain one first; press
+## one to wear it.
+func _skin_row(c: Dictionary) -> void:
+	var slug: String = str(c.get("slug", ""))
+	var owned: Array = Js.list(_skins.get("owned"))
+	var kins: Array = Skins.for_slug(slug).filter(func(k: Dictionary) -> bool: return owned.has(k["id"]))
+	var all_n: int = Skins.for_slug(slug).size()
+	if all_n == 0:
+		return
+	Paper.text(_detail, "Skins  ·  %d of %d" % [kins.size(), all_n], "eyebrow", Paper.ink_soft())
+	if kins.is_empty():
+		Paper.text(_detail, "None yet. Skin vouchers from the Parlor open to them.", "small", Paper.ink_faint(), true)
+		return
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_detail.add_child(row)
+	var cur: Variant = Js.obj(_skins.get("equipped")).get(slug)
+	var opts: Array = [{ "id": null, "filename": str(c.get("baseFilename", "")), "name": "Plain" }]
+	opts.append_array(kins)
+	for k: Dictionary in opts:
+		var on: bool = k["id"] == cur
+		var col: Color = tier_color(Skins.tier_of(k)) if k["id"] != null else Paper.ink_soft()
+		var b: Button = Button.new()
+		b.flat = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(54, 64)
+		b.tooltip_text = str(k["name"])
+		var pic: TextureRect = TextureRect.new()
+		pic.texture = _thumb(str(k["filename"]))
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(pic)
+		var ring: Panel = Panel.new()
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = Color(col, 0.12)
+		sb.border_color = Paper.red() if on else Color(col, 0.45)
+		sb.set_border_width_all(2 if on else 1)
+		sb.set_corner_radius_all(8)
+		ring.add_theme_stylebox_override("panel", sb)
+		ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ring.show_behind_parent = true
+		b.add_child(ring)
+		if not on:
+			var id: Variant = k["id"]
+			b.pressed.connect(func() -> void: _equip(slug, id))
+		row.add_child(b)
+
+
 # ── Cards ──────────────────────────────────────────────────────────────────────
 
 func _thumb(filename: String) -> Texture2D:
@@ -386,7 +677,10 @@ func _draw_detail() -> void:
 		c.queue_free()
 	_detail.visible = room != "hall"
 	if _pick.is_empty():
-		Paper.text(_detail, "Press a card to see the hand.", "note", Paper.ink_faint(), true)
+		Paper.text(_detail, "Press a skin to see it." if room == "trunk" else "Press a card to see the hand.", "note", Paper.ink_faint(), true)
+		return
+	if _pick_kind == "skin":
+		_skin_detail()
 		return
 	var c: Dictionary = _pick
 	var rar: int = clampi(int(Js.num(c.get("rarity"))), 1, 4)
@@ -448,6 +742,7 @@ func _draw_detail() -> void:
 				_draw_room())
 			_detail.add_child(sign)
 	else:
+		_skin_row(c)
 		if c.get("nickname") == null:
 			var row: HBoxContainer = HBoxContainer.new()
 			row.add_theme_constant_override("separation", 6)

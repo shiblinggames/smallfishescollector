@@ -7874,6 +7874,764 @@
   "borderColor": "#c8a060",
   "mirrored": true
  },
+ "crewSkins": [
+  {
+   "id": "dole_frostbite",
+   "slug": "dole",
+   "name": "Frostbite",
+   "filename": "Dole_frostbite.png",
+   "gemCost": 1500,
+   "blurb": "Rimed in the ice of the far cold seas.",
+   "color": "#7dd3fc",
+   "crewTier": 3
+  },
+  {
+   "id": "dole_royaladmiral",
+   "slug": "dole",
+   "name": "Royal Admiral",
+   "filename": "Dole_royaladmiral.png",
+   "gemCost": 1500,
+   "blurb": "Gold braid and a fleet at her back.",
+   "color": "#f0c040",
+   "crewTier": 3
+  },
+  {
+   "id": "dole_cursedghost",
+   "slug": "dole",
+   "name": "Cursed Ghost",
+   "filename": "Dole_cursedghost.png",
+   "gemCost": 2500,
+   "blurb": "A wraith dragged back from the Locker.",
+   "color": "#a78bfa",
+   "crewTier": 3
+  },
+  {
+   "id": "dole_krakenhunter",
+   "slug": "dole",
+   "name": "Kraken Hunter",
+   "filename": "Dole_krakenhunter.png",
+   "gemCost": 3500,
+   "blurb": "Scarred from a hundred dives into the deep.",
+   "color": "#2dd4bf",
+   "chase": true,
+   "crewTier": 3
+  },
+  {
+   "id": "doby_warmachine",
+   "slug": "doby_mick",
+   "name": "War Machine",
+   "filename": "Doby_warmachine.png",
+   "gemCost": 1500,
+   "blurb": "Ironclad and built for the kill.",
+   "color": "#9ca3af",
+   "crewTier": 3
+  },
+  {
+   "id": "doby_moltenmaw",
+   "slug": "doby_mick",
+   "name": "Molten Maw",
+   "filename": "Doby_moltenmaw.png",
+   "gemCost": 1500,
+   "blurb": "Breaching from a sea of fire.",
+   "color": "#fb7185",
+   "crewTier": 3
+  },
+  {
+   "id": "doby_spectral",
+   "slug": "doby_mick",
+   "name": "Spectral",
+   "filename": "Doby_spectral.png",
+   "gemCost": 2500,
+   "blurb": "A ghost-gray leviathan from the black deep.",
+   "color": "#93c5fd",
+   "crewTier": 3
+  },
+  {
+   "id": "doby_huntersbane",
+   "slug": "doby_mick",
+   "name": "Hunter's Bane",
+   "filename": "Doby_huntersbane.png",
+   "gemCost": 3500,
+   "blurb": "The whale that hunts the hunters.",
+   "color": "#dc2626",
+   "chase": true,
+   "crewTier": 3
+  },
+  {
+   "id": "catfish_ancient",
+   "slug": "catfish",
+   "name": "Ancient",
+   "filename": "Catfish_ancient.png",
+   "gemCost": 1500,
+   "blurb": "A relic that swam the first tides.",
+   "color": "#d4a15a",
+   "crewTier": 3
+  },
+  {
+   "id": "catfish_cursed",
+   "slug": "catfish",
+   "name": "Cursed",
+   "filename": "Catfish_cursed.png",
+   "gemCost": 2500,
+   "blurb": "Hexed whiskers, humming with old magic.",
+   "color": "#a78bfa",
+   "crewTier": 3
+  },
+  {
+   "id": "catfish_prismatic",
+   "slug": "catfish",
+   "name": "Prismatic",
+   "filename": "Catfish_prismatic.png",
+   "gemCost": 2500,
+   "blurb": "Every color of the abyss at once.",
+   "color": "#e879f9",
+   "crewTier": 3
+  },
+  {
+   "id": "catfish_galaxy",
+   "slug": "catfish",
+   "name": "Galaxy",
+   "filename": "Catfish_galaxy.png",
+   "gemCost": 3500,
+   "blurb": "A whole galaxy swims in her scales.",
+   "color": "#8b7bf0",
+   "chase": true,
+   "crewTier": 3
+  },
+  {
+   "id": "mako_bloodtide",
+   "slug": "mako",
+   "name": "Blood Tide",
+   "filename": "Mako_bloodtide.png",
+   "gemCost": 1500,
+   "blurb": "Trailing red through the water.",
+   "color": "#ef4444",
+   "crewTier": 3
+  },
+  {
+   "id": "mako_highroller",
+   "slug": "mako",
+   "name": "High Roller",
+   "filename": "Mako_highroller.png",
+   "gemCost": 1500,
+   "blurb": "Dressed to win, built to bite.",
+   "color": "#f0c040",
+   "crewTier": 3
+  },
+  {
+   "id": "mako_wraithfin",
+   "slug": "mako",
+   "name": "Wraithfin",
+   "filename": "Mako_wraithfin.png",
+   "gemCost": 2500,
+   "blurb": "A phantom that haunts the shallows.",
+   "color": "#a5b4fc",
+   "crewTier": 3
+  },
+  {
+   "id": "mako_tempest",
+   "slug": "mako",
+   "name": "Tempest",
+   "filename": "Mako_tempest.png",
+   "gemCost": 3500,
+   "blurb": "Born of storm and lightning.",
+   "color": "#38bdf8",
+   "chase": true,
+   "crewTier": 3
+  },
+  {
+   "id": "coelacanth_deadeye",
+   "slug": "coelacanth",
+   "name": "Deadeye",
+   "filename": "Laz_deadeye.png",
+   "gemCost": 1500,
+   "blurb": "One cold eye on the deep, one on the kill.",
+   "color": "#67e8f9",
+   "crewTier": 3
+  },
+  {
+   "id": "coelacanth_goldenrelic",
+   "slug": "coelacanth",
+   "name": "Golden Relic",
+   "filename": "Laz_goldenrelic.png",
+   "gemCost": 2000,
+   "blurb": "Gilded by ages beneath the waves.",
+   "color": "#f0c040",
+   "crewTier": 3
+  },
+  {
+   "id": "coelacanth_undying",
+   "slug": "coelacanth",
+   "name": "Undying",
+   "filename": "Laz_undying.png",
+   "gemCost": 2500,
+   "blurb": "Dragged back from the Locker, unwilling to stay dead.",
+   "color": "#86efac",
+   "crewTier": 3
+  },
+  {
+   "id": "coelacanth_fossil",
+   "slug": "coelacanth",
+   "name": "Fossil",
+   "filename": "Laz_fossil.png",
+   "gemCost": 3500,
+   "blurb": "A living fossil, older than the tides themselves.",
+   "color": "#c8a45c",
+   "chase": true,
+   "crewTier": 3
+  },
+  {
+   "id": "moorish_idol_corsairqueen",
+   "slug": "moorish_idol",
+   "name": "Corsair Queen",
+   "filename": "Mira_corsairqueen.png",
+   "gemCost": 1500,
+   "blurb": "She took a crown off the sea and dared it to ask for it back.",
+   "color": "#d61f5c",
+   "crewTier": 3
+  },
+  {
+   "id": "moorish_idol_goldencommand",
+   "slug": "moorish_idol",
+   "name": "Golden Command",
+   "filename": "Mira_goldencommand.png",
+   "gemCost": 2000,
+   "blurb": "Gold braid, colder eyes. The fleet answers before she finishes the order.",
+   "color": "#f0c040",
+   "crewTier": 3
+  },
+  {
+   "id": "moorish_idol_cursedghost",
+   "slug": "moorish_idol",
+   "name": "Cursed Ghost",
+   "filename": "Mira_cursedghost.png",
+   "gemCost": 2500,
+   "blurb": "A haunt in the fog, marking names the living cannot read.",
+   "color": "#a78bfa",
+   "crewTier": 3
+  },
+  {
+   "id": "moorish_idol_idol",
+   "slug": "moorish_idol",
+   "name": "The Idol",
+   "filename": "Mira_idol.png",
+   "gemCost": 3500,
+   "blurb": "The rarest catch in the sea, worshipped and feared. Hold her gaze and you are already marked.",
+   "color": "#ff4d7d",
+   "chase": true,
+   "crewTier": 3
+  },
+  {
+   "id": "hammerhead_shark_bloodtide",
+   "slug": "hammerhead_shark",
+   "name": "Blood Tide",
+   "filename": "Hammerhead_bloodtide.png",
+   "gemCost": 1000,
+   "blurb": "The hunt turns the water red.",
+   "color": "#ef4444",
+   "crewTier": 1
+  },
+  {
+   "id": "hammerhead_shark_kingpin",
+   "slug": "hammerhead_shark",
+   "name": "Kingpin",
+   "filename": "Hammerhead_kingpin.png",
+   "gemCost": 1000,
+   "blurb": "Boss of the reef. Everyone pays up.",
+   "color": "#f0c040",
+   "crewTier": 1
+  },
+  {
+   "id": "blobfish_captain",
+   "slug": "blobfish",
+   "name": "Captain",
+   "filename": "Blobfish_captain.png",
+   "gemCost": 1000,
+   "blurb": "Squishy, unbothered, and somehow in command of the whole reef.",
+   "color": "#e0a838",
+   "crewTier": 1
+  },
+  {
+   "id": "blobfish_partyblob",
+   "slug": "blobfish",
+   "name": "Party Blob",
+   "filename": "Blobfish_partyblob.png",
+   "gemCost": 1000,
+   "blurb": "First to the grog, last to leave the deck.",
+   "color": "#ec4899",
+   "crewTier": 1
+  },
+  {
+   "id": "anglerfish_sailor",
+   "slug": "anglerfish",
+   "name": "Sailor",
+   "filename": "Anglerfish_sailor.png",
+   "gemCost": 1000,
+   "blurb": "Salt in the veins, one eye on the horizon.",
+   "color": "#6ba8d9",
+   "crewTier": 1
+  },
+  {
+   "id": "anglerfish_dealer",
+   "slug": "anglerfish",
+   "name": "Dealer",
+   "filename": "Anglerfish_dealer.png",
+   "gemCost": 1000,
+   "blurb": "The house always bites back.",
+   "color": "#f0c040",
+   "crewTier": 1
+  },
+  {
+   "id": "beluga_whale_bard",
+   "slug": "beluga_whale",
+   "name": "Bard",
+   "filename": "Beluga_Whale_bard.png",
+   "gemCost": 1000,
+   "blurb": "A tune for every tide, a tale for every scar.",
+   "color": "#c084fc",
+   "crewTier": 1
+  },
+  {
+   "id": "beluga_whale_tavernkeeper",
+   "slug": "beluga_whale",
+   "name": "Tavernkeeper",
+   "filename": "Beluga_Whale_tavernkeeper.png",
+   "gemCost": 1000,
+   "blurb": "The grog never runs dry on this watch.",
+   "color": "#c9852f",
+   "crewTier": 1
+  },
+  {
+   "id": "blue_marlin_aristocrat",
+   "slug": "blue_marlin",
+   "name": "Aristocrat",
+   "filename": "Blue_Marlin_aristocrat.png",
+   "gemCost": 1000,
+   "blurb": "Old money runs deep in these waters.",
+   "color": "#8fa9c9",
+   "crewTier": 1
+  },
+  {
+   "id": "blue_marlin_royalty",
+   "slug": "blue_marlin",
+   "name": "Royalty",
+   "filename": "Blue_Marlin_royalty.png",
+   "gemCost": 1000,
+   "blurb": "Crowned by the current, bowed to by the reef.",
+   "color": "#f0c040",
+   "crewTier": 1
+  },
+  {
+   "id": "lionfish_potionmaster",
+   "slug": "lionfish",
+   "name": "Potion Master",
+   "filename": "Lionfish_potionmaster.png",
+   "gemCost": 1000,
+   "blurb": "A different brew on every spine.",
+   "color": "#7fd88f",
+   "crewTier": 1
+  },
+  {
+   "id": "lionfish_crimsoncavalier",
+   "slug": "lionfish",
+   "name": "Crimson Cavalier",
+   "filename": "Lionfish_crimsoncavalier.png",
+   "gemCost": 1000,
+   "blurb": "En garde. Venom on every point.",
+   "color": "#dc2626",
+   "crewTier": 1
+  },
+  {
+   "id": "manta_ray_mannyjones",
+   "slug": "manta_ray",
+   "name": "Manny Jones",
+   "filename": "Manta_Ray_mannyjones.png",
+   "gemCost": 1000,
+   "blurb": "Keeper of the reef's own locker.",
+   "color": "#5eead4",
+   "crewTier": 1
+  },
+  {
+   "id": "manta_ray_spectral",
+   "slug": "manta_ray",
+   "name": "Spectral",
+   "filename": "Manta_Ray_spectral.png",
+   "gemCost": 1000,
+   "blurb": "A shadow gliding just past the light.",
+   "color": "#a5b4fc",
+   "crewTier": 1
+  },
+  {
+   "id": "nurse_shark_royalnurse",
+   "slug": "nurse_shark",
+   "name": "Royal Nurse",
+   "filename": "Nurse_Shark_royalnurse.png",
+   "gemCost": 1000,
+   "blurb": "Mends the crew, rules the ward.",
+   "color": "#e8c96a",
+   "crewTier": 1
+  },
+  {
+   "id": "nurse_shark_plaguedoctor",
+   "slug": "nurse_shark",
+   "name": "Plague Doctor",
+   "filename": "Nurse_Shark_plaguedoctor.png",
+   "gemCost": 1000,
+   "blurb": "The beak keeps the miasma at bay.",
+   "color": "#6b7280",
+   "crewTier": 1
+  },
+  {
+   "id": "oarfish_frozen",
+   "slug": "oarfish",
+   "name": "Frozen",
+   "filename": "Oarfish_frozen.png",
+   "gemCost": 1000,
+   "blurb": "Locked in the ice of the deep cold.",
+   "color": "#7dd3fc",
+   "crewTier": 1
+  },
+  {
+   "id": "oarfish_collector",
+   "slug": "oarfish",
+   "name": "Collector",
+   "filename": "Oarfish_collector.png",
+   "gemCost": 1000,
+   "blurb": "Every lost trinket finds its way home.",
+   "color": "#f0c040",
+   "crewTier": 1
+  },
+  {
+   "id": "sailfish_overdrive",
+   "slug": "sailfish",
+   "name": "Overdrive",
+   "filename": "Sailfish_futurespeed.png",
+   "gemCost": 1000,
+   "blurb": "Past the horizon before the wake catches up.",
+   "color": "#22d3ee",
+   "crewTier": 1
+  },
+  {
+   "id": "sailfish_opulent",
+   "slug": "sailfish",
+   "name": "Opulent",
+   "filename": "Sailfish_opulent.png",
+   "gemCost": 1000,
+   "blurb": "Sailing first-class, always.",
+   "color": "#f0c040",
+   "crewTier": 1
+  },
+  {
+   "id": "swordfish_punkrock",
+   "slug": "swordfish",
+   "name": "Punk Rock",
+   "filename": "Swordfish_superspeed.png",
+   "gemCost": 1000,
+   "blurb": "Mohawk fin, blown speakers, zero chill.",
+   "color": "#ec4899",
+   "crewTier": 1
+  },
+  {
+   "id": "swordfish_cavalier",
+   "slug": "swordfish",
+   "name": "Cavalier",
+   "filename": "Swordfish_cavalier.png",
+   "gemCost": 1000,
+   "blurb": "One thrust, one duel, one winner.",
+   "color": "#ef4444",
+   "crewTier": 1
+  },
+  {
+   "id": "whale_shark_afterlife",
+   "slug": "whale_shark",
+   "name": "Afterlife",
+   "filename": "Whale_Shark_afterlife.png",
+   "gemCost": 1000,
+   "blurb": "Drifting on from the far shore.",
+   "color": "#a78bfa",
+   "crewTier": 1
+  },
+  {
+   "id": "whale_shark_enforcer",
+   "slug": "whale_shark",
+   "name": "Enforcer",
+   "filename": "Whale_Shark_enforcer.png",
+   "gemCost": 1000,
+   "blurb": "Gentle giant? Not today.",
+   "color": "#9ca3af",
+   "crewTier": 1
+  },
+  {
+   "id": "orca_detective",
+   "slug": "orca",
+   "name": "Detective",
+   "filename": "Orca_detective.png",
+   "gemCost": 1250,
+   "blurb": "Every current tells a story to a sharp eye.",
+   "color": "#a8b8d0",
+   "crewTier": 2
+  },
+  {
+   "id": "orca_stormchaser",
+   "slug": "orca",
+   "name": "Storm Chaser",
+   "filename": "Orca_stormchaser.png",
+   "gemCost": 1250,
+   "blurb": "Where the storm breaks, she is already there.",
+   "color": "#818cf8",
+   "crewTier": 2
+  },
+  {
+   "id": "orca_royalty",
+   "slug": "orca",
+   "name": "Royalty",
+   "filename": "Orca_royalty.png",
+   "gemCost": 1250,
+   "blurb": "Born to rule the pod, crowned by the tide.",
+   "color": "#b18cf0",
+   "crewTier": 2
+  },
+  {
+   "id": "tiger_shark_embermaw",
+   "slug": "tiger_shark",
+   "name": "Embermaw",
+   "filename": "Tiger_Shark_embermaw.png",
+   "gemCost": 1250,
+   "blurb": "Jaws lit like coals from the deep.",
+   "color": "#fb7331",
+   "crewTier": 2
+  },
+  {
+   "id": "tiger_shark_warlord",
+   "slug": "tiger_shark",
+   "name": "Warlord",
+   "filename": "Tiger_Shark_warlord.png",
+   "gemCost": 1250,
+   "blurb": "Battle-scarred and unbeaten.",
+   "color": "#cf9b3e",
+   "crewTier": 2
+  },
+  {
+   "id": "tiger_shark_crimson",
+   "slug": "tiger_shark",
+   "name": "Crimson",
+   "filename": "Tiger_Shark_bloodcrimson.png",
+   "gemCost": 1250,
+   "blurb": "Striped in fresh blood, and hungry for more.",
+   "color": "#dc2626",
+   "crewTier": 2
+  },
+  {
+   "id": "goblin_shark_bloodbaron",
+   "slug": "goblin_shark",
+   "name": "Blood Baron",
+   "filename": "Goblin_Shark_bloodbaron.png",
+   "gemCost": 1250,
+   "blurb": "Old blood, and plenty of it.",
+   "color": "#dc2626",
+   "crewTier": 2
+  },
+  {
+   "id": "goblin_shark_ghastly",
+   "slug": "goblin_shark",
+   "name": "Ghastly",
+   "filename": "Goblin_Shark_ghastly.png",
+   "gemCost": 1250,
+   "blurb": "A pale terror drifting up from the dark.",
+   "color": "#a7b8c4",
+   "crewTier": 2
+  },
+  {
+   "id": "goblin_shark_eldritch",
+   "slug": "goblin_shark",
+   "name": "Eldritch",
+   "filename": "Goblin_Shark_eldrich.png",
+   "gemCost": 1250,
+   "blurb": "Something older than the deep wears its face.",
+   "color": "#9d7bd8",
+   "crewTier": 2
+  },
+  {
+   "id": "blue_whale_bulwark",
+   "slug": "blue_whale",
+   "name": "Bulwark",
+   "filename": "Blue_Whale_bulwark.png",
+   "gemCost": 1250,
+   "blurb": "The sea breaks on him and loses.",
+   "color": "#6ba8d9",
+   "crewTier": 2
+  },
+  {
+   "id": "blue_whale_songkeeper",
+   "slug": "blue_whale",
+   "name": "Songkeeper",
+   "filename": "Blue_Whale_songkeeper.png",
+   "gemCost": 1250,
+   "blurb": "Keeper of the old songs of the deep.",
+   "color": "#a5b4fc",
+   "crewTier": 2
+  },
+  {
+   "id": "blue_whale_opulent",
+   "slug": "blue_whale",
+   "name": "Opulent",
+   "filename": "Blue_Whale_opulent.png",
+   "gemCost": 1250,
+   "blurb": "Draped in gold, vast beyond counting.",
+   "color": "#f0c040",
+   "crewTier": 2
+  },
+  {
+   "id": "humpback_whale_admiral",
+   "slug": "humpback_whale",
+   "name": "Admiral",
+   "filename": "Humpback_admiral.png",
+   "gemCost": 1250,
+   "blurb": "The fleet answers to his flag.",
+   "color": "#5b7fb0",
+   "crewTier": 2
+  },
+  {
+   "id": "humpback_whale_goldenhelmsman",
+   "slug": "humpback_whale",
+   "name": "Golden Helmsman",
+   "filename": "Humpback_goldenhelmsman.png",
+   "gemCost": 1250,
+   "blurb": "The richest hand on the wheel.",
+   "color": "#f0c040",
+   "crewTier": 2
+  },
+  {
+   "id": "humpback_whale_glacial",
+   "slug": "humpback_whale",
+   "name": "Glacial",
+   "filename": "Humpback_glacial.png",
+   "gemCost": 1250,
+   "blurb": "Carved from the ice of the farthest north.",
+   "color": "#7dd3fc",
+   "crewTier": 2
+  },
+  {
+   "id": "giant_squid_abyssal",
+   "slug": "giant_squid",
+   "name": "Abyssal",
+   "filename": "Giant_Squid_abyssal.png",
+   "gemCost": 1250,
+   "blurb": "Born where no light reaches.",
+   "color": "#3aa8a0",
+   "crewTier": 2
+  },
+  {
+   "id": "giant_squid_sorcerer",
+   "slug": "giant_squid",
+   "name": "Sorcerer",
+   "filename": "Giant_Squid_sorcerer.png",
+   "gemCost": 1250,
+   "blurb": "Ink and old magic in every arm.",
+   "color": "#a78bfa",
+   "crewTier": 2
+  },
+  {
+   "id": "giant_squid_ghoul",
+   "slug": "giant_squid",
+   "name": "Ghoul",
+   "filename": "Giant_Squid_ghoul.png",
+   "gemCost": 1250,
+   "blurb": "Risen gray and hungry from the black.",
+   "color": "#86efac",
+   "crewTier": 2
+  },
+  {
+   "id": "great_white_shark_ghostrelic",
+   "slug": "great_white_shark",
+   "name": "Ghost Relic",
+   "filename": "Great_White_ghostrelic.png",
+   "gemCost": 1250,
+   "blurb": "Bleached bone and old ghosts.",
+   "color": "#a9c0cc",
+   "crewTier": 2
+  },
+  {
+   "id": "great_white_shark_iceborn",
+   "slug": "great_white_shark",
+   "name": "Iceborn",
+   "filename": "Great_White_iceborn.png",
+   "gemCost": 1250,
+   "blurb": "Forged in the coldest deep.",
+   "color": "#7dd3fc",
+   "crewTier": 2
+  },
+  {
+   "id": "great_white_shark_blackout",
+   "slug": "great_white_shark",
+   "name": "Blackout",
+   "filename": "Great_White_blackout.png",
+   "gemCost": 1250,
+   "blurb": "A shadow with teeth. You never see it coming.",
+   "color": "#475569",
+   "crewTier": 2
+  },
+  {
+   "id": "angelfish_archangel",
+   "slug": "angelfish",
+   "name": "Archangel",
+   "filename": "Angelfish_archangel.png",
+   "gemCost": 1250,
+   "blurb": "Wings of light, judgment in every feather.",
+   "color": "#e6ecff",
+   "crewTier": 2
+  },
+  {
+   "id": "angelfish_fallenangel",
+   "slug": "angelfish",
+   "name": "Fallen Angel",
+   "filename": "Angelfish_fallenangel.png",
+   "gemCost": 1250,
+   "blurb": "Grace turned to grievance. Halo swapped for horns.",
+   "color": "#b4384f",
+   "crewTier": 2
+  },
+  {
+   "id": "angelfish_gildedsaint",
+   "slug": "angelfish",
+   "name": "Gilded Saint",
+   "filename": "Angelfish_gildedsaint.png",
+   "gemCost": 1250,
+   "blurb": "Haloed in gold, worshipped by the whole reef.",
+   "color": "#f0c040",
+   "crewTier": 2
+  },
+  {
+   "id": "jellyfish_ancientspirit",
+   "slug": "jellyfish",
+   "name": "Ancient Spirit",
+   "filename": "Jellyfish_ancientspirit.png",
+   "gemCost": 1250,
+   "blurb": "A soul adrift since the first tides.",
+   "color": "#5eead4",
+   "crewTier": 2
+  },
+  {
+   "id": "jellyfish_arcanist",
+   "slug": "jellyfish",
+   "name": "Arcanist",
+   "filename": "Jellyfish_arcanist.png",
+   "gemCost": 1250,
+   "blurb": "Old spells hum in every tendril.",
+   "color": "#a78bfa",
+   "crewTier": 2
+  },
+  {
+   "id": "jellyfish_blizzard",
+   "slug": "jellyfish",
+   "name": "Blizzard",
+   "filename": "Jellyfish_blizzard.png",
+   "gemCost": 1250,
+   "blurb": "A frozen drift out of the deep cold.",
+   "color": "#7dd3fc",
+   "crewTier": 2
+  }
+ ],
  "parlor": {
   "categories": [
    {

@@ -40,7 +40,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 
 
 ## Calls that change nothing.
-const READS: Array = ["parlorState", "getCasinoState", "getSlotStats", "getSlotsJackpot", "getRouletteState", "resumeHand", "finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState"]
+const READS: Array = ["parlorState", "getCasinoState", "getSlotStats", "getSlotsJackpot", "getRouletteState", "resumeHand", "finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState", "skinsState"]
 
 
 static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
@@ -91,6 +91,9 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"equipRod": return Shipyard.equip_rod(db, uid, float(a[0]))
 		"folkState": return Folk.state(db, uid)
 		"parlorState": return Parlor.state(db, uid)
+		"skinsState": return Skins.state(db, uid)
+		"openSkinVoucher": return Skins.open(db, uid, str(a[0]))
+		"equipCrewSkin": return Skins.equip(db, uid, str(a[0]), a[1])
 		"boardReveal": return Parlor.board_reveal(db, uid, str(a[0]))
 		"boardAnswer": return Parlor.board_answer(db, uid, str(a[0]), float(a[1]))
 		"kingStart": return Parlor.king_start(db, uid)
