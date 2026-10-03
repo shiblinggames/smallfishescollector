@@ -626,10 +626,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   mechanic checks (any captain's crew order answers; a failure lands on every ship), statuses,
   shields, the Vengeance ward, and every crew class's order by milestone (a heal, shield, brace
   or ward may go to a crewmate). The enemy's TARGET is a ship it picks as it fires (hidden).
-  PARTY SCALING (port rules battle.party, PROPOSED): HP x1 / 1.8 / 2.5 / 3.2 and 1 / 2 / 3 / 4
-  shots per attack, each at a ship not yet shot that round; tests/battle_check.gd plays Pete's
-  raid 300 times a size with a fair bot: 33% / 47% / 63% / 76% won (one shot a round made two or
-  more captains win every time, so it was raised). NOT YET: raid items, tides, elite affixes,
+  EVERY CAPTAIN KEEPS THEIR OWN SHIP, HP, crew and balls (Kong checked: "it should still be your
+  individual boat"); only the ENEMY scales. PARTY SCALING (port rules battle.party): the enemy's
+  HP x1 / 1.8 / 2.5 / 3.2 (enemyHpMult), and an ordinary attack is 1 / 2 / 3 / 4 AIMED shots,
+  each at a ship it picks as it fires, hidden, and it may pick the same ship twice (focus), so a
+  captain can be focused down and a crewmate's heal or shield matters. BROADSIDES (Kong,
+  2026-10-03: "certain enemies should be able to hit all players at once, and bosses all have
+  that ability for some of their hits"): every boss's volleys and ultimates, and the volleys of
+  the enemies in battle.broadside.enemyVolleys (the Saltwater Corsair for now; more as raids are
+  ported), hit EVERY ship at once, each with its own dodge; on the water a "Broadside!" call and a
+  ball fanning out to every ship together. tests/battle_check.gd, Pete's raid, a fair bot, 300
+  runs a size: 38% / 41% / 63% / 73% won. (Tried and dropped: one shot a round, and aimed shots
+  spread one to a ship: either co-op won nearly every time, or it was the same as hitting all.) NOT YET: raid items, tides, elite affixes,
   boss off-turn abilities, the Last Wall, flare barrages, aim afflictions, burn, freeze, flee.
   Crew.leveled_stats ports crewLevel's stat ticks and resolveDeployedCrew. SEATS: Crew.assign
   (assignToRaid / assignToVoyage / benchCrew, parity: crew.json "the party seats").

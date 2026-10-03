@@ -18,9 +18,12 @@ extends RefCounted
 ## chooses as it fires, never shown before (Kong: hidden). Then the round's
 ## end: deaths and revives, the win, the mechanic check's countdown, statuses.
 ##
-## PARTY SCALING (port rules battle.party, proposed): the enemy's HP times
-## hpMult[n-1], and shots[n-1] shots for every attack, each at a ship not yet
-## shot that round while any is left. Hits stay the size they are.
+## Every captain keeps their own ship, HP, crew and balls. PARTY SCALING
+## (port rules battle.party): the ENEMY's HP times enemyHpMult[n-1]; an
+## ordinary attack is shots[n-1] aimed shots, each at a ship it picks as it
+## fires (focus: the same ship may be picked twice). BROADSIDES (port rules battle.broadside, Kong): a boss's
+## volleys and ultimates, and the volleys of listed enemies, hit EVERY ship
+## at once, each with its own dodge. Hits stay the size they are.
 ##
 ## NOT YET (later raids need them; each is in the specs): raid items, tides,
 ## elite affixes, boss off-turn abilities, the Last Wall, flare barrages, aim
@@ -134,7 +137,7 @@ static func begin(raid_id: String, seats: Array) -> Dictionary:
 
 
 static func party_hp_mult(n: int) -> float:
-	var m: Array = Js.list(Js.obj(cfg().get("party")).get("hpMult"))
+	var m: Array = Js.list(Js.obj(cfg().get("party")).get("enemyHpMult"))
 	if m.is_empty():
 		return 1.0
 	return float(m[clampi(n, 1, m.size()) - 1])
@@ -598,19 +601,42 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 			ev.append({ "t": "eSpecial", "name": sp.get("name", ""), "line": sp.get("line", "") })
 		"fire", "volley", "ultimate":
 			e["charges"] = maxf(0.0, float(e["charges"]) - cost)
-			# A line of ships draws a shot each (party scaling): the same
-			# move at a different ship while any is left untargeted.
-			var shots: int = 1
-			var sh_tab: Array = Js.list(Js.obj(cfg().get("party")).get("shots"))
-			if not sh_tab.is_empty():
-				shots = int(sh_tab[clampi((b["seats"] as Array).size(), 1, sh_tab.size()) - 1])
-			var hit: Array = []
-			for k: int in shots:
-				if alive(b).is_empty():
-					break
-				var ti: int = _target_new(b, hit)
-				hit.append(ti)
-				_enemy_shot(b, act, ti, e_mods, plans, ev, k == 0)
+			if broadside(b, act):
+				# A BROADSIDE: every ship afloat at once, each its own dodge.
+				ev.append({ "t": "eBroadside", "action": act })
+				var k0: int = 0
+				for i: int in (b["seats"] as Array).size():
+					var s3: Dictionary = b["seats"][i]
+					if not s3.get("sunk", false) and float(s3["hp"]) > 0.0:
+						_enemy_shot(b, act, i, e_mods, plans, ev, k0 == 0, true)
+						k0 += 1
+			else:
+				# Aimed shots (party scaling: a bigger line draws more), each at
+				# a different ship it picks as it fires.
+				var shots: int = 1
+				var sh_tab: Array = Js.list(Js.obj(cfg().get("party")).get("shots"))
+				if not sh_tab.is_empty():
+					shots = int(sh_tab[clampi((b["seats"] as Array).size(), 1, sh_tab.size()) - 1])
+				var focus: bool = Js.obj(cfg().get("party")).get("focus", false) == true
+				var hit: Array = []
+				for k: int in shots:
+					if alive(b).is_empty():
+						break
+					var ti: int = _target(b, -1) if focus else _target_new(b, hit)
+					hit.append(ti)
+					_enemy_shot(b, act, ti, e_mods, plans, ev, k == 0)
+
+
+## Does this attack hit every ship (a boss's volley or ultimate, or the
+## volley of an enemy listed as a broadside hand)?
+static func broadside(b: Dictionary, act: String) -> bool:
+	var bs: Dictionary = Js.obj(cfg().get("broadside"))
+	if bs.is_empty():
+		return false
+	var e: Dictionary = b["enemy"]
+	if e["boss"] and Js.list(bs.get("bossActions")).has(act):
+		return true
+	return act == "volley" and Js.list(bs.get("enemyVolleys")).has(e["id"])
 
 
 ## A target not yet shot at this round if any is left, else any ship afloat.
@@ -638,7 +664,7 @@ static func _target(b: Dictionary, not_i: int) -> int:
 	return pool[int(floor(Dice.next() * pool.size()))]
 
 
-static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary, plans: Array, ev: Array, main: bool) -> void:
+static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary, plans: Array, ev: Array, main: bool, all: bool = false) -> void:
 	if ti < 0:
 		return
 	var e: Dictionary = b["enemy"]
@@ -657,7 +683,7 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 	var crit: bool = Dice.next() < eff_crit
 	if crit:
 		dmg = floor(dmg * 1.5)
-	var out: Dictionary = { "t": "eShot", "action": act, "target": ti, "crit": crit, "extra": not main }
+	var out: Dictionary = { "t": "eShot", "action": act, "target": ti, "crit": crit, "extra": not main, "all": all }
 	# The target's dodge stance.
 	if str(Js.obj(plans[ti]).get("action", "")) == "dodge":
 		if float(t["dodgeToken"]) > 0.0:

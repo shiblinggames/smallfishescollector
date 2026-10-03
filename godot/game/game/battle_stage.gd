@@ -365,8 +365,20 @@ func _choose(act: String) -> void:
 # ── Playing a round ──────────────────────────────────────────────────────────
 
 func _play(ev: Array) -> void:
-	for x: Dictionary in ev:
+	var i: int = 0
+	while i < ev.size():
+		var x: Dictionary = ev[i]
+		if x["t"] == "eBroadside":
+			# Every ship's shot of a broadside together, not one by one.
+			var group: Array = []
+			i += 1
+			while i < ev.size() and ev[i]["t"] == "eShot" and ev[i].get("all", false):
+				group.append(ev[i])
+				i += 1
+			await _broadside(x, group)
+			continue
 		await _one(x)
+		i += 1
 	_strip_lit = -99
 	match b["state"]:
 		"won":
@@ -470,6 +482,30 @@ func _one(x: Dictionary) -> void:
 		"sunk":
 			_say("Holed below the waterline")
 			await _wait(0.8)
+
+
+## A BROADSIDE: the call over the water, the enemy heeling with the recoil,
+## a ball for every ship in the line at once.
+func _broadside(x: Dictionary, group: Array) -> void:
+	_strip_lit = -1
+	_say("Broadside!")
+	Rumble.buzz([0, 50, 30, 80])
+	_enemy.kick = 30.0
+	_enemy.heel = 0.1
+	await _wait(0.35)
+	for g: Dictionary in group:
+		var ti: int = int(g["target"])
+		var land: String = "dodge" if g.get("dodged", false) else ("crit" if g["crit"] else "hit")
+		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land, 2 if x["action"] == "volley" else 3, true)
+	await _wait(0.65)
+	for g: Dictionary in group:
+		var ti2: int = int(g["target"])
+		if g.get("dodged", false):
+			_num(_seat_at(ti2), "Dodged!", Color(0.6, 0.9, 1.0))
+		else:
+			_num(_seat_at(ti2), ("%d!" % int(g["dmg"])) if g["crit"] else str(int(g["dmg"])), Color(1.0, 0.45, 0.35), true)
+		_shown_hp[ti2] = float(g["hp"])
+	await _wait(0.4)
 
 
 func _ability_card(x: Dictionary) -> void:

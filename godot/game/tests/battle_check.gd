@@ -116,7 +116,7 @@ func _init() -> void:
 			e["charges"] = float(e["charges"]) - 1.0
 	check(acts == ["reload", "fire", "reload", "fire"], "the Reef Raider's pattern (%s)" % str(acts))
 	check(float(e["max"]) == 20.0 and float(e["acc"]) == 8.0, "its HP 20 and accuracy 4 + speed 4")
-	# The party's HP scaling.
+	# The enemy's HP, scaled by the party.
 	var b4: Dictionary = Battle.begin("corsairs_reckoning", [_seat("A", 3, 14.0, 6.0, []), _seat("B", 3, 14.0, 6.0, []), _seat("C", 3, 14.0, 6.0, []), _seat("D", 3, 14.0, 6.0, [])])
 	check(float(b4["enemy"]["max"]) == 64.0, "four captains face 20 x 3.2 = 64 (%d)" % int(b4["enemy"]["max"]))
 	# A heal given to a crewmate.

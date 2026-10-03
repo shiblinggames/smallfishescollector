@@ -2022,9 +2022,10 @@
     "landmarkVouchers": { "1": "bosun", "2": "bosun", "3": "bosun", "4": "bosun", "5": "bosun", "6": "bosun", "7": "bosun", "8": "bosun", "9": "bosun", "10": "bosun", "11": "captain", "12": "captain", "13": "captain" },
     "completionVoucher": "captain"
   },
-  "_battle": "THE BATTLE ENGINE (Kong, 2026-10-03, core/battle.gd): one engine for every fight, solo a party of one. PARTY SCALING (proposed, awaiting Kong): the enemy's HP times hpMult by how many captains start the fight; it fires shots[n-1] shots a round, each at a ship it picks (a different one while any is left untargeted), so every ship feels a solo fight's pressure. Hits stay the same size.",
+  "_battle": "THE BATTLE ENGINE (Kong, 2026-10-03, core/battle.gd): one engine for every fight, solo a party of one. Every captain keeps their OWN ship, HP, crew and balls; a sunk ship is out on its own. PARTY SCALING (tested on Pete's raid, a fair bot, 300 runs a size: 38% / 41% / 63% / 73% won): the ENEMY's HP times enemyHpMult by how many captains start the fight; an ordinary attack is shots[n-1] aimed shots, each at a ship it picks as it fires (hidden; focus: it may pick the same ship twice). BROADSIDES (Kong, 2026-10-03: \"certain enemies should be able to hit all players at once, and bosses all have that ability for some of their hits\"): every boss's volleys and ultimates, and the volleys of the enemies in broadside.enemyVolleys, hit EVERY ship at once, each rolling its own dodge.",
   "battle": {
-    "party": { "hpMult": [1, 1.8, 2.5, 3.2], "shots": [1, 2, 3, 4] }
+    "party": { "enemyHpMult": [1, 1.8, 2.5, 3.2], "shots": [1, 2, 3, 4], "focus": true },
+    "broadside": { "bossActions": ["volley", "ultimate"], "enemyVolleys": ["corsair"] }
   },
   "_parlorPort": "THE PARLOR IN THE PORT (Kong, 2026-10-02/03, SETTLED): one Captain's Board card dealt every 8 real hours (10 sea days), a hand of 3, 4 at Fishing 30 and 5 at 60, never lost; the tier of a dealt card weighted 45/35/20; the Pirate King at Fishing 25 (levelGates.feature.parlor_king); every question drawn unseen first from content/trivia_bank.json. core/parlor.gd.",
   "parlorPort": {
