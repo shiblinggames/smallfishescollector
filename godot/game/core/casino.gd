@@ -519,7 +519,9 @@ static func gate(db: CaptainStore, uid: String, key: String) -> String:
 	return Rules.gate_block("feature", key, Js.num(db.profile(uid, "fishing_xp").get("fishing_xp")))
 
 
-static func spin_roulette(db: CaptainStore, uid: String, bets: Variant) -> Dictionary:
+## `at`: the number the wheel already landed on (a Charter's shared table
+## spins once for everyone), or -1 to roll it here.
+static func spin_roulette(db: CaptainStore, uid: String, bets: Variant, at: int = -1) -> Dictionary:
 	var gb: String = gate(db, uid, "den_roulette")
 	if gb != "":
 		return { "error": gb }
@@ -536,7 +538,7 @@ static func spin_roulette(db: CaptainStore, uid: String, bets: Variant) -> Dicti
 	if after_stake == null:
 		return { "error": "Not enough chips" }
 	var before: float = float(after_stake) + total
-	var n: float = floor(Dice.next() * 37.0)
+	var n: float = floor(Dice.next() * 37.0) if at < 0 else float(at)
 	var mult: Dictionary = c()["payoutMult"]
 	var paid: float = 0.0
 	var wagered: float = 0.0

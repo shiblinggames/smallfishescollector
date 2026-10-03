@@ -7,6 +7,11 @@ extends VBoxContainer
 ## wheel turns while the ball runs the other way round the rim, drops, rattles
 ## and settles in its pocket. The fish that pocket is named for comes up in
 ## the hub, the winning spot lights on the board and the chips come home.
+##
+## IN A CHARTER THE WHEEL IS SHARED (game/den_tables.gd): everyone at it
+## sees the others' chips on the board in their colours, "Spin" becomes
+## "Ready", a countdown starts with the first ready, and one spin settles the
+## whole table; every captain's result is called out after it.
 
 const ORDER: Array = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26]
 const CHIPS: Array = [10.0, 25.0, 50.0, 100.0, 250.0, 500.0]
@@ -27,6 +32,12 @@ var _total: Label
 var _says: Label
 var _spin_b: Button
 var _busy: bool = false
+var _shared: bool = false
+var _seen_round: int = -1
+var _deadline: float = -1.0
+var _seats_l: Label
+var _ready_sent: bool = false
+var _phase: String = "betting"
 
 
 func _ready() -> void:
@@ -83,6 +94,103 @@ func _ready() -> void:
 	_changed()
 	var rs: Dictionary = Casino.roulette_state(session.store, session.uid)
 	_wheel.recent = (rs["recentSpins"] as Array).map(func(s: Dictionary) -> float: return float(s["winningNumber"]))
+	if DenTables.shared_for(session):
+		_shared = true
+		_spin_b.text = "Ready   ·   Space"
+		_seats_l = Kit.text(self, "", "label", Kit.INK)
+		_seats_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		DenTables.live.changed.connect(_on_table)
+		tree_exiting.connect(func() -> void: session.act("denTable", ["roulette", "leave"]))
+		var st: Variant = DenTables.live.states.get("roulette")
+		if st is Dictionary:
+			_seen_round = int(Js.obj((st as Dictionary).get("result")).get("round", -1))
+		session.act("denTable", ["roulette", "sit"])
+
+
+func _process(_delta: float) -> void:
+	if _shared and _seats_l != null:
+		var left: int = int(ceil((_deadline - Time.get_ticks_msec() / 1000.0)))
+		if _phase == "betting" and _deadline > 0.0 and left >= 0:
+			_says.text = "Spins in %d" % left
+
+
+## The table as the founder's game sees it.
+func _on_table(game: String, st: Dictionary) -> void:
+	if game != "roulette" or not is_inside_tree():
+		return
+	var me: String = DenTables.live.my_key()
+	_phase = str(st["phase"])
+	_deadline = Time.get_ticks_msec() / 1000.0 + float(st["left"]) if float(st["left"]) > 0.0 else -1.0
+	var names: Array = []
+	var others: Array = []
+	for k: String in st["seats"]:
+		var seat: Dictionary = st["seats"][k]
+		names.append("%s%s" % [seat["name"], " (ready)" if seat["ready"] else ""])
+		if k != me:
+			others.append({ "color": Color(str(seat["color"])), "bets": seat["bets"] })
+	_seats_l.text = "At the wheel: %s" % ", ".join(PackedStringArray(names))
+	_board.others = others
+	_board.queue_redraw()
+	if _phase == "betting":
+		if _ready_sent and not (Js.obj(st["seats"].get(me)).get("ready", false)):
+			_ready_sent = false
+		_spin_b.disabled = _ready_sent
+		if _deadline <= 0.0:
+			_says.text = "Place your chips, then Ready" if not _ready_sent else "Waiting for the others"
+	var res: Dictionary = Js.obj(st.get("result"))
+	if _phase == "spun" and int(res.get("round", -1)) > _seen_round:
+		_seen_round = int(res["round"])
+		_shared_spin(res, st)
+
+
+func _shared_spin(res: Dictionary, st: Dictionary) -> void:
+	_busy = true
+	_spin_b.disabled = true
+	_board.won = []
+	_board.result = -1
+	var me: String = DenTables.live.my_key()
+	var mine: Dictionary = Js.obj(Js.obj(res["by"]).get(me))
+	var before: float = Js.num(session.profile().get("casino_chips"))
+	_says.text = "No more bets"
+	Sound.cast()
+	await _wheel.spin_to(int(res["n"]))
+	var n: int = int(res["n"])
+	_board.result = n
+	_board.won = Js.list(mine.get("won"))
+	_board.queue_redraw()
+	var parts: Array = []
+	for k: String in res["by"]:
+		var r: Dictionary = res["by"][k]
+		if r.has("error"):
+			continue
+		var who: String = str(Js.obj(st["seats"].get(k)).get("name", "Someone"))
+		var net: float = float(r["net"])
+		parts.append("%s %s%s" % [who, "+" if net >= 0.0 else "-", Js.thousands(absf(net))])
+	_says.text = "%d, %s.   %s" % [n, _pocket_name(n), "   ".join(PackedStringArray(parts))]
+	if not mine.is_empty() and not mine.has("error"):
+		if float(mine["net"]) > 0.0:
+			Sound.chest(false)
+			Rumble.buzz([0, 40, 30, 60])
+		den.roll_chips(before, float(mine["chipsAfter"]))
+	_last = _bets.duplicate(true)
+	await get_tree().create_timer(2.5).timeout
+	_bets.clear()
+	_ready_sent = false
+	_changed()
+	_busy = false
+	_spin_b.disabled = false
+
+
+func _send_ready() -> void:
+	if _bets.is_empty():
+		den.toast("Place a chip on the board first", DenRoom.RED)
+		return
+	var r: Dictionary = await session.act("denTable", ["roulette", "bets", { "bets": _bets.values(), "ready": true }])
+	if r.has("error"):
+		den.toast(str(r["error"]), DenRoom.RED)
+		return
+	_ready_sent = true
+	_spin_b.disabled = true
 
 
 func _paint_chips() -> void:
@@ -99,6 +207,8 @@ func _paint_chips() -> void:
 ## A spot pressed: a chip of the picked size stacked on it.
 func place(type: String, target: Variant) -> void:
 	if _busy:
+		return
+	if _shared and (_phase != "betting" or _ready_sent):
 		return
 	var key: String = "%s|%s" % [type, JsJson.stringify(target)]
 	var cap: float = float(Casino.c()["rlMaxStraight"] if Casino.INSIDE.has(type) else Casino.c()["rlMaxOutside"])
@@ -134,6 +244,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func spin() -> void:
+	if _shared:
+		if not _busy and not _ready_sent:
+			_send_ready()
+		return
 	if _busy or _bets.is_empty():
 		if _bets.is_empty():
 			den.toast("Place a chip on the board first", DenRoom.RED)
@@ -318,6 +432,8 @@ class Board:
 	extends Control
 	var owner_table: DenRoulette
 	var bets: Dictionary = {}
+	## The other captains' chips at a shared wheel: [{ color, bets }].
+	var others: Array = []
 	var won: Array = []
 	var result: int = -1
 	var _cells: Array = []
@@ -384,6 +500,16 @@ class Board:
 			var tcol: Color = Color(0.98, 0.94, 0.85) if colr.a > 0.0 else Paper.INK
 			var tw: float = fnt.get_string_size(str(cell["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 			draw_string(fnt, r.get_center() + Vector2(-tw / 2.0, fs * 0.35), str(cell["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tcol)
+			# The others' chips, in their colours, a little to the left.
+			var oi: int = 0
+			for o: Dictionary in others:
+				for ob: Dictionary in o["bets"]:
+					if "%s|%s" % [ob["type"], JsJson.stringify(ob["target"])] == key:
+						var op: Vector2 = r.get_center() + Vector2(-r.size.x * 0.22 + oi * 6.0, r.size.y * 0.12)
+						draw_circle(op + Vector2(1, 2), 9.0, Color(0, 0, 0, 0.3))
+						draw_circle(op, 9.0, o["color"])
+						draw_arc(op, 6.5, 0.0, TAU, 16, Color(1, 1, 1, 0.75), 1.2, true)
+						oi += 1
 			# The chips on it.
 			if bets.has(key):
 				var amt: float = float(bets[key]["amount"])

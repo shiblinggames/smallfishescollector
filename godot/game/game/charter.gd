@@ -51,6 +51,8 @@ var sessions: Dictionary = {}
 ## Asks the crew present to agree (CrewNet sets it): (proposer key, text) ->
 ## bool, awaited. Without a crew line, everything goes ahead.
 var voter: Callable = Callable()
+## The Den's shared tables (CrewNet sets them when it hosts).
+var tables: DenTables = null
 
 
 static func _dir() -> String:
@@ -281,6 +283,11 @@ func _spread(actor_key: String) -> void:
 ## put to the crew first; then lend, run, take back, record, spread, write.
 func run(s: Session, op: String, args: Array) -> Variant:
 	var key: String = key_of(s)
+	# A seat at the Den's shared tables: run by the tables, not the rules.
+	if op == "denTable":
+		if tables == null:
+			return { "error": "The Den's tables are not open." }
+		return tables.handle(key, s, args)
 	if op == "prestigeZone" and voter.is_valid():
 		var agreed: bool = await voter.call(key, _prestige_text(s, String(args[0])))
 		if not agreed:

@@ -56,8 +56,13 @@ var _boat_t: float = 0.0
 var _looks: Dictionary = {}
 
 
+var tables: DenTables
+
+
 func _ready() -> void:
 	name = "CrewNet"
+	tables = DenTables.new()
+	add_child(tables)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected)
@@ -82,6 +87,8 @@ func host(c: Charter) -> Error:
 	_reset()
 	charter = c
 	hosting = true
+	tables.charter = c
+	c.tables = tables
 	if not c.shared_changed.is_connected(_on_shared_changed):
 		c.shared_changed.connect(_on_shared_changed)
 	c.voter = ask_crew
@@ -130,6 +137,9 @@ func _reset() -> void:
 	_looks.clear()
 	_open.clear()
 	_mine = null
+	if tables != null:
+		tables.charter = null
+		tables.states.clear()
 
 
 func _on_lobby_created(ok: int, lobby: int) -> void:

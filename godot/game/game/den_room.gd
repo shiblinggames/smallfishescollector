@@ -149,7 +149,8 @@ func _open(which: String) -> void:
 		"roulette":
 			g = DenRoulette.new()
 		"blackjack":
-			g = DenBlackjack.new()
+			# In a Charter, the crew's shared table.
+			g = DenBlackjackTable.new() if DenTables.shared_for(session) else DenBlackjack.new()
 		_:
 			g = DenSlots.new()
 	g.set("session", session)

@@ -588,6 +588,22 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the hole card turns over at the end and the dealer draws one by one; Hit/Stand/Double/Split
   (H/S/D/P), insurance on an Ace; a hand left open comes back. Splits, streets and corners
   are not on the roulette board yet (the rules take them).
+  THE DEN WITH THE CREW (Kong, 2026-10-03: "in a Charter, anyone should be able to join in on
+  roulette and blackjack; quick, easy, fun with friends"): game/den_tables.gd, a node under
+  CrewNet on every game; the founder's runs the tables. A table action is the op "denTable"
+  ([game, action, payload]), caught by Charter.run before the rules, so a crewmate's goes the
+  usual way (CrewNet.request) and the founder's own too. After every change the table is sent
+  to everyone (rpc, call_local); chips stay each captain's own and move only through
+  core/casino.gd (spin_roulette takes the shared number), then the saves are spread and the
+  file written. ROULETTE: sit by opening it; one board shows everyone's chips in their seat
+  colour; Ready (not Spin); it spins when everyone at the wheel is ready or 20 s after the
+  first ready; one number settles all; every captain's net is called out. BLACKJACK (game/
+  den_blackjack_table.gd): up to four seats, one dealer and one shoe; bet and Ready (deals
+  when all are, or 15 s after the first); turns in seat order, 30 s each before a stand is
+  taken; double and split as solo; NO INSURANCE at the shared table (a dealer's natural is
+  seen at once); everyone is paid at the end. Outside a Charter the games are the solo ones.
+  tests/den_tables_check.gd: a Charter with two captains, 12 spins and 40 hands, every chip
+  accounted for.
 - TRIVIA IN THE PORT (Kong, 2026-10-03, SETTLED; not built yet): the port has no server to
   generate questions nightly, so it ships a QUESTION BANK, rotated by day: the questions the web
   has already generated PLUS a freshly written set. Some bank questions double as TREASURE
