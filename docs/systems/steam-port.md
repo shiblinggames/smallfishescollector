@@ -637,6 +637,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the question with a draining ring, the answers inked right or wrong and a stamp; the King's
   ladder with the havens marked and your marker; the capstan a wooden wheel that spins down to
   its wedge with a tick a wedge, the tiles, the letters, a solve box. tests/parlor_check.gd.
+  TREASURE HUNTS ASK TRIVIA (Kong, 2026-10-03: "if you do trivia it actually helps you know
+  the answers"): a fifth step kind, "trivia" (port_rules clues.kinds): the note asks a bank
+  question, one this captain has met in the Parlor (at or under the tier's difficulty) if any,
+  else one about our own fish; "Answer the note" on the hunt list opens its four answers on a
+  slip; right moves the hunt on, wrong and the ink runs until the next sea day
+  (Clues.answer, op clueAnswer). tests/clues_check.gd covers it.
 - TRIVIA IN THE PORT (Kong, 2026-10-03, SETTLED; not built yet): the port has no server to
   generate questions nightly, so it ships a QUESTION BANK, rotated by day: the questions the web
   has already generated PLUS a freshly written set. Some bank questions double as TREASURE

@@ -1478,7 +1478,8 @@
       "bearing",
       "riddle",
       "catch",
-      "speak"
+      "speak",
+      "trivia"
     ],
     "catchRarity": {
       "easy": 2,

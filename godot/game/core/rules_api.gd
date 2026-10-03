@@ -133,6 +133,7 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"digHere": return Explore.dig_here(db, uid, a[0])
 		"openBottle": return Explore.open_bottle(db, uid, a[0])
 		"clueSearch": return Clues.search(db, uid, a[0])
+		"clueAnswer": return Clues.answer(db, uid, str(a[0]), float(a[1]))
 		"getCrewState": return Crew.state(db, uid)
 		"recruitCrew": return Crew.recruit(db, uid, float(a[0]))
 		"upgradeCrewHall": return Crew.upgrade_hall(db, uid)

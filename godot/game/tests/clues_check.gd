@@ -57,6 +57,17 @@ func _init() -> void:
 					var got: Array = Clues.on_catch(db, uid, float(s["fish"]))
 					check(got.size() == 1, "%s: the right catch answers the step" % tier)
 					res = got[0] if not got.is_empty() else {}
+				"trivia":
+					var tq: Dictionary = Parlor.question(str(s["qid"]))
+					check(not tq.is_empty(), "%s: the note's question is in the bank" % tier)
+					var wrong: Dictionary = RulesApi.run(db, uid, "clueAnswer", [tier, float((int(tq["correct_index"]) + 1) % 4)])
+					check(wrong.get("correct") == false, "%s: a wrong answer does not move the hunt" % tier)
+					check(RulesApi.run(db, uid, "clueAnswer", [tier, float(tq["correct_index"])]).has("error"), "%s: the ink has run until the next sea day" % tier)
+					var hs: Dictionary = Js.obj(db.me(uid).get("clue_hunts")).duplicate(true)
+					(hs[tier]["steps"][int(hs[tier]["step"])] as Dictionary).erase("locked_day")
+					db.update_profile(uid, { "clue_hunts": hs })
+					res = RulesApi.run(db, uid, "clueAnswer", [tier, float(tq["correct_index"])])
+					check(res.get("correct") == true, "%s: the right answer moves it on" % tier)
 				"speak":
 					var w: Vector2 = Clues.folk_at(str(s["folk"]), Clock.now_ms())
 					check(w != Vector2.INF, "%s: the regular %s is somewhere" % [tier, s["folk"]])
@@ -84,6 +95,15 @@ func _init() -> void:
 	check(not cols.has("abyssal"), "the last colour is not given away")
 	var dig_left: Dictionary = RulesApi.run(db, uid, "digHere", ["shallows-dig-0"])
 	check(not dig_left.get("ok", false), "a site dug without a hunt gives nothing")
+	# A question step for certain: one met in the Parlor is the one asked.
+	var met: Dictionary = Parlor.bank()["questions"][7]
+	Parlor._p(db, uid)["seen"] = [met["id"]]
+	var qs: Dictionary = Clues._step("trivia", "hard", Traders.Stream.new(9), db.save, [])
+	check(qs.get("qid") == met["id"], "a hunt asks the question met in the Parlor")
+	var hunt: Dictionary = { "tier": "easy", "step": 0, "steps": [qs, Clues._dig_step("easy", Traders.Stream.new(3))], "started": "x" }
+	db.update_profile(uid, { "clue_hunts": { "easy": hunt } })
+	var w2: Dictionary = RulesApi.run(db, uid, "clueAnswer", ["easy", float((int(met["correct_index"]) + 2) % 4)])
+	check(w2.get("correct") == false and RulesApi.run(db, uid, "clueAnswer", ["easy", float(met["correct_index"])]).has("error"), "a wrong answer locks the note for the day")
 	print("  clues: %d caskets, %d points, colours %s" % [opened, int(Achievements.points(db, uid)), str(cols)])
 	print("  clues %s" % ("FAILED" if bad > 0 else "ok"))
 	quit(1 if bad > 0 else 0)

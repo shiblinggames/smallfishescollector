@@ -15,7 +15,11 @@ extends RefCounted
 ## step is a BEARING (a spot given as metres off a landmark: sail there and
 ## search), a RIDDLE (a rock named in a verse: sail to it and search), a
 ## CATCH (bring up a given fish in a given water: it advances on the catch),
-## or a WORD (find a regular and ask them). The last step is always a bearing
+## a WORD (find a regular and ask them), or a QUESTION (Kong, 2026-10-03: "if
+## you do trivia it actually helps you know the answers"): the note asks one
+## from the Parlor's bank, one this captain has already met there if any,
+## else one about our own fish; answered right it moves on, wrong and the ink
+## runs until the next sea day. The last step is always a bearing
 ## to a buried site in the tier's water: dig there. Only then does the site
 ## show its tell on the water; a dig spot is never found any other way.
 ##
@@ -204,6 +208,11 @@ static func _step(kind: String, tier: String, rnd: Traders.Stream, save: Diction
 			# found in the Log, and one never caught must be guessed (Kong).
 			var said: String = veil(str(f.get("fun_fact") if f.get("fun_fact") != null else f.get("description", "")).strip_edges(), str(f["name"]))
 			return { "kind": "catch", "fish": float(f["id"]), "text": "Bring up the fish in %s that your Log would describe so: \"%s\"" % [wname, said] }
+		"trivia":
+			var q: Dictionary = _trivia_for(tier, rnd, save)
+			if q.is_empty():
+				return {}
+			return { "kind": "trivia", "qid": q["id"], "text": "The note asks: \"%s\"" % q["question"] }
 		"speak":
 			var folk: Array = Folk.roster().filter(func(f: Dictionary) -> bool: return not so_far.any(func(s: Dictionary) -> bool: return s.get("folk") == f["id"]))
 			if folk.is_empty():
@@ -211,6 +220,46 @@ static func _step(kind: String, tier: String, rnd: Traders.Stream, save: Diction
 			var f: Dictionary = folk[int(floor(rnd.next() * folk.size()))]
 			return { "kind": "speak", "folk": f["id"], "text": "Show this to %s and ask what it means." % f["name"] }
 	return {}
+
+
+## A question for a hunt: one met in the Parlor (by the tier's difficulty)
+## if this captain has met any, else one about our own fish.
+static func _trivia_for(tier: String, rnd: Traders.Stream, save: Dictionary) -> Dictionary:
+	var hard: int = { "easy": 1, "medium": 2, "hard": 3, "elite": 3 }.get(tier, 2)
+	var seen: Array = Js.list(Js.obj(Js.obj(save.get("profile")).get("parlor")).get("seen"))
+	var pool: Array = []
+	for qid: Variant in seen:
+		var q: Dictionary = Parlor.question(str(qid))
+		if not q.is_empty() and int(q["tier"]) <= hard:
+			pool.append(q)
+	if pool.is_empty():
+		pool = (Parlor.bank()["questions"] as Array).filter(func(q: Dictionary) -> bool: return q.get("source") == "game" and int(q["tier"]) <= hard)
+	if pool.is_empty():
+		return {}
+	return pool[int(floor(rnd.next() * pool.size()))]
+
+
+## Answer the note's question (a QUESTION step).
+static func answer(db: CaptainStore, uid: String, tier: String, chosen: float) -> Dictionary:
+	var p: Dictionary = db.me(uid)
+	var s: Dictionary = current(p, tier)
+	if s.get("kind") != "trivia":
+		return { "error": "That note asks nothing." }
+	var day: int = sea_day(Clock.now_ms())
+	if int(s.get("locked_day", -1)) == day:
+		return { "error": "The ink has run. Look again tomorrow (the next sea day)." }
+	var q: Dictionary = Parlor.question(str(s["qid"]))
+	if not q.is_empty() and int(chosen) == int(q["correct_index"]):
+		var r: Dictionary = advance(db, uid, tier)
+		r["correct"] = true
+		r["explanation"] = q.get("explanation", "")
+		return r
+	var all: Dictionary = Js.obj(p.get("clue_hunts")).duplicate(true)
+	var h: Dictionary = all[tier]
+	(h["steps"][int(h["step"])] as Dictionary)["locked_day"] = day
+	all[tier] = h
+	db.update_profile(uid, { "clue_hunts": all })
+	return { "ok": false, "correct": false, "tier": tier }
 
 
 ## The Log's words with the fish's name taken out (and the last word of it,

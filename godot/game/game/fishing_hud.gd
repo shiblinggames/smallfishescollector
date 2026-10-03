@@ -1194,6 +1194,62 @@ func _paint_clues() -> void:
 		e.add_theme_font_size_override("font_size", 11)
 		var t: Label = Kit.lift(Kit.text(v, str(s["text"]), "small", Color(0.97, 0.93, 0.85), true))
 		t.custom_minimum_size = Vector2(330, 0)
+		if s.get("kind") == "trivia":
+			var tier: String = th[0]
+			var ab: Button = Kit.button("Answer the note", "accent", "small", Color(0.98, 0.84, 0.55))
+			ab.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			ab.mouse_filter = Control.MOUSE_FILTER_STOP
+			ab.pressed.connect(func() -> void: _clue_question(tier, str(s["qid"])))
+			v.add_child(ab)
+
+
+## A hunt's question: the note's four answers on a slip of paper.
+func _clue_question(tier: String, qid: String) -> void:
+	if _modal != null:
+		return
+	var q: Dictionary = Parlor.question(qid)
+	if q.is_empty():
+		return
+	var shade: Control = Control.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(shade)
+	_modal = shade
+	Kit.scrim(shade)
+	var cc: CenterContainer = CenterContainer.new()
+	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.add_child(cc)
+	var card: Pane = Kit.pane(cc, { "radius": 10, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.4)], "shadow": [Color(0, 0, 0, 0.5), 20, Vector2(0, 6)], "pad": [26, 20, 26, 22], "paper": true })
+	card.custom_minimum_size = Vector2(620, 0)
+	var v: VBoxContainer = VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	card.add_child(v)
+	Paper.text(v, "%s  ·  THE NOTE ASKS" % str(Clues.TIER_NAME[tier]).to_upper(), "eyebrow", Paper.RED)
+	Paper.text(v, str(q["question"]), "title", Paper.INK, true)
+	var close: Callable = func() -> void:
+		_modal = null
+		shade.queue_free()
+		_clues_sig = ""
+		refresh()
+	for i: int in 4:
+		var ob: Button = Paper.button(str(q["options"][i]))
+		ob.custom_minimum_size = Vector2(0, 46)
+		ob.pressed.connect(func() -> void:
+			var r: Dictionary = await session.act("clueAnswer", [tier, float(i)])
+			session.persist()
+			close.call()
+			if r.has("error"):
+				toast(str(r["error"]))
+			elif r.get("correct", false):
+				Sound.perfect()
+				toast("Right. The note gives up its next line.")
+			else:
+				Sound.slack()
+				toast("Wrong. The ink has run; look again tomorrow."))
+		v.add_child(ob)
+	var back: Button = Paper.button("Not yet")
+	back.pressed.connect(close)
+	v.add_child(back)
 
 
 # ── Achievements ─────────────────────────────────────────────────────────────
