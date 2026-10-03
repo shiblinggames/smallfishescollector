@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -389,6 +389,27 @@ func _init() -> void:
 				cc.closing = OS.get_environment("CARD_CLOSING") != ""
 				hud.add_child(cc)
 			for f: int in 120:
+				await process_frame
+		"den":
+			# The Den. DEN_GAME: slots, roulette or blackjack; DEN_PLAY: 1 plays
+			# one round and shoots it mid-way (DEN_F frames in).
+			var dp: Dictionary = sea.session.profile()
+			dp["casino_chips"] = 2500.0
+			dp["fishing_xp"] = float(Rules.data()["xpTable"][29])
+			sea._enter_room("den")
+			for f: int in 20:
+				await process_frame
+			var den: DenRoom = sea._room_layer.get_child(0)
+			if OS.get_environment("DEN_GAME") != "":
+				den._open(OS.get_environment("DEN_GAME"))
+				for f: int in 10:
+					await process_frame
+			if OS.get_environment("DEN_FORCE") != "":
+				dp["slots_force_next"] = OS.get_environment("DEN_FORCE")
+			if OS.get_environment("DEN_PLAY") != "":
+				var g: Node = den._table.get_child(den._table.get_child_count() - 1)
+				g.call("play_for_shot")
+			for f: int in int(OS.get_environment("DEN_F")) if OS.get_environment("DEN_F") != "" else 20:
 				await process_frame
 		"crossing":
 			# North through the arch and back (run with --write-movie): the

@@ -22,7 +22,7 @@ const ROWS: Array = [
 		["chart_room", "The Chart Room", "Weekly puzzles that uncover the World Chart", "Study", "sea/charting.png", "#6fc4b4"],
 	]],
 ]
-const BUILT: Array[String] = ["market", "tackle"]
+const BUILT: Array[String] = ["market", "tackle", "den"]
 
 var _card: Pane
 var _first: Button = null

@@ -572,7 +572,22 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Catfish Jackpot (no pot), the trimmed table, the cap by Fishing level, roulette at 10 and
   blackjack at 20. THE RETURN IS ABOUT 90%, NOT 88.6%: exact enumeration of the settled table
   gives 89.6% at 10 chips to 90.1% at 100 and up (pairs round down); the 88.6% in the
-  proposal above was a slip. The room itself is next.
+  proposal above was a slip.
+  THE ROOM (Kong, 2026-10-03: "match our game; use Godot for better animations and smoother
+  play"): game/den_room.gd, a door on the dock. A paper strip holds the purse (chips, what is
+  left to buy in today, +100/+250/+500/+1,000, cash out; the chip number counts up and down);
+  a tab per game (closed tabs say "Needs Fishing 10/20"). FISH SLOTS (game/den_slots.gd): a
+  stained-wood cabinet with three paper windows; the reels run a long strip smeared with
+  speed, land one after another with an overshoot and a knock; the line that pays glows;
+  three hooks spin the bonus round; three catfish light every window and throw gold. The
+  hook symbol is a painted brass hook (web/public/den/hook.png, Kie.ai). FISH ROULETTE
+  (game/den_roulette.gd): a wooden wheel in the real order, the ball running the other way,
+  dropping and rattling into its pocket, the pocket's fish rising in the brass hub; a paper
+  board (numbers, dozens, columns, the even bets) where chips stack; Same again; the last ten
+  numbers as beads. BLACKJACK (game/den_blackjack.gd): paper cards slide in from the shoe,
+  the hole card turns over at the end and the dealer draws one by one; Hit/Stand/Double/Split
+  (H/S/D/P), insurance on an Ace; a hand left open comes back. Splits, streets and corners
+  are not on the roulette board yet (the rules take them).
 - TRIVIA IN THE PORT (Kong, 2026-10-03, SETTLED; not built yet): the port has no server to
   generate questions nightly, so it ships a QUESTION BANK, rotated by day: the questions the web
   has already generated PLUS a freshly written set. Some bank questions double as TREASURE
