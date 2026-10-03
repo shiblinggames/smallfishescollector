@@ -18,6 +18,9 @@ uniform float u_dark = 0.0;
 // The anchorage beyond the reef is always known.
 uniform float u_outer = 22600.0;
 uniform float u_wall = -1500.0;
+// 0: the fishing sea's fog (south of the reef). 1: the campaign's, north of
+// it, over its own grid; anything off that grid is never fogged.
+uniform int u_side = 0;
 
 float hash(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -40,7 +43,7 @@ void fragment() {
 	vec2 px = (UV - 0.5) * u_res;
 	vec2 w = u_center + px / u_scale;
 	float r = length(w);
-	bool in_sea = r < u_outer + 200.0 && w.y > u_wall;
+	bool in_sea = u_side == 1 ? w.y <= u_wall : (r < u_outer + 200.0 && w.y > u_wall);
 	if (!in_sea) {
 		COLOR = vec4(0.0);
 	} else {
@@ -49,6 +52,7 @@ void fragment() {
 		vec2 warp = (vec2(fbm(w * 0.00045), fbm(w * 0.00045 + 5.2)) - 0.5) * 1500.0;
 		vec2 uv = (w + warp - u_origin) / u_span;
 		float seen = (uv.y < 0.0) ? 0.0 : texture(u_fog, uv).r;
+		if (u_side == 1 && (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0)) { seen = 1.0; }
 		float n = (fbm(w * 0.0012) - 0.5) + (vnoise(w * 0.004) - 0.5) * 0.35;
 		float f = 1.0 - smoothstep(0.30, 0.58, seen + n * 0.42);
 		// The cloud: shaded billows of paper and grey wash.

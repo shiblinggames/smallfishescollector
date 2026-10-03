@@ -36,7 +36,7 @@ var _paper: ColorRect
 var _fog: ColorRect
 var _land: Control
 var _bays: Control
-var _xcloud: Control
+var _xcloud: ColorRect
 var _marks: Control
 var _card: Pane
 var _layers: Dictionary = { "ports": true, "people": true, "hotspots": true, "weather": true, "currents": true, "finds": true, "pins": true }
@@ -96,11 +96,14 @@ func _ready() -> void:
 		tr2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_land.add_child(tr2)
 		_plates.append([tr2, i, float(pl2.get("width", 1.0)), true])
-	# The campaign's fog: cloud over the water not yet sailed past the gate.
-	_xcloud = Control.new()
+	# The campaign's fog: the chart's own cloud, over its own grid.
+	_xcloud = ColorRect.new()
 	_xcloud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_xcloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_xcloud.draw.connect(_draw_xfog)
+	var xm: ShaderMaterial = ShaderMaterial.new()
+	xm.shader = load("res://game/fx/chart_fog.gdshader")
+	xm.set_shader_parameter("u_side", 1)
+	_xcloud.material = xm
 	add_child(_xcloud)
 	_fog = ColorRect.new()
 	_fog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -177,6 +180,9 @@ func _build_chrome() -> void:
 	_progress.position = Vector2(28, 104)
 	_progress.custom_minimum_size = Vector2(250, 0)
 	add_child(_progress)
+	_progress.resized.connect(func() -> void:
+		sheet.size.y = _progress.position.y + _progress.size.y + 14.0 - sheet.position.y
+		wsheet.position.y = sheet.position.y + sheet.size.y + 10.0)
 	_draw_progress()
 	# The layers, as ink stamps along the bottom left.
 	var layers: HBoxContainer = HBoxContainer.new()
@@ -354,8 +360,6 @@ func _draw_progress() -> void:
 	var dug: Array = Explore.get_dig_state(sea.session.store, sea.session.uid)["dug"]
 	var ink: Color = Color(0.25, 0.2, 0.16)
 	Kit.text(_progress, "Charted  %d%%" % int(round(Explore.fog_progress(bits) * 100.0)), "label", ink)
-	if sea._xfog != null:
-		Kit.text(_progress, "The campaign's water  ·  %d%% sailed" % int(round(Explore.xfog_progress(sea._xfog.bits) * 100.0)), "small", ink)
 	for w: Dictionary in Chart.WATERS:
 		var seen: int = 0
 		var total: int = 0
@@ -378,6 +382,14 @@ func _draw_progress() -> void:
 			Kit.text(row, "%s  ·  %d%%  ·  isles %d/%d  ·  dug %d/%d" % [w["name"], int(round(100.0 * seen / maxf(1.0, total))), got, isles.size(), gd, sites.size()], "small", ink)
 		var bar: Kit.Bar = Kit.bar(row, float(seen) / maxf(1.0, total), Color(0.3, 0.5, 0.62), true)
 		bar.custom_minimum_size.x = 240
+	if sea._xfog != null:
+		var xr: VBoxContainer = VBoxContainer.new()
+		xr.add_theme_constant_override("separation", 1)
+		_progress.add_child(xr)
+		var xp: float = Explore.xfog_progress(sea._xfog.bits)
+		Kit.text(xr, "The campaign's water  ·  %d%% sailed" % int(round(xp * 100.0)), "small", ink)
+		var xbar: Kit.Bar = Kit.bar(xr, xp, Color(0.62, 0.45, 0.25), true)
+		xbar.custom_minimum_size.x = 240
 
 
 ## A button in the chart's own hand: ink on paper.
@@ -429,7 +441,8 @@ func _process(delta: float) -> void:
 	pm2.set_shader_parameter("u_gate", Vector2(North.GATE_X, North.GATE_HALF))
 	pm2.set_shader_parameter("u_anchor", Vector3(North.EXP_ORIGIN.x, North.EXP_ORIGIN.y, North.EXP_EDGE))
 	var dark: float = float(SeaClock.at(Clock.now_ms())["darkness"])
-	for m: ShaderMaterial in [_paper.material, _fog.material]:
+	(_xcloud.material as ShaderMaterial).set_shader_parameter("u_wall", Explore.NORTH_WALL)
+	for m: ShaderMaterial in [_paper.material, _fog.material, _xcloud.material]:
 		m.set_shader_parameter("u_center", _center)
 		m.set_shader_parameter("u_scale", _scale)
 		m.set_shader_parameter("u_res", size)
@@ -438,6 +451,7 @@ func _process(delta: float) -> void:
 	if _fog_t > 1.0:
 		_fog_t = 0.0
 		_upload_fog()
+		_upload_xfog()
 	for e: Array in _plates:
 		var tr: TextureRect = e[0]
 		var p: Dictionary = e[1]
@@ -451,7 +465,6 @@ func _process(delta: float) -> void:
 		tr.modulate = Color(1, 1, 1, 0.92).lerp(Color(0.55, 0.5, 0.5, 0.92), dark * 0.5)
 	_marks.queue_redraw()
 	_bays.queue_redraw()
-	_xcloud.queue_redraw()
 
 
 ## A campaign island is on the chart while it is on the water and sailed.
@@ -496,22 +509,32 @@ func _draw_bays() -> void:
 			_bays.draw_string(small, c + Vector2(-lw / 2.0, -r * 0.62 + 20), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.45, 0.2, 0.15, 0.8))
 
 
-## The campaign's fog on the chart: soft blots of cloud over every cell not
-## yet sailed, so the clearings are round and run together.
-func _draw_xfog() -> void:
+## The campaign's fog mask, stamped soft at four times its grid like the
+## fishing side's: every cell sailed or never fogged a round blot of clear.
+func _upload_xfog() -> void:
 	if sea._xfog == null:
 		return
-	var cell: float = Explore.XFOG_CELL * _scale
+	var w: int = Explore.xfog_w()
+	var h: int = Explore.xfog_h()
+	const K: int = 4
+	var img: Image = Image.create(w * K, h * K, false, Image.FORMAT_L8)
 	var bits: PackedByteArray = sea._xfog.bits
-	for i: int in Explore.xfog_cells():
-		if Explore.xfog_open(bits, i):
+	var blot: float = K * 1.45
+	for i: int in w * h:
+		if not Explore.xfog_open(bits, i):
 			continue
-		var at: Vector2 = to_screen(Explore.xfog_centre(i))
-		if at.x < -cell * 2.0 or at.y < -cell * 2.0 or at.x > size.x + cell * 2.0 or at.y > size.y + cell * 2.0:
-			continue
-		var wob: float = 0.9 + 0.15 * sin(i * 1.7 + _t * 0.4)
-		_xcloud.draw_circle(at, cell * 0.95 * wob, Color(0.84, 0.81, 0.74, 0.55))
-		_xcloud.draw_circle(at + Vector2(cell * 0.2, -cell * 0.15), cell * 0.6, Color(0.9, 0.88, 0.82, 0.35))
+		var cx: float = (i % w + 0.5) * K
+		var cy: float = (i / w + 0.5) * K
+		for y: int in range(maxi(0, int(cy - blot - 1)), mini(h * K, int(cy + blot + 2))):
+			for x: int in range(maxi(0, int(cx - blot - 1)), mini(w * K, int(cx + blot + 2))):
+				var d: float = Vector2(x + 0.5 - cx, y + 0.5 - cy).length() / blot
+				if d < 1.0:
+					var v: float = maxf(img.get_pixel(x, y).r, 1.0 - d * d)
+					img.set_pixel(x, y, Color(v, v, v))
+	var m: ShaderMaterial = _xcloud.material
+	m.set_shader_parameter("u_fog", ImageTexture.create_from_image(img))
+	m.set_shader_parameter("u_origin", Explore.xfog_box().position)
+	m.set_shader_parameter("u_span", Vector2(w, h) * Explore.XFOG_CELL)
 
 
 ## The fog mask at four times the grid, each sailed cell stamped as a soft

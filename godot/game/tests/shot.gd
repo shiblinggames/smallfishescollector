@@ -702,6 +702,11 @@ func _init() -> void:
 				sea._camera.zoom = Vector2.ONE * float(OS.get_environment("CAMP_ZOOM"))
 			for f: int in 40:
 				await process_frame
+			if OS.get_environment("CAMP_CHART") != "":
+				sea._open_chart()
+				await process_frame
+				sea._chart._scale_to = float(OS.get_environment("CAMP_CHART"))
+				sea._chart._center = Vector2(0, -11000)
 			if OS.get_environment("CAMP_OPEN") != "":
 				if OS.get_environment("CAMP_NOINTRO") != "":
 					NodeSheet._intro_seen[OS.get_environment("CAMP_OPEN")] = true
