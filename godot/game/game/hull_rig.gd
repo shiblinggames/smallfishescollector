@@ -22,6 +22,11 @@ var sink: float = 0.0
 var heel: float = 0.0
 ## Recoil along the beam (a broadside), in pixels; it settles back.
 var kick: float = 0.0
+## A shove off its berth (a recoil, a hit, a swerve), springing back.
+var slide: Vector2 = Vector2.ZERO
+var _slide_v: Vector2 = Vector2.ZERO
+## A hit's tint, fading.
+var flash: float = 0.0
 var _rig: Node2D
 var _hull: Sprite2D
 var _mirror: CanvasGroup
@@ -101,13 +106,27 @@ func _process(delta: float) -> void:
 	heel = lerpf(heel, 0.0, 1.0 - exp(-delta * 3.0))
 	kick = lerpf(kick, 0.0, 1.0 - exp(-delta * 4.0))
 	var roll: float = sin(_t * 1.1 + phase) * 0.018
+	# The shove springs back (a little overshoot, then settles).
+	_slide_v += (-slide * 60.0 - _slide_v * 9.0) * delta
+	slide += _slide_v * delta
+	flash = maxf(0.0, flash - delta * 5.0)
 	_rig.rotation = roll + heel
-	_rig.position = Vector2(kick, sin(_t * 1.6 + phase) * 2.5 + sink * 40.0)
+	_rig.position = Vector2(kick, sin(_t * 1.6 + phase) * 2.5 + sink * 40.0) + slide
+	_hull.self_modulate = Color.WHITE.lerp(Color(1.0, 0.55, 0.45), clampf(flash, 0.0, 1.0))
 	# Going under: the waterline climbs the hull (the shader cuts there), the
 	# bow lifting as she settles stern first.
 	if sink > 0.0:
 		(_hull.material as ShaderMaterial).set_shader_parameter("cut", lerpf(_cut, 0.0, sink))
 		_rig.rotation += sink * 0.25 * face
-	_mirror.position.x = kick
+	_mirror.position.x = kick + slide.x
 	_mirror.modulate.a = 1.0 - sink
 	_rig.modulate.a = 1.0 - smoothstep(0.6, 1.0, sink)
+
+
+
+## A blow, a gun's recoil or a swerve: lean, a shove (it springs back), and
+## a hit's tint.
+func react(lean: float, shove: Vector2, tint: float = 0.0) -> void:
+	heel += lean
+	_slide_v += shove * 9.0
+	flash = maxf(flash, tint)

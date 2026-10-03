@@ -90,6 +90,7 @@ var _target: int = 0
 var _xfire_foe: int = 0
 ## Where each plate was last drawn (key: seat, or "e" and its index).
 var _plate_at: Dictionary = {}
+var _num_glow: Texture2D = Glow.radial(128, Color.WHITE)
 var _xfire_t: float = 0.0
 ## The pale trail on each plate's health bar (key: seat, or "e"), as a share.
 var _trail: Dictionary = {}
@@ -775,41 +776,51 @@ func _one(x: Dictionary) -> void:
 		"order":
 			_strip = x["order"]
 		"reload":
-			_strip_lit = int(x["seat"])
-			_puff(_seat_at(int(x["seat"])), "+1 ball", CREAM)
-			Sound.plip()
-			await _wait(0.25)
+			var rs: int = int(x["seat"])
+			_strip_lit = rs
+			_fx.reload(_seat_at(rs), true)
+			await _wait(0.3)
+			_react(rs, "reload")
+			var got: int = 1 + int(Js.num(x.get("extra")))
+			_num(_seat_at(rs) + Vector2(0, -70), "+%d ball%s" % [got, "" if got == 1 else "s"], CREAM)
+			await _wait(0.2)
 		"brace":
 			_strip_lit = int(x["seat"])
-			_puff(_seat_at(int(x["seat"])), "Bracing", Color(0.7, 0.85, 1.0))
+			_react(int(x["seat"]), "brace")
+			_num(_seat_at(int(x["seat"])), "Bracing", Color(0.7, 0.85, 1.0))
 			await _wait(0.25)
 		"shot":
-			_strip_lit = int(x["seat"])
+			var ss: int = int(x["seat"])
+			var fj: int = _cur
+			_strip_lit = ss
 			var land: String = "dodge" if x.get("dodged", false) else ("miss" if x["aim"] == "miss" else ("crit" if x["aim"] == "critical" else "hit"))
 			var mid: String = str(x.get("mega", ""))
+			var fire_cb: Callable = func(_k: int) -> void: _react(ss, "recoil")
+			var land_cb: Callable = func(k: int) -> void: _landed(-1 - fj, land, k)
 			if x["action"] == "mega":
 				var mg2: Dictionary = Armory.augment(mid)
 				_say(str(mg2.get("name", "")) + "!")
 				var col: Color = Color(str(mg2.get("color", "#ffffff")))
 				match mid:
 					"railgun":
-						await _fx.beam(_seat_at(int(x["seat"])), _enemy_at, col, x.get("grazed", false))
+						_react(ss, "brace")
+						await _fx.beam(_seat_at(ss), _enemy_at, col, x.get("grazed", false))
+						_react(ss, "recoil")
+						_landed(-1 - fj, "crit" if not x.get("grazed", false) else "hit", 0)
 					"barrage":
-						for k: int in 4:
-							_fx.shot(_seat_at(int(x["seat"])) + Vector2(40, 0), _enemy_at + Vector2(randf_range(-40, 40), 0), land, 2, true)
-							await _wait(0.11)
-						await _wait(0.4)
+						await _fx.barrage(_seat_at(ss) + Vector2(40, 0), _enemy_at, land, fire_cb, land_cb)
 					_:
-						await _fx.shot(_seat_at(int(x["seat"])) + Vector2(40, 0), _enemy_at, "miss" if land in ["miss", "dodge"] else "hit", 1, true)
+						await _fx.nuke(_seat_at(ss) + Vector2(40, 0), _enemy_at, land not in ["miss", "dodge"], fire_cb)
 						if land not in ["miss", "dodge"]:
-							_fx.blast(_enemy_at)
+							_landed(-1 - fj, "crit", 0)
 			else:
-				await _fx.shot(_seat_at(int(x["seat"])) + Vector2(40, 0), _enemy_at, land, 3 if x["action"] == "volley" else 1, x["action"] == "volley")
+				await _fx.shot(_seat_at(ss) + Vector2(40, 0), _enemy_at, land, 3 if x["action"] == "volley" else 1, x["action"] == "volley", fire_cb, land_cb)
+			if land == "crit":
+				# A beat held on a critical, before the number.
+				await _wait(0.07)
 			if x.get("dodged", false):
-				_enemy.heel = -0.12
 				_num(_enemy_at, "Slipped it!", Color(0.85, 0.85, 0.85))
 			elif float(x["dmg"]) > 0.0 or x["aim"] != "miss":
-				_enemy.heel = 0.08 if land != "crit" else 0.16
 				_num(_enemy_at, ("%d!" % int(x["dmg"])) if land == "crit" else str(int(x["dmg"])), Color(1.0, 0.85, 0.35) if land == "crit" else CREAM, land == "crit")
 				if x.has("shielded"):
 					_num(_enemy_at + Vector2(-40, -30), "-%d shield" % int(x["shielded"]), Color(0.55, 0.8, 1.0))
@@ -823,12 +834,15 @@ func _one(x: Dictionary) -> void:
 			pass
 		"eReload":
 			_strip_lit = -1 - _cur
-			_puff(_enemy_at, "Reloads", Color(CREAM, 0.8))
-			await _wait(0.25)
+			_fx.reload(_enemy_at, false)
+			await _wait(0.3)
+			_react(-1 - _cur, "reload")
+			_num(_enemy_at + Vector2(0, -70), "Reloads", Color(CREAM, 0.8))
+			await _wait(0.15)
 		"eDodge":
 			_strip_lit = -1 - _cur
-			_enemy.heel = -0.1
-			_puff(_enemy_at, "Evades", Color(0.75, 0.85, 1.0))
+			_react(-1 - _cur, "brace")
+			_num(_enemy_at, "Evades", Color(0.75, 0.85, 1.0))
 			await _wait(0.2)
 		"eSpecial":
 			_strip_lit = -1 - _cur
@@ -838,8 +852,11 @@ func _one(x: Dictionary) -> void:
 		"eShot":
 			_strip_lit = -1 - _cur
 			var ti: int = int(x["target"])
+			var fj2: int = _cur
 			var land2: String = "dodge" if x.get("dodged", false) else ("crit" if x["crit"] else "hit")
-			await _fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land2, 3 if x["action"] == "volley" else 1, x["action"] != "fire")
+			await _fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land2, 3 if x["action"] == "volley" else 1, x["action"] != "fire",
+				func(_k: int) -> void: _react(-1 - fj2, "recoil"),
+				func(k: int) -> void: _landed(ti, land2, k))
 			if x.get("dodged", false):
 				_num(_seat_at(ti), "Dodged!", Color(0.6, 0.9, 1.0))
 			else:
@@ -1035,13 +1052,14 @@ func _broadside(x: Dictionary, group: Array) -> void:
 	_strip_lit = -1 - _cur
 	_say("Broadside!")
 	Rumble.buzz([0, 50, 30, 80])
-	_enemy.kick = 30.0
-	_enemy.heel = 0.1
+	_react(-1 - _cur, "brace")
 	await _wait(0.35)
+	_react(-1 - _cur, "recoil")
+	_react(-1 - _cur, "recoil")
 	for g: Dictionary in group:
 		var ti: int = int(g["target"])
 		var land: String = "dodge" if g.get("dodged", false) else ("crit" if g["crit"] else "hit")
-		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land, 2 if x["action"] == "volley" else 3, true)
+		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land, 2 if x["action"] == "volley" else 3, true, Callable(), func(k: int) -> void: _landed(ti, land, k))
 	await _wait(0.65)
 	for g: Dictionary in group:
 		var ti2: int = int(g["target"])
@@ -1133,7 +1151,7 @@ func _num(world_p: Vector2, text: String, col: Color, big: bool = false) -> void
 	for n: Dictionary in _numbers:
 		if float(n["t"]) < 0.7 and (n["p"] as Vector2).distance_to(world_p) < 90.0:
 			stack = maxi(stack, int(n.get("k", 0)) + 1)
-	_numbers.append({ "p": world_p, "text": text, "col": col, "big": big, "t": 0.0, "k": stack })
+	_numbers.append({ "p": world_p, "text": text, "col": col, "big": big, "t": 0.0, "k": stack, "dx": randf_range(-26.0, 26.0) })
 
 
 func _puff(world_p: Vector2, text: String, col: Color) -> void:
@@ -1345,17 +1363,36 @@ func _draw() -> void:
 			else:
 				_order_chip(sp + Vector2(0, 66), s)
 	# Numbers rising off the water.
+	# Damage slams in big and settles (an overshoot), drifts off its hull and
+	# up, and fades; a critical is bigger, tilted, gold, on a glow, with
+	# CRITICAL over it. Words (a dodge, a reload) are smaller and calmer.
 	for n: Dictionary in _numbers:
 		var u: float = float(n["t"]) / 1.4
-		var p: Vector2 = _screen(n["p"]) + Vector2(0, -30.0 - 80.0 * u - 36.0 * float(n.get("k", 0)))
-		var fs: int = 34 if n["big"] else 24
 		var txt: String = n["text"]
+		var dmg: bool = txt.trim_suffix("!").is_valid_int()
+		var crit: bool = n["big"] and dmg
+		var rise: float = 1.0 - pow(1.0 - clampf(u, 0.0, 1.0), 3.0)
+		var p: Vector2 = _screen(n["p"]) + Vector2(float(n.get("dx", 0.0)) * rise, -40.0 - (90.0 if dmg else 60.0) * rise - 38.0 * float(n.get("k", 0)))
+		var fs: int = (46 if crit else (34 if dmg else (30 if n["big"] else 21)))
 		var w: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var a: float = 1.0 - smoothstep(0.6, 1.0, u)
-		var pop: float = 1.0 + 0.25 * (1.0 - clampf(u / 0.12, 0.0, 1.0))
-		draw_set_transform(p, 0.0, Vector2(pop, pop))
-		draw_string_outline(f, Vector2(-w / 2.0, 0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.75 * a))
+		var a: float = 1.0 - smoothstep(0.62, 1.0, u)
+		var e0: float = clampf(u / 0.16, 0.0, 1.0)
+		var pop: float = (lerpf(1.9, 0.92, e0) if e0 < 1.0 else 1.0) if dmg else lerpf(1.3, 1.0, e0)
+		if u > 0.16 and u < 0.26 and dmg:
+			pop = lerpf(0.92, 1.0, (u - 0.16) / 0.1)
+		var rot: float = (-0.09 if crit else 0.0) * (1.0 - e0 * 0.4)
+		draw_set_transform(p, rot, Vector2(pop, pop))
+		if crit:
+			var gr: float = fs * 1.5
+			draw_texture_rect(_num_glow, Rect2(Vector2(-gr, -fs * 0.3 - gr), Vector2(gr, gr) * 2.0), false, Color(1.0, 0.72, 0.25, 0.5 * a))
+			var cw2: float = Kit.font("karla", 800).get_string_size("CRITICAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+			draw_string_outline(Kit.font("karla", 800), Vector2(-cw2 / 2.0, -fs * 0.95), "CRITICAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 5, Color(0, 0, 0, 0.7 * a))
+			draw_string(Kit.font("karla", 800), Vector2(-cw2 / 2.0, -fs * 0.95), "CRITICAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.9, 0.55, a))
+		draw_string_outline(f, Vector2(-w / 2.0, 0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 9 if dmg else 7, Color(0, 0, 0, 0.8 * a))
 		draw_string(f, Vector2(-w / 2.0, 0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(n["col"], a))
+		# The first instant of a hit: a white flash on the figure.
+		if dmg and u < 0.08:
+			draw_string(f, Vector2(-w / 2.0, 0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.8 * (1.0 - u / 0.08)))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -2011,3 +2048,56 @@ func _hull_tag(at: Vector2, nm: String, share: float, col: Color, lit: bool, alp
 	var r: Rect2 = Rect2(at + Vector2(-45, 6), Vector2(90, 5))
 	BattleLook.draw_box(self, r.grow(1.0), BattleLook.box(Color(0, 0, 0, 0.6 * alpha), Color(0, 0, 0, 0), 0, 3))
 	BattleLook.draw_box(self, Rect2(r.position, Vector2(maxf(3.0, r.size.x * clampf(share, 0.0, 1.0)), r.size.y)), BattleLook.box(Color(col, alpha), Color(0, 0, 0, 0), 0, 2.5))
+
+
+
+# ── The hulls' answers to the guns ────────────────────────────────────────────
+
+## The hull of a ship in the fight: a seat (yours, or a crewmate's), or an
+## enemy (-1 - its index).
+func _hull_of(who: int) -> Object:
+	if who < 0:
+		var j: int = -1 - who
+		return _foe_nodes[j] if j < _foe_nodes.size() and is_instance_valid(_foe_nodes[j]) else null
+	if who == me:
+		return sea._boat
+	return _mate_of(who)
+
+
+## How a hull answers: a hit (leans and is shoved away from the guns, flushes
+## red), a crit (harder), its own guns' recoil, a brace (a lean into it), a
+## reload (a settle), a dodge (a hard swerve aside with foam).
+func _react(who: int, kind: String) -> void:
+	var h: Object = _hull_of(who)
+	if h == null or not h.has_method("react"):
+		return
+	# The enemies ride to the east: a blow pushes them east, the line west.
+	var away: float = 1.0 if who < 0 else -1.0
+	match kind:
+		"hit":
+			h.call("react", 0.07 * away, Vector2(18.0 * away, 2.0), 0.85)
+		"crit":
+			h.call("react", 0.15 * away, Vector2(34.0 * away, -4.0), 1.0)
+		"recoil":
+			h.call("react", 0.035 * away, Vector2(12.0 * away, 0.0), 0.0)
+		"brace":
+			h.call("react", -0.05 * away, Vector2(-4.0 * away, 0.0), 0.0)
+		"reload":
+			h.call("react", 0.0, Vector2(0.0, 6.0), 0.0)
+		"dodge":
+			var side: float = -1.0 if randf() < 0.5 else 1.0
+			h.call("react", -0.14 * away, Vector2(30.0 * away, 70.0 * side), 0.0)
+
+
+## A ball came down on (or past) a ship.
+func _landed(who: int, land: String, k: int) -> void:
+	match land:
+		"hit", "crit":
+			_react(who, land)
+			if who >= 0:
+				Rumble.buzz([0, 35] if land == "hit" else [0, 60, 30, 60])
+		"dodge":
+			if k == 0:
+				_react(who, "dodge")
+				var at: Vector2 = _seat_at(who) if who >= 0 else _foe_at(-1 - who)
+				_fx.swerve(at, -1.0 if who >= 0 else 1.0)

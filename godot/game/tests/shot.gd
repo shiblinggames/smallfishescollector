@@ -679,6 +679,34 @@ func _init() -> void:
 						for bar: Node in bst.find_children("", "AimBar", true, false):
 							(bar as AimBar)._pos = (bar as AimBar)._zone
 							(bar as AimBar).lock()
+					"fx":
+						# One crafted event, captured FX_S seconds in: FX_EV fire,
+						# volley, crit, edodge, ecrit, reload, railgun, barrage, nuke.
+						while bst._busy:
+							await process_frame
+						var ev0: Dictionary = {}
+						match OS.get_environment("FX_EV"):
+							"fire":
+								ev0 = { "t": "shot", "seat": 0, "action": "fire", "aim": "hit", "dmg": 9.0, "enemyHp": 11.0, "foe": 0 }
+							"crit":
+								ev0 = { "t": "shot", "seat": 0, "action": "fire", "aim": "critical", "dmg": 17.0, "enemyHp": 3.0, "foe": 0 }
+							"volley":
+								ev0 = { "t": "shot", "seat": 0, "action": "volley", "aim": "hit", "dmg": 16.0, "enemyHp": 4.0, "foe": 0 }
+							"edodge":
+								ev0 = { "t": "eShot", "target": 0, "action": "fire", "crit": false, "dodged": true, "dmg": 0.0, "hp": 77.0, "foe": 0 }
+							"ecrit":
+								ev0 = { "t": "eShot", "target": 0, "action": "volley", "crit": true, "dmg": 15.0, "hp": 62.0, "foe": 0 }
+							"reload":
+								ev0 = { "t": "reload", "seat": 0, "charges": 2.0 }
+							_:
+								ev0 = { "t": "shot", "seat": 0, "action": "mega", "mega": OS.get_environment("FX_EV"), "aim": "critical", "dmg": 48.0, "enemyHp": 1.0, "foe": 0 }
+						bst._busy = true
+						bst._one(ev0)
+						await create_timer(float(OS.get_environment("FX_S")) if OS.get_environment("FX_S") != "" else 0.5).timeout
+						root.get_texture().get_image().save_png(out)
+						print("  saved ", out)
+						quit()
+						return
 					"card":
 						while bst._busy:
 							await process_frame

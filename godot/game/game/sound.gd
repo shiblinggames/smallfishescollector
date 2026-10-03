@@ -327,3 +327,32 @@ static func chest(grand: bool = false) -> void:
 		for i: int in notes.size():
 			v.append([notes[i], 0.06 + i * 0.075, maxf(0.05, 0.24 - i * 0.018), 0.014, 0.55, "triangle" if i == notes.size() - 1 else "sine"])
 		return _render(v, 1.1), 1.4)
+
+
+
+## A ball into the sea: a hiss of spray and a low plop.
+static func splash() -> void:
+	_play_made("splash", func() -> AudioStreamWAV:
+		return _render([[0.0, 0.0, 0.2, 0.004, 0.55, "noise"], [190.0, 0.0, 0.16, 0.003, 0.18, "sine"], [120.0, 0.02, 0.1, 0.004, 0.2, "triangle"]], 0.8), 1.0)
+
+
+## A ball rammed home: a short wooden clunk.
+static func clunk() -> void:
+	_play_made("clunk", func() -> AudioStreamWAV:
+		return _render([[115.0, 0.0, 0.28, 0.002, 0.13, "triangle"], [0.0, 0.0, 0.1, 0.001, 0.05, "noise"], [230.0, 0.0, 0.06, 0.002, 0.07, "sine"]], 0.4), 1.0)
+
+
+## A hull leaning hard away: rushing water.
+static func whoosh() -> void:
+	_play_made("whoosh", func() -> AudioStreamWAV:
+		return _render([[0.0, 0.0, 0.2, 0.09, 0.35, "noise"], [0.0, 0.12, 0.1, 0.05, 0.3, "noise"]], 0.7), 1.0)
+
+
+## The railgun gathering: a rising run of tones.
+static func charge() -> void:
+	_play_made("charge", func() -> AudioStreamWAV:
+		var v: Array = []
+		var f: Array = [330.0, 415.0, 523.0, 659.0, 830.0, 1046.0]
+		for i: int in f.size():
+			v.append([f[i], i * 0.065, 0.07 + i * 0.012, 0.01, 0.16, "sine"])
+		return _render(v, 0.7), 1.1)

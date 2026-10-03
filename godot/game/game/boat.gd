@@ -419,8 +419,14 @@ func steer(input: Vector2, delta: float) -> void:
 		var fx: float = -1.0 if ((_facing > 0.0) != _ship_flip) else 1.0
 		var bob: float = sin(Time.get_ticks_msec() / 1300.0) * 3.0
 		_ship_rig.scale.x = fx
-		_ship_rig.rotation = sin(Time.get_ticks_msec() / 900.0) * 0.012 * rough
-		_ship_rig.position.y = bob + _rise
+		_fx_v += (-_fx_slide * 60.0 - _fx_v * 9.0) * delta
+		_fx_slide += _fx_v * delta
+		_fx_heel = lerpf(_fx_heel, 0.0, 1.0 - exp(-delta * 3.0))
+		_fx_flash = maxf(0.0, _fx_flash - delta * 5.0)
+		_ship_rig.rotation = sin(Time.get_ticks_msec() / 900.0) * 0.012 * rough + _fx_heel
+		_ship_rig.position.y = bob + _rise + _fx_slide.y
+		_ship_rig.position.x = _fx_slide.x
+		_ship_rig.modulate = Color.WHITE.lerp(Color(1.0, 0.55, 0.45), clampf(_fx_flash, 0.0, 1.0))
 		_ship_mirror.scale.x = fx
 		_ship_mirror.rotation = -_ship_rig.rotation
 		_ship_mirror.position.y = _ship_mirror_y - bob * 0.75 - _rise * Skipper.LIE
@@ -636,3 +642,17 @@ class Ripple:
 func face_to(f: float) -> void:
 	_facing = signf(f)
 	skipper.scale.x = -_facing
+
+
+
+var _fx_slide: Vector2 = Vector2.ZERO
+var _fx_v: Vector2 = Vector2.ZERO
+var _fx_heel: float = 0.0
+var _fx_flash: float = 0.0
+
+
+## In a fight: a blow, her guns' recoil or a swerve (as HullRig.react).
+func react(lean: float, shove: Vector2, tint: float = 0.0) -> void:
+	_fx_heel += lean
+	_fx_v += shove * 9.0
+	_fx_flash = maxf(_fx_flash, tint)

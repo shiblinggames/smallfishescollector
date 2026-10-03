@@ -775,6 +775,23 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   orders and which are spent; right now (statuses, burn, freeze, ward, brace, an aim
   affliction, a repossessed item). KONG: the boss's crate odds are NOT on the card; they belong
   to the raid's entry screen.
+- COMBAT FEEL (2026-10-03; game/battle_fx.gd; Kong: "make combat feel visceral ... cannons and
+  volleys and megas ... damage numbers too ... including dodges and reloads"). Every beat an
+  anticipation, an action and a follow-through, LOCAL (the hull that fires, the water it lands
+  in; no screen shake, per the juice rule): a gun's flash cone, a soft glow and a bank of smoke
+  rolling out along the line of fire, a ring at the port; the ball's high arc trailing smoke; a
+  hit's flash, splinters as tumbling shards, embers, smoke, the struck hull flinching (leans,
+  shoved away from the guns, springs back, flushes red: HullRig/Boat/Shipmate.react); a crit a
+  gold shockwave, sparks and a held beat; a miss a column of water falling back. A volley's
+  three guns go off down the hull one after another, each with its recoil. The Railgun gathers
+  light at the muzzle (Sound.charge) before the lance and a pierce flare; the Barrage four heavy
+  shells in a rolling rhythm; the Nuke a shell lobbed high and slow, then a soft white flash, a
+  mushroom and shockwaves. A reload lifts a ball and rams it home (a clunk of smoke, Sound.clunk);
+  a dodge swerves the hull hard aside in a curl of foam (Sound.whoosh). Flashes are soft radial
+  glows, never flat discs. DAMAGE NUMBERS slam in (an overshoot), flash white, drift off the hull
+  and up; a critical bigger, tilted, gold on a soft glow with CRITICAL over it; words calmer.
+  tests/shot.gd "battle" with BATTLE_SHOW=fx FX_EV (fire, crit, volley, edodge, ecrit, reload,
+  railgun, barrage, nuke) FX_S (seconds in) plays one crafted event and captures it.
 - RAID TIERS, THE FIELD, AND THE ENTRY SCREEN (2026-10-03). KONG'S CALLS (all four on the
   recommended option): Co-op and Co-op Challenge are two new tiers for two or more captains,
   Challenge once EVERY captain in the line has cleared that raid on Co-op; several enemies at once

@@ -126,3 +126,10 @@ func _process(delta: float) -> void:
 	_plate.position = Vector2(-_plate.size.x / 2.0, 0)
 	var way: float = clampf(_vel.length() / 300.0, 0.0, 1.0)
 	skipper.sway(delta, 1.0 + clampf((position.length() - 1400.0) / 21200.0, 0.0, 1.0) * 1.4, 0.0, -signf(_vel.x) * way * 2.8 if absf(_vel.x) > 8.0 else 0.0)
+
+
+
+## In a fight: a crewmate's ship takes a blow, recoils or swerves.
+func react(lean: float, shove: Vector2, tint: float = 0.0) -> void:
+	if _hull != null and is_instance_valid(_hull):
+		_hull.react(lean, shove, tint)
