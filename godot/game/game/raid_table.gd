@@ -1,0 +1,444 @@
+class_name RaidTable
+extends Node
+## A CHARTER'S RAID TOGETHER (Kong, 2026-10-03: co-op raids; the settled shape
+## in docs/systems/steam-port.md: the founder's game runs the fight, a shared
+## planning phase, the boss's target hidden, joining only at a raid's start).
+##
+## Run on the founder's game like the Den's tables (a raid action is
+## `raidTable`, caught by Charter.run); after every change the raid is sent to
+## everyone aboard (changed), and every screen plays the same events.
+##
+##   THE MUSTER: a captain calls a raid from its hull at anchor; everyone
+##   aboard hears it and has MUSTER seconds to join (the caller may sail at
+##   once). Only a captain whose map has reached that raid may come.
+##   A ROUND: each captain in the fight plans (an action, its aim judged on
+##   their own bar, maybe a crew order, maybe aimed at a crewmate) and says
+##   ready; when all are ready, or PLAN seconds pass (a captain who has not
+##   chosen reloads, or braces when full), the founder's game resolves it
+##   (Battle.resolve) and sends the events. A flee goes in as a plan.
+##   PLAYING: every screen plays the round; each says when it is done (or
+##   PLAY seconds pass) before the raid moves on, so nobody is left behind.
+##   BETWEEN: a flare barrage, played by each captain on their own sky; a
+##   tide, each captain choosing their own; the next fight.
+##   PAY: every kill pays each captain still in the fight into their own save
+##   (a captain sunk or fled is out of it); the boss's crate is each one's own,
+##   and the clear is recorded for each.
+
+signal changed(state: Dictionary)
+
+const MUSTER: float = 25.0
+const PLAN: float = 30.0
+const PLAY: float = 25.0
+const FLARES: float = 25.0
+const TIDE: float = 30.0
+const MAX_SEATS: int = 4
+
+## Who in this game is listening (the battle stage, the muster call).
+static var live: RaidTable = null
+
+## On the founder's game: the Charter the raid belongs to.
+var charter: Charter = null
+## The latest raid, as everyone sees it.
+var state: Dictionary = {}
+var _r: Dictionary = { "phase": "idle", "seq": 0 }
+var _began_ms: int = 0
+
+
+func _ready() -> void:
+	name = "RaidTable"
+	live = self
+
+
+func _exit_tree() -> void:
+	if live == self:
+		live = null
+
+
+func hosting() -> bool:
+	return charter != null
+
+
+# ── The founder's side ─────────────────────────────────────────────────────────
+
+## One raid action from a captain: [action, payload].
+func handle(key: String, s: Session, args: Array) -> Dictionary:
+	var action: String = str(args[0]) if args.size() > 0 else ""
+	var payload: Variant = args[1] if args.size() > 1 else null
+	match action:
+		"call":
+			return _call(key, s, Js.obj(payload))
+		"join":
+			return _join(key, s)
+		"leave":
+			return _leave(key)
+		"go":
+			if _r["phase"] != "muster" or _r.get("by") != key:
+				return { "error": "Only the captain who called it can sail early." }
+			_start()
+			return { "ok": true }
+		"plan":
+			return _plan(key, Js.obj(payload))
+		"played":
+			return _played(key, int(Js.num(payload)))
+		"flares":
+			return _flare_result(key, Js.obj(payload))
+		"tide":
+			return _tide_pick(key, str(payload))
+		"drum":
+			return _drum(key)
+		"out":
+			# Sunk or got away: this screen has left the fight, so the rounds
+			# no longer wait on it.
+			if _r.has("gone"):
+				_r["gone"][key] = true
+				if _r["phase"] == "playing" and _everyone_played():
+					_advance()
+			return { "ok": true }
+	return { "error": "There is no such order." }
+
+
+func _seat_of(key: String) -> int:
+	if not (_r.get("b") is Dictionary):
+		return -1
+	var seats: Array = _r["b"]["seats"]
+	for i: int in seats.size():
+		if seats[i].get("key") == key:
+			return i
+	return -1
+
+
+## May this captain take on that raid? Their own map must have reached it.
+static func eligible(s: Session, node_id: String) -> bool:
+	var st: Dictionary = Campaign.statuses(Campaign.view(s.store, s.uid))
+	return st.get(node_id, "locked") != "locked"
+
+
+func _call(key: String, s: Session, p: Dictionary) -> Dictionary:
+	if _r["phase"] not in ["idle", "done"]:
+		return { "error": "The crew are already at a raid." }
+	var node_id: String = str(p.get("nodeId", ""))
+	var raid_id: String = str(p.get("raidId", ""))
+	if Battle.raid_def(raid_id).is_empty() or not eligible(s, node_id):
+		return { "error": "Your map has not reached that raid." }
+	_r = { "phase": "muster", "seq": int(_r["seq"]) + 1, "left": MUSTER, "raidId": raid_id, "nodeId": node_id, "by": key,
+		"members": [{ "key": key, "name": s.captain_name() }], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "tidePicks": {}, "gone": {}, "result": "" }
+	_push()
+	return { "ok": true }
+
+
+func _join(key: String, s: Session) -> Dictionary:
+	if _r["phase"] != "muster":
+		return { "error": "That raid has already sailed." }
+	var mem: Array = _r["members"]
+	if mem.any(func(m: Dictionary) -> bool: return m["key"] == key):
+		return { "ok": true }
+	if mem.size() >= MAX_SEATS:
+		return { "error": "The line is full." }
+	if not eligible(s, str(_r["nodeId"])):
+		return { "error": "Your map has not reached that raid yet." }
+	mem.append({ "key": key, "name": s.captain_name() })
+	_push()
+	return { "ok": true }
+
+
+func _leave(key: String) -> Dictionary:
+	if _r["phase"] != "muster":
+		return { "error": "The fight is on." }
+	if _r.get("by") == key:
+		_r["phase"] = "idle"
+		_r["result"] = "called off"
+	else:
+		_r["members"] = (_r["members"] as Array).filter(func(m: Dictionary) -> bool: return m["key"] != key)
+	_push()
+	return { "ok": true }
+
+
+## The muster is over: every ship joins the line, the first fight begins.
+func _start() -> void:
+	var seats: Array = []
+	for m: Dictionary in _r["members"]:
+		var s: Session = _session(m["key"])
+		if s == null:
+			continue
+		var seat: Dictionary = Battle.seat_for(s.store, s.uid, str(m["name"]))
+		seat["key"] = m["key"]
+		seats.append(seat)
+	_r["b"] = Battle.begin(str(_r["raidId"]), seats)
+	_began_ms = Time.get_ticks_msec()
+	_step("plan", [{ "t": "begin" }])
+
+
+## Move to a phase with this round's events; everyone plays them first.
+func _step(next: String, ev: Array) -> void:
+	_r["seq"] = int(_r["seq"]) + 1
+	_r["ev"] = ev
+	_r["acks"] = {}
+	_r["after"] = next
+	_r["phase"] = "playing"
+	_r["left"] = PLAY
+	_push()
+
+
+func _played(key: String, seq: int) -> Dictionary:
+	if _r["phase"] != "playing" or seq != int(_r["seq"]):
+		return { "ok": true }
+	_r["acks"][key] = true
+	if _everyone_played():
+		_advance()
+	return { "ok": true }
+
+
+func _everyone_played() -> bool:
+	for m: Dictionary in _r["members"]:
+		if not _r["acks"].has(m["key"]) and not Js.obj(_r.get("gone")).has(m["key"]):
+			return false
+	return true
+
+
+## After a round has played on every screen: what comes next.
+func _advance() -> void:
+	var b: Dictionary = _r["b"]
+	var after: String = str(_r.get("after", "plan"))
+	match after:
+		"plan":
+			if b.has("flares") and b["state"] == "plan":
+				_r["phase"] = "flares"
+				_r["left"] = FLARES
+				_r["flareRes"] = {}
+				_push()
+				return
+			_open_plan()
+		"won":
+			# A tide, or the Throne's reprieve, then the next fight (or the end).
+			var tide: Dictionary = Battle.tide_due(b)
+			if tide.is_empty():
+				tide = Battle.reprieve_due(b)
+			if not tide.is_empty():
+				_r["phase"] = "tide"
+				_r["tide"] = tide
+				_r["tidePicks"] = {}
+				_r["left"] = TIDE
+				_push()
+				return
+			_next_fight()
+		"tided":
+			_next_fight()
+		_:
+			_r["phase"] = "done"
+			_push()
+
+
+func _open_plan() -> void:
+	_r["phase"] = "plan"
+	_r["plans"] = {}
+	_r["left"] = PLAN
+	_push()
+
+
+func _next_fight() -> void:
+	var b: Dictionary = _r["b"]
+	var nx: Dictionary = Battle.next_fight(b)
+	if nx["done"]:
+		var ev: Array = _crates()
+		_r["result"] = "won"
+		_step("end", ev)
+		return
+	_step("plan", [{ "t": "nextFight", "rest": nx.get("rest", false), "boss": nx.get("boss", false) }])
+
+
+func _plan(key: String, plan: Dictionary) -> Dictionary:
+	if _r["phase"] != "plan":
+		return { "error": "Not now." }
+	var si: int = _seat_of(key)
+	if si < 0 or not Battle.alive(_r["b"]).has(_r["b"]["seats"][si]):
+		return { "error": "You are out of this fight." }
+	_r["plans"][key] = plan
+	_push()
+	if _all_planned():
+		_resolve()
+	return { "ok": true }
+
+
+func _all_planned() -> bool:
+	var b: Dictionary = _r["b"]
+	for s: Dictionary in Battle.alive(b):
+		if not _r["plans"].has(s["key"]):
+			return false
+	return true
+
+
+## Resolve the round on the founder's game (flees first), and pay any kill.
+func _resolve() -> void:
+	var b: Dictionary = _r["b"]
+	var ev: Array = []
+	var plans: Array = []
+	for i: int in (b["seats"] as Array).size():
+		var s: Dictionary = b["seats"][i]
+		var p: Dictionary = Js.obj(_r["plans"].get(s["key"]))
+		if p.is_empty():
+			var lg: Dictionary = Battle.legal(b, s)
+			p = { "action": "reload" if lg["reload"] else "dodge" }
+		if str(p.get("action", "")) == "flee" and Battle.alive(b).has(s):
+			ev += Battle.flee(b, i)
+			p = { "action": "reload" }
+		plans.append(p)
+	if b["state"] == "plan":
+		ev += Battle.resolve(b, plans)
+	match str(b["state"]):
+		"won":
+			ev += _pay_kill()
+			_step("won", ev)
+		"lost", "fled":
+			_r["result"] = str(b["state"])
+			_step("end", ev)
+		_:
+			_step("plan", ev)
+
+
+## A kill pays each captain still in the fight.
+func _pay_kill() -> Array:
+	var b: Dictionary = _r["b"]
+	var raid: Dictionary = Battle.raid_def(str(_r["raidId"]))
+	var e: Dictionary = b["enemy"]
+	var boss: bool = Battle.fight_at(raid, int(b["fight"]))["boss"]
+	var out: Array = []
+	for s: Dictionary in Battle.alive(b):
+		var ss: Session = _session(s["key"])
+		if ss == null:
+			continue
+		# Through the Charter's book: the purse is the crew's, so the pay is
+		# lent in, earned, taken back and noted under the captain's name.
+		charter._lend(ss)
+		var paid: Dictionary = RaidRun.award_kill(ss.store, ss.uid, raid, str(e["id"]), boss)
+		charter._take(ss)
+		if float(paid["doubloons"]) > 0.0:
+			charter._note(ss.captain_name(), float(paid["doubloons"]), "%s: %s sunk" % [raid.get("raidTitle", "Raid"), e["name"]])
+		out.append({ "t": "pay", "key": s["key"], "xp": paid["xp"], "doubloons": paid["doubloons"] })
+	_settle_saves()
+	return out
+
+
+## The raid is done: each captain still in it opens their own crate, and the
+## clear is theirs.
+func _crates() -> Array:
+	var b: Dictionary = _r["b"]
+	var raid: Dictionary = Battle.raid_def(str(_r["raidId"]))
+	var out: Array = []
+	var ms: float = float(Time.get_ticks_msec() - _began_ms)
+	for s: Dictionary in Battle.alive(b):
+		var ss: Session = _session(s["key"])
+		if ss == null:
+			continue
+		charter._lend(ss)
+		var r: Dictionary = RaidRun.open_crate(ss.store, ss.uid, raid, float(s["fortune"]))
+		RaidRun.record_clear(ss.store, ss.uid, str(_r["raidId"]), ms)
+		charter._take(ss)
+		if Js.num(r.get("coin")) > 0.0:
+			charter._note(ss.captain_name(), float(r["coin"]), "%s: the crate" % raid.get("raidTitle", "Raid"))
+		out.append({ "t": "crate", "key": s["key"], "coin": r.get("coin", 0.0), "items": (Js.list(r.get("items"))).map(func(x: Dictionary) -> String: return str(x.get("label", x["id"]))) })
+	_settle_saves()
+	return out
+
+
+func _flare_result(key: String, res: Dictionary) -> Dictionary:
+	if _r["phase"] != "flares":
+		return { "ok": true }
+	_r["flareRes"][key] = res
+	if _all_in("flareRes"):
+		_land_flares()
+	return { "ok": true }
+
+
+func _all_in(field: String) -> bool:
+	for s: Dictionary in Battle.alive(_r["b"]):
+		if not _r[field].has(s["key"]):
+			return false
+	return true
+
+
+func _land_flares() -> void:
+	var b: Dictionary = _r["b"]
+	var res: Array = []
+	for s: Dictionary in b["seats"]:
+		# A captain who never played their sky let every flare through.
+		res.append(Js.obj(_r["flareRes"].get(s["key"], { "missed": float(Js.obj(b.get("flares")).get("count", 0)), "feints": 0.0 })))
+	var ev: Array = Battle.flares_land(b, res)
+	if b["state"] == "lost":
+		_r["result"] = "lost"
+	_step("end" if b["state"] == "lost" else "plan", ev)
+
+
+func _tide_pick(key: String, choice: String) -> Dictionary:
+	if _r["phase"] != "tide":
+		return { "ok": true }
+	var si: int = _seat_of(key)
+	if si < 0 or _r["tidePicks"].has(key):
+		return { "ok": true }
+	var r: Dictionary = Battle.tide_pick(_r["b"], si, _r["tide"], choice)
+	_r["tidePicks"][key] = r
+	_push()
+	if _all_in("tidePicks"):
+		_step("tided", [{ "t": "tided", "picks": _r["tidePicks"] }])
+	return { "ok": true }
+
+
+func _drum(key: String) -> Dictionary:
+	if _r["phase"] != "plan":
+		return { "error": "Not now." }
+	var si: int = _seat_of(key)
+	if si < 0:
+		return { "error": "You are out of this fight." }
+	var r: Dictionary = Battle.use_drum(_r["b"], si)
+	_push()
+	return r
+
+
+func _process(delta: float) -> void:
+	if not hosting():
+		return
+	if float(_r.get("left", -1.0)) <= 0.0:
+		return
+	_r["left"] = float(_r["left"]) - delta
+	if float(_r["left"]) > 0.0:
+		return
+	_r["left"] = -1.0
+	match str(_r["phase"]):
+		"muster":
+			_start()
+		"plan":
+			_resolve()
+		"playing":
+			_advance()
+		"flares":
+			_land_flares()
+		"tide":
+			for s: Dictionary in Battle.alive(_r["b"]):
+				if not _r["tidePicks"].has(s["key"]):
+					var ch: Array = Js.list(_r["tide"].get("choices"))
+					_tide_pick(s["key"], str(ch[ch.size() - 1]["id"]) if not ch.is_empty() else "")
+
+
+## Send the raid to everyone (and to this game's own screens).
+func _push() -> void:
+	var pub: Dictionary = _r.duplicate(true)
+	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
+		_state.rpc(pub)
+	else:
+		_state(pub)
+
+
+@rpc("authority", "call_local", "reliable")
+func _state(pub: Dictionary) -> void:
+	state = pub
+	changed.emit(pub)
+
+
+func _settle_saves() -> void:
+	if charter == null:
+		return
+	charter._spread("")
+	charter.write()
+
+
+func _session(key: String) -> Session:
+	return charter.session_for(key) if charter != null else null

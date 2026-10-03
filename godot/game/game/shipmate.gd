@@ -59,6 +59,42 @@ func set_mate_name(n: String) -> void:
 
 func set_look(look: Dictionary) -> void:
 	skipper.set_look(look)
+	_look = look
+	if _hull != null:
+		_hull.queue_free()
+		_hull = null
+	_on_ship = false
+	skipper.visible = true
+
+
+var _look: Dictionary = {}
+## North of the arch: their expedition ship, as yours becomes (Boat.set_ship).
+var _hull: HullRig = null
+var _on_ship: bool = false
+
+
+func _side() -> void:
+	var want: bool = North.ship_water(position)
+	if want == _on_ship:
+		return
+	_on_ship = want
+	skipper.visible = not want
+	if _hull != null:
+		_hull.queue_free()
+		_hull = null
+	if not want:
+		return
+	var sa: Dictionary = North.ship_art(_look.get("shipTier"), _look.get("shipSkin"))
+	var tex: Texture2D = Skipper.tex(str(sa["art"]).trim_prefix("/"))
+	if tex == null:
+		skipper.visible = true
+		return
+	_hull = HullRig.new()
+	_hull.tex = tex
+	_hull.def = sa["def"]
+	_hull.box = 340.0 * float(sa["wide"])
+	add_child(_hull)
+	move_child(_hull, 0)
 
 
 ## One update from their game.
@@ -78,6 +114,9 @@ func _process(delta: float) -> void:
 	_age = minf(_age + delta, 0.5)
 	var aim: Vector2 = _at + _vel * _age
 	position = position.lerp(aim, 1.0 - exp(-10.0 * delta))
+	_side()
+	if _hull != null:
+		_hull.turn(1.0 if skipper.scale.x < 0.0 else -1.0)
 	_plate.modulate = lift
 	_plate.position = Vector2(-_plate.size.x / 2.0, 0)
 	var way: float = clampf(_vel.length() / 300.0, 0.0, 1.0)

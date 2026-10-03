@@ -306,6 +306,10 @@ func _ready() -> void:
 	hud_layer.layer = 10
 	add_child(hud_layer)
 	_hud_layer = hud_layer
+	if RaidTable.live != null and (session.remote != null or session.charter != null):
+		var muster: RaidMuster = RaidMuster.new()
+		muster.sea = self
+		hud_layer.add_child(muster)
 	_room_layer = CanvasLayer.new()
 	_room_layer.layer = 20
 	add_child(_room_layer)
@@ -1224,21 +1228,10 @@ func _ship_side() -> void:
 	if want == _boat.on_ship:
 		_sided = true
 		return
-	# Her ship as the web's chart draws it (lib/ships.ts; a skin's hull if worn).
-	var p: Dictionary = session.profile()
-	var tier: int = clampi(int(Js.num(p.get("ship_tier"))), 2, 6)
-	var def: Dictionary = {}
-	for sd: Dictionary in Js.list(Rules.data().get("ships")):
-		if int(sd["tier"]) == tier:
-			def = sd
-	var art: String = str(def.get("seaImageUrl", ""))
-	var wide: float = 1.0
-	for sk: Dictionary in Js.list(Rules.data().get("shipSkins")):
-		if sk["id"] == p.get("equipped_ship_skin") and sk.get("imageByTier") != null:
-			var by: Dictionary = sk["imageByTier"]
-			if by.has(str(tier)):
-				art = str(by[str(tier)])
-				wide = 0.969 / 0.651
+	var sa: Dictionary = North.ship_art(session.profile().get("ship_tier"), session.profile().get("equipped_ship_skin"))
+	var def: Dictionary = sa["def"]
+	var art: String = sa["art"]
+	var wide: float = sa["wide"]
 	# The first time (opening the sea already north) is no crossing.
 	var crossing: bool = _sided
 	_sided = true
@@ -1461,6 +1454,13 @@ func _dock(id: String) -> void:
 
 ## A FIGHT ON THE WATER (game/battle_stage.gd): the sea becomes its stage.
 func start_battle(raid_id: String, node_id: String = "") -> void:
+	# In a Charter every raid goes through the founder's table (the purse is
+	# the crew's): the call goes out, and the line forms when it sails.
+	if raids_shared():
+		var r: Variant = await session.act("raidTable", ["call", { "raidId": raid_id, "nodeId": node_id }])
+		if r is Dictionary and r.has("error"):
+			_hud.toast(str(r["error"]))
+		return
 	var st: BattleStage = BattleStage.new()
 	st.sea = self
 	st.raid_id = raid_id
@@ -1468,6 +1468,40 @@ func start_battle(raid_id: String, node_id: String = "") -> void:
 	if mark != null:
 		st.mark = mark
 		st.dock = mark.dock()
+	st.finished.connect(func(_won: bool) -> void:
+		_campaign.refresh()
+		_open_sea_gate()
+		_hud.refresh()
+		get_tree().create_timer(0.4).timeout.connect(celebrate_chapter))
+	_hud.hold_for(st)
+	_hud_layer.add_child(st)
+
+
+## Is this captain in a Charter whose raids go through the founder's table?
+func raids_shared() -> bool:
+	if RaidTable.live == null:
+		return false
+	return session.remote != null or (session.charter != null and session.charter.raids != null)
+
+
+## The line has formed for a Charter's raid this captain is in: to the fight.
+func open_coop_battle(table_state: Dictionary, my_key: String) -> void:
+	var node_id: String = str(table_state.get("nodeId", ""))
+	var st: BattleStage = BattleStage.new()
+	st.sea = self
+	st.raid_id = str(table_state["raidId"])
+	st.table = RaidTable.live
+	st.my_key = my_key
+	var mark: CampaignWater.Ship = _campaign.ship(node_id) if node_id != "" else null
+	if mark != null:
+		st.mark = mark
+		st.dock = mark.dock()
+	# A captain far off is brought round to the dock's water first.
+	var to: Vector2 = st.dock if st.dock != Vector2.INF else North.SEA_GATE + Vector2(-300, -1300)
+	if _boat.position.distance_to(to) > 2600.0:
+		_boat.position = to + Vector2(-520, 240)
+		_boat.velocity = Vector2.ZERO
+		_field.ring(_boat.position, 140.0, 1.4, 0.6)
 	st.finished.connect(func(_won: bool) -> void:
 		_campaign.refresh()
 		_open_sea_gate()

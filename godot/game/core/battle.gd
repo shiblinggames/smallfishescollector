@@ -223,6 +223,11 @@ static func party_hp_mult(n: int) -> float:
 	return float(m[clampi(n, 1, m.size()) - 1])
 
 
+## Out of the fight: sunk, or got away.
+static func _out(s: Dictionary) -> bool:
+	return s.get("sunk", false) == true or s.get("fled", false) == true
+
+
 static func alive(b: Dictionary) -> Array:
 	return (b["seats"] as Array).filter(func(s: Dictionary) -> bool: return not s.get("sunk", false) and not s.get("fled", false))
 
@@ -289,7 +294,7 @@ static func start_fight(b: Dictionary, r: int) -> void:
 	b.erase("flares")
 	for s: Dictionary in b["seats"]:
 		_ready_seat(s)
-		if s.get("sunk", false):
+		if _out(s):
 			continue
 		# The tides the captain took: the fight's opening HP and balls, and
 		# their banked sure dodges.
@@ -446,7 +451,7 @@ static func legal(b: Dictionary, s: Dictionary) -> Dictionary:
 ## A crew ability a seat may fire now: not used this raid, one per turn, not
 ## silenced.
 static func ability_ok(b: Dictionary, s: Dictionary, crew_id: Variant) -> String:
-	if s.get("sunk", false):
+	if _out(s):
 		return "Sunk"
 	if s.get("abilityThisTurn", false):
 		return "One crew order a turn"
@@ -475,7 +480,7 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 	(s["used"] as Array).append(c["id"])
 	s["abilityThisTurn"] = true
 	var t: Dictionary = b["seats"][clampi(target, 0, (b["seats"] as Array).size() - 1)]
-	if t.get("sunk", false):
+	if _out(t):
 		t = s
 	var e: Dictionary = b["enemy"]
 	var ms: Dictionary = c["ms"]
@@ -657,7 +662,7 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 	# Crew orders first, in seat order.
 	for i: int in plans.size():
 		var ab: Variant = Js.obj(plans[i]).get("ability")
-		if ab is Dictionary and not b["seats"][i].get("sunk", false):
+		if ab is Dictionary and not _out(b["seats"][i]):
 			use_ability(b, i, ab["crew"], int(Js.nz(ab.get("target"), float(i))), ev)
 	if b["state"] != "plan":
 		return _finish(b, ev)
@@ -665,7 +670,7 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 	# a dodge stance is read the same whichever side acts first.
 	for i: int in plans.size():
 		var s0: Dictionary = b["seats"][i]
-		if s0.get("sunk", false):
+		if _out(s0):
 			continue
 		var p0: Dictionary = Js.obj(plans[i]).duplicate()
 		var lg0: Dictionary = legal(b, s0)
@@ -696,11 +701,11 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			return _finish(b, ev)
 	for i: int in (b["seats"] as Array).size():
 		var sf: Dictionary = b["seats"][i]
-		sf["frozenNow"] = float(sf.get("freeze", 0.0)) > 0.0 and not sf.get("sunk", false)
+		sf["frozenNow"] = float(sf.get("freeze", 0.0)) > 0.0 and not _out(sf)
 		if sf["frozenNow"]:
 			sf["freeze"] = 0.0
 		var bn: Dictionary = sf.get("burn", {})
-		if not bn.is_empty() and not sf.get("sunk", false):
+		if not bn.is_empty() and not _out(sf):
 			sf["hp"] = maxf(0.0, float(sf["hp"]) - float(bn["dmg"]))
 			ev.append({ "t": "burn", "seat": i, "dmg": bn["dmg"], "hp": sf["hp"] })
 			bn["turns"] = float(bn["turns"]) - 1.0
@@ -710,7 +715,7 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 	var order: Array = []
 	for i: int in plans.size():
 		var s: Dictionary = b["seats"][i]
-		if s.get("sunk", false):
+		if _out(s):
 			continue
 		var roll: int = d20() + int(maxf(1.0, float(s["speed"]) + float(tide_agg(s)["speed"]) + float(mods(s["statuses"])["speed"]))) + int(floor(float(s["nav"]) * float(Js.obj(s.get("fx")).get("navSpeed", 0.0))))
 		order.append({ "who": i, "roll": roll })
@@ -733,7 +738,7 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			_enemy_act(b, e_act, e_mods, plans, ev)
 		else:
 			var s2: Dictionary = b["seats"][who]
-			if s2.get("sunk", false) or float(s2["hp"]) <= 0.0:
+			if _out(s2) or float(s2["hp"]) <= 0.0:
 				continue
 			if s2.get("frozenNow", false):
 				s2["last"] = ""
@@ -965,7 +970,7 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 				var k0: int = 0
 				for i: int in (b["seats"] as Array).size():
 					var s3: Dictionary = b["seats"][i]
-					if not s3.get("sunk", false) and float(s3["hp"]) > 0.0:
+					if not _out(s3) and float(s3["hp"]) > 0.0:
 						_enemy_shot(b, act, i, e_mods, plans, ev, k0 == 0, true)
 						k0 += 1
 			else:
@@ -1006,7 +1011,7 @@ static func _target_new(b: Dictionary, hit: Array) -> int:
 	var pool: Array = []
 	for i: int in (b["seats"] as Array).size():
 		var s: Dictionary = b["seats"][i]
-		if not s.get("sunk", false) and float(s["hp"]) > 0.0 and not hit.has(i):
+		if not _out(s) and float(s["hp"]) > 0.0 and not hit.has(i):
 			pool.append(i)
 	if pool.is_empty():
 		return _target(b, -1)
@@ -1019,7 +1024,7 @@ static func _target(b: Dictionary, not_i: int) -> int:
 	var pool: Array = []
 	for i: int in (b["seats"] as Array).size():
 		var s: Dictionary = b["seats"][i]
-		if not s.get("sunk", false) and float(s["hp"]) > 0.0 and i != not_i:
+		if not _out(s) and float(s["hp"]) > 0.0 and i != not_i:
 			pool.append(i)
 	if pool.is_empty():
 		return not_i
@@ -1241,7 +1246,7 @@ static func _finish(b: Dictionary, ev: Array) -> Array:
 static func _deaths(b: Dictionary, ev: Array) -> void:
 	for i: int in (b["seats"] as Array).size():
 		var s: Dictionary = b["seats"][i]
-		if s.get("sunk", false) or float(s["hp"]) > 0.0:
+		if _out(s) or float(s["hp"]) > 0.0:
 			continue
 		var w: Dictionary = s["ward"]
 		if not w.is_empty() and float(w["turns"]) > 0.0:
@@ -1284,7 +1289,7 @@ static func _round_end(b: Dictionary, ev: Array) -> Array:
 		sn["turns"] = float(sn["turns"]) - 1.0
 	for s: Dictionary in b["seats"]:
 		s["abilityThisTurn"] = false
-		if s.get("sunk", false):
+		if _out(s):
 			continue
 		var rg: float = float(mods(s["statuses"])["regen"])
 		if rg > 0.0:
@@ -1326,7 +1331,7 @@ static func flares_land(b: Dictionary, results: Array) -> Array:
 		return ev
 	for i: int in (b["seats"] as Array).size():
 		var s: Dictionary = b["seats"][i]
-		if s.get("sunk", false) or i >= results.size():
+		if _out(s) or i >= results.size():
 			continue
 		var r: Dictionary = Js.obj(results[i])
 		var per: float = float(Js.round(maxf(float(fl["per"]), float(Js.round(float(s["max"]) * 0.032)))))
@@ -1393,7 +1398,7 @@ static func _boss_ability(b: Dictionary, a: Dictionary, ev: Array) -> void:
 			# A flurry, fiercer the lower the ship is, at every ship afloat.
 			for i: int in (b["seats"] as Array).size():
 				var s: Dictionary = b["seats"][i]
-				if s.get("sunk", false) or float(s["hp"]) <= 0.0:
+				if _out(s) or float(s["hp"]) <= 0.0:
 					continue
 				var frenzy: float = 1.0 + (1.0 - float(s["hp"]) / float(s["max"])) * float(Js.nz(a.get("value"), 0.3))
 				var tot: float = 0.0

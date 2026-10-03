@@ -72,6 +72,18 @@ func _ready() -> void:
 	_base_y = _hull.position.y
 
 
+## Turn her about (a crewmate's ship sailing the other way): the hull and its
+## reflection flip, the waterline's tilt with them.
+func turn(f: float) -> void:
+	if _hull == null or signf(f) == signf(face):
+		return
+	face = f
+	_hull.flip_h = (face < 0.0) != (def.get("seaFlip", false) == true)
+	(_hull.material as ShaderMaterial).set_shader_parameter("tilt", Skipper.keel_tilt(tex) * (-1.0 if _hull.flip_h else 1.0))
+	for c: Node in _mirror.get_children():
+		(c as Sprite2D).flip_h = _hull.flip_h
+
+
 ## The hull's middle above the water, in the World's space (for shots and
 ## numbers aimed at it).
 func centre() -> Vector2:

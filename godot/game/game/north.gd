@@ -202,3 +202,23 @@ const COMING: Dictionary = {
 	"gunwharf": "Where your ship lies at her berth, is refitted and armed for the campaign.",
 	"charterhouse": "The voyage board: routes, crews and the day's voyage.",
 }
+
+
+## A captain's expedition ship as the web's chart draws it (lib/ships.ts; a
+## skin's hull if worn): the rules' row, the picture, how much wider a skin's
+## padded plate is drawn.
+static func ship_art(ship_tier: Variant, skin: Variant) -> Dictionary:
+	var tier: int = clampi(int(Js.num(ship_tier)), 2, 6)
+	var def: Dictionary = {}
+	for sd: Dictionary in Js.list(Rules.data().get("ships")):
+		if int(sd["tier"]) == tier:
+			def = sd
+	var art: String = str(def.get("seaImageUrl", ""))
+	var wide: float = 1.0
+	for sk: Dictionary in Js.list(Rules.data().get("shipSkins")):
+		if sk["id"] == skin and sk.get("imageByTier") != null:
+			var by: Dictionary = sk["imageByTier"]
+			if by.has(str(tier)):
+				art = str(by[str(tier)])
+				wide = 0.969 / 0.651
+	return { "def": def, "art": art, "wide": wide }

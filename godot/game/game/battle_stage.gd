@@ -18,8 +18,13 @@ extends Control
 ##              the water, splashes, splinters and numbers; a sinking hull
 ##              goes under; after a kill the next enemy sails in.
 ##   THE END    the crate (or, sunk, the sail back to the Gunwharf).
-## Rules: core/battle.gd and core/raid_run.gd. Solo for now; the plans array
-## and the seats are already a party's.
+## Rules: core/battle.gd and core/raid_run.gd.
+##
+## TOGETHER (a Charter's raid, game/raid_table.gd): the founder's game runs the
+## fight and every screen follows it. Each captain sits in their own seat of the
+## line with their own deck; a round is planned by all, then played on every
+## screen from the same events; the flares and the tides are each one's own.
+## A captain sunk or got away leaves the screen; the rest fight on.
 
 signal finished(won: bool)
 
@@ -63,6 +68,16 @@ var mark: CampaignWater.Ship = null
 var _began_ms: int = 0
 ## What each hull is wearing (fire, ice, shields, wards, the Last Wall).
 var _auras: Dictionary = {}
+## Together: the Charter's raid this screen follows, this captain's key and seat.
+var table: RaidTable = null
+var my_key: String = ""
+var me: int = 0
+var _latest: Dictionary = {}
+var _handled: String = ""
+var _pumping: bool = false
+var _gone: bool = false
+var _spoke: bool = false
+var _plan_until: float = 0.0
 
 
 func _ready() -> void:
@@ -70,8 +85,14 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	theme = UiTheme.make()
 	_raid = Battle.raid_def(raid_id)
-	var seat: Dictionary = Battle.seat_for(sea.session.store, sea.session.uid, str(sea.session.profile().get("username", "You")))
-	b = Battle.begin(raid_id, [seat])
+	if table != null:
+		b = (table.state["b"] as Dictionary).duplicate(true)
+		for i: int in (b["seats"] as Array).size():
+			if b["seats"][i].get("key") == my_key:
+				me = i
+	else:
+		var seat: Dictionary = Battle.seat_for(sea.session.store, sea.session.uid, str(sea.session.profile().get("username", "You")))
+		b = Battle.begin(raid_id, [seat])
 	# Out from wherever she lay into open water: the fight's own patch of sea.
 	# Out through the Sea Gate into open water: the fight's own patch of sea
 	# (until the campaign's water is in the port, its fights are sailed out
@@ -84,7 +105,7 @@ func _ready() -> void:
 	sea._boat.target = null
 	sea._boat.hold_still = true
 	var sail: Tween = create_tween()
-	sail.tween_property(sea._boat, "position", _at, 2.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	sail.tween_property(sea._boat, "position", _at + _offset(me), 2.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	sea._hud.visible = false
 	_fx = BattleFx.new()
 	_fx.field = sea._field
@@ -108,7 +129,7 @@ func _ready() -> void:
 	Sound.horn()
 	await sail.finished
 	# Where she actually lies (a rock may have held her short).
-	_at = sea._boat.position
+	_at = sea._boat.position - _offset(me)
 	_enemy_at = _at + Vector2(620, -40)
 	if _from_mark():
 		_enemy_at = mark.position
@@ -118,7 +139,11 @@ func _ready() -> void:
 	aura.face = 1.0
 	aura.z_index = 2
 	sea._boat.add_child(aura)
-	_auras[0] = aura
+	_auras[me] = aura
+	if table != null:
+		table.changed.connect(_pump)
+		_pump(table.state)
+		return
 	await _pre_fight_words()
 	await _enemy_enters()
 	_await_plan()
@@ -128,22 +153,34 @@ func _ready() -> void:
 ## pair fills the middle of the screen.
 func _frame() -> void:
 	var vp: Vector2 = get_viewport_rect().size
-	var span: float = absf(_enemy_at.x - _at.x) + 520.0
-	var z: float = clampf(vp.x * 0.72 / span, 0.55, 1.5)
-	var mid: Vector2 = (_enemy_at - _at) / 2.0
+	# Every ship in the line in the frame (together), the enemy facing them.
+	var lo: Vector2 = _at
+	var hi: Vector2 = _at
+	for i: int in (b["seats"] as Array).size() if not b.is_empty() else 1:
+		lo = lo.min(_at + _offset(i))
+		hi = hi.max(_at + _offset(i))
+	var span: float = absf(_enemy_at.x - lo.x) + 520.0
+	var tall: float = (hi.y - lo.y) * Chart.GROUND + 520.0
+	var z: float = clampf(minf(vp.x * 0.72 / span, vp.y * 0.62 / tall), 0.45, 1.5)
+	var mid: Vector2 = Vector2((lo.x + _enemy_at.x) / 2.0, ((lo.y + hi.y) / 2.0 + _enemy_at.y) / 2.0) - (_at + _offset(me))
 	sea.stage = { "zoom": z, "shift": Vector2(mid.x, mid.y * Chart.GROUND - 40.0) * z }
 
 
 func _process(delta: float) -> void:
 	_t += delta
 	if not b.is_empty():
-		var a0: HullAura = _aura(0)
-		if a0 != null and is_instance_valid(a0):
-			var s0: Dictionary = b["seats"][0]
+		for i: int in (b["seats"] as Array).size():
+			var a0: HullAura = _aura(i)
+			if a0 == null and i != me:
+				a0 = _mate_aura(i)
+			if a0 == null:
+				continue
+			var s0: Dictionary = b["seats"][i]
 			a0.burn = not Js.obj(s0.get("burn")).is_empty()
 			a0.ice = s0.get("frozenNow", false) or float(s0.get("freeze", 0.0)) > 0.0
 			a0.shield = float(s0["shield"])
-			sea._boat.modulate = Color(0.75, 0.88, 1.0) if a0.ice else Color.WHITE
+			if i == me:
+				sea._boat.modulate = Color(0.75, 0.88, 1.0) if a0.ice else Color.WHITE
 		var ae: HullAura = _aura("e")
 		if ae != null and is_instance_valid(ae):
 			var e0: Dictionary = b["enemy"]
@@ -178,9 +215,38 @@ func _screen(world_p: Vector2) -> Vector2:
 	return sea._world.get_global_transform_with_canvas() * world_p
 
 
+## Where seat i rides in the line, from the first seat's place.
+static func _offset(i: int) -> Vector2:
+	return [Vector2.ZERO, Vector2(-300, 300), Vector2(-300, -300), Vector2(-600, 0)][clampi(i, 0, 3)]
+
+
 func _seat_at(i: int) -> Vector2:
-	var base: Vector2 = sea._boat.position if sea != null else _at
-	return base + Vector2(-60.0 * i, 170.0 * i * (1.0 if i % 2 == 1 else -1.0))
+	if i == me:
+		return sea._boat.position if sea != null else _at + _offset(i)
+	var m: Shipmate = _mate_of(i)
+	return m.position if m != null else _at + _offset(i)
+
+
+## A crewmate's hull on this screen (together), by their seat.
+func _mate_of(i: int) -> Shipmate:
+	if table == null or sea == null or i >= (b["seats"] as Array).size():
+		return null
+	var k: String = str(b["seats"][i].get("key", ""))
+	var m: Variant = sea._mates.get(k)
+	return m if m != null and is_instance_valid(m) else null
+
+
+func _mate_aura(i: int) -> HullAura:
+	var m: Shipmate = _mate_of(i)
+	if m == null:
+		return null
+	var a: HullAura = HullAura.new()
+	a.width = 300.0
+	a.face = 1.0
+	a.z_index = 2
+	m.add_child(a)
+	_auras[i] = a
+	return a
 
 
 # ── The enemy ────────────────────────────────────────────────────────────────
@@ -220,7 +286,7 @@ func _enemy_enters() -> void:
 		notes.append("%s: %s" % [af.get("name", ""), af.get("description", "")])
 	if float(e["dr"]) > 0.0:
 		notes.append("%s: takes %d%% less from a single shot" % [e["drName"], int(round(float(e["dr"]) * 100.0))])
-	var rp: Variant = b["seats"][0].get("repossessed")
+	var rp: Variant = b["seats"][me].get("repossessed")
 	if rp != null:
 		notes.append("%s: %s takes back your %s for this fight" % [e["repossessName"], e["name"], Armory.item(str(rp)).get("name", "gear")])
 	_log_line("  ·  ".join(PackedStringArray(notes)))
@@ -300,10 +366,10 @@ func _await_plan() -> void:
 	create_tween().tween_property(self, "_drop", 0.0, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if autoplay:
 		await _wait(0.3)
-		var s: Dictionary = b["seats"][0]
+		var s: Dictionary = b["seats"][me]
 		var lg: Dictionary = Battle.legal(b, s)
 		if float(b["turn"]) == 2.0 and not (s["crew"] as Array).is_empty() and Battle.ability_ok(b, s, s["crew"][0]["id"]) == "":
-			_plan["ability"] = { "crew": s["crew"][0]["id"], "target": 0 }
+			_plan["ability"] = { "crew": s["crew"][0]["id"], "target": me }
 			_paint_actions()
 			await _wait(0.4)
 		_choose("volley" if lg["volley"] else ("fire" if lg["fire"] and Dice.next() < 0.6 else "reload"))
@@ -315,7 +381,7 @@ func _await_plan() -> void:
 
 func _paint_actions() -> void:
 	_clear_deck()
-	var s: Dictionary = b["seats"][0]
+	var s: Dictionary = b["seats"][me]
 	var top: HBoxContainer = HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)
 	_deck_box.add_child(top)
@@ -351,7 +417,7 @@ func _paint_actions() -> void:
 	Paper.night = true
 	var fl: Button = Paper.button("Flee  ·  F")
 	Paper.night = false
-	fl.tooltip_text = "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, 0)
+	fl.tooltip_text = "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me)
 	fl.custom_minimum_size = Vector2(96, 44)
 	fl.pressed.connect(_flee)
 	top.add_child(fl)
@@ -379,6 +445,7 @@ func _paint_actions() -> void:
 		Kit.text(row, "ORDERS", "eyebrow", Color(NIGHT_INK, 0.6)).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		for c: Dictionary in crew:
 			row.add_child(_order_card(s, c))
+	_target_row()
 
 
 func _order_card(s: Dictionary, c: Dictionary) -> Control:
@@ -426,10 +493,45 @@ func _order_card(s: Dictionary, c: Dictionary) -> Control:
 		if chosen:
 			_plan.erase("ability")
 		else:
-			_plan["ability"] = { "crew": c["id"], "target": 0 }
+			_plan["ability"] = { "crew": c["id"], "target": me }
 			Sound.plip()
 		_paint_actions())
 	return bt
+
+
+## The crew orders that may go to another ship in the line.
+const SHARED_ORDERS: Array = ["mender", "abyssal_tide", "anchor", "vengeance"]
+
+
+## Together: a heal, shield, brace or ward ordered this turn may go to a crewmate.
+func _target_row() -> void:
+	var ab: Dictionary = Js.obj(_plan.get("ability"))
+	if ab.is_empty() or table == null or Battle.alive(b).size() < 2:
+		return
+	var cls: String = ""
+	for c: Dictionary in b["seats"][me]["crew"]:
+		if c["id"] == ab["crew"]:
+			cls = str(c["cls"])
+	if cls not in SHARED_ORDERS:
+		return
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_deck_box.add_child(row)
+	Kit.text(row, "TO", "eyebrow", Color(NIGHT_INK, 0.6)).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for i: int in (b["seats"] as Array).size():
+		var st: Dictionary = b["seats"][i]
+		if not Battle.alive(b).has(st):
+			continue
+		Paper.night = true
+		var bt: Button = Paper.button("%s  ·  %d / %d" % ["Your ship" if i == me else str(st["name"]), int(st["hp"]), int(st["max"])], int(ab.get("target", me)) == i)
+		Paper.night = false
+		bt.custom_minimum_size = Vector2(150, 36)
+		var at: int = i
+		bt.pressed.connect(func() -> void:
+			_plan["ability"]["target"] = at
+			Sound.plip()
+			_paint_actions())
+		row.add_child(bt)
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -441,11 +543,11 @@ func _unhandled_input(e: InputEvent) -> void:
 		_flee()
 		return
 	var kc: int = (e as InputEventKey).keycode
-	if kc == KEY_5 and not Battle.drum_of(b["seats"][0]).is_empty():
+	if kc == KEY_5 and not Battle.drum_of(b["seats"][me]).is_empty():
 		get_viewport().set_input_as_handled()
 		_beat_drum()
 		return
-	if m.has(kc) and Battle.legal(b, b["seats"][0]).get(m[kc], false):
+	if m.has(kc) and Battle.legal(b, b["seats"][me]).get(m[kc], false):
 		get_viewport().set_input_as_handled()
 		_choose(m[kc])
 
@@ -457,7 +559,7 @@ func _choose(act: String) -> void:
 	if act == "fire" or act == "volley" or act == "mega":
 		_busy = true
 		_clear_deck()
-		var s: Dictionary = b["seats"][0]
+		var s: Dictionary = b["seats"][me]
 		var bar: AimBar = AimBar.new()
 		bar.enemy_speed = float(b["enemy"]["speed"])
 		bar.nav = float(s["nav"])
@@ -467,7 +569,7 @@ func _choose(act: String) -> void:
 		for c: Dictionary in s["crew"]:
 			if not ab.is_empty() and c["id"] == ab["crew"] and c["cls"] == "sharpshot":
 				sh = { "mult": c["ms"]["critZoneMultiplier"] }
-		var aim: Dictionary = Battle.aim_for(b, 0)
+		var aim: Dictionary = Battle.aim_for(b, me)
 		bar.crit_w = Battle.CRIT_W * (1.0 + float(sh.get("mult", 0.0))) * float(aim["critZone"])
 		bar.volley = act != "fire"
 		bar.zone_stack = float(aim["zoneStack"])
@@ -483,6 +585,10 @@ func _choose(act: String) -> void:
 		await get_tree().create_timer(0.3).timeout
 	_busy = true
 	_clear_deck()
+	if table != null:
+		_act(["plan", _plan])
+		_waiting()
+		return
 	# The deck dips out of the way while the round plays on the water.
 	create_tween().tween_property(self, "_drop", 190.0, 0.2).set_ease(Tween.EASE_IN)
 	_play(Battle.resolve(b, [_plan]))
@@ -491,6 +597,22 @@ func _choose(act: String) -> void:
 # ── Playing a round ──────────────────────────────────────────────────────────
 
 func _play(ev: Array) -> void:
+	await _play_events(ev)
+	_strip_lit = -99
+	if b.has("flares") and b["state"] == "plan":
+		await _flares()
+	match b["state"]:
+		"fled":
+			await _got_away()
+		"won":
+			await _won()
+		"lost":
+			await _lost()
+		_:
+			_await_plan()
+
+
+func _play_events(ev: Array) -> void:
 	var i: int = 0
 	while i < ev.size():
 		var x: Dictionary = ev[i]
@@ -505,18 +627,6 @@ func _play(ev: Array) -> void:
 			continue
 		await _one(x)
 		i += 1
-	_strip_lit = -99
-	if b.has("flares") and b["state"] == "plan":
-		await _flares()
-	match b["state"]:
-		"fled":
-			await _got_away()
-		"won":
-			await _won()
-		"lost":
-			await _lost()
-		_:
-			_await_plan()
 
 
 func _one(x: Dictionary) -> void:
@@ -723,6 +833,46 @@ func _one(x: Dictionary) -> void:
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "The Maw takes nothing", Color(0.9, 0.65, 0.3))
 		"flares":
 			pass
+		"flee":
+			var fs: int = int(x["seat"])
+			if fs == me:
+				await _show_flee(x, int(x["need"]))
+			else:
+				_num(_seat_at(fs), "Got away" if x["success"] else "Caught!  -%d" % int(x.get("dmg", 0)), Color(0.5, 0.86, 0.58) if x["success"] else Color(1.0, 0.45, 0.35), true)
+				if x.has("hp"):
+					_shown_hp[fs] = float(x["hp"])
+				await _wait(0.6)
+		"begin":
+			await _pre_fight_words()
+			await _enemy_enters()
+		"nextFight":
+			if x.get("rest", false):
+				_say("Rest stop")
+				_log_line("The crew catch their breath: every crew order is ready again.")
+				await _wait(1.8)
+			if x.get("boss", false):
+				Sound.horn()
+				await _pre_fight_words()
+			await _enemy_enters()
+		"pay":
+			if x["key"] == my_key:
+				_say("%s sunk" % b["enemy"]["name"])
+				_log_line("+%d Navigation XP  ·  +%d ⟡ to the crew's purse" % [int(x["xp"]), int(x["doubloons"])])
+				await _wait(2.0)
+		"crate":
+			if x["key"] == my_key:
+				_say(str(_raid.get("bossDefeatedText", "Victory")) if str(_raid.get("bossDefeatedText", "")) != "" else "Victory")
+				var items: Array = Js.list(x.get("items"))
+				_log_line("Your crate: %s ⟡%s" % [Js.thousands(Js.num(x.get("coin"))), ("  ·  " + ", ".join(PackedStringArray(items))) if not items.is_empty() else ""])
+				Sound.chest(true)
+				await _wait(3.2)
+		"tided":
+			var r: Dictionary = Js.obj(Js.obj(x.get("picks")).get(my_key))
+			if Js.num(r.get("heal")) > 0.0:
+				_num(_seat_at(me), "+%d" % int(r["heal"]), Color(0.5, 0.95, 0.6), true)
+			if r.get("refreshed") != null:
+				_log_line("A spent crew order is ready again.")
+			await _wait(0.6)
 
 
 ## A BROADSIDE: the call over the water, the enemy heeling with the recoil,
@@ -874,7 +1024,7 @@ func _won() -> void:
 
 
 func _crate() -> void:
-	var s: Dictionary = b["seats"][0]
+	var s: Dictionary = b["seats"][me]
 	var r: Dictionary = RaidRun.open_crate(sea.session.store, sea.session.uid, _raid, float(s["fortune"]))
 	RaidRun.record_clear(sea.session.store, sea.session.uid, raid_id, float(Time.get_ticks_msec() - _began_ms))
 	sea.session.persist()
@@ -896,9 +1046,12 @@ func _lost() -> void:
 
 
 func _end(won: bool, fled: bool = false) -> void:
-	var a0: HullAura = _aura(0)
-	if a0 != null and is_instance_valid(a0):
-		a0.queue_free()
+	for k: Variant in _auras:
+		var a0: HullAura = _aura(k)
+		if a0 != null and k != "e":
+			a0.queue_free()
+	if table != null and table.changed.is_connected(_pump):
+		table.changed.disconnect(_pump)
 	sea._boat.modulate = Color.WHITE
 	if _enemy != null:
 		_enemy.queue_free()
@@ -942,6 +1095,11 @@ func _draw() -> void:
 	var title: String = "%s  ·  Fight %d of %d" % [_raid.get("raidTitle", ""), int(b["fight"]) + 1, int(Battle.fight_at(_raid, int(b["fight"]))["of"])]
 	draw_string(f, Vector2(28, hb * 0.62), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(CREAM, 0.9))
 	_draw_strip(Vector2(vp.x - 28, hb * 0.5))
+	if table != null and str(_latest.get("phase", "")) == "plan":
+		var left: int = maxi(0, ceili(_plan_until - _t))
+		var cd: String = "Orders in %ds" % left
+		var cw: float = f.get_string_size(cd, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+		draw_string(f, Vector2(vp.x / 2.0 - cw / 2.0, hb * 0.62), cd, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(BRASS, 0.95) if left > 5 else Color(1.0, 0.5, 0.4))
 	# The enemy's plate over its masthead.
 	if _enemy != null and is_instance_valid(_enemy):
 		var e: Dictionary = b["enemy"]
@@ -1080,11 +1238,14 @@ func _flares() -> void:
 	fb.fuse_scale = float(fl["fuse"])
 	fb.title = str(fl["name"])
 	fb.source = _screen(_enemy_at) + Vector2(0, -60)
-	fb.target = _screen(_seat_at(0)) + Vector2(0, -40)
+	fb.target = _screen(_seat_at(me)) + Vector2(0, -40)
 	if autoplay:
 		fb.fuse_scale = 0.4
 	add_child(fb)
 	var got: Array = await fb.finished
+	if table != null:
+		_act(["flares", { "missed": float(got[0]), "feints": float(got[1]) }])
+		return
 	await _play_list(Battle.flares_land(b, [{ "missed": got[0], "feints": got[1] }]))
 
 
@@ -1114,10 +1275,13 @@ func _tide(tide: Dictionary, eyebrow: String) -> void:
 		await _wait(1.2)
 		card._pick(str(tide["choices"][0]["id"]))
 	var id: String = await card.chosen
-	var r: Dictionary = Battle.tide_pick(b, 0, tide, id)
+	if table != null:
+		_act(["tide", id])
+		return
+	var r: Dictionary = Battle.tide_pick(b, me, tide, id)
 	if float(r.get("heal", 0.0)) > 0.0:
-		_num(_seat_at(0), "+%d" % int(r["heal"]), Color(0.5, 0.95, 0.6), true)
-		_shown_hp[0] = float(b["seats"][0]["hp"])
+		_num(_seat_at(me), "+%d" % int(r["heal"]), Color(0.5, 0.95, 0.6), true)
+		_shown_hp[me] = float(b["seats"][me]["hp"])
 	if r.get("refreshed") != null:
 		_log_line("A spent crew order is ready again.")
 	await _wait(0.6)
@@ -1127,9 +1291,9 @@ func _tide(tide: Dictionary, eyebrow: String) -> void:
 func _pre_fight_words() -> void:
 	var lines: Array = Js.list(_raid.get("preFightDialogue"))
 	var f: Dictionary = Battle.fight_at(_raid, int(b["fight"]))
-	if lines.is_empty() or not f["boss"] or b.get("spoke", false):
+	if lines.is_empty() or not f["boss"] or _spoke:
 		return
-	b["spoke"] = true
+	_spoke = true
 	var boss: Dictionary = Js.obj(_raid["enemies"][_raid["bossId"]])
 	var scene: Array = []
 	for l: Dictionary in lines:
@@ -1158,15 +1322,21 @@ func _pre_fight_words() -> void:
 func _beat_drum() -> void:
 	if _busy:
 		return
-	var r: Dictionary = Battle.use_drum(b, 0)
+	var r: Dictionary
+	if table != null:
+		r = Js.obj(await _act(["drum"]))
+		if not r.has("error"):
+			b["seats"][me]["drum"] = true
+	else:
+		r = Battle.use_drum(b, me)
 	if r.has("error"):
 		return
 	Sound.horn()
 	Rumble.buzz([0, 40, 40, 40, 40, 60])
 	if r.get("refreshed") != null:
-		_num(_seat_at(0), "A crew order is back", Color(0.95, 0.85, 0.5), true)
+		_num(_seat_at(me), "A crew order is back", Color(0.95, 0.85, 0.5), true)
 	else:
-		_num(_seat_at(0), "The drum goes unanswered", CREAM)
+		_num(_seat_at(me), "The drum goes unanswered", CREAM)
 	_paint_actions()
 
 
@@ -1178,10 +1348,27 @@ func _flee() -> void:
 	if _busy:
 		return
 	_busy = true
-	var need: int = Battle.flee_need(b, 0)
-	var ev: Array = Battle.flee(b, 0)
-	var x: Dictionary = ev[0]
+	if table != null:
+		_clear_deck()
+		_act(["plan", { "action": "flee" }])
+		_waiting()
+		return
+	var ev: Array = Battle.flee(b, me)
+	await _show_flee(ev[0], Battle.flee_need(b, me))
+	for k: int in range(1, ev.size()):
+		await _one(ev[k])
+	match b["state"]:
+		"fled":
+			await _got_away()
+		"lost":
+			await _lost()
+		_:
+			_await_plan()
+
+
+func _show_flee(x: Dictionary, need: int) -> void:
 	_clear_deck()
+	create_tween().tween_property(self, "_drop", 0.0, 0.2)
 	Paper.night = true
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 20)
@@ -1206,20 +1393,12 @@ func _flee() -> void:
 		said.text = "Caught!"
 		said.add_theme_color_override("font_color", Color(0.93, 0.45, 0.33))
 		await _wait(0.4)
-		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(0), "hit")
+		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(me), "hit")
 		await _wait(0.5)
-		_num(_seat_at(0), "Parting shot  -%d" % int(x.get("dmg", 0)), Color(1.0, 0.45, 0.35), true)
-		_shown_hp[0] = float(x.get("hp", b["seats"][0]["hp"]))
+		_num(_seat_at(me), "Parting shot  -%d" % int(x.get("dmg", 0)), Color(1.0, 0.45, 0.35), true)
+		_shown_hp[me] = float(x.get("hp", b["seats"][me]["hp"]))
 	await _wait(1.0)
-	for k: int in range(1, ev.size()):
-		await _one(ev[k])
-	match b["state"]:
-		"fled":
-			await _got_away()
-		"lost":
-			await _lost()
-		_:
-			_await_plan()
+	_clear_deck()
 
 
 ## Out of the fight: she comes about and runs for it, keeping what she earned.
@@ -1241,3 +1420,116 @@ func _got_away() -> void:
 func _aura(k: Variant) -> HullAura:
 	var a: Variant = _auras.get(k)
 	return a if a != null and is_instance_valid(a) else null
+
+
+# ── Together: following the founder's table ──────────────────────────────────
+
+func _act(args: Array) -> Variant:
+	return await sea.session.act("raidTable", args)
+
+
+## Every state the table sends: each phase is handled once, in order.
+func _pump(st: Dictionary) -> void:
+	_latest = st
+	if _pumping or _gone:
+		return
+	_pumping = true
+	while not _gone:
+		var cur: Dictionary = _latest
+		var tag: String = "%s:%d" % [cur.get("phase", ""), int(Js.num(cur.get("seq")))]
+		if tag == _handled:
+			break
+		_handled = tag
+		await _phase(cur)
+	_pumping = false
+	if not _gone and str(_latest.get("phase", "")) == "plan":
+		b = (_latest["b"] as Dictionary).duplicate(true)
+		if Js.obj(_latest.get("plans")).has(my_key):
+			_waiting()
+
+
+func _alive_me() -> bool:
+	return Battle.alive(b).has(b["seats"][me])
+
+
+func _phase(cur: Dictionary) -> void:
+	match str(cur.get("phase", "")):
+		"playing":
+			# The hulls show what they showed until the round says otherwise.
+			for i: int in (b["seats"] as Array).size():
+				_shown_hp[i] = float(b["seats"][i]["hp"])
+			_shown_hp["e"] = float(b["enemy"]["hp"])
+			b = (cur["b"] as Dictionary).duplicate(true)
+			_busy = true
+			_clear_deck()
+			create_tween().tween_property(self, "_drop", 190.0, 0.2).set_ease(Tween.EASE_IN)
+			await _play_events(Js.list(cur.get("ev")))
+			_strip_lit = -99
+			_shown_hp.clear()
+			var seq: int = int(Js.num(cur.get("seq")))
+			var mine: Dictionary = b["seats"][me]
+			if mine.get("sunk", false) or mine.get("fled", false):
+				_gone = true
+				await _act(["played", seq])
+				await _act(["out"])
+				if mine.get("fled", false):
+					await _got_away()
+				else:
+					await _lost()
+				return
+			_act(["played", seq])
+			if str(cur.get("after", "")) == "end":
+				_gone = true
+				match str(cur.get("result", "")):
+					"won":
+						_end(true)
+					"fled":
+						await _got_away()
+					_:
+						await _lost()
+		"plan":
+			b = (cur["b"] as Dictionary).duplicate(true)
+			_plan_until = _t + float(Js.nz(cur.get("left"), RaidTable.PLAN))
+			if _alive_me() and not Js.obj(cur.get("plans")).has(my_key):
+				_await_plan()
+			else:
+				_waiting()
+		"flares":
+			b = (cur["b"] as Dictionary).duplicate(true)
+			if _alive_me():
+				await _flares()
+			_waiting()
+		"tide":
+			if _alive_me() and not Js.obj(cur.get("tidePicks")).has(my_key):
+				var tide: Dictionary = Js.obj(cur.get("tide"))
+				var rp: Variant = Js.obj(Rules.data().get("tides")).get("reprieve")
+				await _tide(tide, "A REPRIEVE" if tide == rp else "A TIDE TURNS")
+			_waiting()
+		"done", "idle":
+			_gone = true
+			_end(str(cur.get("result", "")) == "won")
+
+
+## The deck while the crew decide: who is still choosing.
+func _waiting() -> void:
+	if _pumping and str(_latest.get("phase", "")) == "playing":
+		return
+	_busy = true
+	_clear_deck()
+	var names: Array = []
+	var plans: Dictionary = Js.obj(_latest.get("plans"))
+	var field: String = { "plan": "plans", "flares": "flareRes", "tide": "tidePicks" }.get(str(_latest.get("phase", "")), "plans")
+	var given: Dictionary = Js.obj(_latest.get(field))
+	for st: Dictionary in Battle.alive(b):
+		if st.get("key") != my_key and not given.has(st.get("key")):
+			names.append(str(st["name"]))
+	var line: String = "Orders given. Waiting on %s." % ", ".join(PackedStringArray(names)) if not names.is_empty() else "Orders given. The round is coming."
+	if not _alive_me():
+		line = "You are out of this fight. The crew fight on."
+	var lb: Label = Kit.text(_deck_box, line, "body_strong", NIGHT_INK)
+	lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lb.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if plans.is_empty() and str(_latest.get("phase", "")) != "plan":
+		lb.text = "The crew are seeing to it."
+	create_tween().tween_property(self, "_drop", 0.0, 0.2)

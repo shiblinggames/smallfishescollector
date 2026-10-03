@@ -637,8 +637,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   ported), hit EVERY ship at once, each with its own dodge; on the water a "Broadside!" call and a
   ball fanning out to every ship together. tests/battle_check.gd, Pete's raid, a fair bot, 300
   runs a size: 38% / 41% / 63% / 73% won. (Tried and dropped: one shot a round, and aimed shots
-  spread one to a ship: either co-op won nearly every time, or it was the same as hitting all.) NOT YET: raid items, tides, elite affixes,
-  boss off-turn abilities, the Last Wall, flare barrages, aim afflictions, burn, freeze, flee.
+  spread one to a ship: either co-op won nearly every time, or it was the same as hitting all.)
+  (Everything this slice left out is built below.)
   Crew.leveled_stats ports crewLevel's stat ticks and resolveDeployedCrew. SEATS: Crew.assign
   (assignToRaid / assignToVoyage / benchCrew, parity: crew.json "the party seats").
   REWARDS: core/raid_run.gd (awardRaidKill's XP and doubloons, crew XP to the seated hands, the
@@ -703,6 +703,29 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   THE TWO PAPERS, FINISHED: Pane.set_night repaints the whole HUD on the night paper north of
   the reef (Pane "night" specs, Kit.night_ink for words written in day ink); anything added
   later under it lands on the night paper too.
+- CO-OP RAIDS OVER THE CHARTER, BUILT (2026-10-03; game/raid_table.gd, game/raid_muster.gd).
+  The founder's game runs the fight (a host-run table like the Den's: action `raidTable`, caught
+  by Charter.run, every state sent to all aboard). THE MUSTER: a captain calls a raid from its
+  hull; a card at the top of everyone's sea (night paper) shows the raid, who is aboard and a
+  25s count; Join (only a captain whose own map has reached that node; up to four), Stay
+  behind, and for the caller Sail now or Call it off. A ROUND: every captain in the fight
+  plans on their own deck (their own aim bar) and the top bar counts 30s; a captain who has
+  not chosen reloads (or braces when full); a flee goes in as a plan and its die shows when
+  the round plays. Every screen plays the same events from its own seat (BattleStage.me) and
+  says when it is done (or 25s) before the raid moves on. A heal, shield, brace or ward
+  (mender, abyssal tide, anchor, vengeance) gets a TO row to aim it at a crewmate. Flares and
+  tides are each captain's own. PAY: each kill pays every captain still in the fight, through
+  the Charter's book (lent, earned, taken back, noted under the captain's name), so the coin
+  goes to the crew's purse and the XP is each one's; each captain's own crate and clear at the
+  end. A captain sunk or away leaves the screen ("out") and the rounds stop waiting on them.
+  IN A CHARTER EVERY RAID, EVEN ALONE, GOES THROUGH THE TABLE (Sea.raids_shared), since a solo
+  fight's pay would land in the captain's own save and not the purse. The line: seat 0 at the
+  dock, the others astern to port and starboard; the frame fits every ship. Crewmates' boats on
+  the sea now become their expedition ship north of the arch, as yours does (North.ship_art,
+  HullRig.turn; the look carries shipTier and shipSkin). tests/raid_table_check.gd (a muster
+  with a refusal, a raid played to its end, both paid, a flee paid nothing after);
+  tests/shot.gd "coop" (COOP_STEP muster / plan / target / wait / round, states fed by hand).
+  NOT YET TESTED over a real Steam lobby.
 - THE CAMPAIGN'S WATER, BUILT (2026-10-03). RULES: core/campaign.gd ports computeRaidMap,
   chapterForNode, buildClearedSetVia and all of lib/core/raidMap (the view, chapter unlocks seen,
   tolls, story reads with the legendary gates, puzzles, the caches, the muster, events, dice,

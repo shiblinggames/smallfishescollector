@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "campaign", "puzzle"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "campaign", "puzzle"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -705,6 +705,87 @@ func _init() -> void:
 				if step == "round":
 					for bar: Node in bst.find_children("", "AimBar", true, false):
 						(bar as AimBar).lock()
+			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 10:
+				await process_frame
+		"coop":
+			# A Charter's raid together, as a crewmate's screen sees it: the
+			# table's states fed by hand (two ships, Ben's hull a Shipmate),
+			# COOP_STEP: "plan" (the deck, Ben still choosing), "wait" (orders
+			# given), "round" (a round of both ships played), "target" (a
+			# mender's order aimed at Ben).
+			var kdb: CaptainStore = sea.session.store
+			var ku: String = sea.session.uid
+			p["expedition_xp"] = 2000.0
+			p["ship_tier"] = 4.0
+			for d: int in 2:
+				var kst: Dictionary = RulesApi.run(kdb, ku, "getCrewState", [])
+				for c: Dictionary in kst["board"]:
+					RulesApi.run(kdb, ku, "recruitCrew", [c["id"]])
+				p["last_free_recruit_date"] = "old%d" % d
+			var kids: Array = (RulesApi.run(kdb, ku, "getCrewState", [])["roster"] as Array).map(func(m: Dictionary) -> float: return float(m["id"]))
+			for k: int in mini(3, kids.size()):
+				RulesApi.run(kdb, ku, "assignToRaid", [kids[k], float(k)])
+			var tb: RaidTable = RaidTable.new()
+			root.add_child(tb)
+			var s0: Dictionary = Battle.seat_for(kdb, ku, "Anna")
+			s0["key"] = "anna"
+			var s1: Dictionary = Battle.seat_for(kdb, ku, "Ben")
+			s1["key"] = "ben"
+			var kb: Dictionary = Battle.begin("corsairs_reckoning", [s0, s1])
+			var mate: Shipmate = sea._mate("ben")
+			mate.set_mate_name("Ben")
+			mate.set_look(Skipper.look_of(p))
+			var gate: Vector2 = North.SEA_GATE + Vector2(-300, -1300)
+			var mp: Vector2 = gate + BattleStage._offset(1)
+			mate.state({ "x": mp.x, "y": mp.y, "facing": 1.0 })
+			sea._boat.position = gate + Vector2(-400, 200)
+			var seq: Array = [1]
+			var push: Callable = func(ph: String, ev: Array, extra: Dictionary) -> void:
+				seq[0] += 1 if ph == "playing" else 0
+				var st: Dictionary = { "phase": ph, "seq": seq[0], "b": kb.duplicate(true), "ev": ev, "after": "plan", "left": 30.0, "plans": {}, "raidId": "corsairs_reckoning", "nodeId": "", "members": [{ "key": "anna", "name": "Anna" }, { "key": "ben", "name": "Ben" }], "result": "" }
+				st.merge(extra, true)
+				tb._state(st)
+			if OS.get_environment("COOP_STEP") == "muster":
+				var mu: RaidMuster = RaidMuster.new()
+				mu.sea = sea
+				sea._hud_layer.add_child(mu)
+				tb._state({ "phase": "muster", "seq": 1, "left": 18.0, "raidId": "corsairs_reckoning", "nodeId": "pete", "by": "ben", "members": [{ "key": "ben", "name": "Ben" }, { "key": "cal", "name": "Cal" }] })
+				for f: int in 30:
+					await process_frame
+				root.get_texture().get_image().save_png(out)
+				print("  saved ", out)
+				quit()
+				return
+			push.call("playing", [{ "t": "begin" }], {})
+			sea.open_coop_battle(tb.state, "anna")
+			var kst2: BattleStage = null
+			for f: int in 10:
+				await process_frame
+			for n2: Node in sea._hud_layer.get_children():
+				if n2 is BattleStage:
+					kst2 = n2
+			for f: int in 240:
+				await process_frame
+			push.call("plan", [], {})
+			for f: int in 30:
+				await process_frame
+			var cs: String = OS.get_environment("COOP_STEP")
+			if cs == "target":
+				for c: Dictionary in kst2.b["seats"][0]["crew"]:
+					kst2._plan["ability"] = { "crew": c["id"], "target": 1 }
+					c["cls"] = "mender"
+					break
+				kst2._paint_actions()
+			if cs == "wait" or cs == "round":
+				kst2._choose("reload")
+				for f: int in 20:
+					await process_frame
+				push.call("plan", [], { "plans": { "anna": { "action": "reload" } } })
+			if cs == "round":
+				for f: int in 40:
+					await process_frame
+				var ev: Array = Battle.resolve(kb, [{ "action": "reload" }, { "action": "volley" if Battle.legal(kb, kb["seats"][1])["volley"] else "reload" }])
+				push.call("playing", ev, {})
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 10:
 				await process_frame
 		"campaign":

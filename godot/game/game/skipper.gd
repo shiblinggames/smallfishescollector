@@ -144,6 +144,7 @@ static func look_of(p: Dictionary) -> Dictionary:
 		"rodSlug": rod.get("slug"),
 		"reel": (reels[clampi(int(Js.num(p.get("reel_tier"))), 0, reels.size() - 1)] as Dictionary).get("imageUrl"),
 		"hook": (hooks[clampi(int(Js.num(p.get("hook_tier"))), 0, hooks.size() - 1)] as Dictionary).get("imageUrl"),
+		"shipTier": p.get("ship_tier"), "shipSkin": p.get("equipped_ship_skin"),
 	}
 
 
