@@ -690,7 +690,10 @@ func _init() -> void:
 							bst._portrait = Skipper.tex(str(bst.b["enemy"].get("portrait", "")).trim_prefix("/"))
 							Battle.apply_status(bst.b["enemy"]["statuses"], "fortify", 0.3, 2.0)
 							bst.b["enemy"]["burn"] = { "turns": 2.0, "dmg": 9.0 }
-						bst._open_enemy_card()
+						if OS.get_environment("CARD_CAPTAIN") != "":
+							bst._open_captain_card(0)
+						else:
+							bst._open_enemy_card()
 						if OS.get_environment("CARD_SCROLL") != "":
 							for f: int in 10:
 								await process_frame

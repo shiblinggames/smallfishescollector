@@ -117,6 +117,7 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 	return {
 		"uid": uid, "name": name if name != "" else str(prof.get("username", "Captain")),
 		"face": { "characterColor": str(Js.nz(prof.get("character_color"), "default")), "hat": prof.get("equipped_hat") },
+		"shipSkin": prof.get("equipped_ship_skin"), "classes": _class_cards(prof.get("ship_classes")),
 		"tier": float(tier), "hp": max_hp, "max": max_hp, "speed": maxf(0.0, float(hull["speed"]) + float(cls_fx["speedFlat"])),
 		"shipMin": float(hull["minDamage"]), "power": pw + floor(nav / 5.0), "nav": dg + floor(nav / 5.0),
 		"fortune": ft + floor(nav / 5.0), "dmgMult": float(cls_fx["damageMult"]) * (1.0 + 0.005 * might),
@@ -124,6 +125,17 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 		"crew": crew, "used": [], "repairKit": prof.get("equipped_repair_kit"),
 		"items": items, "fx": fx, "saves": float(fx["lethalSave"]), "drum": false,
 	}
+
+
+## The ship's class picks as the ledger shows them: name, colour, bullets.
+static func _class_cards(picks: Variant) -> Array:
+	var out: Array = []
+	var defs: Dictionary = Js.obj(Js.obj(Rules.data().get("shipClasses")).get("classes"))
+	for id: Variant in Js.obj(picks).values():
+		var c: Dictionary = Js.obj(defs.get(id))
+		if not c.is_empty():
+			out.append({ "name": c.get("name", ""), "color": c.get("color", ""), "bullets": c.get("bullets", []) })
+	return out
 
 
 static func _milestone(cls: Dictionary, lv: int) -> Dictionary:
@@ -1562,6 +1574,9 @@ static func tide_pick(b: Dictionary, si: int, tide: Dictionary, choice_id: Strin
 		if c["id"] != choice_id:
 			continue
 		out["label"] = c.get("label", "")
+		if not s.has("tidesTaken"):
+			s["tidesTaken"] = []
+		(s["tidesTaken"] as Array).append({ "title": tide.get("title", ""), "label": c.get("label", ""), "description": c.get("description", "") })
 		for fx: Dictionary in Js.list(c.get("effects")):
 			match str(fx["kind"]):
 				"instantHeal":

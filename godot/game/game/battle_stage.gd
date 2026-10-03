@@ -86,7 +86,7 @@ var _trail: Dictionary = {}
 ## Each captain's avatar, rendered once (seat: texture).
 var _faces: Dictionary = {}
 ## The enemy's stat card while it is open.
-var _card: EnemyCard = null
+var _card: Dossier = null
 ## Until the card has been opened once, the plate says it can be.
 static var card_seen: bool = false
 
@@ -552,9 +552,19 @@ func _unhandled_input(e: InputEvent) -> void:
 		return
 	# A click on the enemy (its hull or its plate) opens its stat card.
 	if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-		if _enemy_hit((e as InputEventMouseButton).position) and find_children("", "AimBar", true, false).is_empty():
+		if not find_children("", "AimBar", true, false).is_empty():
+			return
+		if _enemy_hit((e as InputEventMouseButton).position):
 			get_viewport().set_input_as_handled()
 			_open_enemy_card()
+			return
+		# A click on a ship's plate opens that captain's ledger.
+		for i: int in (b["seats"] as Array).size():
+			var sp: Vector2 = _screen(_seat_at(i)) + Vector2(0, -215)
+			if Rect2(sp + Vector2(-121, 0), Vector2(258, 60)).has_point((e as InputEventMouseButton).position):
+				get_viewport().set_input_as_handled()
+				_open_captain_card(i)
+				return
 		return
 	if _busy or not (e is InputEventKey) or not (e as InputEventKey).pressed or (e as InputEventKey).echo:
 		return
@@ -1751,8 +1761,20 @@ func _open_enemy_card() -> void:
 	card_seen = true
 	Sound.plip()
 	_card = EnemyCard.new()
-	_card.e = b["enemy"]
-	_card.hp = float(_shown_hp.get("e", b["enemy"]["hp"]))
+	(_card as EnemyCard).e = b["enemy"]
+	(_card as EnemyCard).hp = float(_shown_hp.get("e", b["enemy"]["hp"]))
 	# Its painting; an enemy with no portrait shows its ship.
-	_card.portrait = _portrait if _portrait != null else Skipper.tex(str(b["enemy"].get("image", "")).trim_prefix("/"))
+	(_card as EnemyCard).portrait = _portrait if _portrait != null else Skipper.tex(str(b["enemy"].get("image", "")).trim_prefix("/"))
+	(_card as EnemyCard).ground = _portrait != null
+	(_card as EnemyCard).where = "%s, fight %d of %d" % [_raid.get("raidTitle", ""), int(b["fight"]) + 1, int(Battle.fight_at(_raid, int(b["fight"]))["of"])]
 	add_child(_card)
+
+
+func _open_captain_card(i: int) -> void:
+	Sound.plip()
+	var c: CaptainCard = CaptainCard.new()
+	c.s = b["seats"][i]
+	c.face = _face(i)
+	c.mine = i == me
+	_card = c
+	add_child(c)

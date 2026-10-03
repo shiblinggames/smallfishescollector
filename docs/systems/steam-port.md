@@ -754,14 +754,27 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   round plays; each order a flat tile with a drawn icon, its cost and its key; the shot rack;
   crew orders as cards with the hand's portrait in their class colour. The aim bar flat.
   Words landing on one spot stack instead of overprinting.
-  THE ENEMY'S STAT CARD (game/enemy_card.gd, RaidCombat's EnemyStatsPopup): click the enemy's
-  hull or plate ("CLICK FOR STATS" under its plate until opened once). The full painting (its
-  ship for one with no portrait) on a pool of its colour, rank and name; HP, damage, volley,
-  initiative, crit; the elite's affix; each ability in the web's words (Carapace, Mist Veil,
-  Rolling Plate, the riposte, Shark's Bite, its special, its ultimate, Signal Flares); a boss's
-  phases with the telegraphed move each arms and what answers it; what is on it right now
-  (the Last Wall, statuses, burn, freeze, snare); the behaviour tell. NOT PORTED: the boss's
-  crate odds ("In the Crate").
+  THE STAT CARDS (Kong: the first cut "looks super AI especially with the accent color strips";
+  redesigned). Both are a DOSSIER (game/dossier.gd), set like a page, not a dashboard: LEFT, the
+  art large on a flat disc of its colour (the enemy's painting with a shadow under it, its ship
+  if it has no portrait; a captain's ship with their avatar set into the corner); RIGHT, a quiet
+  lead-in line ("Boss  ·  The Throne, fight 7 of 7", "Your brigantine"), the name in Cinzel, the
+  hull as one wide bar (shield over it), the numbers as figures over small words with
+  hairlines between, then sentence-case sections of entries (a name, what kind of thing it is
+  in faint type, a line of description). NO accent strips, icon tiles, tinted boxes or
+  all-caps eyebrows. Colour only for meaning (red harm, green help, gold the answer to a
+  telegraph). THE ENEMY'S CARD (game/enemy_card.gd, RaidCombat's EnemyStatsPopup): click the
+  enemy's hull or plate ("CLICK FOR STATS" under it until opened once). What it does (an
+  elite's affix, Carapace, Mist Veil, Rolling Plate, the riposte, Shark's Bite, its special,
+  its ultimate, Signal Flares, in the web's words); a boss's phases as a timeline (back at what
+  hull, how much harder, the telegraphed move and, in gold, what answers it); right now (the
+  Last Wall, statuses, burn, freeze, snare, the ward); how it fights. THE CAPTAIN'S LEDGER
+  (game/captain_card.gd, PlayerStatsPopup): click your plate, or a crewmate's in a Charter's
+  raid. Damage, crits, initiative, evasion, fortune; the ship's class as chips; the gear
+  aboard and the Mega; the tides taken this raid (the seat records tidesTaken); the crew's
+  orders and which are spent; right now (statuses, burn, freeze, ward, brace, an aim
+  affliction, a repossessed item). KONG: the boss's crate odds are NOT on the card; they belong
+  to the raid's entry screen.
 - THE CAMPAIGN'S WATER, BUILT (2026-10-03). RULES: core/campaign.gd ports computeRaidMap,
   chapterForNode, buildClearedSetVia and all of lib/core/raidMap (the view, chapter unlocks seen,
   tolls, story reads with the legendary gates, puzzles, the caches, the muster, events, dice,

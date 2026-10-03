@@ -1,0 +1,382 @@
+class_name Dossier
+extends Control
+## A FIGHTER'S DOSSIER: the one layout the enemy's stat card and the captain's
+## ledger share (Kong, 2026-10-03: the cards "look super AI especially with
+## the accent color strips ... can be redesigned to look a lot better").
+##
+## Set like a page, not a dashboard. LEFT, the art, large: the enemy's painting
+## (or a captain's ship, their avatar set into its corner) standing on a flat
+## disc of its colour with a shadow under it. RIGHT, a quiet lead-in line, the
+## name, the hull as one wide bar, the numbers as a row of figures over small
+## words with hairlines between, and then plain sections: a sentence-case
+## heading, entries as a name and a line of description, no boxes, no strips,
+## no icon tiles. Colour is kept for meaning (red harm, green help, gold a
+## warning to answer). Flat, on the night side's browns. Escape, the X or a
+## click outside shuts it.
+
+signal closed
+
+const W: float = 920.0
+const ART_W: float = 360.0
+const FILL: Color = Color(0.112, 0.093, 0.08)
+const ART_FILL: Color = Color(0.15, 0.124, 0.104)
+const INK: Color = Color(0.94, 0.88, 0.77)
+const SOFT: Color = Color(0.72, 0.66, 0.57)
+const FAINT: Color = Color(0.5, 0.46, 0.4)
+const HAIR: Color = Color(1, 1, 1, 0.08)
+const HARM: Color = Color("#f2826e")
+const HELP: Color = Color("#7fd6a0")
+const WARN: Color = Color("#f0c56a")
+
+## The art and its ground.
+var art: Texture2D
+var disc: Color = Color(0.3, 0.4, 0.45)
+## A captain's avatar, set into the art's corner (null for an enemy).
+var badge: Texture2D
+## A shadow under the art (a figure standing; not a ship's padded plate).
+var ground: bool = true
+var lead: String = ""
+var title: String = ""
+var hull: float = 0.0
+var hull_max: float = 1.0
+var shield: float = 0.0
+var hull_col: Color = HARM
+## [[figure, word], ...]
+var figures: Array = []
+
+var _list: VBoxContainer
+var _card: Panel
+
+
+func _ready() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	theme = UiTheme.make()
+	var scrim: ColorRect = ColorRect.new()
+	scrim.color = Color(0, 0, 0, 0.8)
+	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scrim.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed:
+			_close())
+	add_child(scrim)
+	var vp: Vector2 = get_viewport_rect().size
+	var h: float = minf(vp.y - 80.0, 620.0)
+	_card = Panel.new()
+	_card.add_theme_stylebox_override("panel", BattleLook.box(FILL, HAIR, 1, 18, 40.0, Color(0, 0, 0, 0.55)))
+	_card.size = Vector2(W, h)
+	_card.position = (vp - _card.size) / 2.0
+	_card.clip_contents = true
+	add_child(_card)
+	var pane: ArtPane = ArtPane.new()
+	pane.d = self
+	pane.position = Vector2.ZERO
+	pane.size = Vector2(ART_W, h)
+	_card.add_child(pane)
+	# The page.
+	var page: MarginContainer = MarginContainer.new()
+	page.position = Vector2(ART_W, 0)
+	page.size = Vector2(W - ART_W, h)
+	for side: Array in [["left", 34], ["right", 34], ["top", 30], ["bottom", 24]]:
+		page.add_theme_constant_override("margin_" + side[0], side[1])
+	_card.add_child(page)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	page.add_child(col)
+	_text(col, lead, "karla", 600, 14, SOFT)
+	_gap(col, 2)
+	_text(col, title, "cinzel", 700, 32, INK)
+	_gap(col, 16)
+	var hb: HullBar = HullBar.new()
+	hb.d = self
+	hb.custom_minimum_size = Vector2(0, 38)
+	col.add_child(hb)
+	_gap(col, 18)
+	var fr: Figures = Figures.new()
+	fr.items = figures
+	fr.custom_minimum_size = Vector2(0, 52)
+	col.add_child(fr)
+	_gap(col, 18)
+	var rule: ColorRect = ColorRect.new()
+	rule.color = HAIR
+	rule.custom_minimum_size = Vector2(0, 1)
+	col.add_child(rule)
+	var sc: ScrollContainer = ScrollContainer.new()
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(sc)
+	_list = VBoxContainer.new()
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list.add_theme_constant_override("separation", 0)
+	sc.add_child(_list)
+	_content()
+	_gap(_list, 8)
+	var x: CloseX = CloseX.new()
+	x.position = Vector2(W - 44, 14)
+	x.size = Vector2(28, 28)
+	x.pressed.connect(_close)
+	_card.add_child(x)
+	_card.modulate.a = 0.0
+	# As tall as the page needs (the art wants some height), up to the screen.
+	await get_tree().process_frame
+	var need: float = col.get_combined_minimum_size().y - sc.get_combined_minimum_size().y + _list.get_combined_minimum_size().y + 54.0
+	h = clampf(need, 480.0, h)
+	_card.size.y = h
+	pane.size.y = h
+	page.size.y = h
+	_card.position = (vp - _card.size) / 2.0
+	_card.pivot_offset = _card.size / 2.0
+	_card.scale = Vector2(0.98, 0.98)
+	var tw: Tween = create_tween().set_parallel()
+	tw.tween_property(_card, "modulate:a", 1.0, 0.16)
+	tw.tween_property(_card, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+## Filled by the card: sections on the page.
+func _content() -> void:
+	pass
+
+
+func _unhandled_input(ev: InputEvent) -> void:
+	if ev is InputEventKey and (ev as InputEventKey).pressed:
+		get_viewport().set_input_as_handled()
+		if (ev as InputEventKey).keycode == KEY_ESCAPE:
+			_close()
+
+
+func _close() -> void:
+	closed.emit()
+	queue_free()
+
+
+# ── The page's pieces ─────────────────────────────────────────────────────────
+
+func _text(parent: Control, s: String, family: String, weight: int, fs: int, c: Color, wrap: bool = false) -> Label:
+	var l: Label = Label.new()
+	l.text = s
+	l.add_theme_font_override("font", Kit.font(family, weight))
+	l.add_theme_font_size_override("font_size", fs)
+	l.add_theme_color_override("font_color", c)
+	l.add_theme_constant_override("line_spacing", 2)
+	if wrap:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.custom_minimum_size.x = 120
+	parent.add_child(l)
+	return l
+
+
+func _gap(parent: Control, px: float) -> void:
+	var g: Control = Control.new()
+	g.custom_minimum_size = Vector2(0, px)
+	parent.add_child(g)
+
+
+## A section's heading, in sentence case.
+func heading(s: String, aside: String = "") -> void:
+	_gap(_list, 22)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	_list.add_child(row)
+	_text(row, s, "cinzel", 700, 17, INK)
+	if aside != "":
+		var a: Label = _text(row, aside, "karla", 600, 13, FAINT)
+		a.size_flags_vertical = Control.SIZE_SHRINK_END
+	_gap(_list, 8)
+
+
+## An entry: its name (and what kind of thing it is, quietly), then what it
+## does. dot: a small mark of meaning before the name (none: no mark).
+func entry(name: String, kind: String, desc: String, dot: Color = Color(0, 0, 0, 0)) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_list.add_child(row)
+	if dot.a > 0.0:
+		var m: Dot = Dot.new()
+		m.col = dot
+		m.custom_minimum_size = Vector2(8, 20)
+		row.add_child(m)
+	_text(row, name, "karla", 800, 15, INK)
+	if kind != "":
+		var k: Label = _text(row, kind, "karla", 600, 13, FAINT)
+		k.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if desc != "":
+		var d: Label = _text(_list, desc, "karla", 500, 14, SOFT, true)
+		if dot.a > 0.0:
+			d.add_theme_constant_override("line_spacing", 2)
+	_gap(_list, 12)
+
+
+## A line of short, flat chips (class bonuses, tides).
+func chips(items: Array) -> void:
+	var flow: HFlowContainer = HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 8)
+	flow.add_theme_constant_override("v_separation", 8)
+	_list.add_child(flow)
+	for it: Array in items:
+		var p: PanelContainer = PanelContainer.new()
+		var sb: StyleBoxFlat = BattleLook.box(Color(1, 1, 1, 0.05), Color(0, 0, 0, 0), 0, 8).duplicate()
+		sb.content_margin_left = 10
+		sb.content_margin_right = 10
+		sb.content_margin_top = 4
+		sb.content_margin_bottom = 5
+		p.add_theme_stylebox_override("panel", sb)
+		_text(p, str(it[0]), "karla", 700, 13, it[1])
+		flow.add_child(p)
+	_gap(_list, 12)
+
+
+## A timeline of steps (a boss's phases): a hairline down the side, a dot at
+## each step, its title and lines beside it.
+func timeline(steps: Array) -> void:
+	for i: int in steps.size():
+		var st: Dictionary = steps[i]
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 14)
+		_list.add_child(row)
+		var rail: Rail = Rail.new()
+		rail.first = i == 0
+		rail.last = i == steps.size() - 1
+		rail.col = st.get("col", HARM)
+		rail.custom_minimum_size = Vector2(14, 0)
+		rail.size_flags_vertical = Control.SIZE_FILL
+		row.add_child(rail)
+		var v: VBoxContainer = VBoxContainer.new()
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_theme_constant_override("separation", 3)
+		row.add_child(v)
+		var top: HBoxContainer = HBoxContainer.new()
+		top.add_theme_constant_override("separation", 10)
+		v.add_child(top)
+		_text(top, str(st["title"]), "karla", 800, 15, INK)
+		if str(st.get("aside", "")) != "":
+			_text(top, str(st["aside"]), "karla", 600, 13, FAINT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		for ln: Array in Js.list(st.get("lines")):
+			_text(v, str(ln[0]), "karla", int(ln[2]) if ln.size() > 2 else 500, 14, ln[1], true)
+		_gap(v, 14)
+
+
+# ── Drawn pieces ──────────────────────────────────────────────────────────────
+
+class ArtPane:
+	extends Control
+	var d: Dossier
+
+	func _draw() -> void:
+		var r: Rect2 = Rect2(Vector2.ZERO, size)
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = Dossier.ART_FILL
+		sb.corner_radius_top_left = 18
+		sb.corner_radius_bottom_left = 18
+		sb.anti_aliasing = true
+		sb.draw(get_canvas_item(), r)
+		var foot: float = r.size.y - 54.0
+		var ar: Rect2 = Rect2()
+		if d.art != null:
+			var box: Vector2 = Vector2(r.size.x - 40.0, foot - 30.0)
+			var sc: float = minf(box.x / float(d.art.get_width()), box.y / float(d.art.get_height()))
+			var ts: Vector2 = d.art.get_size() * sc
+			ar = Rect2(Vector2((r.size.x - ts.x) / 2.0, foot + 6.0 - ts.y), ts)
+		# The disc sits behind the art's middle.
+		var c: Vector2 = ar.get_center() if d.art != null else r.get_center()
+		var rad: float = minf(r.size.x * 0.42, maxf(ar.size.x, ar.size.y) * 0.5)
+		draw_circle(c, rad, Color(d.disc, 0.2))
+		draw_circle(c, rad * 0.7, Color(d.disc, 0.14))
+		if d.ground and d.art != null:
+			_ellipse(Vector2(c.x, ar.end.y - 4.0), Vector2(ar.size.x * 0.36, 10.0), Color(0, 0, 0, 0.35))
+		if d.art != null:
+			draw_texture_rect(d.art, ar, false)
+		if d.badge != null:
+			var bc: Vector2 = Vector2(62, r.size.y - 62)
+			draw_circle(bc, 40.0, Dossier.ART_FILL)
+			BattleLook.medallion(self, bc, 36.0, d.badge, Dossier.HELP, "", 1.0, Vector2(0.5, 0.5), 0.5)
+		draw_line(Vector2(r.size.x - 0.5, 0), Vector2(r.size.x - 0.5, r.size.y), Dossier.HAIR, 1.0)
+
+	func _ellipse(c: Vector2, rr: Vector2, col: Color) -> void:
+		var pts: PackedVector2Array = PackedVector2Array()
+		for k: int in 32:
+			var a: float = TAU * k / 32.0
+			pts.append(c + Vector2(cos(a) * rr.x, sin(a) * rr.y))
+		draw_colored_polygon(pts, col)
+
+
+class HullBar:
+	extends Control
+	var d: Dossier
+
+	func _draw() -> void:
+		var f: Font = Kit.font("karla", 700)
+		draw_string(f, Vector2(0, 14), "Hull", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Dossier.SOFT)
+		var v: String = "%d / %d" % [int(d.hull), int(d.hull_max)]
+		if d.shield > 0.0:
+			v += "   +%d shield" % int(d.shield)
+		var vw: float = f.get_string_size(v, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+		draw_string(f, Vector2(size.x - vw, 14), v, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Dossier.INK)
+		var r: Rect2 = Rect2(0, 24, size.x, 10)
+		BattleLook.draw_box(self, r, BattleLook.box(Color(0, 0, 0, 0.4), Color(0, 0, 0, 0), 0, 5))
+		var fr: float = clampf(d.hull / maxf(1.0, d.hull_max), 0.0, 1.0)
+		if fr > 0.0:
+			BattleLook.draw_box(self, Rect2(r.position, Vector2(maxf(10.0, r.size.x * fr), r.size.y)), BattleLook.box(d.hull_col, Color(0, 0, 0, 0), 0, 5))
+		if d.shield > 0.0:
+			BattleLook.draw_box(self, Rect2(r.position + Vector2(0, -5), Vector2(r.size.x * clampf(d.shield / maxf(1.0, d.hull_max), 0.0, 1.0), 3)), BattleLook.box(BattleLook.SHIELD, Color(0, 0, 0, 0), 0, 1.5))
+
+
+## The numbers: figures over small words, hairlines between.
+class Figures:
+	extends Control
+	var items: Array = []
+
+	func _draw() -> void:
+		if items.is_empty():
+			return
+		var n: int = items.size()
+		var cw: float = size.x / float(n)
+		var big: Font = Kit.font("cinzel", 700)
+		var small: Font = Kit.font("karla", 600)
+		for i: int in n:
+			var x: float = cw * i
+			if i > 0:
+				draw_line(Vector2(x, 6), Vector2(x, size.y - 4), Dossier.HAIR, 1.0)
+			var pad: float = 0.0 if i == 0 else 16.0
+			draw_string(big, Vector2(x + pad, 26), str(items[i][0]), HORIZONTAL_ALIGNMENT_LEFT, cw - pad - 4, 24, Dossier.INK)
+			draw_string(small, Vector2(x + pad, 46), str(items[i][1]), HORIZONTAL_ALIGNMENT_LEFT, cw - pad - 4, 12, Dossier.SOFT)
+
+
+class Dot:
+	extends Control
+	var col: Color
+
+	func _draw() -> void:
+		draw_circle(Vector2(4, size.y / 2.0 + 1.0), 3.5, col)
+
+
+class Rail:
+	extends Control
+	var first: bool = false
+	var last: bool = false
+	var col: Color
+
+	func _draw() -> void:
+		var x: float = size.x / 2.0
+		draw_line(Vector2(x, 0.0 if not first else 10.0), Vector2(x, size.y if not last else 10.0), Dossier.HAIR, 1.5)
+		draw_circle(Vector2(x, 10), 5.0, Dossier.FILL)
+		draw_circle(Vector2(x, 10), 4.0, col)
+
+
+class CloseX:
+	extends Button
+	func _init() -> void:
+		flat = true
+		focus_mode = Control.FOCUS_NONE
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+	func _process(_d: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		var c: Vector2 = size / 2.0
+		if is_hovered():
+			draw_circle(c, size.x / 2.0, Color(1, 1, 1, 0.08))
+		var s: float = size.x * 0.22
+		var col: Color = Dossier.INK if is_hovered() else Dossier.SOFT
+		draw_line(c + Vector2(-s, -s), c + Vector2(s, s), col, 1.8, true)
+		draw_line(c + Vector2(s, -s), c + Vector2(-s, s), col, 1.8, true)
