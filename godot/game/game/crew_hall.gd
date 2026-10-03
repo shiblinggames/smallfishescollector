@@ -178,11 +178,21 @@ func _build_room() -> void:
 	for c: Node in _tabs.get_children():
 		c.queue_free()
 	var board_open: int = Js.list(_state.get("board")).filter(func(b: Dictionary) -> bool: return b["recruited"] != true).size()
-	if room == "hall" and not at_hall:
+	if room in ["hall", "bunks"] and not at_hall:
 		room = "recruit"
 	var rooms: Array = [["recruit", "Recruit%s" % ("  %d" % board_open if board_open > 0 else "")], ["roster", "Roster  %d" % Js.list(_state.get("roster")).size()]]
 	if at_hall:
 		rooms.append(["hall", "The Hall"])
+		var ready_n: int = 0
+		var waiting_n: int = 0
+		for k: String in Js.obj(_state.get("bunkTerms")):
+			var tm: Dictionary = _state["bunkTerms"][k]
+			if Bunks.stint_done(tm["since"], Clock.now_ms(), float(tm["cap"])):
+				ready_n += 1
+		for m: Dictionary in Js.list(_state.get("roster")):
+			if m.get("pendingTrait") != null:
+				waiting_n += 1
+		rooms.append(["bunks", "Bunks%s" % ("  ·  %d ready" % (ready_n + waiting_n) if ready_n + waiting_n > 0 else "")])
 	var waiting: int = 0
 	for kv: Variant in Js.obj(_skins.get("vouchers")):
 		waiting += int(Js.num(_skins["vouchers"][kv]))
@@ -205,6 +215,11 @@ func _build_room() -> void:
 			_roster_room()
 		"trunk":
 			_trunk_room()
+		"bunks":
+			var hb: HallBunks = HallBunks.new()
+			hb.hall = self
+			hb.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			_body.add_child(hb)
 		_:
 			_hall_room()
 	_draw_detail()
@@ -302,7 +317,7 @@ func _hall_room() -> void:
 	Paper.stat(v, "Roster", "%d of %d" % [Js.list(_state.get("roster")).size(), int(Js.num(_state.get("capacity")))])
 	Paper.stat(v, "From the hall", "+%d" % ((tier - 1) * int(cap["perHallTier"])))
 	Paper.stat(v, "From your level (%d)" % int(Js.num(_state.get("navLevel"))), "+%d, one every %d levels" % [int(floor(Js.num(_state.get("navLevel")) / float(cap["perLevels"]))), int(cap["perLevels"])])
-	Paper.stat(v, "Bunks", "%d (training comes next)" % int(def["bunks"]))
+	Paper.stat(v, "Bunks", "%d (see the Bunks room)" % int(def["bunks"]))
 	Paper.rule(_body)
 	var nxt: Dictionary = Crew.next_hall(tier)
 	if nxt.is_empty():
@@ -697,7 +712,7 @@ func _card(c: Dictionary, kind: String) -> Control:
 func _draw_detail() -> void:
 	for c: Node in _detail.get_children():
 		c.queue_free()
-	_detail.visible = room != "hall"
+	_detail.visible = room != "hall" and room != "bunks"
 	if _pick.is_empty():
 		Paper.text(_detail, "Press a skin to see it." if room == "trunk" else "Press a card to see the hand.", "note", Paper.ink_faint(), true)
 		return

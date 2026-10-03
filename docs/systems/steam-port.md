@@ -859,10 +859,40 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   at the Crew Hall: Recruit (the board, a card opens the hand, Sign on with its moment),
   Roster (one-time names, dismiss on a second press) and The Hall (tier, painting, roster
   space, the next tier). Card art is content (card-arts, 320 px card_thumbs). NEXT SLICES:
-  bunks and training, Drills/Stores, crew levels' stat ticks, promotions, seats. SUNRISE NOTICE
+  crew levels' stat ticks, seats (bunks, Drills/Stores and promotions are slice 2, below). SUNRISE NOTICE
   (Kong): each sea day's fresh board is announced in the HUD's note slip ("New hopefuls at
   the Crew Hall"), and on coming back to a board not yet looked at (Sea._crew_morning; a
   captain who has never had crew is not told until they have).
+- THE CREW HALL, SLICE 2: BUNKS (2026-10-03). Rules: core/bunks.gd ports lib/crewBunks,
+  lib/crewBunkSettle, lib/crewRules' stints and the Leviathan offer, lib/crewTraits' 28-entry
+  deep table and lib/core/crew.ts bunkCrew, collectBunk, resolveTraitOffer, buyHallUpgrade and
+  checkPromotions over the save's bunks; Crew state carries bunkedCrewIds, bunkLockedCrewIds,
+  bunkTerms, drillLevel, storesLevel and capHours, and dismissal is refused while a hand is in
+  a bunk (training, or finished and not collected). The rules export carries crew.bunks (rate
+  by Drills tier, hours by Stores tier, both ladders' prices, the Leviathan slot, the deep
+  table, the milestone levels). PARITY: crew.json "the hall bunks", 86 calls: every refusal,
+  both ladders to VI behind the hall, early collects, the Leviathan's offers taken and
+  declined, a fully trained hand turned from an ordinary bunk and welcome in the deep, and
+  promotions across a long run of stints. THE ROOM (Kong, 2026-10-03: "make the bunk and
+  training experience look and feel better", custom art and animations): the Crew Hall's
+  BUNKS tab (at the hall; "N ready" on it when a stint is done or a draw waits),
+  game/hall_bunks.gd. Six painted bunks, one style per hall tier (web/public/crew/bunk-1..5,
+  driftwood bunk beds up to a carved canopy bed, and bunk-leviathan, a bed of leviathan ribs
+  with a teal glow; Kie.ai, magenta keyed), shut ones in grey pencil with the tier that opens
+  them. game/bunk_tile.gd: a hand lies IN the bunk (the bunk's front drawn again over them),
+  breathing, z's drifting up, and a CANDLE beside it burning down as the stint runs (the candle
+  is the timer); a done stint glows gold and the hand bounces to get out, with a bell. Pressing
+  an empty bunk opens the picker (free hands first, the rest greyed with why; the Leviathan
+  bunk adds the stint length, 1h up to Stores, since a shorter stint is more draws). Bunking
+  drops the hand in with a bounce. game/wake_moment.gd: collecting lifts the hand out to the
+  middle, counts the XP in and ticks the level up a note at a time, a ring and motes on landing
+  (teal from the Leviathan bunk). game/promotion_card.gd: each promotion after it, a card
+  dropped in tilted, the class's colour ringing out, a wax seal pressed with the new tier and
+  the old Special struck through over the new one. Draws from the deep wait at the top of the
+  room: the trait carried beside the trait offered, Take the new one / Keep theirs. Drills and
+  Stores are painted with the web's tiered crew/drill_N and stores_N, six pips, what the next
+  tier buys, its price or the hall tier it needs. tests/shot.gd crewbunks (BUNK_SHOW wake,
+  promo, pick).
 - NOTICES (Kong, 2026-10-02): the free board each sunrise IS the Tavern Notice (port rules
   crewPort.freeWeights 76 / 22.3 / 1.7 / 0: an Epic on 5% of boards, never a Legendary). Two
   items post a fresh board in its place at their own odds (crewPort.notices, per face, three

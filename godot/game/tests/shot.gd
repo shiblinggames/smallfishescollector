@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -610,6 +610,62 @@ func _init() -> void:
 			hud.refresh()
 			hud.open_guide("achievements")
 			for f: int in 40:
+				await process_frame
+		"crewbunks":
+			# The Bunks room: a full hall, hands asleep, one stint done, a draw
+			# from the deep waiting. BUNK_SHOW: "wake" collects the done one,
+			# "promo" shows a promotion card; SHOT_F frames after.
+			var sdb: CaptainStore = sea.session.store
+			var su: String = sea.session.uid
+			p["expedition_xp"] = 50000000.0
+			p["fishing_xp"] = float(Rules.data()["xpTable"][80])
+			p["doubloons"] = 9000000.0
+			for d: int in 4:
+				var st0: Dictionary = RulesApi.run(sdb, su, "getCrewState", [])
+				for c: Dictionary in st0["board"]:
+					RulesApi.run(sdb, su, "recruitCrew", [c["id"]])
+				p["last_free_recruit_date"] = "old%d" % d
+			for k: int in 5:
+				RulesApi.run(sdb, su, "upgradeCrewHall", [])
+			for k: int in 2:
+				RulesApi.run(sdb, su, "buyHallUpgrade", ["drill"])
+				RulesApi.run(sdb, su, "buyHallUpgrade", ["stores"])
+			var ids: Array = (RulesApi.run(sdb, su, "getCrewState", [])["roster"] as Array).map(func(m: Dictionary) -> float: return float(m["id"]))
+			RulesApi.run(sdb, su, "bunkCrew", [ids[0], 0.0, null])
+			RulesApi.run(sdb, su, "bunkCrew", [ids[5], 5.0, 1.0])
+			var t0: float = Clock.now_ms()
+			Clock.install(func() -> float: return t0 + 3600000.0 * 1.2)
+			RulesApi.run(sdb, su, "collectBunk", [ids[5]])
+			RulesApi.run(sdb, su, "bunkCrew", [ids[1], 1.0, null])
+			RulesApi.run(sdb, su, "bunkCrew", [ids[2], 2.0, null])
+			Clock.install(func() -> float: return t0 + 3600000.0 * 3.05)
+			RulesApi.run(sdb, su, "bunkCrew", [ids[3], 3.0, null])
+			RulesApi.run(sdb, su, "checkPromotions", [])
+			var ch: CrewHall = CrewHall.new()
+			ch.session = sea.session
+			ch.room = "bunks"
+			sea._room_layer.add_child(ch)
+			for f: int in 30:
+				await process_frame
+			var show: String = OS.get_environment("BUNK_SHOW")
+			if show == "wake":
+				var hb: HallBunks = ch.find_children("", "HallBunks", true, false)[0]
+				for t: BunkTile in ch.find_children("", "BunkTile", true, false):
+					if t.ready_now():
+						hb.collect(t)
+						break
+			elif show == "pick":
+				var hb2: HallBunks = ch.find_children("", "HallBunks", true, false)[0]
+				for t: BunkTile in ch.find_children("", "BunkTile", true, false):
+					if t.slot == 5:
+						hb2.pick_for(t)
+			elif show == "promo":
+				var pc: PromotionCard = PromotionCard.new()
+				var m0: Dictionary = (ch._state["roster"] as Array)[0]
+				var cls: Dictionary = Crew.class_of(str(m0["slug"]))
+				pc.promo = { "name": m0["name"], "art": "/card-arts/%s.webp" % str(m0["filename"]).get_basename(), "className": cls.get("name", ""), "color": cls.get("color", "#d9a83a"), "tier": "III", "level": 25.0, "from": cls["milestones"][1]["desc"], "to": cls["milestones"][2]["desc"] }
+				ch.add_child(pc)
+			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 30:
 				await process_frame
 		"finnmoment":
 			# A chapter of the Long Cast closing on the water. FINN_CH: 1 to 5;
