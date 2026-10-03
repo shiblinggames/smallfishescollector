@@ -225,6 +225,7 @@ func _on_peer_disconnected(id: int) -> void:
 		if k != null and (_votes[n]["asked"] as Array).has(k):
 			_tally(int(n), str(k), false)
 	if k != null:
+		raids.drop(str(k))
 		mate_left.emit(k)
 		_left.rpc(k)
 		charter.write()

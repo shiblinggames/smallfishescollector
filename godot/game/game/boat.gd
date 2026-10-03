@@ -630,3 +630,9 @@ class Ripple:
 	func _draw() -> void:
 		var age: float = t / life
 		draw_arc(Vector2.ZERO, 26.0 + age * grow, 0.0, TAU, 64, Color(1, 1, 1, (1.0 - age) * 0.5), 3.0, true)
+
+
+## Turned to face one way and held there (a fight: the line faces the enemy).
+func face_to(f: float) -> void:
+	_facing = signf(f)
+	skipper.scale.x = -_facing

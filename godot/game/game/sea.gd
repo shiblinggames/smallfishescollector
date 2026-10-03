@@ -1457,7 +1457,7 @@ func start_battle(raid_id: String, node_id: String = "") -> void:
 	# In a Charter every raid goes through the founder's table (the purse is
 	# the crew's): the call goes out, and the line forms when it sails.
 	if raids_shared():
-		var r: Variant = await session.act("raidTable", ["call", { "raidId": raid_id, "nodeId": node_id }])
+		var r: Variant = await session.act("raidTable", ["call", { "raidId": raid_id, "nodeId": node_id, "x": _boat.position.x, "y": _boat.position.y }])
 		if r is Dictionary and r.has("error"):
 			_hud.toast(str(r["error"]))
 		return
@@ -1496,12 +1496,6 @@ func open_coop_battle(table_state: Dictionary, my_key: String) -> void:
 	if mark != null:
 		st.mark = mark
 		st.dock = mark.dock()
-	# A captain far off is brought round to the dock's water first.
-	var to: Vector2 = st.dock if st.dock != Vector2.INF else North.SEA_GATE + Vector2(-300, -1300)
-	if _boat.position.distance_to(to) > 2600.0:
-		_boat.position = to + Vector2(-520, 240)
-		_boat.velocity = Vector2.ZERO
-		_field.ring(_boat.position, 140.0, 1.4, 0.6)
 	st.finished.connect(func(_won: bool) -> void:
 		_campaign.refresh()
 		_open_sea_gate()

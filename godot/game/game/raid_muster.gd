@@ -15,6 +15,7 @@ var _t: float = 0.0
 var _left: Label
 var _last: Dictionary = {}
 var _opened_seq: int = -1
+var _join: Button = null
 
 
 func _ready() -> void:
@@ -54,6 +55,7 @@ func _on_table(st: Dictionary) -> void:
 
 
 func _close() -> void:
+	_join = null
 	if _card != null:
 		_card.queue_free()
 		_card = null
@@ -109,8 +111,9 @@ func _paint(st: Dictionary) -> void:
 	elif Js.list(st.get("members")).size() < RaidTable.MAX_SEATS:
 		var jn: Button = Kit.button("Join the raid", "primary")
 		jn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_join = jn
 		jn.pressed.connect(func() -> void:
-			var r: Variant = await sea.session.act("raidTable", ["join"])
+			var r: Variant = await sea.session.act("raidTable", ["join", { "x": sea._boat.position.x, "y": sea._boat.position.y }])
 			if r is Dictionary and r.has("error"):
 				sea._hud.toast(str(r["error"])))
 		row.add_child(jn)
@@ -127,4 +130,8 @@ func _tick() -> void:
 	if _left == null:
 		return
 	var n: int = maxi(0, ceili(_until - _t))
+	if _join != null and not _last.is_empty():
+		var at: bool = sea._boat.position.distance_to(RaidTable.dock_of(str(_last["nodeId"]))) <= RaidTable.NEAR
+		_join.disabled = not at
+		_join.text = "Join the raid" if at else "Sail to the raid to join"
 	_left.text = "Sails in %ds. Every captain in the line earns their own XP, crate and clear; the coin goes to the crew's purse." % n

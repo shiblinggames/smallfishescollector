@@ -68,6 +68,8 @@ func set_look(look: Dictionary) -> void:
 
 
 var _look: Dictionary = {}
+## In a fight: held facing this way (1 right, -1 left; 0 free).
+var face_lock: float = 0.0
 ## North of the arch: their expedition ship, as yours becomes (Boat.set_ship).
 var _hull: HullRig = null
 var _on_ship: bool = false
@@ -90,6 +92,7 @@ func _side() -> void:
 		skipper.visible = true
 		return
 	_hull = HullRig.new()
+	_hull.face = signf(skipper.scale.x) if skipper.scale.x != 0.0 else 1.0
 	_hull.tex = tex
 	_hull.def = sa["def"]
 	_hull.box = 340.0 * float(sa["wide"])
@@ -106,7 +109,7 @@ func state(st: Dictionary) -> void:
 		position = _at
 		_placed = true
 	skipper.set_frame(str(st.get("pose", "rest")))
-	var f: float = float(st.get("facing", -1.0))
+	var f: float = float(st.get("facing", -1.0)) if face_lock == 0.0 else face_lock
 	skipper.scale.x = -f
 
 
@@ -116,7 +119,9 @@ func _process(delta: float) -> void:
 	position = position.lerp(aim, 1.0 - exp(-10.0 * delta))
 	_side()
 	if _hull != null:
-		_hull.turn(1.0 if skipper.scale.x < 0.0 else -1.0)
+		if face_lock != 0.0:
+			skipper.scale.x = -face_lock
+		_hull.turn(1.0 if skipper.scale.x > 0.0 else -1.0)
 	_plate.modulate = lift
 	_plate.position = Vector2(-_plate.size.x / 2.0, 0)
 	var way: float = clampf(_vel.length() / 300.0, 0.0, 1.0)

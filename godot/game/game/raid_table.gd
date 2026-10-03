@@ -10,12 +10,15 @@ extends Node
 ##
 ##   THE MUSTER: a captain calls a raid from its hull at anchor; everyone
 ##   aboard hears it and has MUSTER seconds to join (the caller may sail at
-##   once). Only a captain whose map has reached that raid may come.
+##   once). Only a captain whose map has reached that raid, and whose ship is
+##   at it (within NEAR of its dock), may come (Kong: "you have to be at the
+##   same raid").
 ##   A ROUND: each captain in the fight plans (an action, its aim judged on
 ##   their own bar, maybe a crew order, maybe aimed at a crewmate) and says
-##   ready; when all are ready, or PLAN seconds pass (a captain who has not
-##   chosen reloads, or braces when full), the founder's game resolves it
-##   (Battle.resolve) and sends the events. A flee goes in as a plan.
+##   ready. NO CLOCK (Kong: the turn does not move until every captain has
+##   committed): the founder's game resolves it (Battle.resolve) when all are
+##   in. A tide waits the same way. A captain whose game drops leaves the
+##   line (drop). A flee goes in as a plan.
 ##   PLAYING: every screen plays the round; each says when it is done (or
 ##   PLAY seconds pass) before the raid moves on, so nobody is left behind.
 ##   BETWEEN: a flare barrage, played by each captain on their own sky; a
@@ -32,6 +35,8 @@ const PLAY: float = 25.0
 const FLARES: float = 25.0
 const TIDE: float = 30.0
 const MAX_SEATS: int = 4
+## How near the raid's dock a ship must be to call or join it.
+const NEAR: float = 1400.0
 
 ## Who in this game is listening (the battle stage, the muster call).
 static var live: RaidTable = null
@@ -68,7 +73,7 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 		"call":
 			return _call(key, s, Js.obj(payload))
 		"join":
-			return _join(key, s)
+			return _join(key, s, Js.obj(payload))
 		"leave":
 			return _leave(key)
 		"go":
@@ -120,13 +125,32 @@ func _call(key: String, s: Session, p: Dictionary) -> Dictionary:
 	var raid_id: String = str(p.get("raidId", ""))
 	if Battle.raid_def(raid_id).is_empty() or not eligible(s, node_id):
 		return { "error": "Your map has not reached that raid." }
+	if not near(node_id, p):
+		return { "error": "Sail to the raid to call the crew to it." }
 	_r = { "phase": "muster", "seq": int(_r["seq"]) + 1, "left": MUSTER, "raidId": raid_id, "nodeId": node_id, "by": key,
 		"members": [{ "key": key, "name": s.captain_name() }], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "tidePicks": {}, "gone": {}, "result": "" }
 	_push()
 	return { "ok": true }
 
 
-func _join(key: String, s: Session) -> Dictionary:
+## Is a ship (its position in the payload) at this raid?
+static func near(node_id: String, p: Dictionary) -> bool:
+	if not p.has("x"):
+		return false
+	var at: Vector2 = Vector2(Js.num(p["x"]), Js.num(p["y"]))
+	return at.distance_to(dock_of(node_id)) <= NEAR
+
+
+## Where a raid is fought from: its hull's dock on the campaign's water (or,
+## for a raid with no hull there, the open water out of the Sea Gate).
+static func dock_of(node_id: String) -> Vector2:
+	for e: Dictionary in Js.list(Campaign.water().get("encounters")):
+		if e["node"] == node_id:
+			return Vector2(float(e["at"]["x"]), float(e["at"]["y"])) + CampaignWater.DOCK_OFF
+	return North.SEA_GATE + Vector2(-300, -1300)
+
+
+func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 	if _r["phase"] != "muster":
 		return { "error": "That raid has already sailed." }
 	var mem: Array = _r["members"]
@@ -136,6 +160,8 @@ func _join(key: String, s: Session) -> Dictionary:
 		return { "error": "The line is full." }
 	if not eligible(s, str(_r["nodeId"])):
 		return { "error": "Your map has not reached that raid yet." }
+	if not near(str(_r["nodeId"]), p):
+		return { "error": "Sail to the raid to join it." }
 	mem.append({ "key": key, "name": s.captain_name() })
 	_push()
 	return { "ok": true }
@@ -217,7 +243,7 @@ func _advance() -> void:
 				_r["phase"] = "tide"
 				_r["tide"] = tide
 				_r["tidePicks"] = {}
-				_r["left"] = TIDE
+				_r["left"] = -1.0
 				_push()
 				return
 			_next_fight()
@@ -231,7 +257,7 @@ func _advance() -> void:
 func _open_plan() -> void:
 	_r["phase"] = "plan"
 	_r["plans"] = {}
-	_r["left"] = PLAN
+	_r["left"] = -1.0
 	_push()
 
 
@@ -442,3 +468,39 @@ func _settle_saves() -> void:
 
 func _session(key: String) -> Session:
 	return charter.session_for(key) if charter != null else null
+
+
+## A captain's game has dropped out of the Charter: out of the muster, or out
+## of the line (as one who got away, paid nothing more), and nothing waits on
+## them.
+func drop(key: String) -> void:
+	match str(_r["phase"]):
+		"idle", "done":
+			return
+		"muster":
+			_leave(key)
+			return
+	var si: int = _seat_of(key)
+	if si >= 0:
+		_r["b"]["seats"][si]["fled"] = true
+	_r["gone"][key] = true
+	var b: Dictionary = _r["b"]
+	if Battle.alive(b).is_empty():
+		b["state"] = "fled"
+		_r["result"] = "fled"
+		_r["phase"] = "done"
+		_push()
+		return
+	match str(_r["phase"]):
+		"plan":
+			if _all_planned():
+				_resolve()
+		"playing":
+			if _everyone_played():
+				_advance()
+		"flares":
+			if _all_in("flareRes"):
+				_land_flares()
+		"tide":
+			if _all_in("tidePicks"):
+				_step("tided", [{ "t": "tided", "picks": _r["tidePicks"] }])

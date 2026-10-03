@@ -104,6 +104,10 @@ func _ready() -> void:
 	sea._boat.velocity = Vector2.ZERO
 	sea._boat.target = null
 	sea._boat.hold_still = true
+	# The line faces the enemy, off to the east.
+	sea._boat.face_to(1.0)
+	for k: Variant in sea._mates:
+		(sea._mates[k] as Shipmate).face_lock = 1.0 if table != null else 0.0
 	var sail: Tween = create_tween()
 	sail.tween_property(sea._boat, "position", _at + _offset(me), 2.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	sea._hud.visible = false
@@ -1053,6 +1057,9 @@ func _end(won: bool, fled: bool = false) -> void:
 	if table != null and table.changed.is_connected(_pump):
 		table.changed.disconnect(_pump)
 	sea._boat.modulate = Color.WHITE
+	for k2: Variant in sea._mates:
+		if is_instance_valid(sea._mates[k2]):
+			(sea._mates[k2] as Shipmate).face_lock = 0.0
 	if _enemy != null:
 		_enemy.queue_free()
 	if mark != null:
@@ -1096,10 +1103,14 @@ func _draw() -> void:
 	draw_string(f, Vector2(28, hb * 0.62), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(CREAM, 0.9))
 	_draw_strip(Vector2(vp.x - 28, hb * 0.5))
 	if table != null and str(_latest.get("phase", "")) == "plan":
-		var left: int = maxi(0, ceili(_plan_until - _t))
-		var cd: String = "Orders in %ds" % left
+		var who: Array = []
+		var given: Dictionary = Js.obj(_latest.get("plans"))
+		for st: Dictionary in Battle.alive(b):
+			if not given.has(st.get("key")):
+				who.append("You" if st.get("key") == my_key else str(st["name"]))
+		var cd: String = ("Choosing: " + ", ".join(PackedStringArray(who))) if not who.is_empty() else "Every order is in"
 		var cw: float = f.get_string_size(cd, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
-		draw_string(f, Vector2(vp.x / 2.0 - cw / 2.0, hb * 0.62), cd, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(BRASS, 0.95) if left > 5 else Color(1.0, 0.5, 0.4))
+		draw_string(f, Vector2(vp.x / 2.0 - cw / 2.0, hb * 0.62), cd, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(BRASS, 0.95))
 	# The enemy's plate over its masthead.
 	if _enemy != null and is_instance_valid(_enemy):
 		var e: Dictionary = b["enemy"]
@@ -1406,6 +1417,7 @@ func _got_away() -> void:
 	_say("You got away")
 	_log_line("Out of the fight, with what you earned so far. The raid will be here when you come back.")
 	var away: Vector2 = sea._boat.position + Vector2(-700, 260)
+	sea._boat.face_to(-1.0)
 	var tw: Tween = create_tween()
 	tw.tween_property(sea._boat, "position", away, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	for k: int in 5:

@@ -52,12 +52,17 @@ func _init() -> void:
 	var sent: Array = [0]
 	t.changed.connect(func(_st: Dictionary) -> void: sent[0] += 1)
 
+	var at: Dictionary = { "x": RaidTable.dock_of("pete").x, "y": RaidTable.dock_of("pete").y }
+	var far: Dictionary = { "x": float(at["x"]) + 5000.0, "y": at["y"] }
+	var pete: Dictionary = { "raidId": "corsairs_reckoning", "nodeId": "pete" }
 	# ── The muster ──
-	check((await c.run(x, "raidTable", ["call", { "raidId": "corsairs_reckoning", "nodeId": "pete" }])).has("error"), "Cal's map has not reached Pete")
-	check(not (await c.run(a, "raidTable", ["call", { "raidId": "corsairs_reckoning", "nodeId": "pete" }])).has("error"), "Anna calls Pete's raid")
-	check((await c.run(a, "raidTable", ["call", { "raidId": "corsairs_reckoning", "nodeId": "pete" }])).has("error"), "one raid at a time")
-	check((await c.run(x, "raidTable", ["join"])).has("error"), "Cal cannot join it")
-	check(not (await c.run(b, "raidTable", ["join"])).has("error"), "Ben joins")
+	check((await c.run(x, "raidTable", ["call", pete.merged(at)])).has("error"), "Cal's map has not reached Pete")
+	check((await c.run(a, "raidTable", ["call", pete.merged(far)])).has("error"), "Anna must be at the raid to call it")
+	check(not (await c.run(a, "raidTable", ["call", pete.merged(at)])).has("error"), "Anna calls Pete's raid")
+	check((await c.run(a, "raidTable", ["call", pete.merged(at)])).has("error"), "one raid at a time")
+	check((await c.run(x, "raidTable", ["join", at])).has("error"), "Cal cannot join it")
+	check((await c.run(b, "raidTable", ["join", far])).has("error"), "Ben must sail to it first")
+	check(not (await c.run(b, "raidTable", ["join", at])).has("error"), "Ben joins")
 	check((await c.run(b, "raidTable", ["go"])).has("error"), "only the caller sails early")
 	var a_coin: float = Js.num(a.profile().get("doubloons"))
 	var b_coin: float = Js.num(b.profile().get("doubloons"))
@@ -115,8 +120,8 @@ func _init() -> void:
 		check(x.store.clear_count(x.uid, "corsairs_reckoning") == 0, "and not Cal's")
 
 	# ── A flee: Ben gets away, and is paid no more ──
-	await c.run(a, "raidTable", ["call", { "raidId": "corsairs_reckoning", "nodeId": "pete" }])
-	await c.run(b, "raidTable", ["join"])
+	await c.run(a, "raidTable", ["call", pete.merged(at)])
+	await c.run(b, "raidTable", ["join", at])
 	await c.run(a, "raidTable", ["go"])
 	var fled: bool = false
 	var after_flee_pay: int = 0
