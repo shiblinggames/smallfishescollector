@@ -737,23 +737,31 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   "Crossfire!" call, gold lines from each ship to the enemy; while choosing, "Ben landed a
   critical. Land one too for a crossfire." NOT YET TESTED over a real Steam lobby.
 - THE FIGHT'S LOOK, OVERHAULED (2026-10-03; game/battle_look.gd). Kong: the fight UI and the
-  plates "look a bit elementary", then "still in the similar style as what our overall theme
-  is" and "use the players profile pic ... like how the leaderboard on the web game displays
-  the profiles". So: the night paper dressed in brass. PLATES: a warm dark-paper plaque with a
-  brass inlay rim, the captain's own avatar (game/avatar.gd, CharacterAvatar, rendered once to a
-  texture per seat; the seat carries face {characterColor, hat}) or the enemy's portrait in a
-  brass medallion on its left edge, a BOSS / ELITE / YOU tag, a glossed health bar with quarter
-  ticks and a pale trail that drains after a hit, the shield as a bright bead along the top,
-  drawn round shot for balls, status pills; the acting ship's plate glows. TOP BAR: brass
-  hairlines with a knot, the raid's title over its fights as knots on a cord (the boss's red),
-  the initiative order as medallions on a cord (the one acting lit), "Choosing: ..." in a pill.
-  THE DECK: on the night paper with a brass rim and a "YOUR ORDERS" tab, as tall as what is on
-  it, tucked wholly under the bar while a round plays; each order a brass-rimmed plaque with a
-  drawn icon (fire, volley, reload, dodge, Mega, drum, flee), its cost and its key in a brass
-  cap, lifting under the pointer; the shot rack as round shot; crew orders as cards with the
-  hand's portrait in a ring of their class colour. The aim bar's rail is a trough in a brass
-  collar with rounded, glossed bands. The log sits in a pill, the banner between brass
-  flourishes, and words landing on one spot stack instead of overprinting.
+  plates "look a bit elementary"; then "still in the similar style as what our overall theme
+  is", "use the players profile pic ... like how the leaderboard on the web game displays the
+  profiles", and, of a brass-trim pass, "I don't like the brass trim aesthetic. I like the flat,
+  clean aesthetic look that we have still in the game." SETTLED: FLAT AND CLEAN in the night
+  side's browns (solid fills, one faint hairline, rounded corners, a soft shadow at most; NO
+  rims, gloss, sheen or flourishes); colour carries meaning only (green your line, red the
+  enemy, gold a critical, the lead order or what is chosen). PLATES: the captain's own avatar
+  (game/avatar.gd, CharacterAvatar, rendered once to a texture per seat; the seat carries face
+  {characterColor, hat}) or the enemy's portrait in a ring of its colour, a BOSS / ELITE / YOU
+  tag, a flat health bar with a pale trail that drains after a hit, the shield as a thin bar
+  over it, cannonballs as flat discs, status pills; the acting ship's plate takes a gold
+  hairline. TOP BAR: the raid's title over its fights as dots (this one gold, the boss's red),
+  the initiative order as avatars on a line (the one acting ringed in gold), "Choosing: ..." in
+  a pill. THE DECK on the night paper, as tall as what is on it, tucked under the bar while a
+  round plays; each order a flat tile with a drawn icon, its cost and its key; the shot rack;
+  crew orders as cards with the hand's portrait in their class colour. The aim bar flat.
+  Words landing on one spot stack instead of overprinting.
+  THE ENEMY'S STAT CARD (game/enemy_card.gd, RaidCombat's EnemyStatsPopup): click the enemy's
+  hull or plate ("CLICK FOR STATS" under its plate until opened once). The full painting (its
+  ship for one with no portrait) on a pool of its colour, rank and name; HP, damage, volley,
+  initiative, crit; the elite's affix; each ability in the web's words (Carapace, Mist Veil,
+  Rolling Plate, the riposte, Shark's Bite, its special, its ultimate, Signal Flares); a boss's
+  phases with the telegraphed move each arms and what answers it; what is on it right now
+  (the Last Wall, statuses, burn, freeze, snare); the behaviour tell. NOT PORTED: the boss's
+  crate odds ("In the Crate").
 - THE CAMPAIGN'S WATER, BUILT (2026-10-03). RULES: core/campaign.gd ports computeRaidMap,
   chapterForNode, buildClearedSetVia and all of lib/core/raidMap (the view, chapter unlocks seen,
   tolls, story reads with the legendary gates, puzzles, the caches, the muster, events, dice,

@@ -679,6 +679,23 @@ func _init() -> void:
 						for bar: Node in bst.find_children("", "AimBar", true, false):
 							(bar as AimBar)._pos = (bar as AimBar)._zone
 							(bar as AimBar).lock()
+					"card":
+						while bst._busy:
+							await process_frame
+						if OS.get_environment("CARD_BOSS") != "":
+							var guard: int = 0
+							while not bst.b["enemy"]["boss"] and guard < 20:
+								guard += 1
+								Battle.next_fight(bst.b)
+							bst._portrait = Skipper.tex(str(bst.b["enemy"].get("portrait", "")).trim_prefix("/"))
+							Battle.apply_status(bst.b["enemy"]["statuses"], "fortify", 0.3, 2.0)
+							bst.b["enemy"]["burn"] = { "turns": 2.0, "dmg": 9.0 }
+						bst._open_enemy_card()
+						if OS.get_environment("CARD_SCROLL") != "":
+							for f: int in 10:
+								await process_frame
+							for scn: Node in bst._card.find_children("", "ScrollContainer", true, false):
+								(scn as ScrollContainer).scroll_vertical = int(OS.get_environment("CARD_SCROLL"))
 					"flee":
 						while bst._busy:
 							await process_frame

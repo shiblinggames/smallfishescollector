@@ -1,37 +1,39 @@
 class_name BattleLook
 extends RefCounted
-## THE FIGHT'S LOOK (Kong, 2026-10-03: the fight's UI and the plates over the
-## ships "still look a bit elementary ... can we do a visual overhaul", then
-## "I still want the style to be in the similar style as what our overall
-## theme is"): THE NIGHT PAPER, DRESSED IN BRASS. Warm dark-paper browns with a
-## brass inlay rim (the deck sits on the night paper itself), cannonballs drawn
-## as round shot, health bars with a gloss and a pale trail that drains after a
-## hit, every captain's own avatar (CharacterAvatar, as the web's leaderboards
-## show them) in a brass medallion, and vector icons for every order (no emoji). Everything here draws onto a
-## CanvasItem, so the plates on the water, the deck and the turn track all
-## share one hand.
+## THE FIGHT'S LOOK (Kong, 2026-10-03). The plates and the deck "look a bit
+## elementary"; then, of a brass-trim pass: "I don't like the brass trim
+## aesthetic. I like the flat, clean aesthetic look that we have still in the
+## game." So: FLAT AND CLEAN, in the expedition side's night-paper browns.
+## Solid fills, one faint hairline, rounded corners, a soft shadow at most; no
+## rims, gloss, sheen or flourishes. Colour carries meaning only (green your
+## line, red the enemy, gold a critical or what is chosen). Every captain wears
+## their own avatar (CharacterAvatar, as the web's leaderboards show it);
+## the orders carry drawn icons (no emoji). Everything draws onto a CanvasItem
+## so the plates on the water, the deck and the turn track share one hand.
 
-const LACQUER: Color = Color("#2a1f17")
-const LACQUER_HI: Color = Color("#3a2b20")
-const LACQUER_LO: Color = Color("#19120d")
-const BRASS: Color = Color("#d8b26b")
-const BRASS_HI: Color = Color("#f7e1a6")
-const BRASS_LO: Color = Color("#7a5a2c")
-const CREAM: Color = Color("#f4ead6")
-const MUTED: Color = Color("#c4ae8c")
-const ALLY: Color = Color("#6ad893")
-const ALLY_LO: Color = Color("#23824f")
-const FOE: Color = Color("#ff735c")
+const LACQUER: Color = Color(0.135, 0.11, 0.095)
+const LACQUER_HI: Color = Color(0.2, 0.165, 0.14)
+const LACQUER_LO: Color = Color(0.09, 0.075, 0.065)
+const HAIR: Color = Color(1, 1, 1, 0.09)
+## The accent words (labels, a chosen thing).
+const BRASS: Color = Color("#c4a96a")
+const BRASS_HI: Color = Color("#f5cf6a")
+const BRASS_LO: Color = Color(1, 1, 1, 0.09)
+const CREAM: Color = Color(0.94, 0.88, 0.77)
+const MUTED: Color = Color(0.72, 0.66, 0.57)
+const ALLY: Color = Color("#6fd394")
+const ALLY_LO: Color = Color("#2f8a58")
+const FOE: Color = Color("#f2705c")
 const FOE_LO: Color = Color("#a3291f")
 const SHIELD: Color = Color("#8ccfff")
-const GOLD: Color = Color("#ffd36b")
+const GOLD: Color = Color("#f0c040")
 
 static var _boxes: Dictionary = {}
 
 
-## A rounded box (cached): fill, rim, rim width, corner radius, and a shadow
-## (or a glow, in the shadow's colour).
-static func box(bg: Color, rim: Color, rim_w: int, r: float, shadow: float = 0.0, shadow_col: Color = Color(0, 0, 0, 0.5)) -> StyleBoxFlat:
+## A rounded box (cached): fill, hairline, its width, corner radius, and a soft
+## shadow (or a glow, in the shadow's colour).
+static func box(bg: Color, rim: Color, rim_w: int, r: float, shadow: float = 0.0, shadow_col: Color = Color(0, 0, 0, 0.45)) -> StyleBoxFlat:
 	var key: String = "%s|%s|%d|%d|%d|%s" % [bg.to_html(), rim.to_html(), rim_w, int(r), int(shadow), shadow_col.to_html()]
 	if _boxes.has(key):
 		return _boxes[key]
@@ -54,54 +56,35 @@ static func draw_box(ci: CanvasItem, r: Rect2, s: StyleBoxFlat) -> void:
 	s.draw(ci.get_canvas_item(), r)
 
 
-## A lacquer panel with a brass inlay: a dark outer line, the lacquer, a thin
-## brass ring just inside, and a pale catch of light along the top.
-static func panel(ci: CanvasItem, r: Rect2, radius: float = 12.0, alpha: float = 1.0, glow: float = 0.0, glow_col: Color = BRASS_HI) -> void:
-	if glow > 0.0:
-		draw_box(ci, r, box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, radius, 16.0, Color(glow_col, 0.55 * glow)))
-	draw_box(ci, r, box(Color(LACQUER, 0.94 * alpha), Color(BRASS_LO, alpha), 2, radius, 10.0, Color(0, 0, 0, 0.45 * alpha)))
-	draw_box(ci, r.grow(-3.0), box(Color(0, 0, 0, 0), Color(BRASS, 0.42 * alpha), 1, maxf(2.0, radius - 3.0)))
-	ci.draw_line(r.position + Vector2(radius, 4.5), Vector2(r.end.x - radius, r.position.y + 4.5), Color(1, 1, 1, 0.07 * alpha), 1.5, true)
+## A flat panel: one fill, one hairline, a soft shadow. Lit (the one acting),
+## its hairline turns gold.
+static func panel(ci: CanvasItem, r: Rect2, radius: float = 12.0, alpha: float = 1.0, glow: float = 0.0, glow_col: Color = GOLD) -> void:
+	var rim: Color = Color(glow_col, 0.55 + 0.4 * glow) if glow > 0.0 else Color(HAIR, HAIR.a * alpha)
+	draw_box(ci, r, box(Color(LACQUER, 0.93 * alpha), rim, 2 if glow > 0.0 else 1, radius, 10.0, Color(0, 0, 0, 0.35 * alpha)))
 
 
-## A health bar: the trough, a pale trail where hull was just lost (it drains
-## after the hit), the fill with its gloss, quarter ticks, and a shield lying
-## along the top as a bright bead.
-static func bar(ci: CanvasItem, r: Rect2, frac: float, trail: float, shield: float, hi: Color, lo: Color, alpha: float = 1.0) -> void:
+## A health bar: a flat trough, the pale trail where hull was just lost (it
+## drains after the hit), the fill, and a shield as a thin bar along the top.
+static func bar(ci: CanvasItem, r: Rect2, frac: float, trail: float, shield: float, hi: Color, _lo: Color, alpha: float = 1.0) -> void:
 	var rad: float = r.size.y / 2.0
-	draw_box(ci, r.grow(1.5), box(Color(0, 0, 0, 0.6 * alpha), Color(BRASS_LO, 0.7 * alpha), 1, rad + 1.5))
+	draw_box(ci, r, box(Color(0, 0, 0, 0.45 * alpha), Color(0, 0, 0, 0), 0, rad))
 	frac = clampf(frac, 0.0, 1.0)
 	trail = clampf(trail, 0.0, 1.0)
 	if trail > frac + 0.002:
-		draw_box(ci, Rect2(r.position, Vector2(maxf(r.size.y, r.size.x * trail), r.size.y)), box(Color(1.0, 0.93, 0.75, 0.85 * alpha), Color(0, 0, 0, 0), 0, rad))
+		draw_box(ci, Rect2(r.position, Vector2(maxf(r.size.y, r.size.x * trail), r.size.y)), box(Color(CREAM, 0.6 * alpha), Color(0, 0, 0, 0), 0, rad))
 	if frac > 0.0:
-		var fr: Rect2 = Rect2(r.position, Vector2(maxf(r.size.y, r.size.x * frac), r.size.y))
-		draw_box(ci, fr, box(Color(lo, alpha), Color(0, 0, 0, 0), 0, rad))
-		draw_box(ci, Rect2(fr.position, Vector2(fr.size.x, fr.size.y * 0.58)), box(Color(hi, alpha), Color(0, 0, 0, 0), 0, rad))
-		if fr.size.x > rad * 2.0 + 2.0:
-			ci.draw_line(fr.position + Vector2(rad, 2.2), Vector2(fr.end.x - rad, fr.position.y + 2.2), Color(1, 1, 1, 0.4 * alpha), 1.4, true)
-	for k: int in range(1, 4):
-		var x: float = r.position.x + r.size.x * k / 4.0
-		ci.draw_line(Vector2(x, r.position.y + 2), Vector2(x, r.end.y - 2), Color(0, 0, 0, 0.28 * alpha), 1.0)
+		draw_box(ci, Rect2(r.position, Vector2(maxf(r.size.y, r.size.x * frac), r.size.y)), box(Color(hi, alpha), Color(0, 0, 0, 0), 0, rad))
 	if shield > 0.0:
-		var sr: Rect2 = Rect2(r.position + Vector2(0, -4.5), Vector2(maxf(6.0, r.size.x * clampf(shield, 0.0, 1.0)), 5.0))
-		draw_box(ci, sr.grow(2.0), box(Color(SHIELD, 0.22 * alpha), Color(0, 0, 0, 0), 0, 4.5))
-		draw_box(ci, sr, box(Color(SHIELD, alpha), Color(1, 1, 1, 0.6 * alpha), 1, 2.5))
+		draw_box(ci, Rect2(r.position + Vector2(0, -5), Vector2(maxf(6.0, r.size.x * clampf(shield, 0.0, 1.0)), 3.0)), box(Color(SHIELD, alpha), Color(0, 0, 0, 0), 0, 1.5))
 
 
-## A round shot: lit from the top left, a cold glint, a rim of brass light.
-## Empty: the socket it sits in.
+## A cannonball: a flat dark disc with a faint ring; empty, the ring alone.
 static func ball(ci: CanvasItem, c: Vector2, rad: float, full: bool, alpha: float = 1.0) -> void:
-	if not full:
-		ci.draw_circle(c, rad, Color(0, 0, 0, 0.4 * alpha))
-		ci.draw_arc(c, rad, 0.0, TAU, 24, Color(BRASS, 0.32 * alpha), 1.2, true)
-		return
-	ci.draw_circle(c + Vector2(0, rad * 0.3), rad * 1.02, Color(0, 0, 0, 0.35 * alpha))
-	ci.draw_circle(c, rad, Color(0.10, 0.11, 0.13, alpha))
-	ci.draw_circle(c - Vector2(rad, rad) * 0.18, rad * 0.7, Color(0.19, 0.21, 0.24, alpha))
-	ci.draw_circle(c - Vector2(rad, rad) * 0.3, rad * 0.38, Color(0.29, 0.31, 0.35, alpha))
-	ci.draw_circle(c - Vector2(rad, rad) * 0.42, rad * 0.16, Color(1, 1, 1, 0.75 * alpha))
-	ci.draw_arc(c, rad - 0.5, PI * 0.1, PI * 0.9, 16, Color(BRASS, 0.55 * alpha), 1.2, true)
+	if full:
+		ci.draw_circle(c, rad, Color(0.07, 0.07, 0.08, alpha))
+		ci.draw_arc(c, rad, 0.0, TAU, 24, Color(1, 1, 1, 0.28 * alpha), 1.0, true)
+	else:
+		ci.draw_arc(c, rad - 0.5, 0.0, TAU, 24, Color(1, 1, 1, 0.16 * alpha), 1.0, true)
 
 
 static func _head(ci: CanvasItem, tip: Vector2, dir: Vector2, s: float, col: Color) -> void:
@@ -110,48 +93,41 @@ static func _head(ci: CanvasItem, tip: Vector2, dir: Vector2, s: float, col: Col
 	ci.draw_colored_polygon(PackedVector2Array([tip, tip - d * s + n * s * 0.6, tip - d * s - n * s * 0.6]), col)
 
 
-## An order's icon, drawn: s is its half size.
+## An order's icon, flat strokes and discs: s is its half size.
 static func icon(ci: CanvasItem, kind: String, c: Vector2, s: float, col: Color) -> void:
 	match kind:
 		"fire":
 			for k: int in 3:
 				var y: float = c.y - s * 0.3 + k * s * 0.3
-				ci.draw_line(Vector2(c.x - s, y), Vector2(c.x - s * 0.15, y), Color(col, 0.35 + 0.2 * k), 2.0, true)
-			ball(ci, c + Vector2(s * 0.35, 0), s * 0.55, true)
-			ci.draw_arc(c + Vector2(s * 0.35, 0), s * 0.55, 0.0, TAU, 20, col, 1.4, true)
+				ci.draw_line(Vector2(c.x - s, y), Vector2(c.x - s * 0.2, y), Color(col, 0.35 + 0.2 * k), 1.8, true)
+			ci.draw_circle(c + Vector2(s * 0.35, 0), s * 0.5, col)
 		"volley":
 			for p: Vector2 in [Vector2(-0.45, 0.32), Vector2(0.45, 0.32), Vector2(0.0, -0.4)]:
-				ball(ci, c + p * s, s * 0.38, true)
-				ci.draw_arc(c + p * s, s * 0.38, 0.0, TAU, 16, col, 1.2, true)
+				ci.draw_circle(c + p * s, s * 0.34, col)
 		"mega":
 			var pts: PackedVector2Array = PackedVector2Array()
 			for k: int in 16:
 				var a: float = TAU * k / 16.0 - PI / 2.0
 				pts.append(c + Vector2(cos(a), sin(a)) * s * (1.0 if k % 2 == 0 else 0.45))
-			ci.draw_colored_polygon(pts, Color(col, 0.9))
-			ci.draw_circle(c, s * 0.3, Color(1, 1, 1, 0.85))
+			ci.draw_colored_polygon(pts, col)
 		"reload":
-			ci.draw_arc(c, s * 0.72, -PI * 0.85, PI * 0.55, 24, col, 2.4, true)
+			ci.draw_arc(c, s * 0.72, -PI * 0.85, PI * 0.55, 24, col, 2.2, true)
 			var tip: Vector2 = c + Vector2(cos(PI * 0.55), sin(PI * 0.55)) * s * 0.72
 			_head(ci, tip + Vector2(-s * 0.1, 0), Vector2(-1, -0.15), s * 0.45, col)
-			ball(ci, c, s * 0.28, true)
 		"dodge":
 			var pl: PackedVector2Array = PackedVector2Array()
 			for k: int in 13:
 				var u: float = k / 12.0
 				pl.append(c + Vector2(-s + 1.7 * s * u, sin(u * TAU * 0.9) * s * 0.45))
-			ci.draw_polyline(pl, col, 2.4, true)
+			ci.draw_polyline(pl, col, 2.2, true)
 			_head(ci, pl[pl.size() - 1] + Vector2(s * 0.3, 0), pl[pl.size() - 1] - pl[pl.size() - 3], s * 0.42, col)
 		"flee":
 			for k: int in 2:
 				var x: float = c.x + s * 0.35 - k * s * 0.6
-				ci.draw_polyline(PackedVector2Array([Vector2(x, c.y - s * 0.6), Vector2(x - s * 0.5, c.y), Vector2(x, c.y + s * 0.6)]), Color(col, 1.0 - 0.35 * k), 2.4, true)
+				ci.draw_polyline(PackedVector2Array([Vector2(x, c.y - s * 0.6), Vector2(x - s * 0.5, c.y), Vector2(x, c.y + s * 0.6)]), Color(col, 1.0 - 0.35 * k), 2.2, true)
 		"drum":
-			ci.draw_rect(Rect2(c.x - s * 0.7, c.y - s * 0.35, s * 1.4, s * 0.8), Color(col, 0.25))
-			ci.draw_line(Vector2(c.x - s * 0.7, c.y - s * 0.35), Vector2(c.x - s * 0.7, c.y + s * 0.45), col, 1.6)
-			ci.draw_line(Vector2(c.x + s * 0.7, c.y - s * 0.35), Vector2(c.x + s * 0.7, c.y + s * 0.45), col, 1.6)
+			ci.draw_rect(Rect2(c.x - s * 0.7, c.y - s * 0.35, s * 1.4, s * 0.8), Color(col, 0.3))
 			_ellipse(ci, c + Vector2(0, -s * 0.35), Vector2(s * 0.7, s * 0.22), col)
-			_ellipse(ci, c + Vector2(0, s * 0.45), Vector2(s * 0.7, s * 0.22), Color(col, 0.6))
 			ci.draw_line(c + Vector2(-s * 0.2, -s * 0.5), c + Vector2(s * 0.5, -s), col, 1.6, true)
 		_:
 			ci.draw_circle(c, s * 0.4, col)
@@ -165,13 +141,11 @@ static func _ellipse(ci: CanvasItem, c: Vector2, r: Vector2, col: Color) -> void
 	ci.draw_polyline(pts, col, 1.6, true)
 
 
-## A brass medallion: a portrait cropped round (its face: uv_c, uv_r across),
-## or the first letter of a name on its colour.
+## A round portrait: a captain's avatar or an enemy's face cropped round
+## (uv_c, uv_r across), on a disc of its colour, with a thin ring of it. No
+## texture: the first letter of the name.
 static func medallion(ci: CanvasItem, c: Vector2, rad: float, tex: Texture2D, col: Color, letter: String, alpha: float = 1.0, uv_c: Vector2 = Vector2(0.5, 0.34), uv_r: float = 0.3) -> void:
-	ci.draw_circle(c + Vector2(0, 2), rad + 4.0, Color(0, 0, 0, 0.45 * alpha))
-	ci.draw_circle(c, rad + 3.5, Color(BRASS_LO, alpha))
-	ci.draw_circle(c, rad + 2.0, Color(BRASS, alpha))
-	ci.draw_circle(c, rad, Color(col.darkened(0.55), alpha))
+	ci.draw_circle(c, rad, Color(LACQUER_LO, alpha))
 	if tex != null:
 		var asp: float = float(tex.get_width()) / maxf(1.0, float(tex.get_height()))
 		var pts: PackedVector2Array = PackedVector2Array()
@@ -183,13 +157,12 @@ static func medallion(ci: CanvasItem, c: Vector2, rad: float, tex: Texture2D, co
 			uvs.append(uv_c + Vector2(d.x * uv_r, d.y * uv_r * asp))
 		ci.draw_colored_polygon(pts, Color(1, 1, 1, alpha), uvs, tex)
 	else:
-		ci.draw_circle(c - Vector2(0, rad * 0.25), rad * 0.75, Color(col.darkened(0.3), 0.6 * alpha))
-		var f: Font = Kit.font("cinzel", 900)
-		var fs: int = int(rad * 1.05)
+		ci.draw_circle(c, rad, Color(col.darkened(0.6), alpha))
+		var f: Font = Kit.font("cinzel", 800)
+		var fs: int = int(rad * 1.0)
 		var w: float = f.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		ci.draw_string(f, Vector2(c.x - w / 2.0, c.y + fs * 0.36), letter, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(CREAM, alpha))
-	ci.draw_arc(c, rad, 0.0, TAU, 48, Color(0, 0, 0, 0.55 * alpha), 1.5, true)
-	ci.draw_arc(c, rad + 2.0, PI * 1.1, PI * 1.6, 12, Color(BRASS_HI, 0.8 * alpha), 1.2, true)
+	ci.draw_arc(c, rad, 0.0, TAU, 48, Color(col, 0.9 * alpha), 2.0, true)
 
 
 ## Words drawn centred on x, sitting on the baseline y.
@@ -201,28 +174,27 @@ static func say(ci: CanvasItem, f: Font, x: float, y: float, s: String, fs: int,
 	return w
 
 
-## A small pill of words (a tag, a status).
+## A small flat pill of words (a tag, a status).
 static func pill(ci: CanvasItem, left: Vector2, s: String, tone: Color, alpha: float = 1.0) -> float:
 	var f: Font = Kit.font("karla", 800)
 	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x + 12.0
-	var r: Rect2 = Rect2(left, Vector2(w, 15))
-	draw_box(ci, r, box(Color(tone, 0.18 * alpha), Color(tone, 0.75 * alpha), 1, 7.5))
-	ci.draw_string(f, left + Vector2(6, 11), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(tone.lightened(0.35), alpha))
+	draw_box(ci, Rect2(left, Vector2(w, 15)), box(Color(tone, 0.2 * alpha), Color(0, 0, 0, 0), 0, 7.5))
+	ci.draw_string(f, left + Vector2(6, 11), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(tone.lightened(0.3), alpha))
 	return w
 
 
-## A diamond knot (the fight track).
+## A dot on the fight track.
 static func knot(ci: CanvasItem, c: Vector2, s: float, fill: Color, rim: Color) -> void:
-	var pts: PackedVector2Array = PackedVector2Array([c + Vector2(0, -s), c + Vector2(s, 0), c + Vector2(0, s), c + Vector2(-s, 0)])
-	ci.draw_colored_polygon(pts, fill)
-	pts.append(pts[0])
-	ci.draw_polyline(pts, rim, 1.3, true)
+	ci.draw_circle(c, s * 0.8, fill)
+	if rim.a > 0.0 and fill.a < 0.6:
+		ci.draw_arc(c, s * 0.8, 0.0, TAU, 20, rim, 1.2, true)
 
 
 # ── The deck's keys ────────────────────────────────────────────────────────────
 
-## An order's key on the deck: a lacquer plaque that lifts and brightens under
-## the pointer, its icon, its name, what it costs, and its key in a brass cap.
+## An order's key on the deck: a flat rounded tile that lightens under the
+## pointer, its icon, its name, what it costs, and its key in a small cap.
+## The lead order is tinted gold; a chosen one wears a gold hairline.
 class ActionKey:
 	extends Button
 	var kind: String = ""
@@ -231,7 +203,7 @@ class ActionKey:
 	var key_hint: String = ""
 	var primary: bool = false
 	var chosen: bool = false
-	var accent: Color = BattleLook.BRASS
+	var accent: Color = BattleLook.GOLD
 	var _hover: float = 0.0
 
 	func _init() -> void:
@@ -246,39 +218,39 @@ class ActionKey:
 			queue_redraw()
 
 	func _draw() -> void:
-		var a: float = 0.36 if disabled else 1.0
+		var a: float = 0.38 if disabled else 1.0
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
-		r.position.y += 1.0 if is_pressed() else -2.0 * _hover
-		var lit: float = 1.0 if chosen else _hover
+		var bg: Color = BattleLook.LACQUER_HI.lerp(BattleLook.LACQUER_HI.lightened(0.12), _hover)
+		var rim: Color = Color(1, 1, 1, 0.08 + 0.1 * _hover)
 		if primary and not disabled:
-			BattleLook.draw_box(self, r, BattleLook.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 10, 12.0, Color(accent, 0.35 + 0.25 * lit)))
-		var bg: Color = BattleLook.LACQUER_HI.lerp(Color("#5a4029"), lit * 0.8)
-		if primary and not disabled:
-			bg = bg.lerp(Color(accent.darkened(0.55), 1.0), 0.35)
-		BattleLook.draw_box(self, r, BattleLook.box(Color(bg, 0.96 * a), Color(BattleLook.BRASS_LO, a), 2, 10, 6.0, Color(0, 0, 0, 0.4 * a)))
-		BattleLook.draw_box(self, r.grow(-3.0), BattleLook.box(Color(0, 0, 0, 0), Color(accent, (0.35 + 0.55 * lit) * a), 1, 7))
-		draw_line(r.position + Vector2(10, 5), Vector2(r.end.x - 10, r.position.y + 5), Color(1, 1, 1, 0.08 * a), 1.2, true)
+			bg = bg.lerp(accent.darkened(0.45), 0.4)
+			rim = Color(accent, 0.45 + 0.3 * _hover)
+		if chosen:
+			rim = Color(BattleLook.GOLD, 0.95)
+		BattleLook.draw_box(self, r, BattleLook.box(Color(bg, a), Color(rim, rim.a * a), 2 if chosen else 1, 10))
 		var tx: float = r.position.x + 14.0
+		var ink: Color = Color(BattleLook.CREAM, a)
 		if kind != "":
-			BattleLook.icon(self, kind, Vector2(r.position.x + 27, r.get_center().y), 12.0, Color(BattleLook.BRASS_HI, a))
-			tx = r.position.x + 48.0
-		var f: Font = Kit.font("cinzel", 800)
+			BattleLook.icon(self, kind, Vector2(r.position.x + 26, r.get_center().y), 11.0, Color(accent if primary and not disabled else BattleLook.CREAM, a))
+			tx = r.position.x + 46.0
+		var f: Font = Kit.font("karla", 800)
 		var fs: int = 15
-		var avail: float = r.end.x - tx - (28.0 if key_hint != "" else 8.0)
+		var avail: float = r.end.x - tx - (26.0 if key_hint != "" else 8.0)
 		while fs > 11 and f.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > avail:
 			fs -= 1
 		var cy: float = r.get_center().y
-		draw_string(f, Vector2(tx, cy + (0.0 if sub != "" else 5.0)), label, HORIZONTAL_ALIGNMENT_LEFT, avail, fs, Color(BattleLook.CREAM, a))
+		draw_string(f, Vector2(tx, cy + (0.0 if sub != "" else 5.0)), label, HORIZONTAL_ALIGNMENT_LEFT, avail, fs, ink)
 		if sub != "":
-			draw_string(Kit.font("karla", 700), Vector2(tx, cy + 15.0), sub, HORIZONTAL_ALIGNMENT_LEFT, avail + 22.0, 11, Color(BattleLook.MUTED, a))
+			draw_string(Kit.font("karla", 600), Vector2(tx, cy + 15.0), sub, HORIZONTAL_ALIGNMENT_LEFT, avail + 20.0, 11, Color(BattleLook.MUTED, a))
 		if key_hint != "":
-			var kr: Rect2 = Rect2(Vector2(r.end.x - 24, r.position.y + 7), Vector2(17, 17))
-			BattleLook.draw_box(self, kr, BattleLook.box(Color(0, 0, 0, 0.35 * a), Color(BattleLook.BRASS, 0.7 * a), 1, 4))
-			BattleLook.say(self, Kit.font("karla", 800), kr.get_center().x, kr.end.y - 4.5, key_hint, 11, Color(BattleLook.BRASS_HI, a))
+			var kr: Rect2 = Rect2(Vector2(r.end.x - 22, r.position.y + 7), Vector2(15, 15))
+			BattleLook.draw_box(self, kr, BattleLook.box(Color(1, 1, 1, 0.08 * a), Color(0, 0, 0, 0), 0, 4))
+			BattleLook.say(self, Kit.font("karla", 800), kr.get_center().x, kr.end.y - 4.0, key_hint, 10, Color(BattleLook.MUTED, a))
 
 
 ## A crew hand's order on the deck: their portrait in a ring of their class's
-## colour, their name, and the order's state; lit in that colour when ordered.
+## colour, their name, and the order's state; tinted in that colour when
+## ordered.
 class OrderCard:
 	extends Button
 	var tex: Texture2D
@@ -300,42 +272,23 @@ class OrderCard:
 			queue_redraw()
 
 	func _draw() -> void:
-		var a: float = 0.42 if disabled else 1.0
+		var a: float = 0.4 if disabled else 1.0
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
-		r.position.y -= 2.0 * _hover
+		var bg: Color = BattleLook.LACQUER_HI.lerp(BattleLook.LACQUER_HI.lightened(0.12), _hover)
 		if chosen:
-			BattleLook.draw_box(self, r, BattleLook.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 10, 14.0, Color(col, 0.55)))
-		var bg: Color = BattleLook.LACQUER_HI.lerp(Color(col.darkened(0.6), 1.0), 0.55 if chosen else 0.15 * _hover)
-		BattleLook.draw_box(self, r, BattleLook.box(Color(bg, 0.96 * a), Color(BattleLook.BRASS_LO, a), 2, 10, 6.0, Color(0, 0, 0, 0.4 * a)))
-		BattleLook.draw_box(self, r.grow(-3.0), BattleLook.box(Color(0, 0, 0, 0), Color(col, (0.95 if chosen else 0.3 + 0.4 * _hover) * a), 1, 7))
+			bg = bg.lerp(col.darkened(0.5), 0.45)
+		BattleLook.draw_box(self, r, BattleLook.box(Color(bg, a), Color(col, 0.95) if chosen else Color(1, 1, 1, (0.08 + 0.1 * _hover) * a), 2 if chosen else 1, 10))
 		var mr: float = r.size.y * 0.5 - 8.0
 		BattleLook.medallion(self, Vector2(r.position.x + mr + 9, r.get_center().y), mr, tex, col, hand.substr(0, 1), a, Vector2(0.5, 0.36), 0.36)
-		var tx: float = r.position.x + mr * 2.0 + 20.0
+		var tx: float = r.position.x + mr * 2.0 + 18.0
 		var avail: float = r.end.x - tx - 6.0
 		draw_string(Kit.font("karla", 800), Vector2(tx, r.get_center().y - 2), hand, HORIZONTAL_ALIGNMENT_LEFT, avail, 13, Color(BattleLook.CREAM, a))
-		draw_string(Kit.font("karla", 800), Vector2(tx, r.get_center().y + 13), state, HORIZONTAL_ALIGNMENT_LEFT, avail, 10, Color(col.lightened(0.3) if not disabled else BattleLook.MUTED, a))
+		draw_string(Kit.font("karla", 700), Vector2(tx, r.get_center().y + 13), state, HORIZONTAL_ALIGNMENT_LEFT, avail, 10, Color(col.lightened(0.3) if not disabled else BattleLook.MUTED, a))
 
 
-## The deck's lacquer and a tab at its top edge with its title.
+## Kept for the deck's layering: it draws nothing now (the deck is the night
+## paper alone).
 class DeckPanel:
 	extends Control
-	var title: String = "YOUR ORDERS"
-	## The panel's own lacquer (off: it sits on the night paper and draws only
-	## a brass rim and its tab).
-	var body: bool = true
-
-	func _draw() -> void:
-		var r: Rect2 = Rect2(Vector2.ZERO, size)
-		if body:
-			BattleLook.panel(self, r, 16.0)
-		else:
-			BattleLook.draw_box(self, r.grow(-6.0), BattleLook.box(Color(0, 0, 0, 0), Color(BattleLook.BRASS, 0.35), 1, 10))
-		if title == "":
-			return
-		var f: Font = Kit.font("karla", 800)
-		var tw: float = f.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 34.0
-		var tab: Rect2 = Rect2(Vector2(r.get_center().x - tw / 2.0, -11), Vector2(tw, 22))
-		BattleLook.draw_box(self, tab, BattleLook.box(BattleLook.LACQUER_LO, BattleLook.BRASS, 1, 11, 4.0))
-		BattleLook.knot(self, Vector2(tab.position.x + 9, tab.get_center().y), 3.0, BattleLook.BRASS, BattleLook.BRASS_HI)
-		BattleLook.knot(self, Vector2(tab.end.x - 9, tab.get_center().y), 3.0, BattleLook.BRASS, BattleLook.BRASS_HI)
-		BattleLook.say(self, f, tab.get_center().x, tab.get_center().y + 3.5, title, 10, BattleLook.BRASS_HI)
+	var title: String = ""
+	var body: bool = false

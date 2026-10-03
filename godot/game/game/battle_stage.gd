@@ -85,6 +85,10 @@ var _xfire_t: float = 0.0
 var _trail: Dictionary = {}
 ## Each captain's avatar, rendered once (seat: texture).
 var _faces: Dictionary = {}
+## The enemy's stat card while it is open.
+var _card: EnemyCard = null
+## Until the card has been opened once, the plate says it can be.
+static var card_seen: bool = false
 
 
 func _ready() -> void:
@@ -465,8 +469,8 @@ func _paint_actions() -> void:
 	mag.custom_minimum_size = Vector2(150, 60)
 	mag.draw.connect(func() -> void:
 		var r: Rect2 = Rect2(Vector2(4, 0), Vector2(146, 60))
-		BattleLook.draw_box(mag, r, BattleLook.box(Color(0, 0, 0, 0.3), Color(BattleLook.BRASS, 0.35), 1, 10))
-		mag.draw_string(Kit.font("karla", 800), Vector2(16, 17), "SHOT  %d / %d" % [int(s["charges"]), int(s["maxCharges"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, BattleLook.BRASS)
+		BattleLook.draw_box(mag, r, BattleLook.box(Color(0, 0, 0, 0.25), Color(0, 0, 0, 0), 0, 10))
+		mag.draw_string(Kit.font("karla", 800), Vector2(16, 17), "SHOT  %d / %d" % [int(s["charges"]), int(s["maxCharges"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, BattleLook.MUTED)
 		var cnt: int = int(s["maxCharges"])
 		var step: float = minf(28.0, 120.0 / maxf(1.0, float(cnt)))
 		for k: int in cnt:
@@ -478,7 +482,7 @@ func _paint_actions() -> void:
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		_deck_box.add_child(row)
-		Kit.text(row, "ORDERS", "eyebrow", BattleLook.BRASS).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		Kit.text(row, "ORDERS", "eyebrow", BattleLook.MUTED).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		for c: Dictionary in crew:
 			row.add_child(_order_card(s, c))
 	_target_row()
@@ -525,7 +529,7 @@ func _target_row() -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_deck_box.add_child(row)
-	Kit.text(row, "ORDER FOR", "eyebrow", BattleLook.BRASS).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	Kit.text(row, "ORDER FOR", "eyebrow", BattleLook.MUTED).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for i: int in (b["seats"] as Array).size():
 		var st: Dictionary = b["seats"][i]
 		if not Battle.alive(b).has(st):
@@ -544,6 +548,14 @@ func _target_row() -> void:
 
 
 func _unhandled_input(e: InputEvent) -> void:
+	if _card != null and is_instance_valid(_card):
+		return
+	# A click on the enemy (its hull or its plate) opens its stat card.
+	if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		if _enemy_hit((e as InputEventMouseButton).position) and find_children("", "AimBar", true, false).is_empty():
+			get_viewport().set_input_as_handled()
+			_open_enemy_card()
+		return
 	if _busy or not (e is InputEventKey) or not (e as InputEventKey).pressed or (e as InputEventKey).echo:
 		return
 	var m: Dictionary = { KEY_1: "fire", KEY_2: "volley", KEY_3: "reload", KEY_4: "dodge", KEY_6: "mega" }
@@ -1132,8 +1144,6 @@ func _draw() -> void:
 			draw_line(sp4, ep2, Color(1.0, 0.9, 0.55, 0.85 * xa), 3.0, true)
 		draw_circle(ep2, 26.0 + 18.0 * (1.0 - xa), Color(1.0, 0.85, 0.4, 0.35 * xa))
 	var f: Font = Kit.font("cinzel", 800)
-	_hairline(hb, vp.x)
-	_hairline(vp.y - hb, vp.x)
 	_fight_track(hb)
 	_draw_strip(Vector2(vp.x - 30, hb * 0.42))
 	if table != null and str(_latest.get("phase", "")) == "plan":
@@ -1145,31 +1155,23 @@ func _draw() -> void:
 		var cd: String = ("Choosing: " + ", ".join(PackedStringArray(who))) if not who.is_empty() else "Every order is in"
 		var cw: float = f.get_string_size(cd, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		var cr: Rect2 = Rect2(vp.x / 2.0 - cw / 2.0 - 22.0, hb * 0.5 - 15.0, cw + 44.0, 30.0)
-		BattleLook.draw_box(self, cr, BattleLook.box(Color(BattleLook.LACQUER, 0.9), Color(BattleLook.BRASS, 0.7), 1, 15))
+		BattleLook.draw_box(self, cr, BattleLook.box(Color(BattleLook.LACQUER_HI, 0.95), Color(0, 0, 0, 0), 0, 15))
 		BattleLook.say(self, f, vp.x / 2.0, cr.get_center().y + 5.0, cd, 15, BattleLook.BRASS_HI)
 	# The log's backing, and the banner's brass flourish.
 	if _log.text != "" and _log.modulate.a > 0.01:
 		var la: float = _log.modulate.a
 		var lw: float = _log.get_minimum_size().x
 		var lr: Rect2 = Rect2(vp.x / 2.0 - lw / 2.0 - 24.0, _log.position.y + _log.size.y / 2.0 - 17.0, lw + 48.0, 34.0)
-		BattleLook.draw_box(self, lr, BattleLook.box(Color(BattleLook.LACQUER_LO, 0.8 * la), Color(BattleLook.BRASS, 0.35 * la), 1, 17, 8.0, Color(0, 0, 0, 0.35 * la)))
-	if _banner.modulate.a > 0.01 and _banner.text != "":
-		var ba: float = _banner.modulate.a
-		var btw: float = f.get_string_size(_banner.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 44).x
-		var by: float = BAR + 72.0
-		for side: float in [-1.0, 1.0]:
-			var x1: float = vp.x / 2.0 + side * (btw / 2.0 + 26.0)
-			var x2: float = vp.x / 2.0 + side * (btw / 2.0 + 150.0)
-			draw_line(Vector2(x1, by), Vector2(x2, by), Color(BattleLook.BRASS_HI, 0.85 * ba), 1.6, true)
-			draw_line(Vector2(x1, by + 5), Vector2(lerpf(x1, x2, 0.6), by + 5), Color(BattleLook.BRASS, 0.45 * ba), 1.0, true)
-			BattleLook.knot(self, Vector2(x1, by), 4.5, Color(BattleLook.BRASS, ba), Color(BattleLook.BRASS_HI, ba))
-			BattleLook.knot(self, Vector2(x2, by), 3.0, Color(BattleLook.BRASS, ba), Color(BattleLook.BRASS_HI, ba))
+		BattleLook.draw_box(self, lr, BattleLook.box(Color(BattleLook.LACQUER_LO, 0.82 * la), Color(0, 0, 0, 0), 0, 17))
+
 	# The enemy's plate over its masthead.
 	if _enemy != null and is_instance_valid(_enemy):
 		var e: Dictionary = b["enemy"]
 		var ep: Vector2 = _screen(_enemy.position) + Vector2(0, -225)
 		var etag: String = "BOSS" if e["boss"] else ("ELITE" if e.get("elite", false) else "")
 		_plate(ep, str(e["name"]), float(_shown_hp.get("e", e["hp"])), float(e["max"]), float(e["shield"]), int(e["charges"]), int(e["mag"]), e["statuses"], true, _strip_lit == -1, "e", etag, _portrait, "", 1.0 - float(_enemy.sink))
+		if not card_seen and float(_enemy.sink) < 0.05:
+			BattleLook.say(self, Kit.font("karla", 800), ep.x + 8.0, ep.y + 78.0, "CLICK FOR STATS", 10, Color(BattleLook.GOLD, 0.6 + 0.3 * sin(_t * 3.0)), 4)
 	# Each ship's plate.
 	for i: int in (b["seats"] as Array).size():
 		var s: Dictionary = b["seats"][i]
@@ -1245,15 +1247,6 @@ func _plate(at: Vector2, name: String, hp: float, mx: float, shield: float, ch: 
 		BattleLook.say(self, Kit.font("cinzel", 900), r.get_center().x + 10.0, r.get_center().y + 7.0, out_word, 20, Color(BattleLook.CREAM, 0.9 * alpha), 6)
 
 
-## A brass hairline along a letterbox bar's inner edge, a knot at its middle.
-func _hairline(y: float, w: float) -> void:
-	if _bars < 0.05:
-		return
-	draw_line(Vector2(0, y), Vector2(w, y), Color(BattleLook.BRASS, 0.28 * _bars), 1.0)
-	draw_line(Vector2(w * 0.3, y), Vector2(w * 0.7, y), Color(BattleLook.BRASS, 0.55 * _bars), 1.0)
-	BattleLook.knot(self, Vector2(w / 2.0, y), 4.0, Color(BattleLook.LACQUER_LO, _bars), Color(BattleLook.BRASS_HI, _bars))
-
-
 ## The raid's title, and its fights as knots on a cord: sailed, this one lit,
 ## to come hollow; the boss's knot bigger and red.
 func _fight_track(hb: float) -> void:
@@ -1262,19 +1255,18 @@ func _fight_track(hb: float) -> void:
 	var cur: int = int(b["fight"])
 	var of: int = int(Battle.fight_at(_raid, cur)["of"])
 	var y: float = hb * 0.5 + 15.0
-	draw_line(Vector2(36, y), Vector2(36 + (of - 1) * 22.0, y), Color(BattleLook.BRASS, 0.4), 1.5)
+	draw_line(Vector2(36, y), Vector2(36 + (of - 1) * 22.0, y), Color(1, 1, 1, 0.14), 1.5)
 	for k: int in of:
 		var c: Vector2 = Vector2(36 + k * 22.0, y)
 		var boss: bool = Battle.fight_at(_raid, k)["boss"] == true
 		var s: float = 6.5 if boss else 5.0
-		var rim: Color = BattleLook.FOE if boss else BattleLook.BRASS_HI
+		var rim: Color = BattleLook.FOE if boss else Color(1, 1, 1, 0.35)
 		if k < cur:
-			BattleLook.knot(self, c, s, BattleLook.BRASS, rim)
+			BattleLook.knot(self, c, s, Color(BattleLook.CREAM, 0.7), rim)
 		elif k == cur:
-			draw_circle(c, s + 6.0, Color(BattleLook.BRASS_HI, 0.18 + 0.1 * sin(_t * 4.0)))
-			BattleLook.knot(self, c, s + 1.5, BattleLook.FOE if boss else BattleLook.CREAM, rim)
+			BattleLook.knot(self, c, s + 2.0, BattleLook.FOE if boss else BattleLook.GOLD, rim)
 		else:
-			BattleLook.knot(self, c, s, Color(0, 0, 0, 0.5), Color(rim, 0.55))
+			BattleLook.knot(self, c, s, Color(0, 0, 0, 0.4), Color(BattleLook.FOE if boss else Color(1, 1, 1, 0.35), 0.8))
 	draw_string(Kit.font("karla", 800), Vector2(36 + (of - 1) * 22.0 + 16.0, y + 4.0), "FIGHT %d OF %d" % [cur + 1, of], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, BattleLook.MUTED)
 
 
@@ -1285,7 +1277,7 @@ func _draw_strip(right: Vector2) -> void:
 	var n: int = _strip.size()
 	var gap: float = 72.0
 	var x0: float = right.x - (n - 1) * gap - 26.0
-	draw_line(Vector2(x0, right.y), Vector2(x0 + (n - 1) * gap, right.y), Color(BattleLook.BRASS, 0.45), 2.0)
+	draw_line(Vector2(x0, right.y), Vector2(x0 + (n - 1) * gap, right.y), Color(1, 1, 1, 0.14), 1.5)
 	var cf: Font = Kit.font("karla", 800)
 	for k: int in n:
 		var who: int = _strip[k]
@@ -1293,7 +1285,7 @@ func _draw_strip(right: Vector2) -> void:
 		var lit: bool = who == _strip_lit
 		var rad: float = 17.0 if lit else 14.0
 		if lit:
-			draw_circle(c, rad + 10.0, Color(BattleLook.BRASS_HI, 0.16 + 0.1 * sin(_t * 6.0)))
+			draw_arc(c, rad + 5.0, 0.0, TAU, 40, Color(BattleLook.GOLD, 0.95), 2.0, true)
 		var nm: String
 		if who == -1:
 			nm = str(b["enemy"]["name"])
@@ -1692,12 +1684,10 @@ func _order_chip(at: Vector2, s: Dictionary) -> void:
 	var f: Font = Kit.font("karla", 800)
 	var w: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + (40.0 if kind != "" else 24.0)
 	var r: Rect2 = Rect2(at - Vector2(w / 2.0 - 8.0, 0), Vector2(w, 24))
-	if crit:
-		BattleLook.draw_box(self, r, BattleLook.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 12, 12.0, Color(BattleLook.GOLD, 0.45 + 0.2 * sin(_t * 5.0))))
-	BattleLook.draw_box(self, r, BattleLook.box(Color(BattleLook.LACQUER_LO, 0.94), Color(BattleLook.GOLD if crit else BattleLook.BRASS, 0.95 if crit else 0.5), 1, 12, 6.0))
+	BattleLook.draw_box(self, r, BattleLook.box(Color(BattleLook.LACQUER, 0.94), Color(BattleLook.GOLD, 0.95) if crit else Color(0, 0, 0, 0), 1 if crit else 0, 12))
 	var tx: float = r.position.x + 12.0
 	if kind != "":
-		BattleLook.icon(self, kind, Vector2(r.position.x + 16.0, r.get_center().y), 7.0, BattleLook.GOLD if crit else BattleLook.BRASS_HI)
+		BattleLook.icon(self, kind, Vector2(r.position.x + 16.0, r.get_center().y), 7.0, BattleLook.GOLD if crit else BattleLook.CREAM)
 		tx = r.position.x + 30.0
 	draw_string(f, Vector2(tx, r.position.y + 16.5), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, BattleLook.GOLD if crit else (BattleLook.CREAM if kind != "" else BattleLook.MUTED))
 
@@ -1743,3 +1733,26 @@ func _face(i: int) -> Texture2D:
 	add_child(sv)
 	_faces[i] = sv.get_texture()
 	return _faces[i]
+
+
+# ── The enemy's stat card ────────────────────────────────────────────────────
+
+## Is a screen point on the enemy's hull or its plate?
+func _enemy_hit(p: Vector2) -> bool:
+	if _enemy == null or not is_instance_valid(_enemy) or b.is_empty() or float(_enemy.sink) > 0.3:
+		return false
+	var at: Vector2 = _screen(_enemy.position)
+	var plate: Rect2 = Rect2(at + Vector2(-121, -225), Vector2(258, 60))
+	var hull: Rect2 = Rect2(at + Vector2(-_enemy.box * 0.5, -200), Vector2(_enemy.box, 240))
+	return plate.has_point(p) or hull.has_point(p)
+
+
+func _open_enemy_card() -> void:
+	card_seen = true
+	Sound.plip()
+	_card = EnemyCard.new()
+	_card.e = b["enemy"]
+	_card.hp = float(_shown_hp.get("e", b["enemy"]["hp"]))
+	# Its painting; an enemy with no portrait shows its ship.
+	_card.portrait = _portrait if _portrait != null else Skipper.tex(str(b["enemy"].get("image", "")).trim_prefix("/"))
+	add_child(_card)
