@@ -367,9 +367,13 @@ export function finnHaunt(encounters: number, _fishingLevel: number, nowSec = cl
   // The same ellipse the regulars swing on: round in x, flattened in y,
   // because this chart is seen at an angle and a true circle would read as a
   // boat rising and falling rather than one moving about.
-  const a = (nowSec / FINN_LAP) * Math.PI * 2
-  const x = FINN_MOORING.x + Math.cos(a) * FINN_ROAM
-  const y = FINN_MOORING.y + Math.sin(a) * FINN_ROAM * 0.6
+  // Wrapped to one lap first: the same circle, but a small angle, so every
+  // sine (the Godot port's included) agrees on it to the last bit.
+  const a = ((nowSec % FINN_LAP) / FINN_LAP) * Math.PI * 2
+  // To a thousandth of a pixel: invisible, and two maths libraries that
+  // differ in a sine's last bit still land on the same number.
+  const x = Math.round((FINN_MOORING.x + Math.cos(a) * FINN_ROAM) * 1000) / 1000
+  const y = Math.round((FINN_MOORING.y + Math.sin(a) * FINN_ROAM * 0.6) * 1000) / 1000
   // He sits in the Shallows and always will; no need to solve for it.
   const band = PLACES.find(b => b.id === 'shallows')
   return {

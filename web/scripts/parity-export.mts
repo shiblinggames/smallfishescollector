@@ -42,7 +42,8 @@ import { installRng, mulberry32, seedOf, type Rng } from '../lib/rng'
 import { installClock, clockNow } from '../lib/clock'
 import { hotspotsAt } from '../lib/seaHotspots'
 import { squallsAt, squallPos } from '../lib/seaWeather'
-import { goAshore, digHere, openBottle, getDigState, folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, buyPortalTier, spendRecall } from '../lib/core/sea'
+import { goAshore, digHere, openBottle, getDigState, folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, buyPortalTier, spendRecall, finnState, speakToFinn, turnInFinnQuest } from '../lib/core/sea'
+import { finnQuestById } from '../lib/finnQuests'
 import { saveSeaPosition, strikeDeal, wagerForRunnerRod, dealtToday } from '../lib/core/selling'
 import { tradersAround, seaDay } from '../lib/seaTraders'
 import { seaClock, CYCLE_MS } from '../lib/seaClock'
@@ -664,6 +665,55 @@ shop.push(await scripted('the regulars', 37, captainWith(37, 99, 5, { doubloons:
   await x.patchProfile({ doubloons: 10 })
   await rod('yoon')
   await st()
+}))
+// Finn: every meeting and every job in the ladder, worked by moving the
+// counters a catch moves (the lifetime log, zone_perfects, the streak, the
+// giants), handed in early, late and twice; stale hails; the level waits; the
+// reveal on the first giant; the idle and epilogue lines after.
+shop.push(await scripted('finn', 39, captainWith(39, 1, 1, {}), async x => {
+  const sea = localSeaData(x.save)
+  const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+  const st = () => c('finnState', [], () => finnState(sea, x.uid)) as Promise<{ encounters: number; quest: { id: string } | null; questReady: boolean }>
+  const speak = (at: number) => c('speakToFinn', [at], () => speakToFinn(sea, x.uid, at))
+  const turn = () => c('turnInFinnQuest', [], () => turnInFinnQuest(sea, x.uid))
+  const species = x.save.species as { id: number; habitat: string; bite_rarity: number }[]
+  const work = async (id: string, share: number) => {
+    const q = finnQuestById(id)!
+    const n = Math.max(1, Math.ceil(q.target * share))
+    const prof = x.save.profile as Record<string, unknown>
+    if (q.type === 'catch_ancient') {
+      if (share >= 1) await x.patchProfile({ ancient_catches: [...((prof.ancient_catches as number[]) ?? []), q.ancientId] })
+      return
+    }
+    const sp = species.find(s => s.habitat === q.zone && (!q.minRarity || s.bite_rarity >= q.minRarity))!
+    const life = { ...(x.save.lifetime as Record<string, { n: number }>) }
+    life[sp.id] = { ...(life[sp.id] ?? {}), n: (life[sp.id]?.n ?? 0) + n }
+    await x.patchSave({ lifetime: life })
+    const zp = { ...((prof.zone_perfects as Record<string, number>) ?? {}) }
+    zp[q.zone!] = (zp[q.zone!] ?? 0) + n
+    await x.patchProfile({ zone_perfects: zp, current_perfect_streak: n, total_perfects: Number(prof.total_perfects ?? 0) + n })
+  }
+  await turn(); await speak(3); await st()
+  const levels = [1, 15, 30, 50, 75]
+  let li = 0
+  for (let k = 0; k < 90; k++) {
+    let s = await st()
+    await speak(s.encounters)
+    await speak(s.encounters)
+    s = await st()
+    if (s.quest) {
+      await turn()
+      if (k % 3 === 0) { await work(s.quest.id, 0.5); await turn(); const mid = await st(); await speak(mid.encounters) }
+      await work(s.quest.id, 1)
+      await st()
+      await turn(); await turn()
+    } else if (li < levels.length - 1) {
+      li++
+      await x.patchProfile({ fishing_xp: XP_TABLE[levels[li] - 1] })
+    }
+    x.advance(k % 4 === 0 ? 3_600_000 : 41_000)
+  }
+  for (let k = 0; k < 12; k++) { const s = await st(); await speak(s.encounters); x.advance(600_000) }
 }))
 // The wanderers: a month of deals with whoever is out (bait bought, holds
 // sold to salters, talkers who trade nothing), the cap of six, a key kept past

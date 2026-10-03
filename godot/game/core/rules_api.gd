@@ -34,7 +34,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 
 
 ## Calls that change nothing.
-const READS: Array = ["folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState"]
+const READS: Array = ["finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState"]
 
 
 static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
@@ -84,6 +84,9 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"buyShipyardTier": return Shipyard.buy_tier(db, uid, a[0])
 		"equipRod": return Shipyard.equip_rod(db, uid, float(a[0]))
 		"folkState": return Folk.state(db, uid)
+		"finnState": return Finn.state(db, uid)
+		"speakToFinn": return Finn.speak(db, uid, float(a[0]))
+		"turnInFinnQuest": return Finn.turn_in(db, uid)
 		"talkToFolk": return Folk.talk(db, uid, a[0])
 		"askForFavourite": return Folk.ask(db, uid, a[0])
 		"deliverToFolk": return Folk.deliver(db, uid, a[0])

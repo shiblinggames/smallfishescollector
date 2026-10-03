@@ -32,7 +32,9 @@ import { FOLK } from '../lib/seaFolk'
 import { REELS } from '../lib/reels'
 import { FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY } from '../app/(app)/fishing/depths'
 import { starterSave } from '../lib/data/local/starter'
-import { FINN_ANCIENT_BEATS, FINN_AVATAR } from '../lib/finn'
+import { FINN_ANCIENT_BEATS, FINN_AVATAR, FINN_BEATS, FINN_REVEAL_BEAT, FINN_IDLE_LINES, FINN_EPILOGUE_IDLE_LINES, FINN_EPILOGUE_LORE_LINES, FINN_EPILOGUE_LORE_CHANCE, FINN_ASKS, FINN_STANDING_NAME, FINN_STANDING_AT } from '../lib/finn'
+import { FINN_QUESTS, FINN_CHAPTERS } from '../lib/finnQuests'
+import { FINN_MOORING, FINN_ROAM, FINN_REACH, FINN_LOOK } from '../lib/seaFinn'
 import { VIGIL_DIAL } from '../lib/ancientVigil'
 import { fishingGearLevelReq } from '../lib/gearGating'
 import { isCaptainRod, ROD_SELL_RATE } from '../lib/rods'
@@ -89,7 +91,6 @@ const rules = {
   },
   fishHoldTiers: FISH_HOLD_TIERS,
   lines: LINES,
-  finn: { thresholds: FINN_ITEM_THRESHOLDS, anglersPatience: FINN_ITEMS.anglers_patience.milestones },
   renownFishingPerPoint: Object.fromEntries(renownStats('fishing').map(s => [s.id, s.perPoint])),
   // fishingColorsToGrant(level, []) for every level: the colors a fishing level earns, in order.
   fishingColorsByLevel: Object.fromEntries(Array.from({ length: 100 }, (_, i) => [i + 1, fishingColorsToGrant(i + 1, [])])),
@@ -154,6 +155,17 @@ const rules = {
   vigilDial: VIGIL_DIAL,
   finnAncientBeats: FINN_ANCIENT_BEATS,
   finnAvatar: FINN_AVATAR,
+  // Finn's campaign (lib/finn, lib/finnQuests, lib/seaFinn): his beats, his
+  // jobs and chapters, where he is moored and how far he circles.
+  finn: {
+    thresholds: FINN_ITEM_THRESHOLDS, anglersPatience: FINN_ITEMS.anglers_patience.milestones,
+    beats: FINN_BEATS, reveal: FINN_REVEAL_BEAT, idle: FINN_IDLE_LINES,
+    epilogueIdle: FINN_EPILOGUE_IDLE_LINES, epilogueLore: FINN_EPILOGUE_LORE_LINES, loreChance: FINN_EPILOGUE_LORE_CHANCE,
+    asks: FINN_ASKS, standingName: FINN_STANDING_NAME, standingAt: FINN_STANDING_AT,
+    quests: FINN_QUESTS, chapters: FINN_CHAPTERS,
+    mooring: FINN_MOORING, roam: FINN_ROAM, lap: 96, reach: FINN_REACH, look: FINN_LOOK,
+    bandName: PLACES.find(p => p.id === 'shallows')?.name ?? 'The Shallows',
+  },
   // The tackle shop and selling (lib/core/harbour, lib/core/selling).
   rodShop: Object.fromEntries(RODS.map(r => [r.tier, { levelReq: fishingGearLevelReq(r), captainRod: isCaptainRod(r) }])),
   rodSellRate: ROD_SELL_RATE,
