@@ -35,6 +35,8 @@ var _scale_to: float = 0.03
 var _paper: ColorRect
 var _fog: ColorRect
 var _land: Control
+var _bays: Control
+var _xcloud: Control
 var _marks: Control
 var _card: Pane
 var _layers: Dictionary = { "ports": true, "people": true, "hotspots": true, "weather": true, "currents": true, "finds": true, "pins": true }
@@ -59,6 +61,12 @@ func _ready() -> void:
 	pm.shader = load("res://game/fx/chart_paper.gdshader")
 	_paper.material = pm
 	add_child(_paper)
+	# The campaign's bays: each a wash of its own water, under the land.
+	_bays = Control.new()
+	_bays.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_bays.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bays.draw.connect(_draw_bays)
+	add_child(_bays)
 	_land = Control.new()
 	_land.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_land.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -76,6 +84,24 @@ func _ready() -> void:
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_land.add_child(tr)
 		_plates.append([tr, p, float((pl as Dictionary).get("width", 1.0))])
+	# The campaign's islands, drawn while they are on the water and sailed.
+	for i: Dictionary in Campaign.water()["isles"]:
+		var pl2: Dictionary = Js.obj(i.get("plate"))
+		var tr2: TextureRect = TextureRect.new()
+		tr2.texture = Lit.diffuse(Skipper.tex(str(pl2.get("art", ""))))
+		if tr2.texture == null:
+			continue
+		tr2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr2.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_land.add_child(tr2)
+		_plates.append([tr2, i, float(pl2.get("width", 1.0)), true])
+	# The campaign's fog: cloud over the water not yet sailed past the gate.
+	_xcloud = Control.new()
+	_xcloud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_xcloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_xcloud.draw.connect(_draw_xfog)
+	add_child(_xcloud)
 	_fog = ColorRect.new()
 	_fog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fog.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -328,6 +354,8 @@ func _draw_progress() -> void:
 	var dug: Array = Explore.get_dig_state(sea.session.store, sea.session.uid)["dug"]
 	var ink: Color = Color(0.25, 0.2, 0.16)
 	Kit.text(_progress, "Charted  %d%%" % int(round(Explore.fog_progress(bits) * 100.0)), "label", ink)
+	if sea._xfog != null:
+		Kit.text(_progress, "The campaign's water  ·  %d%% sailed" % int(round(Explore.xfog_progress(sea._xfog.bits) * 100.0)), "small", ink)
 	for w: Dictionary in Chart.WATERS:
 		var seen: int = 0
 		var total: int = 0
@@ -419,9 +447,71 @@ func _process(delta: float) -> void:
 		var c: Vector2 = to_screen(Vector2(float(p["x"]), float(p["y"])))
 		tr.position = c - Vector2(w2 / 2.0, h2 * 0.55)
 		tr.size = Vector2(w2, h2)
-		tr.visible = w2 > 3.0
+		tr.visible = w2 > 3.0 and (e.size() < 4 or _camp_isle_seen(p))
 		tr.modulate = Color(1, 1, 1, 0.92).lerp(Color(0.55, 0.5, 0.5, 0.92), dark * 0.5)
 	_marks.queue_redraw()
+	_bays.queue_redraw()
+	_xcloud.queue_redraw()
+
+
+## A campaign island is on the chart while it is on the water and sailed.
+func _camp_isle_seen(i: Dictionary) -> bool:
+	var n: Node2D = sea._campaign._isles.get(i["id"])
+	return n != null and n.visible and _xseen(Vector2(float(i["x"]), float(i["y"])))
+
+
+## Has this campaign water been sailed (or is it never fogged)?
+func _xseen(w: Vector2) -> bool:
+	if sea._xfog == null:
+		return true
+	var i: int = Explore.xfog_index(w.x, w.y)
+	return i < 0 or Explore.xfog_open(sea._xfog.bits, i)
+
+
+## Each bay a wash of its own colours, deepest in the middle; a shut bay
+## hatched over, with what opens it.
+func _draw_bays() -> void:
+	var small: Font = Kit.font("karla", 700)
+	var big: Font = Kit.font("cinzel", 800)
+	for b: Dictionary in Campaign.water()["bays"]:
+		var c: Vector2 = to_screen(Vector2(float(b["centre"]["x"]), float(b["centre"]["y"])))
+		var r: float = float(b["r"]) * _scale
+		var sea_c: Array = b["sea"]
+		for k: int in 6:
+			var f: float = 1.0 - k / 6.0
+			_bays.draw_circle(c, r * (0.45 + 0.55 * f), Color(Color(sea_c[mini(2, k / 2)]), 0.12))
+		_bays.draw_arc(c, r, 0.0, TAU, 96, Color(Color(sea_c[1]).darkened(0.4), 0.55), 2.0, true)
+		var shut: bool = CampaignWater.shut.has(b)
+		if shut:
+			for k: int in range(-12, 13):
+				var off: float = k * r / 6.0
+				_bays.draw_line(c + Vector2(off - r, -r), c + Vector2(off + r, r), Color(0.3, 0.22, 0.16, 0.12), 1.5, true)
+		var nm: String = str(b["name"])
+		var fs: int = clampi(int(r * 0.14), 12, 30)
+		var tw: float = big.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		_bays.draw_string(big, c + Vector2(-tw / 2.0, -r * 0.62), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.2, 0.15, 0.1, 0.35 if shut else 0.55))
+		if shut and r > 60.0:
+			var line: String = str(b["shutLine"])
+			var lw: float = small.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+			_bays.draw_string(small, c + Vector2(-lw / 2.0, -r * 0.62 + 20), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.45, 0.2, 0.15, 0.8))
+
+
+## The campaign's fog on the chart: soft blots of cloud over every cell not
+## yet sailed, so the clearings are round and run together.
+func _draw_xfog() -> void:
+	if sea._xfog == null:
+		return
+	var cell: float = Explore.XFOG_CELL * _scale
+	var bits: PackedByteArray = sea._xfog.bits
+	for i: int in Explore.xfog_cells():
+		if Explore.xfog_open(bits, i):
+			continue
+		var at: Vector2 = to_screen(Explore.xfog_centre(i))
+		if at.x < -cell * 2.0 or at.y < -cell * 2.0 or at.x > size.x + cell * 2.0 or at.y > size.y + cell * 2.0:
+			continue
+		var wob: float = 0.9 + 0.15 * sin(i * 1.7 + _t * 0.4)
+		_xcloud.draw_circle(at, cell * 0.95 * wob, Color(0.84, 0.81, 0.74, 0.55))
+		_xcloud.draw_circle(at + Vector2(cell * 0.2, -cell * 0.15), cell * 0.6, Color(0.9, 0.88, 0.82, 0.35))
 
 
 ## The fog mask at four times the grid, each sailed cell stamped as a soft
@@ -520,6 +610,21 @@ func _all_marks() -> Array:
 			if not _seen(c) and not Js.includes(sea.session.save.get("discoveries", []), i["id"]):
 				continue
 			out.append({ "kind": "isle", "at": c, "name": i["name"], "color": Color(0.45, 0.4, 0.3), "data": i })
+		# The campaign: its fights, its posts and chests, as far as the
+		# chain has shown them and the fog has lifted.
+		if sea._campaign != null:
+			var cw: CampaignWater = sea._campaign
+			for e: Dictionary in Campaign.water()["encounters"]:
+				var nid: String = str(e["node"])
+				var at: Vector2 = Vector2(float(e["at"]["x"]), float(e["at"]["y"]))
+				if cw.shown(nid) and _xseen(at):
+					out.append({ "kind": "camp", "at": at, "name": str(Campaign.node(nid)["label"]), "color": Color(0.55, 0.15, 0.12), "data": { "id": nid, "ship": true } })
+			for bt: Dictionary in Campaign.water()["beats"] + Campaign.water()["caches"]:
+				var nid2: String = str(bt["node"])
+				var isl: Node2D = cw._isles.get(bt["isle"])
+				if isl == null or not cw.shown(nid2) or not _xseen(isl.position):
+					continue
+				out.append({ "kind": "camp", "at": isl.position, "name": str(Campaign.node(nid2)["label"]), "color": Color(0.35, 0.25, 0.15), "data": { "id": nid2, "ship": false } })
 		if sea._portal != null:
 			out.append({ "kind": "portal", "at": sea._portal.position, "name": "Home Portal", "color": Color(str(Portal.tier_def(sea._portal.tier).get("accent", "#7fc8de"))), "data": {} })
 	if _layers["people"]:
@@ -684,6 +789,26 @@ func _draw_marks() -> void:
 				_marks.draw_line(at - Vector2(7, -7), at + Vector2(7, -7), xc, 3.0, true)
 				if _scale > 0.05 or hot:
 					_name(small, at + Vector2(10, 4), ("\u2713 " if dug else "") + str(m["name"]), 11, ink, false, hot)
+			"camp":
+				var nid3: String = str(m["data"]["id"])
+				var st3: String = str(sea._campaign.status.get(nid3, "locked"))
+				var next: bool = nid3 == sea._campaign.next_id
+				if m["data"]["ship"]:
+					var hull: PackedVector2Array = PackedVector2Array([at + Vector2(-9, -1), at + Vector2(9, -1), at + Vector2(6, 5), at + Vector2(-6, 5)])
+					_marks.draw_colored_polygon(hull, Color(c, 0.9) if st3 != "cleared" else Color(0.45, 0.42, 0.38))
+					_marks.draw_line(at + Vector2(0, -1), at + Vector2(0, -12), ink, 1.4, true)
+					_marks.draw_colored_polygon(PackedVector2Array([at + Vector2(1, -12), at + Vector2(8, -6), at + Vector2(1, -4)]), Color(ink, 0.8))
+				else:
+					_marks.draw_rect(Rect2(at - Vector2(4, 4), Vector2(8, 8)), Color(c, 0.85) if st3 != "cleared" else Color(0.45, 0.42, 0.38))
+				if next:
+					var bob: float = sin(_t * 2.4) * 3.0
+					_marks.draw_circle(at + Vector2(0, -24 + bob), 10.0, Color(0.15, 0.1, 0.05, 0.9))
+					_marks.draw_arc(at + Vector2(0, -24 + bob), 10.0, 0.0, TAU, 24, Color(1.0, 0.8, 0.35), 2.0, true)
+					_marks.draw_string(font, at + Vector2(-4, -19 + bob), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.82, 0.38))
+				elif st3 == "cleared":
+					_marks.draw_string(small, at + Vector2(7, -6), "\u2713", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.2, 0.5, 0.25))
+				if _scale > 0.04 or hot or next:
+					_name(small, at + Vector2(0, 18), str(m["name"]), 11, ink, true, hot or next)
 			"pin":
 				_marks.draw_line(at, at - Vector2(0, 18), ink, 1.6, true)
 				_marks.draw_circle(at - Vector2(0, 20), 6.0, c)
@@ -781,7 +906,7 @@ func _open_card(m: Dictionary) -> void:
 	var dist: float = SeaRoute.length_of(SeaRoute.plan(sea._boat.position, m["at"]))
 	var secs: float = dist / maxf(1.0, Boat.SPEED * sea._boat.hull * sea._boat.boat_speed * 0.92)
 	var eyebrow: String = { "port": "Port", "isle": "Isle", "portal": "The Homestead Portal", "regular": "One of the regulars", "buyer": "Buyer",
-		"stranger": "Wanderer", "mate": "Crewmate", "hotspot": "Hotspot", "salter": "Salter", "dig": "Buried", "pin": "Your pin" }.get(m["kind"], "")
+		"stranger": "Wanderer", "mate": "Crewmate", "hotspot": "Hotspot", "salter": "Salter", "dig": "Buried", "pin": "Your pin", "camp": "The campaign" }.get(m["kind"], "")
 	var ink: Color = Color(0.22, 0.17, 0.13)
 	Kit.text(v, eyebrow, "eyebrow", Color(0.6, 0.35, 0.18))
 	Kit.text(v, str(m["name"]), "title", ink)
@@ -854,4 +979,10 @@ func _card_lines(m: Dictionary) -> Array:
 			return ["Dug." if d["dug"] else "Something lies on the bottom here. Sail over it and drop the grapple."]
 		"pin":
 			return ["Your own mark on the chart."]
+		"camp":
+			var n: Dictionary = Campaign.node(str(d["id"]))
+			var st: String = str(sea._campaign.status.get(d["id"], "locked"))
+			var ch: Dictionary = Campaign.chapter_for(str(d["id"]))
+			var head: String = ("Chapter %s  ·  " % ch["romanNumeral"]) if str(ch.get("romanNumeral", "")) != "" else ""
+			return [head + str(ch["title"]), str(n.get("flavor", "")), {"cleared": "Done.", "available": "Waiting on you.", "locked": "Not yet."}.get(st, "")]
 	return []

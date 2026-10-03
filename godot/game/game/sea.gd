@@ -23,6 +23,7 @@ var _crew_marks: CrewMarks
 ## the bottles fished out this session; the fog cells seen and not yet saved.
 var _isles: Dictionary = {}
 var _campaign: CampaignWater
+var _xfog: ExpFog
 var _digs: Dictionary = {}
 var _bottles: Dictionary = {}
 var _taken: Dictionary = {}
@@ -242,6 +243,22 @@ func _ready() -> void:
 		Rumble.buzz([0, 16, 40, 22]))
 	var at: Variant = session.profile().get("sea_x")
 	add_child(_campaign)
+	# The campaign's fog: the saved mask, or (when there is none) the water
+	# already earned, queued so the first save carries it.
+	_xfog = ExpFog.new()
+	_xfog.sea = self
+	var xraw: Variant = session.profile().get("sea_explored_exp")
+	_xfog.bits = Explore.xfog_decode(xraw)
+	if xraw == null or str(xraw) == "":
+		var been: Array = []
+		for e: Dictionary in Campaign.water()["encounters"]:
+			if _campaign.status.get(e["node"]) == "cleared":
+				been.append(Vector2(float(e["at"]["x"]), float(e["at"]["y"])))
+		Explore.xfog_seed(_xfog.bits, been)
+		for i: int in Explore.xfog_cells():
+			if Explore.xfog_has(_xfog.bits, i):
+				_xfog.fresh.append(i)
+	_world.add_child(_xfog)
 	_boat.position = Vector2(Js.num(at), Js.num(session.profile().get("sea_y"))) if at != null else Chart.HOME
 	_world.add_child(_boat)
 	_boat.set_look(Skipper.look_of(session.profile()))
@@ -488,10 +505,11 @@ func _process(delta: float) -> void:
 				Explore.fog_set(_fog, i)
 				_fog_new.append(i)
 	_save_t += delta
-	if _save_t > 5.0 and (_boat.velocity.length() < 5.0 or not _fog_new.is_empty()):
+	var xnew: bool = _xfog != null and not _xfog.fresh.is_empty()
+	if _save_t > 5.0 and (_boat.velocity.length() < 5.0 or not _fog_new.is_empty() or xnew):
 		_save_t = 0.0
 		var p: Dictionary = session.profile()
-		if not _fog_new.is_empty() or Js.num(p.get("sea_x")) != round(_boat.position.x) or Js.num(p.get("sea_y")) != round(_boat.position.y):
+		if not _fog_new.is_empty() or xnew or Js.num(p.get("sea_x")) != round(_boat.position.x) or Js.num(p.get("sea_y")) != round(_boat.position.y):
 			_flush_position()
 
 
@@ -828,7 +846,10 @@ func _grade(delta: float, at: Vector2, dark: float) -> void:
 func _flush_position() -> void:
 	var seen: Array = _fog_new.duplicate()
 	_fog_new.clear()
-	await session.act("saveSeaPosition", [round(_boat.position.x), round(_boat.position.y), seen])
+	var seen_exp: Array = _xfog.fresh.duplicate() if _xfog != null else []
+	if _xfog != null:
+		_xfog.fresh.clear()
+	await session.act("saveSeaPosition", [round(_boat.position.x), round(_boat.position.y), seen, seen_exp])
 	session.persist()
 
 

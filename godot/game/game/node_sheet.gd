@@ -85,7 +85,9 @@ func _paid(r: Dictionary) -> void:
 		sea._hud.toast("  ·  ".join(PackedStringArray(bits)))
 	var leg: Variant = r.get("unlockedLegendary")
 	if leg is Dictionary:
-		sea._hud.notify("NEW RECRUIT", "%s can be recruited" % leg["name"], "%s now turns up on the Crew Hall's board of hopefuls." % leg["name"], Skipper.tex("card-arts/%s" % str(leg.get("filename", ""))))
+		var lu: LegendaryUnlock = LegendaryUnlock.new()
+		lu.crew = leg
+		sea._hud_layer.add_child(lu)
 	Sound.chest(true)
 
 

@@ -183,7 +183,7 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"claimLandmark": return ChartRoom.claim_landmark(db, uid, a[0])
 		"markChartingGuideSeen": return ChartRoom.mark_guide_seen(db, uid)
 		"getDigState": return Explore.get_dig_state(db, uid)
-		"saveSeaPosition": return Explore.save_sea_position(db, uid, float(a[0]), float(a[1]), a[2] if a.size() > 2 else [])
+		"saveSeaPosition": return Explore.save_sea_position(db, uid, float(a[0]), float(a[1]), a[2] if a.size() > 2 else [], a[3] if a.size() > 3 else [])
 		"setSeaPos":
 			db.update_profile(uid, { "sea_x": float(a[0]), "sea_y": float(a[1]) })
 			return null

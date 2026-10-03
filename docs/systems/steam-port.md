@@ -711,9 +711,28 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   anchorage's mouth (the sea's own warp). THE COFFERS' SPANS drawn (the gate's eleven bars blow
   outward from the middle once the gate is run; the boom goes slack and sinks once the lens is
   cracked). THE SOUNDING's fog bank (seven lying puffs, four drifting, breathing). A lost fight
-  or a gate that held warps her to the Gunwharf. NOT YET: the Wargate and the two maelstroms
-  (the gauntlets are not ported), the fog of war past the gate, the legendary unlock overlay (a
-  notice for now).
+  or a gate that held warps her to the Gunwharf. THE FOG OF WAR past the gate (core/explore.gd
+  xfog_*, a port of lib/seaExploreExp; its own grid of 700 cells boxed off the bays, its own
+  column sea_explored_exp, OR'd in by saveSeaPosition's fourth argument; seeded on an empty
+  mask with the junction and round every beaten fight). GODOT OVER THE WEB: drawn as rolling
+  cloud (game/exp_fog.gd: one quad, each cell's cover in a small texture sampled smooth, two
+  layers of drifting noise, a lit top and a darker underside, dimmed at night); it lifts by
+  distance from the hull and never comes back. THE WORLD CHART (M) carries the campaign: each
+  bay as a wash of its own colours with its name (a shut one hatched, with its line), its
+  islands from their plates once shown and sailed, its fog as cloud, its stops as marks (hulls
+  for the fights, a square for a post or a chest, the gold "?" on the next, a tick when done)
+  with a card and Set course, and the share of the campaign's water sailed. A LEGENDARY'S DEBUT
+  (game/legendary_unlock.gd): their card rises on slow gold rays and the name is pressed in.
+  THE FIVE PUZZLE BOARDS (game/puzzles/beacon, cipher, mirror, cargo, tumbler on
+  game/puzzle_board.gd's shared night-paper sheet; the rules as static functions, checked by
+  tests/puzzle_check.gd on the real data): the beacon chain (lanterns; hovering shows the cross
+  a press flips), the cipher dials (spring-turned pointers, sealed ones gold), the mirror run
+  (the beam drawn travelling from the lantern, the prism splitting it, fires against the
+  budget), the cargo shuffle (keys, a drag or a press beside the sailor; Undo), the tumbler
+  lock (bars dragged one-to-one along their groove, the bolt sliding out). Busting a budget
+  resets the stage as on the web. Added over the web: Reset on the beacon, cipher and mirror
+  (the mirror's keeps fires spent), Undo in the cargo hold, a scramble never dealt already
+  solved. NOT YET: the Wargate and the two maelstroms (the gauntlets are not ported).
 - THE CHART ROOM, BUILT (2026-10-03). Rules: core/chart_room.gd ports lib/core/chartRoom,
   lib/chartBoards, lib/worldChart, the four pure engines (charting/treasureMatch and minefield,
   chart-room/hold/sudoku, chart-room/rigging) and chartLocal (each week's boards built from the

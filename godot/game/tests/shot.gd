@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "campaign"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "campaign", "puzzle"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -707,6 +707,25 @@ func _init() -> void:
 					NodeSheet._intro_seen[OS.get_environment("CAMP_OPEN")] = true
 				sea.open_node(OS.get_environment("CAMP_OPEN"))
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 30:
+				await process_frame
+		"puzzle":
+			# A campaign puzzle's board over the sea. PUZZLE_NODE: the node
+			# (default smugglers_chart); PUZZLE_WIN: solve it on the spot (to
+			# see the reveal); PUZZLE_FIRE: fire the mirror run's lantern;
+			# SHOT_F frames after.
+			var pid: String = OS.get_environment("PUZZLE_NODE") if OS.get_environment("PUZZLE_NODE") != "" else "smugglers_chart"
+			var board: PuzzleBoard = PuzzleBoard.make(Campaign.node(pid)["puzzle"])
+			sea._hud.hold_for(board)
+			sea._hud_layer.add_child(board)
+			if OS.get_environment("PUZZLE_WIN") != "":
+				for f: int in 5:
+					await process_frame
+				board.win()
+			if OS.get_environment("PUZZLE_FIRE") != "":
+				for f: int in 5:
+					await process_frame
+				board.call("_fire")
+			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 40:
 				await process_frame
 		"chartroom":
 			# The Chart Room. CHART_TAB: match, minefield, rigging, hold, chart;

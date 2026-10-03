@@ -221,21 +221,181 @@ static func fog_progress(bits: PackedByteArray) -> float:
 	return float(seen) / maxf(1.0, water_cells().size())
 
 
+# ── The campaign's fog (lib/seaExploreExp) ────────────────────────────────────
+#
+# Its own grid of 700 cells, boxed off the bays themselves (padded a cell) and
+# running south to the reef; the anchorage, south of the reef and past
+# RAID_EDGE are never fogged. Its own column, sea_explored_exp.
+
+const XFOG_CELL: float = 700.0
+const XFOG_CLEAR: float = 700.0 * 1.5
+const XFOG_SOFT: float = 700.0 * 3.2
+static var _xb: Rect2 = Rect2()
+static var _xfree: PackedByteArray = PackedByteArray()
+
+
+static func xfog_box() -> Rect2:
+	if _xb.size == Vector2.ZERO:
+		var w: Dictionary = Rules.data()["campaignWater"]
+		var hub: Vector2 = Vector2(float(w["hub"]["x"]), float(w["hub"]["y"]))
+		var hr: float = float(w["hubR"])
+		var x0: float = hub.x - hr
+		var x1: float = hub.x + hr
+		var y0: float = hub.y - hr
+		for b: Dictionary in w["bays"]:
+			var c: Vector2 = Vector2(float(b["centre"]["x"]), float(b["centre"]["y"]))
+			x0 = minf(x0, c.x - float(b["r"]))
+			x1 = maxf(x1, c.x + float(b["r"]))
+			y0 = minf(y0, c.y - float(b["r"]))
+		_xb = Rect2(x0 - XFOG_CELL, y0 - XFOG_CELL, x1 - x0 + 2.0 * XFOG_CELL, NORTH_WALL - (y0 - XFOG_CELL))
+	return _xb
+
+
+static func xfog_w() -> int:
+	return int(ceil(xfog_box().size.x / XFOG_CELL))
+
+
+static func xfog_h() -> int:
+	return int(ceil(xfog_box().size.y / XFOG_CELL))
+
+
+static func xfog_cells() -> int:
+	return xfog_w() * xfog_h()
+
+
+static func in_exp_water(y: float) -> bool:
+	return y <= NORTH_WALL
+
+
+static func xfog_index(x: float, y: float) -> int:
+	var b: Rect2 = xfog_box()
+	var cx: int = int(floor((x - b.position.x) / XFOG_CELL))
+	var cy: int = int(floor((y - b.position.y) / XFOG_CELL))
+	if cx < 0 or cy < 0 or cx >= xfog_w() or cy >= xfog_h():
+		return -1
+	return cy * xfog_w() + cx
+
+
+static func xfog_centre(i: int) -> Vector2:
+	var b: Rect2 = xfog_box()
+	return Vector2(b.position.x + (i % xfog_w() + 0.5) * XFOG_CELL, b.position.y + (i / xfog_w() + 0.5) * XFOG_CELL)
+
+
+## Never fogged: the anchorage (half a cell generous), south of the reef, past
+## the edge.
+static func xfog_free(i: int) -> bool:
+	if _xfree.is_empty():
+		_xfree.resize(xfog_cells())
+		for k: int in xfog_cells():
+			var c: Vector2 = xfog_centre(k)
+			var d: float = c.distance_to(Vector2(0.0, NORTH_WALL - 1500.0))
+			_xfree[k] = 1 if d <= 3600.0 + XFOG_CELL * 0.5 or c.y > NORTH_WALL or d > 21000.0 else 0
+	return i >= 0 and _xfree[i] == 1
+
+
+static func xfog_open(bits: PackedByteArray, i: int) -> bool:
+	return i >= 0 and (xfog_free(i) or xfog_has(bits, i))
+
+
+## How much fog a cell wears with the hull at `at`: 0 clear, 1 full.
+static func xfog_cover(i: int, at: Vector2) -> float:
+	var d: float = xfog_centre(i).distance_to(at)
+	if d <= XFOG_CLEAR:
+		return 0.0
+	if d >= XFOG_SOFT:
+		return 1.0
+	var t: float = (d - XFOG_CLEAR) / (XFOG_SOFT - XFOG_CLEAR)
+	return t * t * (3.0 - 2.0 * t)
+
+
+static func xfog_near(at: Vector2) -> Array:
+	var out: Array = []
+	var n: int = int(ceil(XFOG_SOFT / XFOG_CELL))
+	for dy: int in range(-n, n + 1):
+		for dx: int in range(-n, n + 1):
+			var i: int = xfog_index(at.x + dx * XFOG_CELL, at.y + dy * XFOG_CELL)
+			if i >= 0:
+				out.append(i)
+	return out
+
+
+static func xfog_disc(at: Vector2, r: float) -> Array:
+	var out: Array = []
+	var n: int = int(ceil(r / XFOG_CELL))
+	for dy: int in range(-n, n + 1):
+		for dx: int in range(-n, n + 1):
+			if Vector2(dx, dy).length() * XFOG_CELL > r:
+				continue
+			var i: int = xfog_index(at.x + dx * XFOG_CELL, at.y + dy * XFOG_CELL)
+			if i >= 0:
+				out.append(i)
+	return out
+
+
+static func xfog_decode(raw: Variant) -> PackedByteArray:
+	var bits: PackedByteArray = PackedByteArray()
+	bits.resize(int(ceil(xfog_cells() / 8.0)))
+	if raw == null or str(raw) == "":
+		return bits
+	var got: PackedByteArray = Marshalls.base64_to_raw(str(raw))
+	for i: int in mini(got.size(), bits.size()):
+		bits[i] = got[i]
+	return bits
+
+
+static func xfog_has(bits: PackedByteArray, i: int) -> bool:
+	return i >= 0 and (i >> 3) < bits.size() and (bits[i >> 3] & (1 << (i & 7))) != 0
+
+
+static func xfog_set(bits: PackedByteArray, i: int) -> void:
+	if i >= 0 and i < xfog_cells():
+		bits[i >> 3] = bits[i >> 3] | (1 << (i & 7))
+
+
+## seedXfog: the water a captain already earned, opened when the mask is
+## empty (the junction, and round everything they have beaten).
+static func xfog_seed(bits: PackedByteArray, been: Array) -> void:
+	var w: Dictionary = Rules.data()["campaignWater"]
+	for i: Variant in xfog_disc(Vector2(float(w["hub"]["x"]), float(w["hub"]["y"])), float(w["hubR"])):
+		xfog_set(bits, int(i))
+	for p: Vector2 in been:
+		for i: Variant in xfog_disc(p, XFOG_CELL * 2.0):
+			xfog_set(bits, int(i))
+
+
+static func xfog_progress(bits: PackedByteArray) -> float:
+	var seen: int = 0
+	var tot: int = 0
+	for i: int in xfog_cells():
+		if not xfog_free(i):
+			tot += 1
+			if xfog_has(bits, i):
+				seen += 1
+	return float(seen) / maxf(1.0, tot)
+
+
 ## saveSeaPosition (the fishing side's part): where the boat is, when it was
 ## last seen, and the cells it has revealed, OR'd into the mask.
-static func save_sea_position(db: CaptainStore, uid: String, x: float, y: float, seen: Array) -> Dictionary:
+static func save_sea_position(db: CaptainStore, uid: String, x: float, y: float, seen: Array, seen_exp: Array = []) -> Dictionary:
 	if is_nan(x) or is_nan(y) or is_inf(x) or is_inf(y):
 		return { "helm": "mine" }
 	var patch: Dictionary = {
 		"sea_x": clampf(x, -1e6, 1e6), "sea_y": clampf(y, -1e6, 1e6),
 		"sea_seen_at": Js.iso(Clock.now_ms()), "sea_side": "fishing",
 	}
-	if not seen.is_empty():
-		var row: Dictionary = db.profile(uid, "sea_explored")
-		var bits: PackedByteArray = fog_decode(row.get("sea_explored"))
-		for i: Variant in seen:
-			fog_set(bits, int(i))
-		patch["sea_explored"] = fog_encode(bits)
+	if not seen.is_empty() or not seen_exp.is_empty():
+		var row: Dictionary = db.profile(uid, "sea_explored, sea_explored_exp")
+		if not seen.is_empty():
+			var bits: PackedByteArray = fog_decode(row.get("sea_explored"))
+			for i: Variant in seen:
+				fog_set(bits, int(i))
+			patch["sea_explored"] = fog_encode(bits)
+		# The campaign's own mask, on its own column and grid.
+		if not seen_exp.is_empty():
+			var xb: PackedByteArray = xfog_decode(row.get("sea_explored_exp"))
+			for i: Variant in seen_exp:
+				xfog_set(xb, int(i))
+			patch["sea_explored_exp"] = Marshalls.raw_to_base64(xb)
 	db.update_profile(uid, patch)
 	return { "helm": "mine" }
 
