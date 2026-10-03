@@ -12,7 +12,7 @@ extends Control
 ##   THE HALL the building: its tier and painting, roster space, and the next
 ##            tier with its price and gate.
 ##   THE TRUNK every crew skin (Kong, 2026-10-03), by crew, the ones not found
-##            yet in grey; skin vouchers waiting are opened here; a skin
+##            yet in grey; skin vouchers (Bosun's, Captain's) opened here; a skin
 ##            owned is worn from here or from the roster card's skin row.
 ## Every change is Crew.*, through the rules (core/crew.gd).
 
@@ -183,7 +183,9 @@ func _build_room() -> void:
 	var rooms: Array = [["recruit", "Recruit%s" % ("  %d" % board_open if board_open > 0 else "")], ["roster", "Roster  %d" % Js.list(_state.get("roster")).size()]]
 	if at_hall:
 		rooms.append(["hall", "The Hall"])
-	var waiting: int = Js.list(_skins.get("vouchers")).size()
+	var waiting: int = 0
+	for kv: Variant in Js.obj(_skins.get("vouchers")):
+		waiting += int(Js.num(_skins["vouchers"][kv]))
 	rooms.append(["trunk", "The Trunk  %d/%d%s" % [Js.list(_skins.get("owned")).size(), int(Js.num(_skins.get("total"))), ("  ·  %d to open" % waiting) if waiting > 0 else ""]])
 	for o: Array in rooms:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == room or (o[0] == "trunk" and waiting > 0 and room != "trunk"))
@@ -332,15 +334,11 @@ static func tier_color(tier: String) -> Color:
 
 
 func _trunk_room() -> void:
-	var vs: Array = Js.list(_skins.get("vouchers"))
-	if vs.is_empty():
-		Paper.text(_body, "Skin vouchers come from the Parlor: one at each rank. A voucher opens to a skin you do not own yet, at or above its tier.", "note", Paper.ink_soft(), true)
-	else:
-		var vrow: HBoxContainer = HBoxContainer.new()
-		vrow.add_theme_constant_override("separation", 10)
-		_body.add_child(vrow)
-		for v: Dictionary in vs:
-			vrow.add_child(_voucher(v))
+	var vrow: HBoxContainer = HBoxContainer.new()
+	vrow.add_theme_constant_override("separation", 10)
+	_body.add_child(vrow)
+	for kind: String in Skins.KINDS:
+		vrow.add_child(_voucher(kind))
 	var owned: Array = Js.list(_skins.get("owned"))
 	var eq: Dictionary = Js.obj(_skins.get("equipped"))
 	var aboard: Array = Js.list(_skins.get("crewSlugs"))
@@ -378,36 +376,58 @@ func _trunk_room() -> void:
 			row.add_child(_skin_tile(k, owned.has(k["id"]), eq.get(slug) == k["id"]))
 
 
-## A sealed voucher: its floor's colour, where it came from, and Open.
-func _voucher(v: Dictionary) -> Control:
-	var tier: String = str(v["floor"])
-	var col: Color = tier_color(tier)
-	var p: Pane = Kit.pane(null, { "radius": 10, "fill": [Color("#1d1712")], "border": [2, Color(col, 0.8)], "shadow": [Color(col, 0.35), 14, Vector2.ZERO], "pad": [14, 10, 14, 10] })
+## A kind of voucher: its painting, how many held, its odds in plain words,
+## where it is found, and Open.
+func _voucher(kind: String) -> Control:
+	var d: Dictionary = Skins.kind_def(kind)
+	var n: int = int(Js.num(Js.obj(_skins.get("vouchers")).get(kind)))
+	var col: Color = Color(str(d.get("color", "#c0392b")))
+	var p: Pane = Kit.pane(null, { "radius": 10, "fill": [Color("#1d1712")], "border": [2 if n > 0 else 1, Color(col, 0.8 if n > 0 else 0.3)], "shadow": [Color(col, 0.35 if n > 0 else 0.0), 14, Vector2.ZERO], "pad": [12, 10, 14, 10] })
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p.size_flags_stretch_ratio = 1.0
 	var h: HBoxContainer = HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
+	h.add_theme_constant_override("separation", 10)
 	p.add_child(h)
+	var art: TextureRect = TextureRect.new()
+	art.texture = Skipper.tex(str(d.get("art", "")))
+	art.custom_minimum_size = Vector2(56, 56)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	if n <= 0:
+		art.modulate = Color(1, 1, 1, 0.4)
+	h.add_child(art)
 	var t: VBoxContainer = VBoxContainer.new()
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.add_theme_constant_override("separation", 0)
 	h.add_child(t)
-	Paper.text(t, "SKIN VOUCHER", "eyebrow", col.lightened(0.2))
-	Paper.text(t, "Chase skin" if tier == "chase" else "%s or better" % TIER_NAMES[tier], "body_strong", Paper.ink())
-	Paper.text(t, str(v.get("from", "")), "small", Paper.ink_soft())
-	var b: Pane.PaneButton = Paper.button("Open", true)
+	Paper.text(t, "%d HELD" % n, "eyebrow", col.lightened(0.25) if n > 0 else Paper.ink_faint())
+	Paper.text(t, str(d.get("name", kind)), "body_strong", Paper.ink() if n > 0 else Paper.ink_soft())
+	var w: Dictionary = Js.obj(d.get("weights"))
+	var odds: Array = []
+	for tier: String in Skins.TIERS:
+		if float(w.get(tier, 0.0)) > 0.0:
+			var pc: float = float(w[tier])
+			odds.append("%s %s%%" % [TIER_NAMES[tier], str(int(pc)) if pc == floorf(pc) else str(pc)])
+	Paper.text(t, ", ".join(PackedStringArray(odds)), "small", col.lightened(0.25), true)
+	Paper.text(t, str(d.get("from", "")), "small", Paper.ink_soft(), true)
+	var b: Pane.PaneButton = Paper.button("Open", n > 0)
+	b.disabled = n <= 0
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	b.pressed.connect(func() -> void: _open_voucher(str(v["id"])))
+	b.pressed.connect(func() -> void: _open_voucher(kind))
 	h.add_child(b)
-	# A slow breath on the border, so a voucher waiting looks alive.
-	var tw: Tween = p.create_tween().set_loops()
-	tw.tween_property(p, "modulate", Color(1.12, 1.12, 1.12), 0.9).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(p, "modulate", Color.WHITE, 0.9).set_trans(Tween.TRANS_SINE)
+	if n > 0:
+		# A slow breath, so a voucher waiting looks alive.
+		var tw: Tween = p.create_tween().set_loops()
+		tw.tween_property(p, "modulate", Color(1.12, 1.12, 1.12), 0.9).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(p, "modulate", Color.WHITE, 0.9).set_trans(Tween.TRANS_SINE)
 	return p
 
 
-func _open_voucher(id: String) -> void:
+func _open_voucher(kind: String) -> void:
 	if _busy:
 		return
 	_busy = true
-	var r: Variant = await session.act("openSkinVoucher", [id])
+	var r: Variant = await session.act("openSkinVoucher", [kind])
 	session.persist()
 	_busy = false
 	var res: Dictionary = r if r is Dictionary else {}
@@ -556,7 +576,7 @@ func _skin_row(c: Dictionary) -> void:
 		return
 	Paper.text(_detail, "Skins  ·  %d of %d" % [kins.size(), all_n], "eyebrow", Paper.ink_soft())
 	if kins.is_empty():
-		Paper.text(_detail, "None yet. Skin vouchers from the Parlor open to them.", "small", Paper.ink_faint(), true)
+		Paper.text(_detail, "None yet. Skin vouchers, found in crates and caskets, open to them.", "small", Paper.ink_faint(), true)
 		return
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)

@@ -616,26 +616,37 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   every winning spot paying back, blackjack's bet and its return, solo and at the shared
   table). The roulette board draws the painted chips (the others' ringed in their colour).
   GOTCHA: a texture first loaded inside _draw is white until the next frame; load ahead.
-- CREW SKINS AND SKIN VOUCHERS, BUILT (Kong, 2026-10-03: "get all the skins in and set up the
-  crew roll voucher system"). All 75 of the web's skins (lib/crewSkins.ts) export to rules.json
+- CREW SKINS AND SKIN VOUCHERS, BUILT (Kong, 2026-10-03; reshaped the same day: "I want those
+  vouchers to be item drops like how crates are", then "just two voucher types, and it should be
+  hard to get any voucher"). All 75 of the web's skins (lib/crewSkins.ts) export to rules.json
   "crewSkins" with crewTier (the crew's FISH_GROUPS index): 24 for Rare crew, 27 Epic, 18
-  Legendary, 6 chase. Gems are retired, so skins are EARNED: a SKIN VOUCHER opens to a skin not
-  owned, at or above its floor, weighted rare 60 / epic 28 / legendary 11 / chase 1 over what is
-  left (the lowest allowed tier is likeliest; a chase floor is chase only); the floor falls back
-  if its tiers are all owned, and with every skin owned it pays 2,500 doubloons. It CAN land on a
+  Legendary, 6 chase. Gems are retired, so skins are EARNED through two vouchers, held as counts
+  (port_rules skinVouchers.kinds):
+  - BOSUN'S VOUCHER (red wax): rare 60, epic 30, legendary 9, chase 1. Drops: wooden 1.5%, metal
+    2%, gold 2.5% of crates opened; easy 3%, medium 4%, hard 6% of caskets.
+  - CAPTAIN'S VOUCHER (gold wax): rare 25, epic 45, legendary 25, chase 5. Drops: diamond 0.75%,
+    ancient 1.25% of crates; elite 8% of caskets; and ONE at Parlor Legend (the Parlor's only
+    reward; its other ranks are titles; profile.parlor_capstone_paid).
+  Rates are a first guess, ASSUMING a regular player opens ~45 crates and ~8 caskets a month (150
+  casts an hour, an hour a day): about one Bosun's a month in the middle waters, about five
+  Captain's a year in the deepest. No real cast rates were measured; tune here.
+  THE ROLL: the tier by the kind's weights over the tiers with a skin left (a tier owned in full
+  drops out and the rest keep their shares, so a voucher never comes up empty), then a skin in
+  that tier at random; never one owned; every skin owned pays 2,500 doubloons. It can land on a
   crew not signed yet: it waits in the Trunk. Worn at once if that crew is aboard and wears
-  nothing; worn per crew type (every copy), as on the web. THE PARLOR'S NINE RANKS give one each,
-  state-based (profile.parlor_vouchers_paid): Card Hand and Sharp rare+, Cardsharp and Rounder
-  epic+, Parlor Master to Grandee legendary+, Parlor Legend a chase (port_rules skinVouchers).
-  core/skins.gd; ops skinsState, openSkinVoucher, equipCrewSkin; Crew state's filename is the
-  worn skin (baseFilename the plain card). UI: the Crew Hall's THE TRUNK tab (every skin by crew,
-  the ones not found in grey pencil, vouchers waiting on top with Open, a skin's page to wear or
-  take off), a skin row on a roster hand, and the Parlor's strip opens a waiting voucher and
-  says what the next rank brings. THE REVEAL (game/skin_reveal.gd): a sealed card rises and
-  trembles while its glow climbs the tiers to the one it is, a tick a tier; it flips to the
-  painting on its tier's colour with a ring breaking out; legendary and chase add turning rays,
-  and a chase skin's painting carries a sweeping sheen (game/fx/chase_sheen.gdshader, the web's
-  ChaseSkinFx). More voucher sources are open (Kong's call). tests/skins_check.gd.
+  nothing; worn per crew type (every copy), as on the web. The first build's per-floor voucher
+  list reads as kinds (rare/epic floors Bosun's, legendary/chase Captain's).
+  core/skins.gd; ops skinsState, openSkinVoucher(kind), equipCrewSkin; Crew state's filename is
+  the worn skin (baseFilename the plain card). Drops in Fishing.open_crate and the casket
+  (Clues), told in the crate's notice and the casket's list. UI: the Crew Hall's THE TRUNK tab
+  (the two vouchers painted, held, their odds in plain words, where found, Open; every skin by
+  crew, the ones not found in grey pencil; a skin's page to wear or take off), a skin row on a
+  roster hand. ART: items/voucher-bosun.png and voucher-captain.png (Kie.ai, magenta keyed).
+  THE REVEAL (game/skin_reveal.gd): the sealed card shows the voucher's painting and trembles
+  while its glow climbs the tiers to the one it is, a tick a tier; it flips to the skin on its
+  tier's colour with a ring breaking out; legendary and chase add turning rays, and a chase
+  skin's painting carries a sweeping sheen (game/fx/chase_sheen.gdshader, the web's ChaseSkinFx).
+  tests/skins_check.gd.
 - THE PARLOR, BUILT (2026-10-03). Port-native rules, no parity (the web's Parlor is weekly
   and generated; the port's settled shape is not): core/parlor.gd, with the web's tables
   (rules.json "parlor": payouts 50/100/200, the 12 s clock and 4 s grace, the ranks, the King's
@@ -651,8 +662,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   THE BOARD: a card every 8 hours into a hand of 3/4/5 (port_rules parlorPort), the tier
   weighted 45/35/20; a card shows its topic and worth face down and draws its question when
   turned. THE KING at Fishing 25, one run a week, rungs tier 1,1,1,2,2,2,2,3,3,3. THE CAPSTAN:
-  three phrases a week, unseen first, no Captain gate. RANKS GIVE SKIN VOUCHERS (settled
-  2026-10-03, see CREW SKINS below). The room
+  three phrases a week, unseen first, no Captain gate. RANKS ARE TITLES; Parlor Legend gives a
+  Captain's Voucher (see CREW SKINS above). The room
   (game/parlor_room.gd): the hand fanned face down in topic colours; a turned card grows into
   the question with a draining ring, the answers inked right or wrong and a stamp; the King's
   ladder with the havens marked and your marker; the capstan a wooden wheel that spins down to

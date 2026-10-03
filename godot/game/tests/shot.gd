@@ -618,12 +618,11 @@ func _init() -> void:
 				for c: Dictionary in st["board"]:
 					RulesApi.run(sea.session.store, sea.session.uid, "recruitCrew", [c["id"]])
 				p["last_free_recruit_date"] = "old%d" % d
-			p["parlor_points"] = 400.0
-			Skins.sync_parlor(sea.session.store, sea.session.uid)
-			var keep: int = 2 if what == "crewtrunk" else 1
+			Skins.grant(sea.session.store, sea.session.uid, "bosun", 5.0)
 			var opened: Dictionary = {}
-			while Skins.vouchers(p).size() > keep:
-				opened = Skins.open(sea.session.store, sea.session.uid, str(Skins.vouchers(p)[0]["id"]))
+			for i: int in 4:
+				opened = Skins.open(sea.session.store, sea.session.uid, "bosun")
+			Skins.grant(sea.session.store, sea.session.uid, "captain", 1.0)
 			var ch: CrewHall = CrewHall.new()
 			ch.session = sea.session
 			ch.room = "trunk"
@@ -637,10 +636,8 @@ func _init() -> void:
 				for f: int in 30:
 					await process_frame
 			else:
-				var tier: String = OS.get_environment("SKIN_TIER") if OS.get_environment("SKIN_TIER") != "" else "legendary"
-				Skins.grant(sea.session.store, sea.session.uid, tier, "test")
-				var vv: Array = Skins.vouchers(p)
-				ch._open_voucher(str(vv[vv.size() - 1]["id"]))
+				var kind: String = OS.get_environment("SKIN_KIND") if OS.get_environment("SKIN_KIND") != "" else "captain"
+				ch._open_voucher(kind)
 				var frames: int = int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 200
 				for f: int in frames:
 					await process_frame

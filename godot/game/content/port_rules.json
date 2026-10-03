@@ -1977,10 +1977,40 @@
       ]
     ]
   },
-  "_skinVouchers": "SKIN VOUCHERS (Kong, 2026-10-03, SETTLED): gems are retired, so the 75 crew skins are earned. A voucher opens to a skin not owned, at or above its floor (rare, epic, legendary crew, or chase), weighted by tier (weights) so the lowest allowed is likeliest; it can land on a crew not signed yet (it waits in the Trunk); worn at once if that crew is aboard and wears nothing. The Parlor's nine ranks give one each (parlorRanks, in rank order). Every skin owned: it pays allOwnedPays doubloons. core/skins.gd.",
+  "_skinVouchers": "SKIN VOUCHERS (Kong, 2026-10-03, SETTLED, second shape): two kinds, found like crates and hard to get. Each rolls the skin's tier by its weights over the tiers with a skin left (a tier owned in full drops out, the rest keep their shares), then a skin in that tier at random; it can land on a crew not signed yet (it waits in the Trunk); worn at once if that crew is aboard and wears nothing. drops: chance per crate opened and per casket, by tier. The Parlor gives one Captain's Voucher, at Parlor Legend (parlorCapstone); its other ranks are titles. Every skin owned: allOwnedPays doubloons. Rough rates, ASSUMING about 45 crates and 8 caskets a month for a regular player (150 casts an hour, an hour a day): about one Bosun's Voucher a month in the middle waters, about five Captain's a year fishing the deepest. core/skins.gd.",
   "skinVouchers": {
-    "weights": { "rare": 60, "epic": 28, "legendary": 11, "chase": 1 },
-    "parlorRanks": ["rare", "rare", "epic", "epic", "legendary", "legendary", "legendary", "legendary", "chase"],
+    "kinds": {
+      "bosun": {
+        "name": "Bosun's Voucher",
+        "color": "#c0392b",
+        "art": "items/voucher-bosun.png",
+        "weights": { "rare": 60, "epic": 30, "legendary": 9, "chase": 1 },
+        "from": "Found in wooden, metal and gold crates and easy to hard caskets."
+      },
+      "captain": {
+        "name": "Captain's Voucher",
+        "color": "#e0b04a",
+        "art": "items/voucher-captain.png",
+        "weights": { "rare": 25, "epic": 45, "legendary": 25, "chase": 5 },
+        "from": "Found in diamond and ancient crates and elite caskets; one at Parlor Legend."
+      }
+    },
+    "drops": {
+      "crate": {
+        "wooden": { "bosun": 0.015 },
+        "metal": { "bosun": 0.02 },
+        "gold": { "bosun": 0.025 },
+        "diamond": { "captain": 0.0075 },
+        "ancient": { "captain": 0.0125 }
+      },
+      "casket": {
+        "easy": { "bosun": 0.03 },
+        "medium": { "bosun": 0.04 },
+        "hard": { "bosun": 0.06 },
+        "elite": { "captain": 0.08 }
+      }
+    },
+    "parlorCapstone": "Parlor Legend",
     "allOwnedPays": 2500
   },
   "_parlorPort": "THE PARLOR IN THE PORT (Kong, 2026-10-02/03, SETTLED): one Captain's Board card dealt every 8 real hours (10 sea days), a hand of 3, 4 at Fishing 30 and 5 at 60, never lost; the tier of a dealt card weighted 45/35/20; the Pirate King at Fishing 25 (levelGates.feature.parlor_king); every question drawn unseen first from content/trivia_bank.json. core/parlor.gd.",

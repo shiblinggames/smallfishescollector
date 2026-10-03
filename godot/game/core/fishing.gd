@@ -438,6 +438,8 @@ static func open_crate(db: CaptainStore, uid: String, tier: String) -> Dictionar
 	loot["stash"] = stash
 	# Notices for the Crew Hall (port rules, core/crew.gd).
 	loot["notices"] = Crew.roll_drops(db, uid, Js.obj(Js.obj(Crew.port().get("noticeDrops")).get("crate")).get(tier))
+	# Skin vouchers (port rules, core/skins.gd).
+	loot["vouchers"] = Skins.drops(db, uid, "crate", tier)
 	return loot
 
 

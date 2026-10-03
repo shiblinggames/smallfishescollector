@@ -27,7 +27,7 @@ var _face: TextureRect
 var _words: VBoxContainer
 var _flipped: bool = false
 var _tick: int = -1
-var _hook: Texture2D
+var _seal: Texture2D
 
 
 ## Play the reveal for an openSkinVoucher result over `parent`.
@@ -66,7 +66,7 @@ func _ready() -> void:
 	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_card)
 	# Loaded here, not in the draw (a texture first loaded in a draw shows white).
-	_hook = Skipper.tex("den/hook.png")
+	_seal = Skipper.tex(str(Skins.kind_def(str(result.get("kind", "bosun"))).get("art", "den/hook.png")))
 	_back = Control.new()
 	_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -197,7 +197,7 @@ func _close() -> void:
 		queue_free())
 
 
-## The sealed card: dark board, a brass border, the Trunk's anchor in the
+## The sealed card: dark board, a brass border, the voucher's painting in the
 ## middle, and the glow of the tier it is climbing through.
 func _draw_back() -> void:
 	var g: Color = _col if _flipped and _face.visible else _glow_now()
@@ -223,10 +223,12 @@ func _draw_back() -> void:
 		_back.draw_circle(CARD / 2.0, CARD.x * 0.30, Color(g, 0.18))
 		return
 	var c: Vector2 = CARD / 2.0
-	_back.draw_arc(c, 62.0, 0.0, TAU, 48, Color(0.78, 0.62, 0.36, 0.8), 3.0, true)
-	_back.draw_arc(c, 52.0, 0.0, TAU, 48, Color(g, 0.4 + 0.3 * pulse), 2.0, true)
-	if _hook != null:
-		_back.draw_texture_rect(_hook, Rect2(c - Vector2(36, 36), Vector2(72, 72)), false, Color(0.9, 0.78, 0.55))
+	# The voucher itself, painted, on a pool of the glow.
+	_back.draw_circle(c, 120.0, Color(g, 0.10 + 0.06 * pulse))
+	if _seal != null:
+		var sz: Vector2 = _seal.get_size()
+		var k: float = 230.0 / maxf(sz.x, sz.y)
+		_back.draw_texture_rect(_seal, Rect2(c - sz * k / 2.0, sz * k), false)
 
 
 ## Behind the card: a ring breaking out at the flip, and for the best tiers

@@ -539,6 +539,11 @@ func _open_crate(tier: String) -> void:
 	# A notice for the Crew Hall in the crate (port rules, core/crew.gd).
 	for nt: Variant in Js.obj(r.get("notices")):
 		hud.notify("FOUND IN THE CRATE", "A %s" % Js.obj(Crew.notice_defs().get(nt)).get("name", nt), "Post it at the Crew Hall for a fresh board of hopefuls.", Skipper.tex("crew/hall_1.png"))
+	# A skin voucher (core/skins.gd): opened in the Crew Hall's Trunk.
+	for kv: Variant in Js.obj(r.get("vouchers")):
+		var vd: Dictionary = Skins.kind_def(str(kv))
+		Sound.chest(kv == "captain")
+		hud.notify("FOUND IN THE CRATE", "A %s!" % vd.get("name", kv), "Open it in the Crew Hall's Trunk for a crew skin you do not own yet.", Skipper.tex(str(vd.get("art", ""))))
 	hud.refresh()
 	if is_inside_tree() and tab == "crates":
 		_show_tab("crates")

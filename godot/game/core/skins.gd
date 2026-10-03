@@ -1,23 +1,29 @@
 class_name Skins
 extends RefCounted
-## CREW SKINS AND SKIN VOUCHERS (Kong, 2026-10-03: "get all the skins in and
-## set up the crew roll voucher system"; the web's 75 skins, lib/crewSkins.ts,
-## rules.json "crewSkins"). Gems are retired, so skins are earned, never
-## bought: a SKIN VOUCHER opens to a skin you do not own yet, at or above its
-## floor (rare, epic, legendary, or chase: a Legendary crew's animated skin),
-## weighted toward the lower tiers it allows so the best stay special. It can
-## land on a crew you have not signed: the skin waits in your Trunk until you
-## do. Skins are worn per crew type (every copy wears it), as on the web.
-##
-## Vouchers come from the Parlor's ranks first (one a rank, the floor rising
-## with the rank; port_rules skinVouchers). With every skin owned, a voucher
-## pays doubloons instead.
+## CREW SKINS AND SKIN VOUCHERS (Kong, 2026-10-03; the web's 75 skins,
+## lib/crewSkins.ts, rules.json "crewSkins"). Gems are retired, so skins are
+## earned: a SKIN VOUCHER is an item found like a crate, rarely, and opens to
+## a skin you do not own yet. TWO KINDS (port_rules skinVouchers.kinds):
+##   BOSUN'S   from wooden, metal and gold crates and the lesser caskets.
+##   CAPTAIN'S from diamond and ancient crates and elite caskets, and once
+##             from the Parlor at Parlor Legend (its capstone).
+## Each kind rolls the skin's tier by its own weights (rare, epic, legendary,
+## or chase: a Legendary crew's animated skin), then a skin in that tier at
+## random. A tier you own all of is left out and the rest keep their shares,
+## so a voucher never comes up empty; with every skin owned it pays doubloons.
+## A skin can be for a crew not signed yet: it waits in the Trunk. Skins are
+## worn per crew type (every copy wears it), as on the web.
 
 const TIERS: Array = ["rare", "epic", "legendary", "chase"]
+const KINDS: Array = ["bosun", "captain"]
 
 
 static func cfg() -> Dictionary:
 	return Js.obj(Rules.data().get("skinVouchers"))
+
+
+static func kind_def(kind: String) -> Dictionary:
+	return Js.obj(Js.obj(cfg().get("kinds")).get(kind))
 
 
 static func all() -> Array:
@@ -63,80 +69,111 @@ static func filename_for(prof: Dictionary, slug: String, base: String) -> String
 	return str(k["filename"]) if not k.is_empty() else base
 
 
-static func vouchers(prof: Dictionary) -> Array:
-	return Js.list(prof.get("skin_vouchers"))
+## Vouchers held, by kind. (The first build kept a list with a floor each:
+## rare and epic floors read as Bosun's, legendary and chase as Captain's.)
+static func vouchers(prof: Dictionary) -> Dictionary:
+	var v: Variant = prof.get("skin_vouchers")
+	if v is Array:
+		var out: Dictionary = {}
+		for x: Variant in v:
+			var k: String = "captain" if str(Js.obj(x).get("floor")) in ["legendary", "chase"] else "bosun"
+			out[k] = Js.num(out.get(k)) + 1.0
+		return out
+	return Js.obj(v)
 
 
-static func grant(db: CaptainStore, uid: String, floor_tier: String, from: String) -> void:
-	var prof: Dictionary = db.me(uid)
-	var n: float = Js.num(prof.get("skin_voucher_next")) + 1.0
-	var list: Array = vouchers(prof).duplicate()
-	list.append({ "id": "v%d" % int(n), "floor": floor_tier, "from": from })
-	db.update_profile(uid, { "skin_vouchers": list, "skin_voucher_next": n })
+static func held(prof: Dictionary) -> int:
+	var n: int = 0
+	for k: Variant in vouchers(prof):
+		n += int(Js.num(vouchers(prof)[k]))
+	return n
 
 
-## The Parlor's ranks, one voucher each (state-based: every rank reached and
-## not yet paid is paid now, however it was reached).
+static func grant(db: CaptainStore, uid: String, kind: String, n: float = 1.0) -> void:
+	var v: Dictionary = vouchers(db.me(uid)).duplicate()
+	v[kind] = Js.num(v.get(kind)) + n
+	db.update_profile(uid, { "skin_vouchers": v })
+
+
+## A drop table ({kind: chance}) rolled: what was found, granted.
+static func roll_drops(db: CaptainStore, uid: String, table: Variant) -> Dictionary:
+	var out: Dictionary = {}
+	var tb: Dictionary = Js.obj(table)
+	for kind: Variant in tb:
+		if Dice.next() < float(tb[kind]):
+			grant(db, uid, str(kind))
+			out[str(kind)] = 1.0
+	return out
+
+
+## A crate's or a casket's vouchers (port_rules skinVouchers.drops).
+static func drops(db: CaptainStore, uid: String, source: String, tier: String) -> Dictionary:
+	return roll_drops(db, uid, Js.obj(Js.obj(cfg().get("drops")).get(source)).get(tier))
+
+
+## The Parlor's capstone: a Captain's Voucher at Parlor Legend, once
+## (state-based: paid whenever the rank is found reached).
 static func sync_parlor(db: CaptainStore, uid: String) -> void:
-	var floors: Array = Js.list(cfg().get("parlorRanks"))
-	if floors.is_empty():
+	var at: String = str(cfg().get("parlorCapstone", ""))
+	if at == "":
 		return
 	var prof: Dictionary = db.me(uid)
-	var pts: float = Js.num(prof.get("parlor_points"))
-	var ranks: Array = Parlor.c()["ranks"]
-	var reached: int = 0
-	for i: int in range(1, ranks.size()):
-		if pts >= float(ranks[i]["at"]):
-			reached = i
-	var paid: int = int(Js.num(prof.get("parlor_vouchers_paid")))
-	while paid < reached and paid < floors.size():
-		grant(db, uid, str(floors[paid]), "The Parlor: %s" % ranks[paid + 1]["title"])
-		paid += 1
-	db.update_profile(uid, { "parlor_vouchers_paid": float(paid) })
+	if prof.get("parlor_capstone_paid") == true:
+		return
+	for r: Dictionary in Parlor.c()["ranks"]:
+		if r["title"] == at and Js.num(prof.get("parlor_points")) >= float(r["at"]):
+			grant(db, uid, "captain")
+			db.update_profile(uid, { "parlor_capstone_paid": true })
 
 
-## Open a voucher: a skin not owned, at or above its floor, weighted toward
-## the lower tiers allowed; the floor falls back if nothing is left there,
-## and with every skin owned it pays doubloons.
-static func open(db: CaptainStore, uid: String, voucher_id: String) -> Dictionary:
+## Open a voucher of a kind: its tier by the kind's weights over the tiers
+## with a skin left, then a skin in that tier.
+static func open(db: CaptainStore, uid: String, kind: String) -> Dictionary:
 	var prof: Dictionary = db.me(uid)
-	var list: Array = vouchers(prof).duplicate()
-	var v: Dictionary = {}
-	for x: Dictionary in list:
-		if x["id"] == voucher_id:
-			v = x
-	if v.is_empty():
-		return { "error": "That voucher is not in your hand." }
-	list.erase(v)
+	var v: Dictionary = vouchers(prof).duplicate()
+	if Js.num(v.get(kind)) < 1.0:
+		return { "error": "You have no voucher like that." }
+	v[kind] = Js.num(v.get(kind)) - 1.0
+	if float(v[kind]) <= 0.0:
+		v.erase(kind)
 	var have: Array = owned(prof)
-	var floor_i: int = TIERS.find(str(v["floor"]))
-	var weights: Dictionary = Js.obj(cfg().get("weights"))
-	var pick: Dictionary = {}
-	for f: int in range(floor_i, -1, -1):
-		var pool: Array = all().filter(func(k: Dictionary) -> bool: return not have.has(k["id"]) and TIERS.find(tier_of(k)) >= f)
-		if pool.is_empty():
-			continue
-		var total: float = 0.0
-		for k: Dictionary in pool:
-			total += float(weights.get(tier_of(k), 1.0))
-		var r: float = Dice.next() * total
-		for k: Dictionary in pool:
-			r -= float(weights.get(tier_of(k), 1.0))
-			if r <= 0.0:
-				pick = k
-				break
-		if pick.is_empty():
-			pick = pool[pool.size() - 1]
-		break
-	if pick.is_empty():
+	var left: Dictionary = {}
+	for k: Dictionary in all():
+		if not have.has(k["id"]):
+			var t: String = tier_of(k)
+			if not left.has(t):
+				left[t] = []
+			(left[t] as Array).append(k)
+	if left.is_empty():
 		var pay: float = float(cfg().get("allOwnedPays", 2500))
-		db.update_profile(uid, { "skin_vouchers": list })
+		db.update_profile(uid, { "skin_vouchers": v })
 		db.bump_stat(uid, "doubloons", pay)
 		db.ledger(uid, pay, "A skin voucher, every skin already owned")
-		return { "ok": true, "doubloons": pay }
+		return { "ok": true, "kind": kind, "doubloons": pay }
+	var w: Dictionary = Js.obj(kind_def(kind).get("weights"))
+	var total: float = 0.0
+	for t: String in TIERS:
+		if left.has(t):
+			total += float(w.get(t, 0.0))
+	var tier: String = ""
+	var r: float = Dice.next() * total
+	for t: String in TIERS:
+		if left.has(t) and float(w.get(t, 0.0)) > 0.0:
+			tier = t
+			r -= float(w.get(t, 0.0))
+			if r < 0.0:
+				break
+	if tier == "":
+		# Only tiers this kind never gives are left: the lowest of them.
+		for t: String in TIERS:
+			if left.has(t):
+				tier = t
+				break
+	var pool: Array = left[tier]
+	var pick: Dictionary = pool[mini(int(floor(Dice.next() * pool.size())), pool.size() - 1)]
 	var new_owned: Array = have.duplicate()
 	new_owned.append(pick["id"])
-	var patch: Dictionary = { "skin_vouchers": list, "owned_crew_skins": new_owned }
+	var patch: Dictionary = { "skin_vouchers": v, "owned_crew_skins": new_owned }
 	# Worn at once if you have that crew and it wears nothing yet.
 	var eq: Dictionary = equipped(prof).duplicate()
 	var crew_has: bool = Crew.live(db).any(func(c: Dictionary) -> bool: return str(Crew.card(float(c["card_id"])).get("slug", "")).to_lower() == pick["slug"])
@@ -144,7 +181,7 @@ static func open(db: CaptainStore, uid: String, voucher_id: String) -> Dictionar
 		eq[pick["slug"]] = pick["id"]
 		patch["equipped_crew_skins"] = eq
 	db.update_profile(uid, patch)
-	return { "ok": true, "skin": pick, "tier": tier_of(pick), "worn": patch.has("equipped_crew_skins"), "crewHas": crew_has }
+	return { "ok": true, "kind": kind, "skin": pick, "tier": tier, "worn": patch.has("equipped_crew_skins"), "crewHas": crew_has }
 
 
 static func equip(db: CaptainStore, uid: String, slug: String, skin_id: Variant) -> Dictionary:
