@@ -44,6 +44,8 @@ import { hotspotsAt } from '../lib/seaHotspots'
 import { squallsAt, squallPos } from '../lib/seaWeather'
 import { goAshore, digHere, openBottle, getDigState, folkState, talkToFolk, askForFavourite, deliverToFolk, buyFolkRod, buyPortalTier, spendRecall, finnState, speakToFinn, turnInFinnQuest } from '../lib/core/sea'
 import { finnQuestById } from '../lib/finnQuests'
+import { getCasinoState, buyInCasino, cashOutCasino, spinSlots, getSlotStats, getSlotsJackpot, getRouletteState, placeBetsAndSpin, dealBlackjack, acceptInsurance, declineInsurance, hit, stand, doubleDown, split, resumeHand } from '../lib/core/casino'
+import { localCasinoData } from '../lib/data/local/casinoLocal'
 import { saveSeaPosition, strikeDeal, wagerForRunnerRod, dealtToday } from '../lib/core/selling'
 import { tradersAround, seaDay } from '../lib/seaTraders'
 import { seaClock, CYCLE_MS } from '../lib/seaClock'
@@ -714,6 +716,129 @@ shop.push(await scripted('finn', 39, captainWith(39, 1, 1, {}), async x => {
     x.advance(k % 4 === 0 ? 3_600_000 : 41_000)
   }
   for (let k = 0; k < 12; k++) { const s = await st(); await speak(s.encounters); x.advance(600_000) }
+}))
+// THE DEN. The script's own choices come from its own little generator, never
+// the dice (those are the rules' and are counted).
+const lcg = (seed: number) => { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296 } }
+// The purse and Fish Slots: buy-ins refused and taken to the cap, a Captain's
+// cap, hundreds of spins at every stake, forced symbols, an admin's catfish,
+// cash-out, busting out, and a new day.
+shop.push(await scripted('the den: purse and slots', 40, captainWith(40, 30, 5, { doubloons: 300_000 }), async x => {
+  const den = localCasinoData(x.save)
+  const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+  const st = () => c('getCasinoState', [], () => getCasinoState(den, x.uid))
+  const buy = (n: number) => c('buyInCasino', [n], () => buyInCasino(den, x.uid, n))
+  const out = () => c('cashOutCasino', [], () => cashOutCasino(den, x.uid))
+  const spin = (w: number) => c('spinSlots', [w], () => spinSlots(den, x.uid, w))
+  const r = lcg(40)
+  await st(); await out(); await spin(10)
+  for (const n of [0, 5, 10.5, 30000, -100]) await buy(n)
+  await buy(100); await buy(1000); await buy(800); await buy(200); await buy(10)
+  await st()
+  const stakes = [10, 25, 100, 500, 250, 50]
+  for (let k = 0; k < 600; k++) {
+    if (k % 97 === 3) await spin(7)
+    if (k % 131 === 5) await spin(12.5)
+    if (k === 150) await x.patchProfile({ slots_force_next: 'catfish' })
+    if (k === 160) await x.patchProfile({ slots_force_next: 'anchor' })
+    if (k === 170) await x.patchProfile({ slots_force_next: 'shark' })
+    if (k === 180) await x.patchProfile({ is_admin: true, slots_force_next: 'catfish' })
+    if (k === 181) await x.patchProfile({ slots_force_next: 'anchor' })
+    if (k === 190) await x.patchProfile({ is_admin: false })
+    if (Number((x.save.profile as Record<string, unknown>).casino_chips ?? 0) < 600) await x.patchProfile({ casino_chips: 5000 })
+    await spin(stakes[Math.floor(r() * stakes.length)])
+    if (k % 50 === 49) { await c('getSlotStats', [], () => getSlotStats(den, x.uid)); await c('getSlotsJackpot', [], () => getSlotsJackpot(den)) }
+    x.advance(9_000)
+  }
+  await x.patchProfile({ casino_chips: 30 })
+  for (let k = 0; k < 6; k++) await spin(10)
+  await st()
+  await out(); await out()
+  x.advance(86_400_000)
+  await buy(2000); await buy(10)
+  await x.patchProfile({ is_premium: true, premium_expires_at: null, expedition_xp: 900_000 })
+  await st(); await buy(5000); await buy(30000)
+  await out()
+}))
+// Fish Roulette: every kind of bet, good and bad, hundreds of spins.
+shop.push(await scripted('the den: roulette', 41, captainWith(41, 30, 5, { doubloons: 100_000, casino_chips: 20_000 }), async x => {
+  const den = localCasinoData(x.save)
+  const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+  const go = (bets: unknown[]) => c('placeBetsAndSpin', [bets], () => placeBetsAndSpin(den, x.uid, bets as never))
+  const r = lcg(41)
+  const pick = <T,>(a: T[]): T => a[Math.floor(r() * a.length)]
+  await go([]); await go([{ type: 'straight', target: 37, amount: 10 }]); await go([{ type: 'split', target: [1, 3], amount: 10 }])
+  await go([{ type: 'corner', target: [3, 4, 6, 7], amount: 10 }]); await go([{ type: 'street', target: 13, amount: 10 }])
+  await go([{ type: 'line', target: 12, amount: 10 }]); await go([{ type: 'dozen', target: 4, amount: 10 }]); await go([{ type: 'color', target: 'green', amount: 10 }])
+  await go([{ type: 'parity', target: 'even', amount: 5 }]); await go([{ type: 'half', target: 'low', amount: 600 }]); await go([{ type: 'bogus', target: 1, amount: 10 }])
+  await go([{ type: 'color', target: 'red', amount: 300 }, { type: 'color', target: 'red', amount: 300 }])
+  await go(Array.from({ length: 51 }, () => ({ type: 'color', target: 'red', amount: 10 })))
+  const amounts = [10, 25, 50, 100, 250, 500]
+  for (let k = 0; k < 400; k++) {
+    const bets: unknown[] = []
+    const n = 1 + Math.floor(r() * 4)
+    for (let i = 0; i < n; i++) {
+      const t = pick(['straight', 'split', 'street', 'corner', 'line', 'dozen', 'column', 'color', 'parity', 'half'])
+      const a = pick(amounts)
+      if (t === 'straight') bets.push({ type: t, target: Math.floor(r() * 37), amount: a })
+      else if (t === 'split') { const lo = 1 + Math.floor(r() * 33); bets.push({ type: t, target: r() < 0.5 && lo % 3 !== 0 ? [lo, lo + 1] : [lo, lo + 3], amount: a }) }
+      else if (t === 'street') bets.push({ type: t, target: 1 + Math.floor(r() * 12), amount: a })
+      else if (t === 'corner') { let lo = 1 + Math.floor(r() * 32); if (lo % 3 === 0) lo -= 1; bets.push({ type: t, target: [lo, lo + 1, lo + 3, lo + 4], amount: a }) }
+      else if (t === 'line') bets.push({ type: t, target: 1 + Math.floor(r() * 11), amount: a })
+      else if (t === 'dozen' || t === 'column') bets.push({ type: t, target: 1 + Math.floor(r() * 3), amount: a })
+      else if (t === 'color') bets.push({ type: t, target: pick(['red', 'black']), amount: a })
+      else if (t === 'parity') bets.push({ type: t, target: pick(['even', 'odd']), amount: a })
+      else bets.push({ type: t, target: pick(['low', 'high']), amount: a })
+    }
+    if (Number((x.save.profile as Record<string, unknown>).casino_chips ?? 0) < 3000) await x.patchProfile({ casino_chips: 20_000 })
+    await go(bets)
+    if (k % 40 === 39) await c('getRouletteState', [], () => getRouletteState(den, x.uid))
+    x.advance(15_000)
+  }
+  await x.patchProfile({ casino_chips: 10 })
+  await go([{ type: 'color', target: 'red', amount: 10 }])
+  await go([{ type: 'color', target: 'red', amount: 10 }])
+  await c('getRouletteState', [], () => getRouletteState(den, x.uid))
+}))
+// Blackjack: hundreds of hands played every way (insurance, splits, doubles,
+// hits and stands), moves refused, an abandoned hand settled by the next deal.
+shop.push(await scripted('the den: blackjack', 42, captainWith(42, 30, 5, { doubloons: 100_000, casino_chips: 20_000 }), async x => {
+  const den = localCasinoData(x.save)
+  const c = (op: string, args: unknown[], run: () => Promise<unknown>) => x.call(op, args, run)
+  const r = lcg(42)
+  type View = { kind?: string; state?: { phase: string; canHit: boolean; canDouble: boolean; canSplit: boolean; hands: { total: number }[]; activeHandIdx: number }; error?: string }
+  const deal = (w: number) => c('dealBlackjack', [w], () => dealBlackjack(den, x.uid, w)) as Promise<View>
+  const moves: Record<string, () => Promise<unknown>> = {
+    hit: () => hit(den, x.uid), stand: () => stand(den, x.uid), doubleDown: () => doubleDown(den, x.uid),
+    split: () => split(den, x.uid), acceptInsurance: () => acceptInsurance(den, x.uid), declineInsurance: () => declineInsurance(den, x.uid),
+  }
+  const move = (op: string) => c(op, [], moves[op]) as Promise<View>
+  await move('hit'); await move('stand'); await deal(5); await deal(10.5); await deal(600)
+  await c('resumeHand', [], () => resumeHand(den, x.uid))
+  const wagers = [10, 25, 50, 100, 250, 500]
+  for (let k = 0; k < 500; k++) {
+    if (Number((x.save.profile as Record<string, unknown>).casino_chips ?? 0) < 2000) await x.patchProfile({ casino_chips: 20_000 })
+    let v = await deal(wagers[Math.floor(r() * wagers.length)])
+    if (k % 60 === 7) { await c('resumeHand', [], () => resumeHand(den, x.uid)); await c('cashOutCasino', [], () => cashOutCasino(den, x.uid)) }
+    if (k % 45 === 11) continue
+    let guard = 0
+    while (v.kind === 'active' && guard++ < 12) {
+      const s = v.state!
+      if (s.phase === 'insuranceOffered') { v = await move(r() < 0.5 ? 'acceptInsurance' : 'declineInsurance'); continue }
+      const total = s.hands[s.activeHandIdx]?.total ?? 21
+      const roll = r()
+      if (s.canSplit && roll < 0.6) v = await move('split')
+      else if (s.canDouble && roll < 0.25) v = await move('doubleDown')
+      else if (roll < 0.05) v = await move('doubleDown')
+      else if (total < 17 || roll < 0.08) v = await move('hit')
+      else v = await move('stand')
+    }
+    if (k % 25 === 0) { await move('hit'); await move('acceptInsurance') }
+    x.advance(20_000)
+  }
+  await x.patchProfile({ casino_chips: 10 })
+  await deal(10)
+  await c('getCasinoState', [], () => getCasinoState(den, x.uid))
 }))
 // The wanderers: a month of deals with whoever is out (bait bought, holds
 // sold to salters, talkers who trade nothing), the cap of six, a key kept past

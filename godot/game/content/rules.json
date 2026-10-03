@@ -7874,6 +7874,378 @@
   "borderColor": "#c8a060",
   "mirrored": true
  },
+ "casino": {
+  "symbols": [
+   {
+    "id": "common",
+    "filename": "Sardine_v2.png",
+    "color": "#8a8880",
+    "weight": 28,
+    "bonusWeight": 30,
+    "label": "Sardine"
+   },
+   {
+    "id": "rare",
+    "filename": "Blue_Marlin.png",
+    "color": "#60a5fa",
+    "weight": 20,
+    "bonusWeight": 18,
+    "label": "Blue Marlin"
+   },
+   {
+    "id": "shark",
+    "filename": "Great_White_Shark.png",
+    "color": "#8ea6c4",
+    "weight": 12,
+    "bonusWeight": 12,
+    "label": "Great White"
+   },
+   {
+    "id": "legendary",
+    "filename": "Blue_Whale_v2.png",
+    "color": "#a78bfa",
+    "weight": 7,
+    "bonusWeight": 8,
+    "label": "Blue Whale"
+   },
+   {
+    "id": "catfish",
+    "filename": "Catfish.png",
+    "color": "#f0c040",
+    "weight": 9,
+    "bonusWeight": 8,
+    "label": "Catfish"
+   },
+   {
+    "id": "anchor",
+    "color": "#34d399",
+    "weight": 24,
+    "bonusWeight": 0,
+    "label": "Hook"
+   },
+   {
+    "id": "wild",
+    "filename": "Jellyfish.png",
+    "color": "#e879f9",
+    "weight": 0,
+    "bonusWeight": 16,
+    "label": "Jellyfish"
+   }
+  ],
+  "payouts": {
+   "common": 4,
+   "rare": 12,
+   "shark": 28,
+   "legendary": 60,
+   "catfish": 0,
+   "anchor": 0,
+   "wild": 0
+  },
+  "pairPayouts": {
+   "rare": 1.5,
+   "shark": 3,
+   "legendary": 5,
+   "catfish": 3
+  },
+  "bonusMult": 1.5,
+  "slotsMin": 10,
+  "slotsMax": 500,
+  "feedPct": 0.1,
+  "potSeed": 15000,
+  "buyInMin": 10,
+  "buyInMax": 20000,
+  "buyInPresets": [
+   25,
+   50,
+   100,
+   250,
+   500,
+   1000
+  ],
+  "capBase": 2000,
+  "capMax": 20000,
+  "capMaxLevel": 200,
+  "bjMin": 10,
+  "bjMax": 500,
+  "bjPresets": [
+   10,
+   25,
+   50,
+   100,
+   250,
+   500
+  ],
+  "deckCount": 8,
+  "ranks": [
+   "A",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "8",
+   "9",
+   "T",
+   "J",
+   "Q",
+   "K"
+  ],
+  "suits": [
+   "H",
+   "D",
+   "C",
+   "S"
+  ],
+  "rlMin": 10,
+  "rlMaxStraight": 500,
+  "rlMaxOutside": 500,
+  "rlPresets": [
+   10,
+   25,
+   50,
+   100,
+   250,
+   500
+  ],
+  "payoutMult": {
+   "straight": 36,
+   "split": 18,
+   "street": 12,
+   "corner": 9,
+   "line": 6,
+   "dozen": 3,
+   "column": 3,
+   "color": 2,
+   "parity": 2,
+   "half": 2
+  },
+  "pockets": [
+   {
+    "number": 0,
+    "fishId": null,
+    "name": "The Abyss",
+    "color": "green"
+   },
+   {
+    "number": 1,
+    "fishId": 1,
+    "name": "Bluegill",
+    "color": "red"
+   },
+   {
+    "number": 2,
+    "fishId": 2,
+    "name": "Common Carp",
+    "color": "black"
+   },
+   {
+    "number": 3,
+    "fishId": 3,
+    "name": "Yellow Perch",
+    "color": "red"
+   },
+   {
+    "number": 4,
+    "fishId": 69,
+    "name": "Needlefish",
+    "color": "black"
+   },
+   {
+    "number": 5,
+    "fishId": 4,
+    "name": "Pumpkinseed",
+    "color": "red"
+   },
+   {
+    "number": 6,
+    "fishId": 5,
+    "name": "Channel Catfish",
+    "color": "black"
+   },
+   {
+    "number": 7,
+    "fishId": 6,
+    "name": "Crappie",
+    "color": "red"
+   },
+   {
+    "number": 8,
+    "fishId": 7,
+    "name": "Rainbow Trout",
+    "color": "black"
+   },
+   {
+    "number": 9,
+    "fishId": 8,
+    "name": "Largemouth Bass",
+    "color": "red"
+   },
+   {
+    "number": 10,
+    "fishId": 9,
+    "name": "Smallmouth Bass",
+    "color": "black"
+   },
+   {
+    "number": 11,
+    "fishId": 10,
+    "name": "Brown Trout",
+    "color": "black"
+   },
+   {
+    "number": 12,
+    "fishId": 11,
+    "name": "Northern Pike",
+    "color": "red"
+   },
+   {
+    "number": 13,
+    "fishId": 98,
+    "name": "European Anchovy",
+    "color": "black"
+   },
+   {
+    "number": 14,
+    "fishId": 99,
+    "name": "Pacific Sardine",
+    "color": "red"
+   },
+   {
+    "number": 15,
+    "fishId": 14,
+    "name": "Atlantic Herring",
+    "color": "black"
+   },
+   {
+    "number": 16,
+    "fishId": 13,
+    "name": "Atlantic Mackerel",
+    "color": "red"
+   },
+   {
+    "number": 17,
+    "fishId": 15,
+    "name": "Skipjack Tuna",
+    "color": "black"
+   },
+   {
+    "number": 18,
+    "fishId": 106,
+    "name": "Spanish Mackerel",
+    "color": "red"
+   },
+   {
+    "number": 19,
+    "fishId": 17,
+    "name": "Bluefish",
+    "color": "red"
+   },
+   {
+    "number": 20,
+    "fishId": 16,
+    "name": "Bonito",
+    "color": "black"
+   },
+   {
+    "number": 21,
+    "fishId": 18,
+    "name": "Striped Bass",
+    "color": "red"
+   },
+   {
+    "number": 22,
+    "fishId": 25,
+    "name": "Mahi-mahi",
+    "color": "black"
+   },
+   {
+    "number": 23,
+    "fishId": 22,
+    "name": "Wahoo",
+    "color": "red"
+   },
+   {
+    "number": 24,
+    "fishId": 24,
+    "name": "Barracuda",
+    "color": "black"
+   },
+   {
+    "number": 25,
+    "fishId": 51,
+    "name": "Lanternfish",
+    "color": "red"
+   },
+   {
+    "number": 26,
+    "fishId": 52,
+    "name": "Hatchetfish",
+    "color": "black"
+   },
+   {
+    "number": 27,
+    "fishId": 30,
+    "name": "Red Snapper",
+    "color": "red"
+   },
+   {
+    "number": 28,
+    "fishId": 27,
+    "name": "Atlantic Cod",
+    "color": "black"
+   },
+   {
+    "number": 29,
+    "fishId": 29,
+    "name": "Sea Bass",
+    "color": "black"
+   },
+   {
+    "number": 30,
+    "fishId": 31,
+    "name": "Moray Eel",
+    "color": "red"
+   },
+   {
+    "number": 31,
+    "fishId": 33,
+    "name": "Grouper",
+    "color": "black"
+   },
+   {
+    "number": 32,
+    "fishId": 39,
+    "name": "Mako Shark",
+    "color": "red"
+   },
+   {
+    "number": 33,
+    "fishId": 40,
+    "name": "Swordfish",
+    "color": "black"
+   },
+   {
+    "number": 34,
+    "fishId": 38,
+    "name": "Blue Marlin",
+    "color": "red"
+   },
+   {
+    "number": 35,
+    "fishId": 68,
+    "name": "Giant Squid",
+    "color": "black"
+   },
+   {
+    "number": 36,
+    "fishId": 61,
+    "name": "Megamouth Shark",
+    "color": "red"
+   }
+  ],
+  "keepRoulette": 20
+ },
  "finn": {
   "thresholds": [
    0,

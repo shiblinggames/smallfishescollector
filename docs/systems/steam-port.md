@@ -564,6 +564,21 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   - The Parlor: the Captain's Board from 1, holding up to 3 cards, 4 at 30, 5 at 60; the
     Pirate King ladder at 25.
   - The Chart Room: one puzzle type opens at each of 1, 10, 20 and 30.
+- THE DEN, RULES (2026-10-03): core/casino.gd ports lib/core/casino.ts with casinoRules,
+  roulette, blackjack and the local store's casino (the purse and its daily cap, buy-in and
+  cash-out, Fish Slots, roulette's whole bet slip, blackjack with insurance, splits and
+  doubles). Parity: three scripted sessions, 2,393 calls (600 spins, 400 roulette slips, 500
+  hands, every refusal). Port rules (port_rules "casino"; tests/den_check.gd): the fixed 300x
+  Catfish Jackpot (no pot), the trimmed table, the cap by Fishing level, roulette at 10 and
+  blackjack at 20. THE RETURN IS ABOUT 90%, NOT 88.6%: exact enumeration of the settled table
+  gives 89.6% at 10 chips to 90.1% at 100 and up (pairs round down); the 88.6% in the
+  proposal above was a slip. The room itself is next.
+- TRIVIA IN THE PORT (Kong, 2026-10-03, SETTLED; not built yet): the port has no server to
+  generate questions nightly, so it ships a QUESTION BANK, rotated by day: the questions the web
+  has already generated PLUS a freshly written set. Some bank questions double as TREASURE
+  HUNT steps (a new clue step type), so playing trivia teaches answers the hunts ask for.
+  Order of the room ports: the Den first (slots, roulette, blackjack), then trivia, then the
+  Chart Room.
 - FISH SLOTS, A MONEY SINK (Kong, 2026-10-02: the community pot was built for an online MMO
   where every bet fed it; "an always-available pot based on probability, more of a money sink
   than something you make money from, but still fun"). PROPOSED, awaiting Kong's OK: the

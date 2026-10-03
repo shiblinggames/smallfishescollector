@@ -606,7 +606,9 @@
       }
     },
     "feature": {
-      "market_advanced": 50
+      "market_advanced": 50,
+      "den_roulette": 10,
+      "den_blackjack": 20
     }
   },
   "boats": [
@@ -1868,6 +1870,109 @@
         "waiting": "In fog. Wait for it to roll in.",
         "gated": "The black water is not open to you."
       }
+    ]
+  },
+  "_casino": "THE DEN IN THE PORT (Kong, 2026-10-02, SETTLED). Fish Slots is a gentle money sink: the Catfish Jackpot is a FIXED 300x the bet on three catfish (main reels or the bonus round), no shared pot and nothing fed into it; catfish weight 9 to 8 (about 1 spin in 1,895); triples sardine 3 / marlin 10 / great white 25 / whale 50; pairs marlin 1.25 / great white 2.5 / whale 4 / catfish 2; the bonus round (three hooks, Jellyfish wild, wins x1.5) and the two-hook refund stay. Exact enumeration: about 90% back (89.6% at 10 chips to 90.1% at 100 and up, pairs rounded down). The daily buy-in cap follows Fishing level alone: 1,000, +1,000 at 10, 20, 30 and 40, 7,500 at 70, 10,000 at 100. Roulette opens at Fishing 10 and Blackjack at 20 (levelGates.feature). No Crown & Anchor.",
+  "casino": {
+    "fixedJackpot": 300,
+    "symbols": [
+      {
+        "id": "common",
+        "filename": "Sardine_v2.png",
+        "color": "#8a8880",
+        "weight": 28,
+        "bonusWeight": 30,
+        "label": "Sardine"
+      },
+      {
+        "id": "rare",
+        "filename": "Blue_Marlin.png",
+        "color": "#60a5fa",
+        "weight": 20,
+        "bonusWeight": 18,
+        "label": "Blue Marlin"
+      },
+      {
+        "id": "shark",
+        "filename": "Great_White_Shark.png",
+        "color": "#8ea6c4",
+        "weight": 12,
+        "bonusWeight": 12,
+        "label": "Great White"
+      },
+      {
+        "id": "legendary",
+        "filename": "Blue_Whale_v2.png",
+        "color": "#a78bfa",
+        "weight": 7,
+        "bonusWeight": 8,
+        "label": "Blue Whale"
+      },
+      {
+        "id": "catfish",
+        "filename": "Catfish.png",
+        "color": "#f0c040",
+        "weight": 8,
+        "bonusWeight": 8,
+        "label": "Catfish"
+      },
+      {
+        "id": "anchor",
+        "color": "#34d399",
+        "weight": 24,
+        "bonusWeight": 0,
+        "label": "Hook"
+      },
+      {
+        "id": "wild",
+        "filename": "Jellyfish.png",
+        "color": "#e879f9",
+        "weight": 0,
+        "bonusWeight": 16,
+        "label": "Jellyfish"
+      }
+    ],
+    "payouts": {
+      "common": 3,
+      "rare": 10,
+      "shark": 25,
+      "legendary": 50
+    },
+    "pairPayouts": {
+      "rare": 1.25,
+      "shark": 2.5,
+      "legendary": 4,
+      "catfish": 2
+    },
+    "capByLevel": [
+      [
+        1,
+        1000
+      ],
+      [
+        10,
+        2000
+      ],
+      [
+        20,
+        3000
+      ],
+      [
+        30,
+        4000
+      ],
+      [
+        40,
+        5000
+      ],
+      [
+        70,
+        7500
+      ],
+      [
+        100,
+        10000
+      ]
     ]
   }
 }

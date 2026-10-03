@@ -40,7 +40,7 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 
 
 ## Calls that change nothing.
-const READS: Array = ["finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState"]
+const READS: Array = ["getCasinoState", "getSlotStats", "getSlotsJackpot", "getRouletteState", "resumeHand", "finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState"]
 
 
 static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
@@ -90,6 +90,22 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"buyShipyardTier": return Shipyard.buy_tier(db, uid, a[0])
 		"equipRod": return Shipyard.equip_rod(db, uid, float(a[0]))
 		"folkState": return Folk.state(db, uid)
+		"getCasinoState": return Casino.state(db, uid)
+		"buyInCasino": return Casino.buy_in(db, uid, a[0])
+		"cashOutCasino": return Casino.cash_out(db, uid)
+		"spinSlots": return Casino.spin_slots(db, uid, a[0])
+		"getSlotStats": return Casino.slot_stats(db, uid)
+		"getSlotsJackpot": return Casino.jackpot_state(db)
+		"getRouletteState": return Casino.roulette_state(db, uid)
+		"placeBetsAndSpin": return Casino.spin_roulette(db, uid, a[0])
+		"dealBlackjack": return Casino.deal(db, uid, a[0])
+		"acceptInsurance": return Casino.insurance(db, uid, true)
+		"declineInsurance": return Casino.insurance(db, uid, false)
+		"hit": return Casino._move(db, uid, "hit")
+		"stand": return Casino._move(db, uid, "stand")
+		"doubleDown": return Casino._move(db, uid, "double")
+		"split": return Casino._move(db, uid, "split")
+		"resumeHand": return Casino.resume(db, uid)
 		"finnState": return Finn.state(db, uid)
 		"speakToFinn": return Finn.speak(db, uid, float(a[0]))
 		"turnInFinnQuest": return Finn.turn_in(db, uid)

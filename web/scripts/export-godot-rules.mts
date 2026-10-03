@@ -34,6 +34,10 @@ import { FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY } from '../app/(app)/fishing/dep
 import { starterSave } from '../lib/data/local/starter'
 import { FINN_ANCIENT_BEATS, FINN_AVATAR, FINN_BEATS, FINN_REVEAL_BEAT, FINN_IDLE_LINES, FINN_EPILOGUE_IDLE_LINES, FINN_EPILOGUE_LORE_LINES, FINN_EPILOGUE_LORE_CHANCE, FINN_ASKS, FINN_STANDING_NAME, FINN_STANDING_AT } from '../lib/finn'
 import { FINN_QUESTS, FINN_CHAPTERS } from '../lib/finnQuests'
+import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOT_BONUS_MULT, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX, DEN_CAP_BASE, DEN_CAP_MAX, DEN_CAP_MAX_LEVEL, BJ_MIN_BET, BJ_MAX_BET, RL_MIN_BET, RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET, CASINO_BUY_IN_PRESETS, BJ_BET_PRESETS, RL_BET_PRESETS } from '../app/(app)/tavern/constants'
+import { PAYOUT_MULT, POCKETS } from '../lib/roulette'
+import { DECK_COUNT, RANKS, SUITS } from '../lib/blackjack'
+import { LOCAL_POT_SEED } from '../lib/data/local/casinoLocal'
 import { FINN_MOORING, FINN_ROAM, FINN_REACH, FINN_LOOK } from '../lib/seaFinn'
 import { VIGIL_DIAL } from '../lib/ancientVigil'
 import { fishingGearLevelReq } from '../lib/gearGating'
@@ -155,6 +159,17 @@ const rules = {
   vigilDial: VIGIL_DIAL,
   finnAncientBeats: FINN_ANCIENT_BEATS,
   finnAvatar: FINN_AVATAR,
+  // The Den (lib/core/casino, lib/casinoRules, lib/roulette, lib/blackjack,
+  // tavern/constants): the purse, Fish Slots, roulette and blackjack.
+  casino: {
+    symbols: SLOT_SYMBOLS_LIST, payouts: SLOT_PAYOUTS, pairPayouts: SLOT_PAIR_PAYOUTS, bonusMult: SLOT_BONUS_MULT,
+    slotsMin: SLOTS_MIN_BET, slotsMax: SLOTS_MAX_BET, feedPct: SLOTS_JACKPOT_FEED_PCT, potSeed: LOCAL_POT_SEED,
+    buyInMin: CASINO_BUY_IN_MIN, buyInMax: CASINO_BUY_IN_MAX, buyInPresets: CASINO_BUY_IN_PRESETS,
+    capBase: DEN_CAP_BASE, capMax: DEN_CAP_MAX, capMaxLevel: DEN_CAP_MAX_LEVEL,
+    bjMin: BJ_MIN_BET, bjMax: BJ_MAX_BET, bjPresets: BJ_BET_PRESETS, deckCount: DECK_COUNT, ranks: RANKS, suits: SUITS,
+    rlMin: RL_MIN_BET, rlMaxStraight: RL_MAX_STRAIGHT_BET, rlMaxOutside: RL_MAX_OUTSIDE_BET, rlPresets: RL_BET_PRESETS,
+    payoutMult: PAYOUT_MULT, pockets: POCKETS, keepRoulette: 20,
+  },
   // Finn's campaign (lib/finn, lib/finnQuests, lib/seaFinn): his beats, his
   // jobs and chapters, where he is moored and how far he circles.
   finn: {
