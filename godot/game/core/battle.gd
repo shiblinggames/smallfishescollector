@@ -18,6 +18,12 @@ extends RefCounted
 ## chooses as it fires, never shown before (Kong: hidden). Then the round's
 ## end: deaths and revives, the win, the mechanic check's countdown, statuses.
 ##
+## CROSSFIRE (Kong, 2026-10-03: skill based): when two or more ships in the
+## line land a CRITICAL on their own aim bar in the same round, each of those
+## shots hits harder (port rules battle.crossfire.pct for every crit past the
+## first). A hit turned crit by gear or a tide does not count; a frozen ship
+## does not fire.
+##
 ## Every captain keeps their own ship, HP, crew and balls. PARTY SCALING
 ## (port rules battle.party): the ENEMY's HP times enemyHpMult[n-1]; an
 ## ordinary attack is shots[n-1] aimed shots, each at a ship it picks as it
@@ -711,6 +717,16 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			bn["turns"] = float(bn["turns"]) - 1.0
 			if float(bn["turns"]) <= 0.0:
 				sf["burn"] = {}
+	# Crossfire: the criticals landed on the bars this round.
+	var crits: Array = []
+	for i: int in plans.size():
+		var sc: Dictionary = b["seats"][i]
+		var pc: Dictionary = Js.obj(plans[i])
+		if not _out(sc) and not sc.get("frozenNow", false) and str(pc.get("action", "")) in ["fire", "volley", "mega"] and str(pc.get("aim", "")) == "critical":
+			crits.append(i)
+	b["xfire"] = float(crits.size()) if crits.size() >= 2 else 0.0
+	if crits.size() >= 2:
+		ev.append({ "t": "crossfire", "seats": crits, "mult": crossfire_mult(crits.size()) })
 	# Initiative.
 	var order: Array = []
 	for i: int in plans.size():
@@ -803,6 +819,8 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 				tmult *= float(ta2["bossMult"]) * (float(ta2["bossVolMult"]) if act != "fire" else 1.0)
 			tmult *= float(fx.get("fireMult", 1.0)) if act == "fire" else (float(fx.get("volleyMult", 1.0)) if act == "volley" else float(fx.get("megaMult", 1.0)))
 			var crit_shot: bool = res == "critical"
+			# Crossfire rides only on a crit landed on the bar.
+			var xf: float = crossfire_mult(int(b.get("xfire", 0.0))) if str(plan.get("aim", "")) == "critical" else 1.0
 			var imult: float = float(fx.get("bossMult", 1.0)) if e["boss"] else float(fx.get("nonbossMult", 1.0))
 			imult *= float(fx.get("critMult", 1.0)) if crit_shot else float(fx.get("noncritMult", 1.0))
 			imult *= 1.0 + minf(1.0, float(fx.get("ramp", 0.0)) * (maxf(0.0, float(b["turn"]) - 1.0) + float(s.get("critRamp", 0.0))))
@@ -813,9 +831,11 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 			if s.get("cheated", false) and (e.get("elite", false) or not (e["affix"] as Dictionary).is_empty()):
 				imult *= float(fx.get("avengeElite", 1.0))
 			var base_mult: float = 1.0 if act == "fire" else (2.0 if act == "volley" else float(Js.nz(mega.get("megaMult"), 2.6)))
-			var mult: float = base_mult * float(s["dmgMult"]) * (1.0 + float(s["vBuff"])) * float(mods(s["statuses"])["dealt"]) * float(e_mods["taken"]) * tmult * imult
+			var mult: float = base_mult * float(s["dmgMult"]) * (1.0 + float(s["vBuff"])) * float(mods(s["statuses"])["dealt"]) * float(e_mods["taken"]) * tmult * imult * xf
 			var dmg: float = floor(roll_shot(res, float(s["shipMin"]), float(s["power"])) * mult)
 			var out: Dictionary = { "t": "shot", "seat": si, "action": act, "aim": res, "raw": dmg, "mega": mega.get("id") }
+			if xf > 1.0:
+				out["crossfire"] = xf
 			var af: Dictionary = e["affix"]
 			# Carapace: armour takes a slice off a single shot (not a volley).
 			if float(e["dr"]) > 0.0 and dmg > 0.0 and act == "fire":
@@ -1821,3 +1841,11 @@ static func flee(b: Dictionary, si: int) -> Array:
 					b["state"] = "lost"
 					ev.append({ "t": "lost" })
 	return ev
+
+
+
+## A crossfire's multiplier for n criticals in one round (1 under two).
+static func crossfire_mult(n: int) -> float:
+	if n < 2:
+		return 1.0
+	return 1.0 + float(Js.nz(Js.obj(cfg().get("crossfire")).get("pct"), 0.25)) * float(n - 1)

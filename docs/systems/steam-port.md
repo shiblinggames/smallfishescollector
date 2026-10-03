@@ -725,7 +725,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   HullRig.turn; the look carries shipTier and shipSkin). tests/raid_table_check.gd (a muster
   with a refusal, a raid played to its end, both paid, a flee paid nothing after);
   tests/shot.gd "coop" (COOP_STEP muster / plan / target / wait / round, states fed by hand).
-  NOT YET TESTED over a real Steam lobby.
+  KONG 2026-10-03, AFTER A LOOK: a captain must be AT the raid to call or join it (within
+  RaidTable.NEAR, 1400, of its dock; the founder's game checks the position sent); NO CLOCK on
+  a round or a tide (it waits for every captain; a game that drops leaves the line, paid nothing
+  more); every ship in the line faces the enemy (Boat.face_to, Shipmate.face_lock). WHILE THE
+  CREW PLAN each ship's plate shows its committed order: the action, where its aim landed (a
+  critical in gold), and a crew order with who it is for. CROSSFIRE (skill based, Kong: "only
+  when both parties hit a critical"): two or more ships landing a CRITICAL on their own aim bar
+  in the same round; each of those shots x(1 + 0.25 per crit past the first) (port rules
+  battle.crossfire.pct). A hit turned crit by gear or a tide does not count. On the water: a
+  "Crossfire!" call, gold lines from each ship to the enemy; while choosing, "Ben landed a
+  critical. Land one too for a crossfire." NOT YET TESTED over a real Steam lobby.
 - THE CAMPAIGN'S WATER, BUILT (2026-10-03). RULES: core/campaign.gd ports computeRaidMap,
   chapterForNode, buildClearedSetVia and all of lib/core/raidMap (the view, chapter unlocks seen,
   tolls, story reads with the legendary gates, puzzles, the caches, the muster, events, dice,

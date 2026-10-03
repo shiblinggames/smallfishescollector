@@ -770,6 +770,18 @@ func _init() -> void:
 			for f: int in 30:
 				await process_frame
 			var cs: String = OS.get_environment("COOP_STEP")
+			if cs == "chips" or cs == "xfire":
+				kb["seats"][0]["charges"] = 3.0
+				kb["seats"][1]["charges"] = 3.0
+				push.call("plan", [], { "plans": { "ben": { "action": "volley", "aim": "critical" } } })
+				for f: int in 20:
+					await process_frame
+			if cs == "xfire":
+				kst2._choose("fire")
+				for f: int in 30:
+					await process_frame
+				var xev: Array = Battle.resolve(kb, [{ "action": "fire", "aim": "critical" }, { "action": "volley", "aim": "critical" }])
+				push.call("playing", xev, {})
 			if cs == "target":
 				for c: Dictionary in kst2.b["seats"][0]["crew"]:
 					kst2._plan["ability"] = { "crew": c["id"], "target": 1 }

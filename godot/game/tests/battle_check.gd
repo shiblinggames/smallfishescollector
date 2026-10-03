@@ -127,6 +127,24 @@ func _init() -> void:
 	var healed: Array = ev.filter(func(x: Dictionary) -> bool: return x["t"] == "ability")
 	check(not healed.is_empty() and int(healed[0]["target"]) == 1 and float(healed[0]["heal"]) == 16.0, "a Lv 40 Mender heals a crewmate 35%% of 45 (%s)" % str(healed))
 	check(Battle.ability_ok(b2, b2["seats"][0], 1.0) != "", "an order once a raid")
+	# Crossfire: two crits on the bars in one round, and not one crit and a hit.
+	var xf_seen: Array = [0, 0]
+	for k: int in 40:
+		Dice.install(Dice.Mulberry32.new(300 + k))
+		var bx: Dictionary = Battle.begin("corsairs_reckoning", [_seat("A", 3, 14.0, 6.0, []), _seat("B", 3, 14.0, 6.0, [])])
+		var both: bool = k % 2 == 0
+		for sx: Dictionary in bx["seats"]:
+			sx["charges"] = 3.0
+		var evx: Array = Battle.resolve(bx, [{ "action": "fire", "aim": "critical" }, { "action": "fire", "aim": "critical" if both else "hit" }])
+		var xev: Array = evx.filter(func(x: Dictionary) -> bool: return x["t"] == "crossfire")
+		var flagged: Array = evx.filter(func(x: Dictionary) -> bool: return x["t"] == "shot" and x.has("crossfire"))
+		if both:
+			check(xev.size() == 1 and flagged.size() == 2 and is_equal_approx(float(flagged[0]["crossfire"]), 1.25), "two crits make a crossfire, both shots +25%% (%s)" % str(flagged))
+			xf_seen[0] += 1
+		else:
+			check(xev.is_empty() and flagged.is_empty(), "a crit and a hit make no crossfire")
+			xf_seen[1] += 1
+	check(is_equal_approx(Battle.crossfire_mult(4), 1.75), "four crits: +75%")
 	# Pete's raid, many times.
 	for n: int in [1, 2, 3, 4]:
 		var wins: int = 0

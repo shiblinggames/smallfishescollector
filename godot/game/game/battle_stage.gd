@@ -78,6 +78,9 @@ var _pumping: bool = false
 var _gone: bool = false
 var _spoke: bool = false
 var _plan_until: float = 0.0
+## A crossfire's lines from the ships to the enemy, fading (seconds left).
+var _xfire_seats: Array = []
+var _xfire_t: float = 0.0
 
 
 func _ready() -> void:
@@ -682,6 +685,8 @@ func _one(x: Dictionary) -> void:
 			else:
 				_num(_enemy_at, "Miss", Color(0.8, 0.8, 0.8))
 			_shown_hp["e"] = float(x["enemyHp"])
+			if x.has("crossfire") and not x.get("dodged", false):
+				_num(_enemy_at + Vector2(0, -150), "Crossfire  x%s" % str(snappedf(float(x["crossfire"]), 0.01)), Color(1.0, 0.85, 0.35))
 			await _wait(0.15)
 		"intent":
 			pass
@@ -837,6 +842,18 @@ func _one(x: Dictionary) -> void:
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "The Maw takes nothing", Color(0.9, 0.65, 0.3))
 		"flares":
 			pass
+		"crossfire":
+			_xfire_seats = Js.list(x["seats"])
+			_xfire_t = 2.4
+			_say("Crossfire!")
+			var who: Array = []
+			for si3: Variant in _xfire_seats:
+				who.append("you" if int(si3) == me else str(b["seats"][int(si3)]["name"]))
+				_num(_seat_at(int(si3)) + Vector2(0, -60), "Critical", Color(1.0, 0.85, 0.35), true)
+			_log_line("Criticals from %s: each of those shots hits %d%% harder." % [" and ".join(PackedStringArray(who)), int(round((float(x["mult"]) - 1.0) * 100.0))])
+			Sound.perfect()
+			Rumble.buzz([0, 30, 30, 50])
+			await _wait(0.9)
 		"flee":
 			var fs: int = int(x["seat"])
 			if fs == me:
@@ -1096,6 +1113,16 @@ func _draw() -> void:
 	draw_rect(Rect2(0, vp.y - hb, vp.x, hb), Color(0, 0, 0, 0.92))
 	if _bars < 0.5 or b.is_empty():
 		return
+	# A crossfire: gold lines from each critical ship to the enemy, fading.
+	_xfire_t = maxf(0.0, _xfire_t - get_process_delta_time())
+	if _xfire_t > 0.0 and _enemy != null and is_instance_valid(_enemy):
+		var xa: float = clampf(_xfire_t / 2.4, 0.0, 1.0)
+		var ep2: Vector2 = _screen(_enemy_at) + Vector2(0, -60)
+		for si4: Variant in _xfire_seats:
+			var sp4: Vector2 = _screen(_seat_at(int(si4))) + Vector2(30, -60)
+			draw_line(sp4, ep2, Color(1.0, 0.82, 0.35, 0.18 * xa), 14.0, true)
+			draw_line(sp4, ep2, Color(1.0, 0.9, 0.55, 0.85 * xa), 3.0, true)
+		draw_circle(ep2, 26.0 + 18.0 * (1.0 - xa), Color(1.0, 0.85, 0.4, 0.35 * xa))
 	var f: Font = Kit.font("cinzel", 800)
 	var small: Font = Kit.font("karla", 700)
 	# The raid's name in the top bar, and the turn strip.
@@ -1125,6 +1152,8 @@ func _draw() -> void:
 		var s: Dictionary = b["seats"][i]
 		var sp: Vector2 = _screen(_seat_at(i)) + Vector2(0, -215)
 		_plate(sp, str(s["name"]), float(_shown_hp.get(i, s["hp"])), float(s["max"]), float(s["shield"]), int(s["charges"]), int(s["maxCharges"]), s["statuses"], Color(0.4, 0.8, 0.5), _strip_lit == i)
+		if table != null and str(_latest.get("phase", "")) == "plan" and Battle.alive(b).has(s):
+			_order_chip(sp + Vector2(0, 52), s)
 	# Numbers rising off the water.
 	for n: Dictionary in _numbers:
 		var u: float = float(n["t"]) / 1.4
@@ -1458,6 +1487,10 @@ func _pump(st: Dictionary) -> void:
 		b = (_latest["b"] as Dictionary).duplicate(true)
 		if Js.obj(_latest.get("plans")).has(my_key):
 			_waiting()
+		else:
+			if not _busy:
+				_paint_actions()
+			_xfire_hint()
 
 
 func _alive_me() -> bool:
@@ -1504,6 +1537,7 @@ func _phase(cur: Dictionary) -> void:
 			_plan_until = _t + float(Js.nz(cur.get("left"), RaidTable.PLAN))
 			if _alive_me() and not Js.obj(cur.get("plans")).has(my_key):
 				_await_plan()
+				_xfire_hint()
 			else:
 				_waiting()
 		"flares":
@@ -1545,3 +1579,53 @@ func _waiting() -> void:
 	if plans.is_empty() and str(_latest.get("phase", "")) != "plan":
 		lb.text = "The crew are seeing to it."
 	create_tween().tween_property(self, "_drop", 0.0, 0.2)
+
+
+## A ship's order for the round, under its plate while the crew plan: what it
+## will do, where its aim landed (a critical in gold: half a crossfire), and a
+## crew order with who it is for. "Choosing" until it is in.
+func _order_chip(at: Vector2, s: Dictionary) -> void:
+	var pl: Dictionary = Js.obj(Js.obj(_latest.get("plans")).get(s.get("key")))
+	var txt: String = "Choosing"
+	var col: Color = Color(CREAM, 0.55)
+	var crit: bool = false
+	if not pl.is_empty():
+		var act: String = str(pl.get("action", ""))
+		txt = { "fire": "Fire", "volley": "Volley", "reload": "Reload", "dodge": "Dodge", "flee": "Flee" }.get(act, str(Js.obj(s.get("mega")).get("name", "Mega")))
+		if act in ["fire", "volley", "mega"]:
+			var aim: String = str(pl.get("aim", ""))
+			crit = aim == "critical"
+			txt += "  ·  " + ("Critical" if crit else aim.capitalize())
+		var ab: Dictionary = Js.obj(pl.get("ability"))
+		if not ab.is_empty():
+			for c: Dictionary in s["crew"]:
+				if c["id"] == ab["crew"]:
+					txt += "  +  %s" % c["name"]
+			var ti: int = int(Js.nz(ab.get("target"), -1.0))
+			if ti >= 0 and ti < (b["seats"] as Array).size() and b["seats"][ti] != s:
+				txt += " for %s" % ("you" if ti == me else str(b["seats"][ti]["name"]))
+		col = Color(1.0, 0.85, 0.35) if crit else CREAM
+	var f: Font = Kit.font("karla", 800)
+	var w: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 20.0
+	var r: Rect2 = Rect2(at - Vector2(w / 2.0, 0), Vector2(w, 22))
+	draw_rect(r, Color(0.1, 0.08, 0.07, 0.85))
+	draw_rect(r, Color(BRASS, 0.9) if crit else Color(CREAM, 0.2), false, 1.5 if crit else 1.0)
+	draw_string(f, Vector2(r.position.x + 10, r.position.y + 15), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
+
+
+## While choosing: a crewmate's critical already in is half a crossfire.
+func _xfire_hint() -> void:
+	if table == null or not _alive_me() or Battle.alive(b).size() < 2:
+		return
+	var plans: Dictionary = Js.obj(_latest.get("plans"))
+	if plans.has(my_key):
+		return
+	var names: Array = []
+	for st: Dictionary in Battle.alive(b):
+		var pl: Dictionary = Js.obj(plans.get(st.get("key")))
+		if st.get("key") != my_key and str(pl.get("aim", "")) == "critical" and str(pl.get("action", "")) in ["fire", "volley", "mega"]:
+			names.append(str(st["name"]))
+	if not names.is_empty():
+		_log_line("%s landed a critical. Land one too for a crossfire." % " and ".join(PackedStringArray(names)))
+	else:
+		_log_line("Crossfire: two or more criticals in one round hit harder.")
