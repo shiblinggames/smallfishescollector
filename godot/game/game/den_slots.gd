@@ -143,6 +143,7 @@ func spin() -> void:
 	for r: Reel in _reels:
 		r.lit = false
 	den.paint_purse(chips - _bet)
+	den.fly_chips(Vector2.ZERO, _bet, false, (_reels[1] as Reel).get_global_rect().get_center())
 	var r: Dictionary = await session.act("spinSlots", [_bet])
 	if r.has("error"):
 		den.toast(str(r["error"]), DenRoom.RED)
@@ -185,27 +186,34 @@ func _show(outcome: String, payout: float, sym: Variant, reels: Array, bonus: bo
 				r.lit = true
 			Sound.chest(true)
 			Rumble.buzz([0, 60, 40, 80, 40, 120])
-			_burst(60)
+			_burst(40)
+			den.fly_chips(_win_from(), payout)
 		"win":
 			_says.text = "Three %s!   +%s" % [_label(str(sym if sym != null else reels[0])), Js.thousands(payout)]
 			_light(reels, str(sym if sym != null else reels[0]))
 			Sound.chest(false)
-			_burst(24)
+			_burst(10)
+			den.fly_chips(_win_from(), payout)
 		"pair_win", "pair":
 			_says.text = "Two %s   +%s" % [_label(str(sym)), Js.thousands(payout)]
 			_light(reels, str(sym))
 			Sound.perfect()
-			_burst(10)
+			den.fly_chips(_win_from(), payout)
 		"refund":
 			_says.text = "Two hooks: your bet back"
 			_light(reels, "anchor")
 			Sound.plip()
+			den.fly_chips(_win_from(), payout)
 		"near_miss":
 			_says.text = "Two sardines. So close."
 		_:
 			_says.text = ""
 	if _says.text != "":
 		_pop(_says)
+
+
+func _win_from() -> Vector2:
+	return (_reels[1] as Reel).get_global_rect().get_center()
 
 
 func _light(reels: Array, sym: String) -> void:

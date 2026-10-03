@@ -604,6 +604,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   seen at once); everyone is paid at the end. Outside a Charter the games are the solo ones.
   tests/den_tables_check.gd: a Charter with two captains, 12 spins and 40 hands, every chip
   accounted for.
+  REAL CHIPS (Kong, 2026-10-03: "actual chips that get animated, different stack tiers; seeing
+  the chips add to your stack"): painted wooden tavern chips from one Kie.ai sheet so they
+  match (web/public/den/chip-10/25/50/100/250/500: bone, coral, sea blue, kelp, charcoal,
+  purple), keyed by distance from pure magenta (the usual hue key ate the purple), and four
+  stack tiers (den/stack-1..4: a short stack, a tall one, two, a heap). DenRoom: your stack
+  stands by the chip count and changes tier as it grows (under 500, 2,500, 10,000, then the
+  heap) with a pop; fly_chips() sends an amount as chips (biggest first, up to 14) arcing out
+  of the stack to a bet or back into it from a win, each landing with a tick and the stack
+  giving under it. Used by every game (a slot's stake and wins, each roulette chip placed and
+  every winning spot paying back, blackjack's bet and its return, solo and at the shared
+  table). The roulette board draws the painted chips (the others' ringed in their colour).
+  GOTCHA: a texture first loaded inside _draw is white until the next frame; load ahead.
 - TRIVIA IN THE PORT (Kong, 2026-10-03, SETTLED; not built yet): the port has no server to
   generate questions nightly, so it ships a QUESTION BANK, rotated by day: the questions the web
   has already generated PLUS a freshly written set. Some bank questions double as TREASURE

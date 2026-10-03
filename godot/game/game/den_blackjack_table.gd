@@ -115,6 +115,10 @@ func _ready_up() -> void:
 	var r: Dictionary = await session.act("denTable", ["blackjack", "ready", _bet])
 	if r.has("error"):
 		den.toast(str(r["error"]), DenRoom.RED)
+		return
+	var me: String = DenTables.live.my_key()
+	if _seat_ui.has(me):
+		den.fly_chips(Vector2.ZERO, _bet, false, (_seat_ui[me]["box"] as Control).get_global_rect().get_center())
 
 
 func _move(m: String) -> void:
@@ -219,6 +223,13 @@ func _apply(st: Dictionary) -> void:
 	if st["phase"] == "result" and _paid_round != int(st["round"]):
 		_paid_round = int(st["round"])
 		var mine: Dictionary = Js.obj(st["seats"].get(me))
+		if mine.get("playing", false) and _seat_ui.has(me):
+			var staked: float = 0.0
+			for h: Dictionary in mine["hands"]:
+				staked += float(h["wager"])
+			var back: float = staked + float(mine["net"])
+			if back > 0.0:
+				den.fly_chips((_seat_ui[me]["box"] as Control).get_global_rect().get_center(), back)
 		if mine.get("playing", false):
 			if float(mine["net"]) > 0.0:
 				Sound.chest(false)

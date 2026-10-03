@@ -168,6 +168,9 @@ func _shared_spin(res: Dictionary, st: Dictionary) -> void:
 		parts.append("%s %s%s" % [who, "+" if net >= 0.0 else "-", Js.thousands(absf(net))])
 	_says.text = "%d, %s.   %s" % [n, _pocket_name(n), "   ".join(PackedStringArray(parts))]
 	if not mine.is_empty() and not mine.has("error"):
+		var wk: Array = Js.list(mine.get("won"))
+		if not wk.is_empty() and float(mine["payout"]) > 0.0:
+			den.fly_chips(_board.cell_center(str(wk[0])), float(mine["payout"]))
 		if float(mine["net"]) > 0.0:
 			Sound.chest(false)
 			Rumble.buzz([0, 40, 30, 60])
@@ -217,7 +220,7 @@ func place(type: String, target: Variant) -> void:
 		den.toast("%s chips is the most on one spot" % Js.thousands(cap), DenRoom.RED)
 		return
 	_bets[key] = { "type": type, "target": target, "amount": have + _chip }
-	Sound.xp_tick()
+	den.fly_chips(Vector2.ZERO, _chip, false, _board.cell_center(key))
 	_changed()
 
 
@@ -284,6 +287,9 @@ func spin() -> void:
 			won.append("%s|%s" % [pb["bet"]["type"], JsJson.stringify(pb["bet"]["target"])])
 	_board.won = won
 	_board.queue_redraw()
+	for pb: Dictionary in r["perBet"]:
+		if pb["won"]:
+			den.fly_chips(_board.cell_center("%s|%s" % [pb["bet"]["type"], JsJson.stringify(pb["bet"]["target"])]), float(pb["payout"]))
 	var name: String = _pocket_name(n)
 	if float(r["net"]) > 0.0:
 		_says.text = "%d, %s.  +%s" % [n, name, Js.thousands(float(r["totalPayout"]))]
@@ -442,6 +448,7 @@ class Board:
 		mouse_filter = Control.MOUSE_FILTER_STOP
 		resized.connect(_layout)
 		_layout()
+		get_tree().process_frame.connect(queue_redraw, CONNECT_ONE_SHOT)
 
 	func _layout() -> void:
 		_cells.clear()
@@ -470,6 +477,13 @@ class Board:
 			var colr: Color = DenRoulette.POCKET_RED if o[1] == "red" else (DenRoulette.POCKET_BLACK if o[1] == "black" else Color(0, 0, 0, 0))
 			_cells.append({ "r": Rect2(zero_w + k * ow, y3, ow, h - y3), "type": o[0], "target": o[1], "text": o[2], "col": colr })
 		queue_redraw()
+
+	## A spot's middle on the screen, by its key ("type|target").
+	func cell_center(key: String) -> Vector2:
+		for cell: Dictionary in _cells:
+			if "%s|%s" % [cell["type"], JsJson.stringify(cell["target"])] == key:
+				return get_global_transform() * (cell["r"] as Rect2).get_center()
+		return get_global_rect().get_center()
 
 	func _gui_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
@@ -506,20 +520,19 @@ class Board:
 				for ob: Dictionary in o["bets"]:
 					if "%s|%s" % [ob["type"], JsJson.stringify(ob["target"])] == key:
 						var op: Vector2 = r.get_center() + Vector2(-r.size.x * 0.22 + oi * 6.0, r.size.y * 0.12)
-						draw_circle(op + Vector2(1, 2), 9.0, Color(0, 0, 0, 0.3))
-						draw_circle(op, 9.0, o["color"])
-						draw_arc(op, 6.5, 0.0, TAU, 16, Color(1, 1, 1, 0.75), 1.2, true)
+						draw_circle(op + Vector2(0, 1), 12.0, o["color"])
+						draw_texture_rect(DenRoom.chip_tex(float(ob["amount"])), Rect2(op - Vector2(11, 9.5), Vector2(22, 19)), false)
 						oi += 1
 			# The chips on it.
 			if bets.has(key):
 				var amt: float = float(bets[key]["amount"])
 				var cpos: Vector2 = r.get_center() + Vector2(r.size.x * 0.22, -r.size.y * 0.18)
 				var stack: int = clampi(int(amt / 25.0) + 1, 1, 5)
-				for s: int in stack:
-					var sp: Vector2 = cpos + Vector2(0, -s * 3.0)
-					draw_circle(sp + Vector2(1, 2), 11.0, Color(0, 0, 0, 0.3))
-					draw_circle(sp, 11.0, Color(0.85, 0.66, 0.2))
-					draw_arc(sp, 8.0, 0.0, TAU, 20, Color(1, 1, 1, 0.7), 1.5, true)
+				var each: Array = DenRoom.breakdown(amt, 5)
+				for s: int in each.size():
+					var sp: Vector2 = cpos + Vector2(0, -s * 4.0)
+					draw_texture_rect(DenRoom.chip_tex(float(each[s])), Rect2(sp - Vector2(14, 12), Vector2(28, 24)), false)
+				stack = each.size()
 				var at: String = Js.thousands(amt)
 				var aw: float = small.get_string_size(at, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 				draw_string(small, cpos + Vector2(-aw / 2.0, -stack * 3.0 + 4.0), at, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.25, 0.15, 0.03))

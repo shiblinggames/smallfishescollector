@@ -154,6 +154,7 @@ func deal() -> void:
 	_busy = true
 	_clear_table()
 	den.paint_purse(chips - _bet)
+	den.fly_chips(Vector2.ZERO, _bet, false, _hands_box.get_global_rect().get_center())
 	var r: Dictionary = await session.act("dealBlackjack", [_bet])
 	if r.has("error"):
 		den.toast(str(r["error"]), DenRoom.RED)
@@ -290,6 +291,11 @@ func _render(r: Dictionary, animate: bool) -> void:
 		w.scale = Vector2(1.3, 1.3)
 		w.create_tween().tween_property(w, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	var net: float = float(res["netDelta"])
+	var back: float = 0.0
+	for h: Dictionary in hands:
+		back += float(h["payout"])
+	if back > 0.0:
+		den.fly_chips(_hands_box.get_global_rect().get_center(), back)
 	if net > 0.0:
 		Sound.chest(hands.any(func(h: Dictionary) -> bool: return h["outcome"] == "blackjack"))
 		Rumble.buzz([0, 40, 30, 60])
