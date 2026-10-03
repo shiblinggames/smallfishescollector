@@ -51,6 +51,9 @@ var water: Dictionary = {}
 ## change of boat): the level bar reads Navigation and the bottom row is the
 ## expedition's, not fishing's.
 var expedition: bool = false
+var _story: StoryLine
+var _story_st: Dictionary = {}
+var _finn_arrow: FinnArrow
 var _bottom_fish: HBoxContainer
 var _bottom_exp: HBoxContainer
 var _crew_val: Label
@@ -142,6 +145,13 @@ func _ready() -> void:
 	_place(_xp, Vector2(0.5, 0.0), Vector2(-320, 12), Vector2(640, 40))
 	add_child(_xp)
 	_xp.pressed.connect(open_guide)
+	# The story line under it (The Long Cast), and the arrow to Finn.
+	_story = StoryLine.new()
+	_place(_story, Vector2(0.5, 0.0), Vector2(-StoryLine.W / 2.0, 64), Vector2(StoryLine.W, 52))
+	add_child(_story)
+	_finn_arrow = FinnArrow.new()
+	add_child(_finn_arrow)
+	move_child(_finn_arrow, 0)
 	var purse_row: HBoxContainer = HBoxContainer.new()
 	purse_row.add_theme_constant_override("separation", 10)
 	purse_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -457,6 +467,7 @@ func set_side(on_expedition: bool, animate: bool = false) -> void:
 	if expedition == on_expedition:
 		return
 	expedition = on_expedition
+	set_story(_story_st)
 	var going: HBoxContainer = _bottom_exp if not expedition else _bottom_fish
 	var coming: HBoxContainer = _bottom_exp if expedition else _bottom_fish
 	_update_action()
@@ -871,6 +882,35 @@ func _press_reach() -> void:
 	if _modal != null or not _reach_btn.visible or not _reach_act.is_valid():
 		return
 	_reach_act.call()
+
+
+## The Long Cast's line under the level bar, from finnState ({} for none).
+## Only on the fishing side.
+func set_story(st: Dictionary) -> void:
+	_story_st = st
+	if expedition:
+		_story.visible = false
+		return
+	_story.apply(st)
+
+
+## Finn's place on the screen (null when there is none to point at) and his
+## mark: the arrow at the edge when he has something and is off the screen.
+func finn_arrow(at: Variant, mark: String) -> void:
+	_finn_arrow.target = null if expedition or _modal != null else at
+	_finn_arrow.mark = mark
+
+
+## A job handed back: its XP pours into the level bar from the slip.
+func story_pour(xp: float, from: Vector2) -> void:
+	_xp.gain(xp, from, 3.0)
+	refresh()
+
+
+## After Finn's scene: a level crossed by a job's XP gets the level card.
+func after_story() -> void:
+	if session.level() > _level_seen:
+		_after_catch(true)
 
 
 ## A panel or room from the sea (ashore, a buyer, the Market) holds the HUD

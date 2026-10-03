@@ -267,6 +267,28 @@ static func horn() -> void:
 		return _render([[98.0, 0.0, 0.22, 0.28, 2.4, "triangle"], [98.7, 0.0, 0.16, 0.3, 2.3, "triangle"], [196.0, 0.02, 0.07, 0.3, 1.9, "sine"], [294.0, 0.04, 0.035, 0.3, 1.5, "sine"]], 2.6), 1.5)
 
 
+## A STAMP ON FINN'S SLIP: a dull thump of a stamp on paper; with wax (a
+## job handed back), a bright two-note chime over it, its own sound and not
+## the level's.
+static func seal(wax: bool) -> void:
+	_play_made("seal%s" % wax, func() -> AudioStreamWAV:
+		var v: Array = [[92.0, 0.0, 0.34, 0.004, 0.22, "triangle"], [184.0, 0.0, 0.12, 0.003, 0.12, "sine"]]
+		if wax:
+			v.append([1046.5, 0.07, 0.12, 0.006, 0.9, "sine"])
+			v.append([1568.0, 0.16, 0.11, 0.006, 1.1, "sine"])
+			v.append([3136.0, 0.16, 0.025, 0.004, 0.5, "sine"])
+		return _render(v, 1.4), 1.3)
+
+
+## A catch that counts toward Finn's job: a small pluck, a semitone higher
+## for each step nearer done (step 0 to 12), so the last few climb.
+static func job_tick(step: int) -> void:
+	var k: int = clampi(step, 0, 12)
+	_play_made("jobtick%d" % k, func() -> AudioStreamWAV:
+		var f: float = 587.33 * pow(2.0, k / 12.0)
+		return _render([[f, 0.0, 0.1, 0.003, 0.28, "sine"], [f * 2.0, 0.0, 0.03, 0.003, 0.16, "sine"]], 0.4), 1.0)
+
+
 ## The harbour bell: 660Hz with two inharmonic partials, ringing out.
 static func bell() -> void:
 	_play_made("bell", func() -> AudioStreamWAV:

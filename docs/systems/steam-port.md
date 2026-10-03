@@ -624,6 +624,24 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   buyers, regulars' moorings, currents and kelp, the traders' reach, the blooms and the sandy
   caustics; hotspots and bottles follow the rings. A chart saved on the old grid is carried
   over cell by cell (Explore.fog_decode). Never under parity (web tables alone).
+- THE LONG CAST, FINN'S CAMPAIGN AS THE MAIN STORY (Kong, 2026-10-02). Settled: the story
+  never gates anything; no story rewards beyond the jobs' own pay (flat XP, and the doubloons
+  the web's jobs already pay); "the Salt Road" is renamed: the panel is the JOURNAL (Story /
+  People tabs), the saga THE LONG CAST. Rules: core/finn.gd ports finnState, speakToFinn and
+  turnInFinnQuest (+ finnQuests' ladder, chapters, standing), parity-checked by a 623-call
+  session working all 32 jobs and the reveal ("finn" in shop.json). On the water:
+  game/finn_hull.gd (moored where the web moors him, widened with the sea; a gold ? when he
+  has a job your level reaches and none is open, a gold ! when one is done; gold means the
+  story only), game/finn_scene.gd (his lines typed one at a time; the job as a paper slip,
+  game/job_slip.gd, stamped TAKEN when taken and flown up to the story line, or sealed DONE in
+  wax when handed back, its XP poured into the level bar, then his next beat and the next
+  slip), game/story_line.gd (under the level bar: chapter, job, progress; each counting catch
+  sends a gold mote into it with a pluck a semitone higher, so the last few climb; the last
+  one presses a wax seal with its own chime and the line turns gold, "Back to Finn"), and
+  game/finn_arrow.gd (a gold chevron at the screen edge pointing to him while he has a mark).
+  His state is read off the local save each second (a crewmate's Charter never sends it).
+  NOT YET: the Journal, chapter open/close cards, the port-only job types, the per-chapter
+  moments on the water.
 - NORTH OF THE REEF, PLACES FIRST (Kong, 2026-10-02): game/north.gd, a port of chart.ts's
   reef, anchorage and Sea Gate and SeaMap's reefRocks/anchorageRocks (same seeds, so the same
   rock). THE PORT'S OWN ROCK (Kong, 2026-10-02: the web's pale side-on crags did not fit the

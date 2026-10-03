@@ -166,6 +166,8 @@ func _ready() -> void:
 		_world.add_child(b)
 		_buyers.append(b)
 	_moor_regulars()
+	_finn = FinnHull.new()
+	_world.add_child(_finn)
 	_portal = PortalWell.new()
 	_world.add_child(_portal)
 	_portal_state()
@@ -410,6 +412,7 @@ func _process(delta: float) -> void:
 	_weather(delta, now, cam_world)
 	_ship_side()
 	_passage(delta)
+	_finn_tick(delta)
 	_feed_berths(cam_world)
 	# Every hull's wake, laid on the water.
 	var contacts: Array = [_boat.wake_contact()]
@@ -514,6 +517,11 @@ func _reach(at: Vector2) -> void:
 			_hud.set_reach(("Speak to %s" if _dealt.has(b.info["zoneId"]) else "Hail %s") % b.info["name"], _hail.bind(b))
 			_mark.target = null
 			return
+	if _finn != null and _finn.near(at):
+		var ready: bool = _finn_st.get("questReady", false)
+		_hud.set_reach("Hand the job to Finn" if ready else "Talk to Finn", _open_finn)
+		_mark.target = null
+		return
 	for list: Dictionary in [_regulars, _strangers]:
 		for k: String in list:
 			var wn: Wanderer = list[k]
@@ -1078,6 +1086,59 @@ func _draw_north() -> void:
 		l.add_theme_constant_override("shadow_outline_size", 10)
 		holder.add_child(l)
 		l.position = Vector2(-l.get_minimum_size().x / 2.0, -30.0)
+
+
+## FINN (The Long Cast): his state read off the save each second (a pure
+## read of the local copy, so a crewmate's Charter never sends it), the mark
+## over him, the story line and the arrow to him.
+var _finn: FinnHull
+var _finn_st: Dictionary = {}
+var _finn_t: float = 99.0
+
+
+func _finn_tick(delta: float) -> void:
+	if _finn == null:
+		return
+	_finn_t += delta
+	if _finn_t >= 1.0:
+		_finn_t = 0.0
+		_finn_refresh()
+	var xf: Transform2D = _world.get_global_transform_with_canvas()
+	_hud.finn_arrow(null if North.is_north(_boat.position) else xf * _finn.position, _finn.mark)
+
+
+func _finn_refresh() -> void:
+	var r: Variant = Finn.state(session.store, session.uid)
+	if not (r is Dictionary):
+		return
+	_finn_st = r
+	var q: Variant = _finn_st.get("quest")
+	if _finn_st.get("questReady", false):
+		_finn.mark = "!"
+	elif q == null and not Finn.next_quest(Js.list(_finn_st.get("questsDone")), int(Js.num(_finn_st.get("fishingLevel")))).is_empty():
+		_finn.mark = "?"
+	else:
+		_finn.mark = ""
+	_hud.set_story(_finn_st)
+
+
+func _open_finn() -> void:
+	Rumble.tap(12)
+	_boat.velocity = Vector2.ZERO
+	_boat.target = null
+	_finn_refresh()
+	var sc: FinnScene = FinnScene.new()
+	sc.session = session
+	sc.st = _finn_st
+	sc.changed.connect(func() -> void:
+		session.persist()
+		_finn_refresh())
+	sc.paid.connect(func(xp: float, from: Vector2) -> void: _hud.story_pour(xp, from))
+	sc.closed.connect(func() -> void:
+		_finn_refresh()
+		_hud.after_story.call_deferred())
+	_hud.hold_for(sc)
+	_hud_layer.add_child(sc)
 
 
 ## THROUGH THE ARCH (Kong, 2026-10-02: make the crossing feel great), by

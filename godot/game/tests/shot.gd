@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -296,6 +296,61 @@ func _init() -> void:
 			sea._boat.target = Vector2(1400, 14300)
 			for f: int in 90:
 				await process_frame
+		"angler":
+			# Finn (The Long Cast). FINN_STEP: "sea" (him on the water with his
+			# mark, the story line), "talk" (the first meeting), "offer" (his
+			# lines run through to the slip), "half" (a job half done, the line
+			# under the level bar), "ready" (the job done: the slip and Hand it
+			# over), "sealed" (the seal pressed).
+			var step: String = OS.get_environment("FINN_STEP")
+			var h: Dictionary = Finn.haunt(0, 1)
+			sea._boat.position = Vector2(float(h["x"]) + 230.0, float(h["y"]) + 140.0)
+			var sv: Dictionary = sea.session.save
+			sv["profile"]["finn_encounters"] = 0
+			sv["profile"]["finn_seen_beats"] = []
+			sv["profile"]["finn_quest"] = null
+			sv["profile"]["finn_quests_done"] = []
+			sv["profile"]["finn_revealed"] = false
+			if step in ["half", "ready", "sealed"]:
+				Finn.speak(sea.session.store, sea.session.uid, 0.0)
+				var sp: Dictionary = {}
+				for f: Dictionary in sv["species"]:
+					if f["habitat"] == "shallows":
+						sp = f
+						break
+				var lt: Dictionary = sv["lifetime"]
+				var k: String = Js.key(sp["id"])
+				var n0: float = Js.num((lt.get(k, {}) as Dictionary).get("n"))
+				lt[k] = { "n": n0 + (5.0 if step == "half" else 8.0), "last": "2026-10-01T00:00:00.000Z" }
+			for f: int in 70:
+				await process_frame
+			if step in ["talk", "offer", "ready", "sealed"]:
+				sea._open_finn()
+				for f: int in 40:
+					await process_frame
+				var sc: FinnScene = null
+				for c: Node in sea._hud_layer.get_children():
+					if c is FinnScene:
+						sc = c
+				if step == "offer":
+					for i: int in 12:
+						sc._line.finish()
+						await process_frame
+						if not sc._queue.is_empty():
+							sc._next_line()
+						for f: int in 4:
+							await process_frame
+					for f: int in 40:
+						await process_frame
+				elif step == "sealed":
+					for f: int in 30:
+						await process_frame
+					sc._turn_in()
+					for f: int in 26:
+						await process_frame
+				else:
+					for f: int in 160:
+						await process_frame
 		"crossing":
 			# North through the arch and back (run with --write-movie): the
 			# boat changes, the row changes, the name over the water.
