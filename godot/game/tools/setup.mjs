@@ -58,7 +58,7 @@ const ART = [
   // The campaign's water: the bays' island plates, the bosses' portraits, the
   // nodes' pictures and the story scenes' backdrops.
   'sea/bay-*.webp', 'scenes', 'Captainkrust.png', 'quartermasterghost.png', 'raid4_tollmasterspet.png', 'raid5_*.png', 'raid6_*.png', 'raid7_*.png', 'raid8_*.png',
-  'finn_final.png', 'raidlog.png', 'bilge_eel.png', 'krust_soldier.png',
+  'finn_final.png', 'raidlog.png', 'bilge_eel.png', 'krust_*.png', 'raid4_*.png',
   // Achievements: every badge's art (256 px).
   'badges',
   'tackle-shop-page-bg.jpg', 'monofilament.png', 'braidedline.png', 'copolymer.png', 'fluorocarbon.png', 'titaniumwire.png', 'deepsealine.png',

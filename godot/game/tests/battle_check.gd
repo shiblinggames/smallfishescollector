@@ -172,6 +172,15 @@ func _init() -> void:
 				stuck += 1
 		print("  %s, 1 strong captain: %d%% won" % [rid, int(100.0 * wins2 / runs2)])
 		check(stuck == 0, "%s always ends (%d stuck)" % [rid, stuck])
+	# Every enemy's portrait and ship art is in the port (tools/setup.mjs ART):
+	# a missing one falls back to the ship on its card and plate.
+	var raids: Variant = Rules.data()["raids"]
+	for raid: Variant in (raids.values() if raids is Dictionary else raids):
+		for en: Variant in Js.obj(Js.obj(raid).get("enemies")).values():
+			for k: String in ["portrait", "image"]:
+				var u: String = str(Js.obj(en).get(k, ""))
+				if u != "" and u != "<null>":
+					check(ResourceLoader.exists("res://art/" + u.trim_prefix("/")), "%s's %s is in art/ (%s)" % [Js.obj(en).get("name", "?"), k, u])
 	print("  battle check: %s" % ("ok" if bad == 0 else "%d FAILED" % bad))
 	quit(0 if bad == 0 else 1)
 
