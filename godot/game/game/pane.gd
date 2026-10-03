@@ -23,6 +23,8 @@ extends PanelContainer
 const SHADER: Shader = preload("res://game/pane.gdshader")
 
 var spec: Dictionary = {}
+## The spec as given (before it was made paper), to repaint it by.
+var raw: Dictionary = {}
 var _mat: ShaderMaterial
 
 
@@ -35,10 +37,15 @@ func _init(s: Dictionary = {}) -> void:
 
 
 func set_spec(s: Dictionary) -> void:
+	raw = s
 	s = Pane.paperize(s)
 	spec = s
 	Pane.apply(_mat, s)
-	if s.get("paper", false):
+	set_meta("night", s.get("night", false) == true)
+	if s.get("night", false):
+		# Night paper keeps its words light: they are not inked dark.
+		set_meta("paper", false)
+	elif s.get("paper", false):
 		set_meta("paper", true)
 	elif s.get("keep", false) and s.has("grain"):
 		set_meta("paper", false)
@@ -64,7 +71,24 @@ func set_spec(s: Dictionary) -> void:
 	queue_redraw()
 
 
+## Is this under a root that has gone to the night paper (Pane.set_night)?
+static func night_root(n: Node) -> bool:
+	var p: Node = n.get_parent()
+	var hops: int = 0
+	while p != null and hops < 30:
+		if p.has_meta("night_root"):
+			return p.get_meta("night_root") == true
+		p = p.get_parent()
+		hops += 1
+	return false
+
+
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_ENTER_TREE and not raw.get("keep", false) and not (get_parent() is PaneButton) and raw.get("night", false) != Pane.night_root(self) and Pane.night_root(self):
+		var r0: Dictionary = raw.duplicate()
+		r0["night"] = true
+		set_spec(r0)
+		return
 	if what == NOTIFICATION_ENTER_TREE and not spec.get("paper", false) and not spec.get("keep", false) and not spec.get("_force", false):
 		var top: float = 0.0
 		for f: Variant in spec.get("fill", []):
@@ -110,9 +134,21 @@ static func reach(s: Dictionary) -> float:
 ## PAPER (2026-10-01): a dark, solid fill is a panel, and panels are paper
 ## now. Its stops become paper (a tinted stop, paper washed with that tint),
 ## light hairlines become ink, shadows soften, sheens and inner glows go. A
-## spec with "keep" (a wash over art, the wood) is left alone.
+## spec with "keep" (a wash over art, the wood) is left alone. A spec with
+## "night" becomes the expedition side's tarred night paper instead, inked in
+## cream (Paper.NIGHT_PAPER).
 static func paperize(s: Dictionary) -> Dictionary:
-	if s.get("keep", false) or s.get("paper", false):
+	if s.get("keep", false):
+		return s
+	if s.get("paper", false):
+		# Already paper: on the night side its sheet is the night paper.
+		if s.get("night", false) and not s.has("_day"):
+			var n: Dictionary = s.duplicate(true)
+			n["fill"] = [Paper.NIGHT_PAPER]
+			for key: String in ["border", "top"]:
+				if n.get(key) != null:
+					n[key] = [n[key][0], Color(Paper.NIGHT_INK_FAINT, 0.5)]
+			return n
 		return s
 	var fill: Array = s.get("fill", [Color(0.05, 0.07, 0.09)])
 	var dark: bool = s.get("_force", false)
@@ -124,13 +160,15 @@ static func paperize(s: Dictionary) -> Dictionary:
 		return s
 	var out: Dictionary = s.duplicate(true)
 	var stops: Array = []
+	var base: Color = Paper.NIGHT_PAPER if s.get("night", false) else Kit.PAPER
+	var hair: Color = Paper.NIGHT_INK_FAINT if s.get("night", false) else Kit.PAPER_INK
 	for f: Variant in fill:
 		var c: Color = f[0] if f is Array else f
 		var pc: Color
 		if c.get_luminance() < 0.22:
-			pc = Kit.PAPER.darkened(clampf(0.1 - c.get_luminance(), 0.0, 0.06))
+			pc = base.darkened(clampf(0.1 - c.get_luminance(), 0.0, 0.06)) if base == Kit.PAPER else base.lightened(clampf(c.get_luminance() * 0.6, 0.0, 0.08))
 		else:
-			pc = Kit.PAPER.lerp(Color(c, 1.0), clampf(c.a * 1.4, 0.0, 0.45))
+			pc = base.lerp(Color(c, 1.0), clampf(c.a * 1.4, 0.0, 0.45))
 		pc.a = maxf(0.97, c.a) if c.a > 0.3 else 0.97
 		stops.append([pc, float(f[1])] if f is Array else pc)
 	out["fill"] = stops
@@ -138,7 +176,7 @@ static func paperize(s: Dictionary) -> Dictionary:
 		var b: Variant = out.get(key)
 		if b != null:
 			var bc: Color = b[1]
-			out[key] = [b[0], Color(Kit.PAPER_INK, clampf(bc.a * 2.4, 0.18, 0.55)) if bc.s < 0.25 else Color(Kit.ink(Color(bc, 1.0)), clampf(bc.a * 1.4, 0.35, 0.85))]
+			out[key] = [b[0], Color(hair, clampf(bc.a * 2.4, 0.18, 0.55)) if bc.s < 0.25 else Color(Kit.ink(Color(bc, 1.0)), clampf(bc.a * 1.4, 0.35, 0.85))]
 	var sh: Variant = out.get("shadow")
 	if sh != null:
 		out["shadow"] = [Color(0, 0, 0, minf(0.3, Color(sh[0]).a * 0.5)), sh[1], sh[2] if (sh as Array).size() > 2 else Vector2.ZERO]
@@ -232,7 +270,60 @@ class PaneButton:
 		focus_entered.connect(func() -> void: _bg.set_spec(hot))
 		focus_exited.connect(func() -> void: _bg.set_spec(normal))
 
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_ENTER_TREE and Pane.night_root(self) and normal.get("night", false) != true:
+			var nm: Dictionary = normal.duplicate()
+			var ht: Dictionary = hot.duplicate()
+			nm["night"] = true
+			ht["night"] = true
+			restyle(nm, ht)
+			set_meta("night", true)
+			if not has_meta("day_font"):
+				set_meta("day_font", get_theme_color("font_color"))
+			var col: Color = Kit.night_ink(get_meta("day_font"))
+			for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+				add_theme_color_override(st, col)
+
 	func restyle(n: Dictionary, h: Dictionary = {}) -> void:
 		normal = n
 		hot = h if not h.is_empty() else n
 		_bg.set_spec(normal)
+
+
+
+## THE SIDE OF THE REEF (Kong, 2026-10-03: expedition menus are the dark night
+## paper, fishing's the day's): every pane and pane button under `root` is
+## repainted on the night paper (on) or the day's (off), and every word on
+## them re-inked to match.
+static func set_night(root: Node, on: bool) -> void:
+	root.set_meta("night_root", on)
+	for n: Node in root.find_children("", "Pane", true, false):
+		var pn: Pane = n
+		if pn.get_parent() is PaneButton and (pn.get_parent() as PaneButton)._bg == pn:
+			continue
+		if pn.raw.get("keep", false):
+			continue
+		var r: Dictionary = pn.raw.duplicate()
+		r["night"] = on
+		pn.set_spec(r)
+	for n: Node in root.find_children("", "Button", true, false):
+		if n is PaneButton:
+			var b: PaneButton = n
+			var nm: Dictionary = b.normal.duplicate()
+			var ht: Dictionary = b.hot.duplicate()
+			nm["night"] = on
+			ht["night"] = on
+			b.restyle(nm, ht)
+			if b._bg.has_meta("paper"):
+				b.set_meta("paper", b._bg.get_meta("paper"))
+			b.set_meta("night", on)
+			# The button's own words: kept for the day, lightened for the night.
+			if not b.has_meta("day_font"):
+				b.set_meta("day_font", b.get_theme_color("font_color"))
+			var day: Color = b.get_meta("day_font")
+			var col: Color = Kit.night_ink(day) if on else day
+			for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+				b.add_theme_color_override(st, col)
+	for n: Node in root.find_children("", "Label", true, false):
+		if n.has_meta("raw_ink"):
+			Kit._settle(n as Label)

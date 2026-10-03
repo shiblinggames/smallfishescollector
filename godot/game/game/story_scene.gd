@@ -27,6 +27,9 @@ var node: Dictionary = {}
 var allow_skip: bool = false
 ## The words on the last line's button.
 var cta: String = "Log it"
+## Played over a fight on the water: no backdrop of its own, the sea shows
+## through under the vignette.
+var over_water: bool = false
 
 var _lines: Array = []
 var _i: int = -1
@@ -62,7 +65,7 @@ func _ready() -> void:
 	if node.get("sceneAccent") != null:
 		_accent = Color(str(node["sceneAccent"]))
 	var base: ColorRect = ColorRect.new()
-	base.color = Color("#07090d")
+	base.color = Color("#07090d") if not over_water else Color(0.02, 0.03, 0.05, 0.35)
 	base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(base)

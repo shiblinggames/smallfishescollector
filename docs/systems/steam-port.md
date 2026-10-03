@@ -661,6 +661,37 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   count in a fight (Battle.seat_for: hpMult, speedFlat, damageMult; RaidRun: doubloonMult on
   kills and the crate), and a clear is a raidClears row with its time (raidLocal addClear); the
   Reef Skirmish sets has_completed_practice_raid instead (recordSkirmishClear).
+- THE ENEMIES' WAYS, TIDES AND RAID ITEMS, BUILT (2026-10-03; core/battle.gd, core/armory.gd).
+  ENEMIES: affixes (a named hand's baked one; a challenge run rolls two elites with one each,
+  HP x1.5 and damage x1.25; the Quartermaster's challenge merges a second onto every baked
+  one), Carapace (a slice off a single shot), the riposte (a parry that cuts back; the Riposte
+  affix), the shark's bite (a landed shot knocks a ball loose), aim afflictions (the zone's
+  speed stack up to x4, a drifting crit seam, fog, a false court of decoy bands where locking on
+  one fumbles for a chip of hull, iron shutters the first press only cracks, a squall pitching
+  the needle), the flare barrage every third turn (a swatting game: real flares on fuses, live
+  iron shells at tier three), a boss's off-turn ability once a phase two to four turns in (the
+  Maw's lunge, the Wake's flurry at every ship, Old Armour's heal and barrier, foresight, the
+  vengeance ward that holds it up once at a fifth and then hits a quarter harder, the requiem's
+  mark on every ship), the Last Wall (blows only crack it; a volley twice), phase mitigation,
+  burn and freeze both ways, Ironclad, Vampiric, Volatile, Fleet, Frenzied, Reflective,
+  Resilient, Marksman, Scorching, Glacial, Warded, Yawing. TIDES: drawn at the start
+  (drawTides), offered after the slotted kills, EACH CAPTAIN CHOOSES THEIR OWN and the effects
+  ride on their ship (the ones that shrink the next enemy multiply across the line); the
+  Throne's reprieve before the don. RAID ITEMS: the Gunwharf's Armory tab (mounts, the hold,
+  conflicts) and Refits tab (the Sixth Berth, the Expanded Armory); saveEquippedRaidItems,
+  buySixthBerth and buyArmoryExpansion ported with parity (campaign.json "the armory"); every
+  effect type in a fight except the Primeval Maw's charged ones; the Quartermaster repossesses
+  one item a fight; the drum family's rally is a free action (key 5). The boss's pre-fight
+  words play over the water as a scene. A bot with a late loadout clears the campaign's raids
+  except the Throne and the Hand (tests/battle_check.gd). NOT YET: flee, the Mega augment.
+  THE LOOK (Godot over the web): fire on a hull (flames, embers, smoke, a warm light on the
+  water), a frost crust and ice shards, a dome of light for a shield, the ward's runes turning
+  on the water, foresight's eye over the masthead, the Last Wall as iron plates rising from
+  the sea that crack and burst, the boss's summon breaching beside it in its colour (cut at the
+  waterline) and lunging, the flare sky, the tide card, and the battle deck on the night paper.
+  THE TWO PAPERS, FINISHED: Pane.set_night repaints the whole HUD on the night paper north of
+  the reef (Pane "night" specs, Kit.night_ink for words written in day ink); anything added
+  later under it lands on the night paper too.
 - THE CAMPAIGN'S WATER, BUILT (2026-10-03). RULES: core/campaign.gd ports computeRaidMap,
   chapterForNode, buildClearedSetVia and all of lib/core/raidMap (the view, chapter unlocks seen,
   tolls, story reads with the legendary gates, puzzles, the caches, the muster, events, dice,

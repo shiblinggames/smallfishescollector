@@ -641,6 +641,40 @@ func _init() -> void:
 			var step: String = OS.get_environment("BATTLE_STEP")
 			if step == "auto":
 				bst.autoplay = true
+			# BATTLE_SHOW stages one moment: flares, summon, wall, tide, aim.
+			var show: String = OS.get_environment("BATTLE_SHOW")
+			if show != "":
+				for f: int in 170:
+					await process_frame
+				match show:
+					"flares":
+						bst.b["flares"] = { "name": "False Colors", "count": 9, "feint": 0.22, "cluster": 0.34, "fuse": 2.5, "per": 6.0 }
+						bst._flares()
+					"summon":
+						bst._summon({ "kind": "leviathan", "name": "The Primeval Maw", "image": "/fish/megalodon.png", "color": "#f87171", "hits": [{ "seat": 0, "dmg": 41.0, "hp": 30.0 }], "enemyHp": 100.0 })
+						for f: int in int(OS.get_environment("SHOT_F")):
+							await process_frame
+						root.get_texture().get_image().save_png(out)
+						print("  saved ", out)
+						quit()
+						return
+					"wall":
+						var en: Dictionary = bst.b["enemy"]
+						en["aegis"] = { "name": "The Last Wall", "left": 4.0, "of": 6.0 }
+						en["burn"] = { "turns": 2.0, "dmg": 6.0 }
+						en["ward"] = 2.0
+						bst.b["seats"][0]["shield"] = 20.0
+						bst.b["seats"][0]["freeze"] = 1.0
+					"tide":
+						bst._tide(Rules.data()["tides"]["pool"][int(OS.get_environment("TIDE_I")) if OS.get_environment("TIDE_I") != "" else 0], "A TIDE TURNS")
+					"aim":
+						bst.b["seats"][0]["charges"] = 3.0
+						bst.b["seats"][0]["afflict"] = { "kind": OS.get_environment("AIM_KIND") if OS.get_environment("AIM_KIND") != "" else "decoys", "passes": 2.0 }
+						bst.b["enemy"]["fog"] = 0.5
+						bst.b["enemy"]["critDrift"] = 0.5
+						while bst._busy:
+							await process_frame
+						bst._choose("fire")
 			for f: int in 150:
 				await process_frame
 			if step == "aim" or step == "round":
@@ -702,6 +736,17 @@ func _init() -> void:
 				sea._camera.zoom = Vector2.ONE * float(OS.get_environment("CAMP_ZOOM"))
 			for f: int in 40:
 				await process_frame
+			if OS.get_environment("GW_TAB") != "":
+				p["ship_tier"] = 6.0
+				p["raid_items"] = ["corsair_cannon", "corsair_prime_cannon", "navigators_compass", "gunners_sight", "reinforced_hull", "war_drum", "krusts_carapace", "the_standing_wall", "bloodletter", "leviathans_cannon", "chain_shot", "incendiary_cannonball"]
+				p["equipped_raid_items"] = ["the_standing_wall", "bloodletter", "gunners_sight"]
+				sea._dock("gunwharf")
+				for f: int in 5:
+					await process_frame
+				for n: Node in sea._room_layer.get_children():
+					if n is GunwharfSheet:
+						n._tab = OS.get_environment("GW_TAB")
+						n._paint()
 			if OS.get_environment("CAMP_CHART") != "":
 				sea._open_chart()
 				await process_frame

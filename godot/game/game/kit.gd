@@ -67,6 +67,33 @@ static func ink(c: Color) -> Color:
 	return Color.from_hsv(c.h, minf(1.0, c.s * 1.15), c.v * 0.5, c.a)
 
 
+## The colour a word takes on the night paper: dark inks come up to cream,
+## a coloured ink keeps its hue and is lifted.
+static func night_ink(c: Color) -> Color:
+	var l: float = c.get_luminance()
+	if l >= 0.5:
+		return c
+	if c.s < 0.28:
+		return Color(Paper.NIGHT_INK if l < 0.3 else Paper.NIGHT_INK_SOFT, c.a)
+	return Color.from_hsv(c.h, c.s * 0.8, maxf(0.82, c.v), c.a)
+
+
+## Whether a control sits on the night paper: the nearest ancestor that says.
+static func on_night(n: Node) -> bool:
+	var p: Node = n.get_parent()
+	var hops: int = 0
+	while p != null and hops < 24:
+		if p.has_meta("night") and p.get_meta("night") == true:
+			return true
+		if p.has_meta("paper") and p.get_meta("paper") == true:
+			return false
+		if p is CanvasLayer or p is Viewport:
+			return false
+		p = p.get_parent()
+		hops += 1
+	return false
+
+
 ## Whether a control sits on paper: the nearest ancestor that says.
 static func on_paper(n: Node) -> bool:
 	var p: Node = n.get_parent()
@@ -95,7 +122,7 @@ static func _settle(l: Label) -> void:
 	if l.has_meta("lifted") or not l.has_meta("raw_ink"):
 		return
 	var raw: Color = l.get_meta("raw_ink")
-	l.add_theme_color_override("font_color", ink(raw) if on_paper(l) else raw)
+	l.add_theme_color_override("font_color", night_ink(raw) if on_night(l) else (ink(raw) if on_paper(l) else raw))
 
 
 ## Rarity 1-5 (the catch card's palette; the market's near-copy is retired).

@@ -404,10 +404,10 @@ static func _place(c: Control, anchor: Vector2, offset: Vector2, size_px: Vector
 
 
 ## A menu button: its name small above, its value below.
-func _menu(parent: Control, key: String, on_press: Callable) -> Array:
+func _menu(parent: Control, key: String, on_press: Callable, night: bool = false) -> Array:
 	var b: Pane.PaneButton = Pane.PaneButton.new(
-		{ "radius": 10, "fill": [Color(0.024, 0.055, 0.086, 0.86)], "border": [1, Color(1, 1, 1, 0.16)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 3)], "pad": 0 },
-		{ "radius": 10, "fill": [Color(0.04, 0.08, 0.12, 0.92)], "border": [1, Color(1, 1, 1, 0.3)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 3)], "pad": 0 })
+		{ "radius": 10, "fill": [Color(0.024, 0.055, 0.086, 0.86)], "border": [1, Color(1, 1, 1, 0.16)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 3)], "pad": 0, "night": night },
+		{ "radius": 10, "fill": [Color(0.04, 0.08, 0.12, 0.92)], "border": [1, Color(1, 1, 1, 0.3)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 3)], "pad": 0, "night": night })
 	b.custom_minimum_size = Vector2(0, 54)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	Kit.tap(b)
@@ -439,9 +439,9 @@ func _build_expedition_row() -> void:
 	_bottom_exp.add_theme_constant_override("separation", 8)
 	_place(_bottom_exp, Vector2(0.5, 1.0), Vector2(-300, -72), Vector2(600, 54))
 	add_child(_bottom_exp)
-	var cv: Array = _menu(_bottom_exp, "Crew", func() -> void: expedition_wanted.emit("crew"))
+	var cv: Array = _menu(_bottom_exp, "Crew", func() -> void: expedition_wanted.emit("crew"), true)
 	_crew_val = cv[1]
-	var rv: Array = _menu(_bottom_exp, "Recruits", func() -> void: expedition_wanted.emit("recruits"))
+	var rv: Array = _menu(_bottom_exp, "Recruits", func() -> void: expedition_wanted.emit("recruits"), true)
 	_recruit_val = rv[1]
 	_recruit_dot = Control.new()
 	_recruit_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -453,7 +453,7 @@ func _build_expedition_row() -> void:
 			_recruit_dot.draw_circle(p, 7.0 + pulse * 2.0, Color(0.95, 0.72, 0.3, 0.25))
 			_recruit_dot.draw_circle(p, 5.0, Color(0.95, 0.72, 0.3)))
 	(rv[0] as Control).add_child(_recruit_dot)
-	var sv: Array = _menu(_bottom_exp, "Ship", func() -> void: expedition_wanted.emit("ship"))
+	var sv: Array = _menu(_bottom_exp, "Ship", func() -> void: expedition_wanted.emit("ship"), true)
 	_ship_val = sv[1]
 	_bottom_exp.visible = false
 
@@ -468,6 +468,8 @@ func set_side(on_expedition: bool, animate: bool = false) -> void:
 	if expedition == on_expedition:
 		return
 	expedition = on_expedition
+	# North of the reef the whole HUD is on the night paper.
+	Pane.set_night(self, expedition)
 	set_story(_story_st)
 	var going: HBoxContainer = _bottom_exp if not expedition else _bottom_fish
 	var coming: HBoxContainer = _bottom_exp if expedition else _bottom_fish
