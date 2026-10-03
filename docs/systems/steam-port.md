@@ -918,8 +918,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   dropped in tilted, the class's colour ringing out, a wax seal pressed with the new tier and
   the old Special struck through over the new one. Draws from the deep wait at the top of the
   room: the trait carried beside the trait offered, Take the new one / Keep theirs. Drills and
-  Stores are painted with the web's tiered crew/drill_N and stores_N, six pips, what the next
-  tier buys, its price or the hall tier it needs. tests/shot.gd crewbunks (BUNK_SHOW wake,
+  Stores are painted per tier for the port (Kong, 2026-10-03: the web's line art did not match
+  the painted bunks): web/public/crew/hall-drill-1..6 and hall-stores-1..6, Kie.ai, driftwood up
+  to leviathan bone like the hall; the web keeps its own drill_N and stores_N. Six pips, what
+  the next tier buys, its price or the hall tier it needs. tests/shot.gd crewbunks (BUNK_SHOW wake,
   promo, pick).
 - NOTICES (Kong, 2026-10-02): the free board each sunrise IS the Tavern Notice (port rules
   crewPort.freeWeights 76 / 22.3 / 1.7 / 0: an Epic on 5% of boards, never a Legendary). Two

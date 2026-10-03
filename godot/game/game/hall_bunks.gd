@@ -15,7 +15,8 @@ extends VBoxContainer
 ##   THE DEEP   the Leviathan bunk's draw, laid beside the trait the hand
 ##              carries: keep it or take it.
 ##   DRILLS / STORES  the two ladders, their paintings growing with the tier
-##              (the web's crew/drill_N and stores_N), with what the next buys.
+##              (crew/hall-drill-N and hall-stores-N, painted for the port in
+##              the bunks' style: driftwood up to bone), with what the next buys.
 
 const LEVIATHAN: Color = Color("#3fd6c4")
 const GOLD: Color = Color(0.98, 0.8, 0.38)
@@ -90,8 +91,8 @@ func _ladder(kind: String) -> Control:
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 12)
 	var art: TextureRect = TextureRect.new()
-	art.texture = Skipper.tex("crew/%s_%d.png" % ["drill" if drill else "stores", lv])
-	art.custom_minimum_size = Vector2(96, 96)
+	art.texture = Skipper.tex("crew/hall-%s-%d.png" % ["drill" if drill else "stores", lv])
+	art.custom_minimum_size = Vector2(120, 120)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	box.add_child(art)
