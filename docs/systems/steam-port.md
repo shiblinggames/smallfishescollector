@@ -1848,6 +1848,28 @@ its system's doc.
            crew wins. In a hardcore Charter it spends a life.
          - GAUNTLETS: the crew DIVES TOGETHER, with a shared run, shared boons and a joint
            cash-out decision. To be designed in detail.
+         - SETTLED 2026-10-03 (Kong, the expedition campaign sitting):
+           - ONE ENGINE, BUILT FOR PARTIES: the port rebuilds combat rather than copying the
+             web's 1v1 file (its rules are tangled in a 14,600-line React component with
+             unseeded dice, so parity cannot replay it). The web's NUMBERS are kept (damage,
+             the aim bar's zones, enemy stats, statuses, mechanic checks, tides); the
+             STRUCTURE is new: seeded dice, rules apart from the screen, each round resolved
+             into a list of events every captain's screen plays back. Solo is a party of one.
+           - THE ROUND: PLAN together (everyone picks an action and maybe a crew ability on a
+             short timer, ready-up ends it early), the BROADSIDE (ships fire in initiative
+             order along a turn-order strip), then the ENEMY'S TURN.
+           - THE BOSS'S TARGET STAYS HIDDEN until it fires (not telegraphed).
+           - A SEPARATE BATTLE SCREEN, because a raid and a gauntlet are a set run of enemies;
+             but the cut from the sea into it must be SEAMLESS (the same water, light and
+             weather carry over, the ships slide from where they were into their line).
+           - JOINING ONLY AT THE START OF A RAID: the Charter gathers when a raid begins; no one
+             joins a raid already under way.
+           - Proposed, not yet confirmed: boss HP x1, x1.8, x2.5, x3.2 for one to four
+             captains, a second boss attack a round at three or more, hits the same size.
+           - BUILD ORDER: solo combat for Pete's raid, fully animated; then the campaign map on
+             the anchorage side (every node kind, scenes, tides, loot, class picks); then
+             co-op (gathering, planning together, scaling, crew abilities on a crewmate);
+             then co-op gauntlets.
      - THE ITEM SYSTEM (Kong, 2026-09-30; applies to solo captains too):
        - EVERYTHING OWNED IS ONE OF FOUR KINDS:
          - STACKS: counts of identical things (bait, fish, forge materials, raid components).
