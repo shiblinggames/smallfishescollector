@@ -162,7 +162,12 @@ static func gains(from: int, to: int) -> Array:
 	for fk: Variant in Js.obj(lg.get("feature")):
 		var fl: int = int(lg["feature"][fk])
 		if fl > from and fl <= to:
-			out.append(["Unlocked", { "market_advanced": "The Market's Advanced board: moods, the Sea Index, movers and price history" }.get(fk, str(fk))])
+			out.append(["Unlocked", { "market_advanced": "The Market's Advanced board: moods, the Sea Index, movers and price history", "den_roulette": "Fish Roulette in the Den", "den_blackjack": "Blackjack in the Den" }.get(fk, str(fk))])
+	# The Den's daily buy-in grows with Fishing (port rules casino.capByLevel).
+	for st: Variant in Js.list(Js.obj(d.get("casino")).get("capByLevel")):
+		var cl: int = int((st as Array)[0])
+		if cl > 1 and cl > from and cl <= to:
+			out.append(["Stronger", "The Den: buy in up to %s chips a day" % Js.thousands(float((st as Array)[1]))])
 	var names: Dictionary = { "hull_speed_tier": "Hull speed", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig", "lantern_tier": "Lantern" }
 	var su: Dictionary = Js.obj(d.get("shipUpgrades"))
 	for lvk: Variant in su:
