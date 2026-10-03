@@ -21,6 +21,11 @@ func _init() -> void:
 	Captains.dir_override = "user://finn_captains"
 	for f: String in DirAccess.get_files_at(Captains.dir_override) if DirAccess.dir_exists_absolute(Captains.dir_override) else PackedStringArray():
 		DirAccess.remove_absolute("%s/%s" % [Captains.dir_override, f])
+	# Midday on the sea (the conditions jobs must not be met by the hour the
+	# test happens to run at: at night an ordinary catch is a night catch).
+	var cycle: float = SeaClock.CYCLE_MS
+	var noon: float = floor(Time.get_unix_time_from_system() * 1000.0 / cycle) * cycle + cycle * 0.1
+	Clock.install(func() -> float: return noon)
 	Main.straight_to_sea = true
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
