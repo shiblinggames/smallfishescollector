@@ -297,7 +297,7 @@ func _draw() -> void:
 		var a2: Vector2 = up(bm["a"])
 		var b2: Vector2 = up(bm["b"]) + Vector2(0, -30)
 		var c: Color = bm["c"]
-		var wid: float = 26.0 * (1.0 - u3) * (1.0 + 0.15 * sin(_t * 60.0))
+		var wid: float = (8.0 if bm.get("thin", false) else 26.0) * (1.0 - u3) * (1.0 + 0.15 * sin(_t * 60.0))
 		var pts: PackedVector2Array = PackedVector2Array()
 		for k: int in 17:
 			var f: float = k / 16.0
@@ -367,3 +367,21 @@ func _draw() -> void:
 		else:
 			draw_circle(q["p"], float(q["r"]) * (1.0 - u5 * 0.5), col)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+
+## A role's beam: a line of light from one hull to another, motes running
+## along it, a ring where it lands.
+func tether(from: Vector2, to: Vector2, col: Color) -> void:
+	_beams.append({ "a": from + Vector2(0, -20), "b": to + Vector2(0, 10), "t": 0.0, "c": col, "life": 0.7, "thin": true })
+	for k: int in 14:
+		_sparks.append({ "kind": "gather", "a": up(from) + Vector2(0, -50), "b": up(to) + Vector2(0, -50), "t": -k * 0.025, "life": 0.45, "c": col.lightened(0.3) })
+	await _wait(0.4)
+	_rings.append({ "p": to, "t": 0.0, "life": 0.8, "r": 120.0 })
+	_puffs.append({ "p": up(to) + Vector2(0, -50), "v": Vector2.ZERO, "t": 0.0, "life": 0.4, "r": 40.0, "c": col, "flash": true, "world": false })
+
+
+## A rally: a pulse of light out from a hull and a ring on the water.
+func pulse(at: Vector2, col: Color) -> void:
+	_puffs.append({ "p": up(at) + Vector2(0, -50), "v": Vector2.ZERO, "t": 0.0, "life": 0.5, "r": 46.0, "c": col, "flash": true, "world": false })
+	_rings.append({ "p": at, "t": 0.0, "life": 0.9, "r": 150.0 })

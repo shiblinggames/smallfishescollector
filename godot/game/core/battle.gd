@@ -264,6 +264,21 @@ static func _tag(ev: Array, from: int, j: int) -> void:
 			ev[k]["foe"] = j
 
 
+## A raid's hand as the port fights it: the raid's own, with the port's
+## changes laid over (port rules battle.enemyMods: an earlier status special
+## and the pattern that uses it).
+static func enemy_def(raid: Dictionary, id: Variant) -> Dictionary:
+	var e: Dictionary = Js.obj(raid["enemies"][id]).duplicate(true)
+	var md: Dictionary = Js.obj(Js.obj(Js.obj(cfg().get("enemyMods")).get(str(raid.get("raidId", "")))).get(str(id)))
+	for k: String in md:
+		e[k] = md[k].duplicate(true) if md[k] is Dictionary or md[k] is Array else md[k]
+	return e
+
+
+static func roles_cfg() -> Dictionary:
+	return Js.obj(cfg().get("roles"))
+
+
 static func _affixes() -> Dictionary:
 	return Js.obj(Js.obj(Rules.data().get("raidAffixes")).get("affixes"))
 
@@ -292,7 +307,7 @@ static func alive(b: Dictionary) -> Array:
 static func start_fight(b: Dictionary, r: int) -> void:
 	var raid: Dictionary = raid_def(str(b["raidId"]))
 	var f: Dictionary = fight_at(raid, r)
-	var e: Dictionary = Js.obj(raid["enemies"][f["enemyId"]]).duplicate(true)
+	var e: Dictionary = enemy_def(raid, f["enemyId"])
 	var n: int = maxi(1, alive(b).size())
 	var skirmish: bool = raid.get("skirmish", false) == true
 	# Its affix: a baked one (with a challenge's merged second), else a rolled
@@ -382,7 +397,7 @@ static func _escorts(b: Dictionary, raid: Dictionary, f: Dictionary, n: int, hp_
 	var seq: Array = Js.list(raid.get("sequence"))
 	for j: int in range(1, k):
 		var id: Variant = seq[int(floor(Dice.next() * seq.size()))]
-		var e: Dictionary = Js.obj(raid["enemies"][id]).duplicate(true)
+		var e: Dictionary = enemy_def(raid, id)
 		var affix: Dictionary = {}
 		var elite: bool = false
 		if tc.get("eliteEscorts", false) and e.get("affix") == null:
@@ -395,6 +410,13 @@ static func _escorts(b: Dictionary, raid: Dictionary, f: Dictionary, n: int, hp_
 		var hp: float = maxf(1.0, float(Js.round(float(e["hpBase"]) * float(tc["escortHp"]) * float(tc["hpMult"]) * hp_scale)))
 		var foe: Dictionary = _make_foe(raid, e, false, affix, elite, hp)
 		foe["escort"] = true
+		# A role, each escort its own while any are left.
+		var rl: Array = Js.list(roles_cfg().get("list")).duplicate()
+		for f2: Dictionary in b["foes"]:
+			rl.erase(f2.get("role", ""))
+		if not rl.is_empty():
+			foe["role"] = rl[int(floor(Dice.next() * rl.size()))]
+			foe["roleTurn"] = 0.0
 		# Escorts carry no boss's trappings.
 		foe["phases"] = []
 		foe["decoy"] = 0.0
@@ -456,12 +478,12 @@ const GRAZE_W: float = 0.038
 ## Where the needle stopped against the zone (positions 0..1), as the web
 ## judges a lock: crit, hit, graze or miss. Inclusive. critW is the live crit
 ## half-width (a Sharpshot widens it).
-static func judge(pos: float, zone: float, crit_w: float = CRIT_W) -> String:
+static func judge(pos: float, zone: float, crit_w: float = CRIT_W, scale: float = 1.0) -> String:
 	if absf(pos - zone) <= crit_w:
 		return "critical"
-	if absf(pos - zone) <= HIT_W:
+	if absf(pos - zone) <= HIT_W * scale:
 		return "hit"
-	if absf(pos - zone) <= HIT_W + GRAZE_W:
+	if absf(pos - zone) <= (HIT_W + GRAZE_W) * scale:
 		return "graze"
 	return "miss"
 
@@ -506,7 +528,13 @@ static func aim_for(b: Dictionary, si: int, target: int = -1) -> Dictionary:
 		"enemySpeed": float(e["speed"]), "zoneStack": stack, "needleMult": float(e["aimSpeed"]),
 		"critDrift": float(e["critDrift"]), "fog": minf(0.92, float(e["fog"])), "critZone": float(tide_agg(s)["critZone"]),
 		"afflict": "", "decoys": 0,
+		"blind": 0.0, "narrow": 1.0,
 	}
+	var st: Dictionary = Js.obj(s.get("statuses"))
+	if st.has("blinded"):
+		out["blind"] = clampf(float(st["blinded"]["mag"]), 0.05, 0.3)
+	if st.has("narrowed"):
+		out["narrow"] = clampf(1.0 - float(st["narrowed"]["mag"]), 0.3, 1.0)
 	var af: Dictionary = s["afflict"]
 	if not af.is_empty() and float(af["passes"]) > 0.0:
 		out["afflict"] = af["kind"]
@@ -913,6 +941,8 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			var tj4: int = target_of(b, Js.obj(plans[who]))
 			if tj4 < 0:
 				break
+			if str(Js.obj(plans[who]).get("action", "")) in ["fire", "volley", "mega"]:
+				tj4 = breakwater(b, who, tj4, ev)
 			var et: Dictionary = fs[tj4]
 			b["enemy"] = et
 			var n3: int = ev.size()
@@ -1099,6 +1129,8 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 		e["ward"] = float(e["ward"]) - 1.0
 	if e.get("frozenNow", false):
 		ev.append({ "t": "eFrozen" })
+		return
+	if str(e.get("role", "")) != "" and _role_turn(b, e, ev):
 		return
 	# The boss's off-turn ability, once a phase, two to four turns in.
 	var abl: Dictionary = _ability_now(e)
@@ -2026,3 +2058,73 @@ static func crossfire_mult(n: int) -> float:
 	if n < 2:
 		return 1.0
 	return 1.0 + float(Js.nz(Js.obj(cfg().get("crossfire")).get("pct"), 0.25)) * float(n - 1)
+
+
+
+# ══ Roles (a co-op field's escorts) ════════════════════════════════════════════
+
+## Every few of its turns an escort spends the turn on its role, instantly.
+## Returns whether it did (it then does nothing else this turn).
+static func _role_turn(b: Dictionary, e: Dictionary, ev: Array) -> bool:
+	var rc: Dictionary = roles_cfg()
+	e["roleTurn"] = float(e.get("roleTurn", 0.0)) + 1.0
+	if int(e["roleTurn"]) % int(Js.nz(rc.get("every"), 3.0)) != 2 % int(Js.nz(rc.get("every"), 3.0)):
+		return false
+	var fs: Array = foes(b)
+	var me_j: int = fs.find(e)
+	var r: String = str(e["role"])
+	var def: Dictionary = Js.obj(rc.get(r))
+	match r:
+		"shieldwright", "sawbones":
+			# Its most hurt ally afloat (itself if it is the only one).
+			var best: int = -1
+			for j: int in fs.size():
+				var f: Dictionary = fs[j]
+				if not foe_up(f):
+					continue
+				var share: float = float(f["hp"]) / maxf(1.0, float(f["max"]))
+				if r == "sawbones" and share >= 0.95:
+					continue
+				if best < 0 or share < float(fs[best]["hp"]) / maxf(1.0, float(fs[best]["max"])):
+					best = j
+			if best < 0:
+				return false
+			var t: Dictionary = fs[best]
+			var amt: float = maxf(1.0, float(Js.round(float(t["max"]) * float(Js.nz(def.get("pct"), 0.18)))))
+			if r == "shieldwright":
+				t["shield"] = float(t["shield"]) + amt
+			else:
+				amt = minf(amt, float(t["max"]) - float(t["hp"]))
+				t["hp"] = float(t["hp"]) + amt
+			ev.append({ "t": "role", "role": r, "foe": me_j, "to": best, "amount": amt, "hp": t["hp"], "shield": t["shield"], "name": def.get("name", "") })
+		"hexer":
+			var ti: int = _target(b, -1)
+			if ti < 0:
+				return false
+			var blind: bool = Dice.next() < 0.5
+			apply_status(b["seats"][ti]["statuses"], "blinded" if blind else "narrowed", float(def["blind"]) if blind else float(def["narrow"]), float(def["turns"]))
+			ev.append({ "t": "role", "role": r, "foe": me_j, "seat": ti, "status": "blinded" if blind else "narrowed", "name": def.get("name", "") })
+		"rallier":
+			var to: Array = []
+			for j2: int in fs.size():
+				if foe_up(fs[j2]):
+					apply_status(fs[j2]["statuses"], "enrage", float(def["mag"]), float(def["turns"]))
+					to.append(j2)
+			ev.append({ "t": "role", "role": r, "foe": me_j, "all": to, "name": def.get("name", "") })
+		_:
+			return false
+	return true
+
+
+## A Breakwater afloat may take a shot aimed at an ally (passive). Returns the
+## enemy the shot now goes to.
+static func breakwater(b: Dictionary, si: int, tj: int, ev: Array) -> int:
+	var fs: Array = foes(b)
+	if fs.size() < 2:
+		return tj
+	var ch: float = float(Js.nz(Js.obj(roles_cfg().get("breakwater")).get("chance"), 0.35))
+	for j: int in fs.size():
+		if j != tj and foe_up(fs[j]) and fs[j].get("role", "") == "breakwater" and Dice.next() < ch:
+			ev.append({ "t": "intercept", "foe": j, "from": tj, "seat": si })
+			return j
+	return tj

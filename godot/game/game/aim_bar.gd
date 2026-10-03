@@ -16,6 +16,10 @@ extends Control
 ##   HARDENED   iron shutters over the rail: the first press only cracks them
 ##              (sparks), the second judges.
 ##   SQUALL     the needle pitches with the gusts and rain streaks the bar.
+## And two statuses on the captain (Battle.aim_for):
+##   BLINDED    the bar is dark but for a window round the needle: find the
+##              zone as the needle passes it.
+##   NARROWED   every band (crit, hit, graze) smaller, judged the same.
 
 signal locked(result: String)
 
@@ -30,6 +34,10 @@ var crit_drift: float = 0.0
 var fog: float = 0.0
 var afflict: String = ""
 var decoy_n: int = 0
+## Blinded: the half-width of sight round the needle (0: sighted).
+var blind: float = 0.0
+## Narrowed: the bands' scale (1: whole).
+var narrow: float = 1.0
 
 const DECOY_HALF: float = 0.06 * 0.62
 
@@ -57,7 +65,7 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_ALL
 	_zone = 0.3 + randf() * 0.4
 	_zdir = -1.0 if randf() < 0.5 else 1.0
-	var max_off: float = maxf(0.0, Battle.HIT_W + Battle.GRAZE_W - crit_w)
+	var max_off: float = maxf(0.0, (Battle.HIT_W + Battle.GRAZE_W) * narrow - crit_w)
 	_seam = (randf() * 2.0 - 1.0) * max_off * 0.8
 	_seam_dir = -1.0 if randf() < 0.5 else 1.0
 	_gust_ph = randf() * TAU
@@ -86,7 +94,7 @@ func _process(delta: float) -> void:
 		var zs: float = enemy_speed * 0.0008 / (1.0 + nav * 0.015) * minf(4.0, zone_stack)
 		# The crit seam rolls inside the zone; the false court's bands slide.
 		if crit_drift > 0.0:
-			var max_off2: float = maxf(0.0, Battle.HIT_W + Battle.GRAZE_W - crit_w)
+			var max_off2: float = maxf(0.0, (Battle.HIT_W + Battle.GRAZE_W) * narrow - crit_w)
 			_seam += 0.0022 * crit_drift * _seam_dir * f
 			if absf(_seam) > max_off2:
 				_seam = signf(_seam) * max_off2
@@ -97,7 +105,7 @@ func _process(delta: float) -> void:
 			if float(d["p"]) > 0.902 or float(d["p"]) < 0.098:
 				d["p"] = clampf(float(d["p"]), 0.098, 0.902)
 				d["dir"] = -float(d["dir"])
-		var lo: float = Battle.HIT_W + Battle.GRAZE_W
+		var lo: float = (Battle.HIT_W + Battle.GRAZE_W) * narrow
 		_zone += zs * _zdir * f
 		if _zone >= 1.0 - lo:
 			_zone = 2.0 * (1.0 - lo) - _zone
@@ -158,7 +166,7 @@ func lock() -> void:
 	if absf(_pos - (_zone + _seam)) <= crit_w:
 		res = "critical"
 	else:
-		res = Battle.judge(_pos, _zone, -1.0)
+		res = Battle.judge(_pos, _zone, -1.0, narrow)
 	_flash = res
 	Rumble.tap(18 if res == "critical" else 10)
 	match res:
@@ -181,10 +189,10 @@ func _draw() -> void:
 		var gx: float = rail.position.x + rail.size.x * float(k) / 12.0
 		draw_line(Vector2(gx, rail.position.y + 3), Vector2(gx, rail.end.y - 3), Color(1, 1, 1, 0.05 if k % 3 else 0.1), 1.0)
 	var px: Callable = func(u: float) -> float: return rail.position.x + rail.size.x * u
-	var gw: float = Battle.HIT_W + Battle.GRAZE_W
+	var gw: float = (Battle.HIT_W + Battle.GRAZE_W) * narrow
 	# The bands, widest first.
 	BattleLook.draw_box(self, Rect2(px.call(_zone - gw), rail.position.y + 1, rail.size.x * gw * 2.0, rail.size.y - 2), BattleLook.box(Color(0.95, 0.88, 0.62, 0.22), Color(0, 0, 0, 0), 0, 5))
-	var hr: Rect2 = Rect2(px.call(_zone - Battle.HIT_W), rail.position.y + 1, rail.size.x * Battle.HIT_W * 2.0, rail.size.y - 2)
+	var hr: Rect2 = Rect2(px.call(_zone - Battle.HIT_W * narrow), rail.position.y + 1, rail.size.x * Battle.HIT_W * narrow * 2.0, rail.size.y - 2)
 	BattleLook.draw_box(self, hr, BattleLook.box(Color(0.33, 0.74, 0.47, 0.95), Color(0, 0, 0, 0), 0, 5))
 	var cg: float = 0.5 + 0.5 * sin(_t * 8.0)
 	var seam: float = _zone + _seam
@@ -222,6 +230,19 @@ func _draw() -> void:
 	for sp: Dictionary in _sparks:
 		draw_circle(sp["p"], 2.0, Color(1.0, 0.75, 0.35, 1.0 - float(sp["t"]) / 0.6))
 
+	# Blinded: dark over the rail but for a soft window round the needle.
+	if blind > 0.0 and not _done:
+		var wx0: float = px.call(_pos - blind)
+		var wx1: float = px.call(_pos + blind)
+		var dark: Color = Color(0.05, 0.04, 0.035, 0.97)
+		var top: float = rail.position.y - 6.0
+		var hgt: float = rail.size.y + 12.0
+		draw_rect(Rect2(rail.position.x - 6.0, top, maxf(0.0, wx0 - rail.position.x + 6.0), hgt), dark)
+		draw_rect(Rect2(wx1, top, maxf(0.0, rail.end.x + 6.0 - wx1), hgt), dark)
+		for k: int in 8:
+			var fa: float = dark.a * (1.0 - (k + 1) / 9.0)
+			draw_rect(Rect2(wx0 + k * 3.0, top, 3.0, hgt), Color(dark, fa))
+			draw_rect(Rect2(wx1 - (k + 1) * 3.0, top, 3.0, hgt), Color(dark, fa))
 	# The needle: a brass pointer above and below the rail.
 	var nx: float = px.call(_pos)
 	var col: Color = Color(1, 0.96, 0.85)
@@ -240,6 +261,10 @@ func _draw() -> void:
 		draw_string(f, Vector2(nx - tw / 2.0, rail.position.y - 22), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c2)
 	else:
 		var hint: String = "VOLLEY  ·  SPACE TO FIRE" if volley else "SPACE TO FIRE"
+		if blind > 0.0:
+			hint = "BLINDED  ·  YOU SEE ONLY NEAR THE NEEDLE"
+		elif narrow < 0.99:
+			hint = "NARROWED  ·  A SMALLER MARK TO HIT"
 		if afflict == "hardened" and not _cracked:
 			hint = "IRON SHUTTERS  ·  KNOCK ONCE TO CRACK THEM"
 		elif afflict == "decoys":

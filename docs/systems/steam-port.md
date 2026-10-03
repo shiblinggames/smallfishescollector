@@ -775,6 +775,35 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   orders and which are spent; right now (statuses, burn, freeze, ward, brace, an aim
   affliction, a repossessed item). KONG: the boss's crate odds are NOT on the card; they belong
   to the raid's entry screen.
+- THE FIGHT SYSTEM, UPGRADED (2026-10-03). KONG: statuses "introduced earlier than it is today"
+  (they first came at the Blockade, chapter 4), more for co-op ("enemies can also shield one
+  another or heal one another or inflict statuses like blinding players"), and "we're no longer
+  doing anything with the web at all": THE PORT'S RAIDS ARE ITS OWN NOW (port rules
+  battle.enemyMods lays the port's changes over a raid's hands; Battle.enemy_def). KONG'S CALLS:
+  every tier including solo; aim statuses Blinded and Narrowed; support moves INSTANT (no
+  telegraph); roles on co-op fields only.
+  EARLIER STATUSES, one new idea a raid, each a status special IN PLACE OF ONE OF THE HAND'S
+  DODGES (not a reload: that starved its shot and turned a volley the pattern promised into a
+  reload, wrecking the rhythm players read, which cut the fair bot from 35% to 17% on Pete; not
+  an extra turn: a free breather made Pete easier, 49%): Pete's raid, the Corsair's Rusted Chains
+  (Feeble) and Barnacle Pete's Barnacle Crust (Fortify); Krust, the Hull Breaker's Ram Home
+  (Weaken), the Overseer's Lash (Slowed), Krust's Shell Up (Fortify); the Cartographer, BLINDED
+  (the Sounding Hand's Ink Cloud, the Cartographer's Squid Ink); the Tollmaster's Cut, NARROWED
+  (Snapjaw's Jaw Clamp, Spet's Toll Due) and the Exactor's Levy (Weaken); the Coffers, Barb's
+  Marked Man and Bristle Up (Enrage); the Quartermaster, the Breaker's Lockdown (Silence).
+  BLINDED (aim bar): dark but for a soft window round the needle (mag: its half width).
+  NARROWED: every band (crit, hit, graze) smaller by mag, judged the same (Battle.judge scale).
+  ROLES (port rules battle.roles), each escort of a co-op field its own; every third of its turns
+  (the 2nd, 5th, 8th...) it spends the turn on its role, instantly: SHIELDWRIGHT a barrier (18% of
+  max) on its most hurt ally; SAWBONES mends its most hurt ally 18%; HEXER Blinds or Narrows a
+  captain for 2 turns; RALLIER enrages its whole line (+20%, 2 turns); BREAKWATER (passive) takes
+  a shot aimed at an ally 35% of the time ("Intercepted!"). On the water a beam of light from the
+  caster (blue shield, green mend), a violet bolt to the hexed captain, a red pulse through the
+  rallied line; the role on the escort's frame and its stat card ("What it does").
+  Balance (tests/battle_check.gd, the fair bot now aims worse while Blinded or Narrowed): Pete's
+  raid Normal 42/55/68/77% for 1/2/3/4 captains (was 38/40/64/74), Co-op 37/64/52, Co-op
+  Challenge 17/34/24. tests/shot.gd: BATTLE_SHOW=aim AIM_KIND=blinded|narrowed; "coop"
+  COOP_STEP=role ROLE=shieldwright|sawbones|hexer|rallier|breakwater.
 - COMBAT FEEL (2026-10-03; game/battle_fx.gd; Kong: "make combat feel visceral ... cannons and
   volleys and megas ... damage numbers too ... including dodges and reloads"). Every beat an
   anticipation, an action and a follow-through, LOCAL (the hull that fires, the water it lands

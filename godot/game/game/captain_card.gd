@@ -22,6 +22,8 @@ const STATUS: Dictionary = {
 	"fortify": ["Fortified", true, "You take %s less damage."],
 	"enrage": ["Enraged", true, "You deal %s more damage."],
 	"regen": ["Mending", true, "You heal %s each round."],
+	"blinded": ["Blinded", false, "Your aim bar is dark but for a window round the needle."],
+	"narrowed": ["Narrowed", false, "Every band on your aim bar is smaller."],
 }
 
 

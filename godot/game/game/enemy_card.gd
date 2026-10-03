@@ -29,6 +29,15 @@ const STATUS: Dictionary = {
 	"fortify": ["Fortified", true, "takes %s less damage"],
 	"enrage": ["Enraged", true, "deals %s more damage"],
 	"regen": ["Mending", true, "heals %s each round"],
+	"blinded": ["Blinded", false, "sees only near its needle"],
+	"narrowed": ["Narrowed", false, "has a smaller mark to hit"],
+}
+const ROLE_DESC: Dictionary = {
+	"shieldwright": "Every few turns it spends its turn throwing a barrier over its most hurt ally (or itself).",
+	"sawbones": "Every few turns it spends its turn patching up its most hurt ally (or itself).",
+	"hexer": "Every few turns it hexes a captain: Blinded (you see only near the needle) or Narrowed (a smaller mark to hit).",
+	"rallier": "Every few turns it rallies its whole line: they hit harder for a while.",
+	"breakwater": "It may throw itself in front of a shot aimed at an ally, taking the blow instead.",
 }
 const RESPONSE: Dictionary = { "brace": "a defensive one", "shield": "a defensive one", "snare": "a disrupting one", "heal": "a recovery one", "burst": "a heavy-hitting one" }
 
@@ -58,6 +67,9 @@ func _ready() -> void:
 func _content() -> void:
 	# What it does.
 	var does: Array = []
+	if str(e.get("role", "")) != "":
+		var rd: Dictionary = Js.obj(Battle.roles_cfg().get(str(e["role"])))
+		does.append([str(rd.get("name", "")), "role", str(ROLE_DESC.get(str(e["role"]), ""))])
 	var af: Dictionary = Js.obj(e.get("affix"))
 	if not af.is_empty():
 		does.append([str(af.get("name", "")), "elite affix", str(af.get("description", ""))])

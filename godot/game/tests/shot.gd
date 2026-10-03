@@ -735,7 +735,12 @@ func _init() -> void:
 						bst._tide(Rules.data()["tides"]["pool"][int(OS.get_environment("TIDE_I")) if OS.get_environment("TIDE_I") != "" else 0], "A TIDE TURNS")
 					"aim":
 						bst.b["seats"][0]["charges"] = 3.0
-						bst.b["seats"][0]["afflict"] = { "kind": OS.get_environment("AIM_KIND") if OS.get_environment("AIM_KIND") != "" else "decoys", "passes": 2.0 }
+						var ak: String = OS.get_environment("AIM_KIND") if OS.get_environment("AIM_KIND") != "" else "decoys"
+						if ak in ["blinded", "narrowed"]:
+							Battle.apply_status(bst.b["seats"][0]["statuses"], ak, 0.12 if ak == "blinded" else 0.35, 2.0)
+							bst.b["enemy"]["fog"] = 0.0
+						else:
+							bst.b["seats"][0]["afflict"] = { "kind": ak, "passes": 2.0 }
 						bst.b["enemy"]["fog"] = 0.5
 						bst.b["enemy"]["critDrift"] = 0.5
 						while bst._busy:
@@ -859,6 +864,25 @@ func _init() -> void:
 			for f: int in 30:
 				await process_frame
 			var cs: String = OS.get_environment("COOP_STEP")
+			if cs == "role":
+				# A role's move on a field: ROLE shieldwright, sawbones, hexer, rallier, breakwater.
+				var rr: String = OS.get_environment("ROLE")
+				var rev: Dictionary = {}
+				match rr:
+					"shieldwright", "sawbones":
+						rev = { "t": "role", "role": rr, "foe": 1, "to": 0, "amount": 9.0, "hp": 20.0, "shield": 9.0, "name": rr.capitalize() }
+					"hexer":
+						rev = { "t": "role", "role": "hexer", "foe": 1, "seat": 0, "status": "blinded", "name": "Hexer" }
+					"rallier":
+						rev = { "t": "role", "role": "rallier", "foe": 1, "all": [0, 1], "name": "Rallier" }
+					_:
+						rev = { "t": "intercept", "foe": 1, "from": 0, "seat": 0 }
+				kst2._one(rev)
+				await create_timer(float(OS.get_environment("FX_S")) if OS.get_environment("FX_S") != "" else 0.5).timeout
+				root.get_texture().get_image().save_png(out)
+				print("  saved ", out)
+				quit()
+				return
 			if cs == "chips" or cs == "xfire":
 				kb["seats"][0]["charges"] = 3.0
 				kb["seats"][1]["charges"] = 3.0

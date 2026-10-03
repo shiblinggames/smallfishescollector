@@ -42,6 +42,10 @@ func _plan(b: Dictionary, si: int, use_crew: bool) -> Dictionary:
 	var lg: Dictionary = Battle.legal(b, s)
 	var r: float = Dice.next()
 	var aim: String = "critical" if r < 0.10 else ("hit" if r < 0.60 else ("graze" if r < 0.85 else "miss"))
+	# Blinded or Narrowed, a fair captain aims worse.
+	var stx: Dictionary = Js.obj(s.get("statuses"))
+	if stx.has("blinded") or stx.has("narrowed"):
+		aim = "critical" if r < 0.05 else ("hit" if r < 0.42 else ("graze" if r < 0.70 else "miss"))
 	var nxt: String = Battle.predict(b, 1)[0]
 	var act: String = "reload"
 	if nxt == "dodge":
@@ -176,6 +180,8 @@ func _init() -> void:
 	for fx0: Dictionary in fs0:
 		fx0["hp"] = 999.0
 		fx0["max"] = 999.0
+		# Targeting alone here: no Breakwater stepping in.
+		fx0.erase("role")
 	var evf: Array = Battle.resolve(bf, [{ "action": "fire", "aim": "critical", "target": 1 }, { "action": "fire", "aim": "critical", "target": 1 }, { "action": "fire", "aim": "critical", "target": 0 }])
 	var ordf: Array = evf.filter(func(x: Dictionary) -> bool: return x["t"] == "order")[0]["order"]
 	check(ordf.filter(func(w: int) -> bool: return w < 0).size() == fs0.size(), "every enemy takes a turn (%s)" % str(ordf))
@@ -211,7 +217,7 @@ func _init() -> void:
 	# The enemies' own ways.
 	_ways()
 	# Every raid, a strong captain alone, to see each plays through.
-	for rid: String in ["captain_krust", "cartographer", "tollmasters_cut", "coffers_fleet", "the_quartermaster", "the_quartermasters_ghost", "the_blockade", "the_throne", "the_sunken_hand", "the_blockade_challenge", "the_throne_challenge"]:
+	for rid: String in ["corsairs_reckoning", "captain_krust", "cartographer", "tollmasters_cut", "coffers_fleet", "the_quartermaster", "the_quartermasters_ghost", "the_blockade", "the_throne", "the_sunken_hand", "the_blockade_challenge", "the_throne_challenge"]:
 		var wins2: int = 0
 		var runs2: int = 60
 		var stuck: int = 0

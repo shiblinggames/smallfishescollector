@@ -222,7 +222,7 @@ func _process(delta: float) -> void:
 			if ae == null or not is_instance_valid(ae):
 				continue
 			var e0: Dictionary = fs0[j0]
-			var en0: HullRig = _foe_nodes[j0]
+			var en0: HullRig = _foe_nodes[j0] if is_instance_valid(_foe_nodes[j0]) else null
 			ae.burn = not Js.obj(e0.get("burn")).is_empty()
 			ae.ice = e0.get("frozenNow", false) or float(e0.get("freeze", 0.0)) > 0.0
 			ae.shield = float(e0["shield"])
@@ -390,7 +390,7 @@ func _ctx(j: int) -> void:
 	if _foe_nodes.is_empty():
 		return
 	_cur = clampi(j, 0, _foe_nodes.size() - 1)
-	_enemy = _foe_nodes[_cur]
+	_enemy = _foe_nodes[_cur] if is_instance_valid(_foe_nodes[_cur]) else null
 	_enemy_at = _foe_at(_cur)
 	_portrait = _foe_tex[_cur]
 
@@ -707,7 +707,9 @@ func _choose(act: String) -> void:
 			if not ab.is_empty() and c["id"] == ab["crew"] and c["cls"] == "sharpshot":
 				sh = { "mult": c["ms"]["critZoneMultiplier"] }
 		var aim: Dictionary = Battle.aim_for(b, me, _target)
-		bar.crit_w = Battle.CRIT_W * (1.0 + float(sh.get("mult", 0.0))) * float(aim["critZone"])
+		bar.crit_w = Battle.CRIT_W * (1.0 + float(sh.get("mult", 0.0))) * float(aim["critZone"]) * float(aim["narrow"])
+		bar.narrow = float(aim["narrow"])
+		bar.blind = float(aim["blind"])
 		bar.volley = act != "fire"
 		bar.zone_stack = float(aim["zoneStack"])
 		bar.needle_mult = float(aim["needleMult"])
@@ -990,6 +992,13 @@ func _one(x: Dictionary) -> void:
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "The Maw takes nothing", Color(0.9, 0.65, 0.3))
 		"flares":
 			pass
+		"role":
+			await _role_move(x)
+		"intercept":
+			_strip_lit = -1 - _cur
+			_react(-1 - _cur, "brace")
+			_num(_enemy_at + Vector2(0, -70), "Intercepted!", Color(0.75, 0.85, 1.0), true)
+			await _wait(0.35)
 		"crossfire":
 			_xfire_seats = Js.list(x["seats"])
 			_xfire_foe = int(x.get("foe", 0))
@@ -1223,9 +1232,10 @@ func _lost() -> void:
 
 
 func _end(won: bool, fled: bool = false) -> void:
+	# The ships' own auras (the enemies' go with their hulls).
 	for k: Variant in _auras:
 		var a0: HullAura = _aura(k)
-		if a0 != null and k != "e":
+		if a0 != null and k is int:
 			a0.queue_free()
 	if table != null and table.changed.is_connected(_pump):
 		table.changed.disconnect(_pump)
@@ -1310,8 +1320,10 @@ func _draw() -> void:
 	var frames: bool = _frames_mode()
 	var row: int = 0
 	for j2: int in mini(fs2.size(), _foe_nodes.size()):
+		if not is_instance_valid(_foe_nodes[j2]):
+			continue
 		var en: HullRig = _foe_nodes[j2]
-		if en == null or not is_instance_valid(en) or float(en.sink) >= 0.95:
+		if float(en.sink) >= 0.95:
 			continue
 		if frames:
 			# A field: the enemies' frames down the right edge, a slim tag on
@@ -1333,13 +1345,15 @@ func _draw() -> void:
 		acc[w[0]] = w[1]
 		return acc, {}) if frames else _spread(want)
 	for j2: int in mini(fs2.size(), _foe_nodes.size()):
+		if not is_instance_valid(_foe_nodes[j2]):
+			continue
 		var en: HullRig = _foe_nodes[j2]
 		var key: String = "e%d" % j2
 		if not _plate_at.has(key):
 			continue
 		var e: Dictionary = fs2[j2]
 		var ep: Vector2 = _plate_at[key]
-		var etag: String = "TARGET" if aiming and j2 == _target else ("BOSS" if e["boss"] else ("ELITE" if e.get("elite", false) else ""))
+		var etag: String = "TARGET" if aiming and j2 == _target else ("BOSS" if e["boss"] else (_role_name(e).to_upper() if str(e.get("role", "")) != "" else ("ELITE" if e.get("elite", false) else "")))
 		if aiming and j2 == _target:
 			var hc: Vector2 = _screen(en.position) + Vector2(0, -60.0 * _z())
 			var rr: float = en.box * 0.45 * _z()
@@ -2101,3 +2115,46 @@ func _landed(who: int, land: String, k: int) -> void:
 				_react(who, "dodge")
 				var at: Vector2 = _seat_at(who) if who >= 0 else _foe_at(-1 - who)
 				_fx.swerve(at, -1.0 if who >= 0 else 1.0)
+
+
+
+func _role_name(e: Dictionary) -> String:
+	return str(Js.obj(Battle.roles_cfg().get(str(e.get("role", "")))).get("name", ""))
+
+
+## A role's move on the water: a beam of light from the caster to the ally it
+## shields or mends, a bolt to the captain it hexes, a pulse through the line
+## it rallies.
+func _role_move(x: Dictionary) -> void:
+	_strip_lit = -1 - _cur
+	var from: Vector2 = _enemy_at
+	var nm: String = str(x.get("name", ""))
+	match str(x["role"]):
+		"shieldwright", "sawbones":
+			var tj: int = int(x["to"])
+			var to: Vector2 = _foe_at(tj)
+			var col: Color = Color(0.55, 0.8, 1.0) if x["role"] == "shieldwright" else Color(0.5, 0.95, 0.6)
+			_react(-1 - _cur, "brace")
+			_fx.tether(from, to, col)
+			await _wait(0.45)
+			if x["role"] == "shieldwright":
+				_num(to + Vector2(0, -60), "+%d shield" % int(x["amount"]), col, true)
+			else:
+				_num(to + Vector2(0, -60), "+%d" % int(x["amount"]), col, true)
+				_shown_hp["e%d" % tj] = float(x["hp"])
+			_log_line("The %s %s %s." % [nm, "throws a barrier over" if x["role"] == "shieldwright" else "patches up", "itself" if tj == _cur else Battle.foes(b)[tj]["name"]])
+		"hexer":
+			var si: int = int(x["seat"])
+			_fx.tether(from, _seat_at(si), Color(0.75, 0.5, 1.0))
+			await _wait(0.4)
+			_react(si, "hit")
+			_num(_seat_at(si) + Vector2(0, -60), "Blinded!" if x["status"] == "blinded" else "Narrowed!", Color(0.8, 0.6, 1.0), true)
+			_log_line("The %s hexes %s: %s." % [nm, "you" if si == me else b["seats"][si]["name"], "sight only near the needle" if x["status"] == "blinded" else "a smaller mark to hit"])
+		"rallier":
+			_react(-1 - _cur, "brace")
+			for j: Variant in Js.list(x.get("all")):
+				_fx.pulse(_foe_at(int(j)), Color(1.0, 0.5, 0.35))
+				_num(_foe_at(int(j)) + Vector2(0, -60), "Enraged!", Color(1.0, 0.55, 0.4))
+			_log_line("The %s rallies the line: they hit harder for a while." % nm)
+	Sound.seal(true)
+	await _wait(0.45)
