@@ -112,7 +112,7 @@ func _text(at: Vector2, s: String, family: String, weight: int, fs: int, c: Colo
 ## The descent's synergies, then (the Don's) its convergences.
 func _all() -> Array:
 	var out: Array = []
-	for c: Dictionary in Js.list(Gauntlet.t().get("confluences")):
+	for c: Dictionary in Gauntlet.confluences():
 		if Gauntlet.in_pool(c.get("gauntlet"), variant):
 			out.append(c)
 	for cv: Dictionary in Js.list(Gauntlet.t().get("convergences")):
@@ -177,10 +177,24 @@ func _grid() -> GridContainer:
 func _all_tab() -> void:
 	var confs: Array = _all().filter(func(e: Dictionary) -> bool: return e.has("requires") and Js.list(e["requires"]).size() > 0 and (e["requires"][0] as Dictionary).has("boonId"))
 	var convs: Array = _all().filter(func(e: Dictionary) -> bool: return not confs.has(e))
+	var crew: Array = confs.filter(func(e: Dictionary) -> bool: return e.get("coop", false))
+	confs = confs.filter(func(e: Dictionary) -> bool: return not e.get("coop", false))
 	_heading("Synergies", "Two powers, held together and taken at a draft.")
 	var g: GridContainer = _grid()
 	for c: Dictionary in confs:
 		g.add_child(_entry(c, false, 0, ""))
+	_heading("Bond powers", "Co-op dives only. Powers that reach your crewmates: tanks take the fire, healers mend, support lifts the others, gunners hit what the crew hits.")
+	var gb: GridContainer = _grid()
+	for b: Dictionary in Gauntlet.bonds():
+		var e: Dictionary = { "id": b["id"], "name": b["name"], "image": b.get("image"),
+			"levels": Js.list(b["tiers"]).map(func(t: Dictionary) -> Dictionary: return { "desc": t.get("desc", "") }) }
+		var en: Control = _entry(e, false, 0, "%s  ·  %s" % [str(b.get("role", "")).capitalize(), str(Gauntlet.rarity(b)).capitalize()])
+		gb.add_child(en)
+	if not crew.is_empty():
+		_heading("Crew synergies", "Co-op dives only. A bond power and a power: one captain may hold both, or two captains one each.")
+		var gc: GridContainer = _grid()
+		for c3: Dictionary in crew:
+			gc.add_child(_entry(c3, false, 0, ""))
 	if not convs.is_empty():
 		_heading("Convergences", "Two synergies, both taken and online, fused. The Don's descent only.")
 		var g2: GridContainer = _grid()
@@ -195,7 +209,7 @@ func _dive_tab() -> void:
 	var on: Array = []
 	var ready: Array = []
 	var near: Array = []
-	for c: Dictionary in Js.list(Gauntlet.t().get("confluences")):
+	for c: Dictionary in Gauntlet.confluences():
 		if not Gauntlet.in_pool(c.get("gauntlet"), variant):
 			continue
 		var lv: int = Gauntlet.confluence_level(c, owned)

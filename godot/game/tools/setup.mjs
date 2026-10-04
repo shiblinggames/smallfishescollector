@@ -10,7 +10,9 @@
 // 2. ART. The pictures live in web/public (the web is still their home), and
 //    they are big (the fish alone are 22 MB), so they are COPIED into art/ and
 //    not committed a second time. ART names what the port draws so far; add a
-//    path as a screen needs it. The fonts come from the desktop shell's
+//    path as a screen needs it. Art the port has that the web never had lives
+//    in port_art/ (committed; Godot skips it) and is copied in the same way.
+//    The fonts come from the desktop shell's
 //    @fontsource packages.
 // 3. GODOTSTEAM. The GDExtension build (Godot 4.4+), pinned by version and
 //    checksum and unpacked into addons/godotsteam. Its binaries are not
@@ -148,6 +150,19 @@ for (const rel of ART) {
   if (fs.statSync(from).isDirectory()) {
     for (const f of fs.readdirSync(from)) if (fs.statSync(path.join(from, f)).isFile()) copyIfChanged(path.join(from, f), path.join(HERE, 'art', rel, f))
   } else copyIfChanged(from, path.join(HERE, 'art', rel))
+}
+// The port's own art (the web is frozen; pictures it never had live in
+// port_art/, committed, at the art path they are drawn from).
+{
+  const walk = (dir) => {
+    for (const f of fs.readdirSync(dir)) {
+      const p = path.join(dir, f)
+      if (f.startsWith('.')) continue
+      if (fs.statSync(p).isDirectory()) walk(p)
+      else copyIfChanged(p, path.join(HERE, 'art', path.relative(path.join(HERE, 'port_art'), p)))
+    }
+  }
+  if (fs.existsSync(path.join(HERE, 'port_art'))) walk(path.join(HERE, 'port_art'))
 }
 const FONTSRC = path.join(HERE, '..', '..', 'desktop', 'node_modules', '@fontsource')
 for (const [pkg, file] of FONTS) {

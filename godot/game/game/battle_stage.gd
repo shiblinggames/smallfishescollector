@@ -1112,8 +1112,18 @@ func _one(x: Dictionary) -> void:
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
 		"leech":
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
+		"bond":
+			# A bond reaching a crewmate (or the ship it marked): a line over them.
+			var bt: int = int(x.get("to", -1))
+			var at: Vector2 = _seat_at(bt) if bt >= 0 else _enemy_at
+			_num(at + Vector2(0, -100), str(x.get("text", "")), Color(0.75, 0.9, 1.0))
+		"rake":
+			var fj: int = int(x["foe"])
+			_fx.splash(_foe_at(fj))
+			_num(_foe_at(fj), "Raked  -%d" % int(x["dmg"]), Color(1.0, 0.75, 0.45))
+			_shown_hp["e%d" % fj] = float(x["enemyHp"])
 		"execute":
-			_say("Executioner!" if x.get("kind", "") == "execute" else "Coup de Grace!")
+			_say({ "execute": "Executioner!", "deathMark": "Death Mark!" }.get(str(x.get("kind", "")), "Coup de Grace!"))
 			_shown_hp[_ek()] = 0.0
 			await _wait(0.5)
 		"tithe":

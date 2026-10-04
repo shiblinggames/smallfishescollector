@@ -90,10 +90,24 @@ func _play(t: GauntletTable, keys: Array, act: Callable, bank_at: int, max_steps
 					await act.call(who, ["pick", { "syn": true }])
 				else:
 					var picked: bool = false
+					# A crew synergy is always taken by one of its two; a bond
+					# first when the probe asks (BONDS=1).
+					for i0: int in (d["cards"] as Array).size():
+						var c0: Dictionary = d["cards"][i0]
+						if picked or Js.obj(d["stamps"]).has(str(i0)):
+							continue
+						var want: bool = (c0["card"] == "crew" and Js.list(c0["keys"]).has(who)) or (OS.get_environment("BONDS") == "1" and c0.get("bond", false) and t.next_tier(who, str(c0["id"])) > 0)
+						if want:
+							var r0: Dictionary = await act.call(who, ["pick", { "card": float(i0) }])
+							check(not r0.has("error"), "a bond or crew pick is taken (%s)" % str(r0))
+							seen["bonds"] = int(seen.get("bonds", 0)) + 1
+							picked = true
 					for i: int in (d["cards"] as Array).size():
-						if Js.obj(d["stamps"]).has(str(i)):
+						if picked or Js.obj(d["stamps"]).has(str(i)):
 							continue
 						var c: Dictionary = d["cards"][i]
+						if c["card"] == "crew":
+							continue
 						if c["card"] == "reprieve" or t.next_tier(who, str(c["id"])) > 0:
 							var r2: Dictionary = await act.call(who, ["pick", { "card": float(i) }])
 							check(not r2.has("error"), "a pick is taken (%s)" % str(r2))

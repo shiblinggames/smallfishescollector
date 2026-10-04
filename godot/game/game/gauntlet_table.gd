@@ -365,7 +365,7 @@ func _effects_onto(seats: Array) -> void:
 		var c: Dictionary = Js.obj(Js.obj(_r["caps"]).get(s["key"]))
 		if c.is_empty():
 			continue
-		var own: Array = Gauntlet.boon_effects(c["boons"]) + Gauntlet.confluence_effects(c["boons"], c["taken"]) + Gauntlet.convergence_effects(c["boons"], c["taken"], c["takenCv"]) + Gauntlet.mark_effects(c["marks"])
+		var own: Array = Gauntlet.boon_effects(c["boons"]) + Gauntlet.confluence_effects(c["boons"], c["taken"]) + Gauntlet.convergence_effects(c["boons"], c["taken"], c["takenCv"]) + Gauntlet.mark_effects(c["marks"]) + _crew_effects(str(s["key"]))
 		var fx: Array = own + party
 		if float(s.get("lockerTaken", 1.0)) != 1.0:
 			fx.append({ "kind": "incomingDmgMult", "mult": float(s["lockerTaken"]), "scope": "allRemaining" })
@@ -377,6 +377,26 @@ func _effects_onto(seats: Array) -> void:
 			s["hp"] = float(s["hp"]) + (mx - float(s["max"]))
 		s["max"] = mx
 		s["hp"] = minf(float(s["hp"]), mx)
+
+
+## A captain's crew synergies: each at the lower tier of the two halves the
+## pair holds between them.
+func _crew_effects(key: String) -> Array:
+	var out: Array = []
+	for x: Dictionary in Js.list(_r["run"].get("crewSyn")):
+		if not Js.list(x["keys"]).has(key):
+			continue
+		var cf: Dictionary = Gauntlet.confluence_def(str(x["id"]))
+		var lv: int = 99
+		for r: Dictionary in Js.list(cf.get("requires")):
+			var best: int = 0
+			for k: Variant in x["keys"]:
+				best = maxi(best, int(Js.num(Js.obj(Js.obj(_r["caps"].get(k)).get("boons")).get(r["boonId"]))))
+			lv = mini(lv, best)
+		lv = mini(lv, Js.list(cf.get("levels")).size())
+		if lv >= 1:
+			out += Js.list(cf["levels"][lv - 1]["effects"])
+	return out
 
 
 # ── A round (as the raid table plays one) ─────────────────────────────────────
@@ -790,6 +810,21 @@ func _open_draft(who: String, nd: int) -> bool:
 	var picks: int = int(tm["boonPicks"])
 	var n: int = (maxi(1, picks - 1) if not syn.is_empty() else picks) if solo_draft else keys.size() + 2 - (1 if picks < 3 else 0)
 	var cards: Array = _deal(n, keys, [])
+	# Co-op only: a bond power in place of the last card (at most one), and a
+	# crew synergy for two captains who each hold half of one.
+	if who == "" and keys.size() >= 2:
+		var pc: Dictionary = Gauntlet.coop_cfg()
+		if Dice.next() < float(pc.get("bondChance", 0.55)):
+			var bd: Dictionary = Gauntlet.draw_bond(_lowest(keys), Js.list(run["banned"]))
+			if not bd.is_empty():
+				bd["card"] = "boon"
+				if not cards.is_empty():
+					cards[cards.size() - 1] = bd
+				else:
+					cards.append(bd)
+		var cs: Dictionary = _crew_synergy(keys)
+		if not cs.is_empty() and Dice.next() < float(pc.get("crewSynChance", 0.7)):
+			cards.append(cs)
 	if cards.is_empty() and syn.is_empty():
 		return false
 	# A reprieve card, when nobody was offered a synergy (it forgoes the pick).
@@ -833,6 +868,54 @@ func _deal(n: int, keys: Array, excl: Array) -> Array:
 	return drawn
 
 
+## The lowest tier any of these captains holds of every family (a family is
+## live while anyone can still take a tier).
+func _lowest(keys: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for b: Dictionary in Js.list(Gauntlet.t().get("boons")) + Gauntlet.bonds():
+		var lo: int = 99
+		for k: String in keys:
+			lo = mini(lo, int(Js.num(Js.obj(_r["caps"][k]["boons"]).get(b["id"]))))
+		if lo > 0:
+			out[b["id"]] = float(lo)
+	return out
+
+
+## A crew synergy for this table: a synergy whose two powers two different
+## captains hold one each (neither holds both, and the pair has not taken it).
+func _crew_synergy(keys: Array) -> Dictionary:
+	var run: Dictionary = _r["run"]
+	var found: Array = []
+	for c: Dictionary in Gauntlet.confluences():
+		if not Gauntlet.in_pool(c.get("gauntlet"), str(run["variant"])):
+			continue
+		var h1: String = str(c["requires"][0]["boonId"])
+		var h2: String = str(c["requires"][1]["boonId"])
+		for a: String in keys:
+			for b2: String in keys:
+				if a == b2:
+					continue
+				var ca: Dictionary = _r["caps"][a]["boons"]
+				var cb: Dictionary = _r["caps"][b2]["boons"]
+				if Js.num(ca.get(h1)) >= 1.0 and Js.num(cb.get(h2)) >= 1.0 and Js.num(ca.get(h2)) < 1.0 and Js.num(cb.get(h1)) < 1.0 and not _crew_has(str(c["id"]), a, b2):
+					found.append([c, a, b2, mini(mini(int(ca[h1]), int(cb[h2])), Js.list(c["levels"]).size())])
+	if found.is_empty():
+		return {}
+	var pick: Array = found[int(floor(Dice.next() * found.size()))]
+	var cf: Dictionary = pick[0]
+	var names: Dictionary = Js.obj(run.get("names"))
+	return { "card": "crew", "id": cf["id"], "name": cf["name"], "keys": [pick[1], pick[2]], "level": float(pick[3]),
+		"desc": Js.obj(Js.list(cf["levels"])[int(pick[3]) - 1]).get("desc", ""), "image": cf.get("image"),
+		"names": [names.get(pick[1], "A captain"), names.get(pick[2], "A captain")] }
+
+
+func _crew_has(id: String, a: String, b2: String) -> bool:
+	for x: Dictionary in Js.list(_r["run"].get("crewSyn")):
+		if x["id"] == id and Js.list(x["keys"]).has(a) and Js.list(x["keys"]).has(b2):
+			return true
+	return false
+
+
 ## The tier a captain would take of a family card (0: they hold it all).
 func next_tier(key: String, fam: String) -> int:
 	var b: Dictionary = Gauntlet.boon_def(fam)
@@ -871,6 +954,15 @@ func _pick(key: String, p: Dictionary) -> Dictionary:
 		var card: Dictionary = cards[i]
 		if card["card"] == "reprieve":
 			got = _take_reprieve(key, card)
+		elif card["card"] == "crew":
+			if not Js.list(card["keys"]).has(key):
+				return { "error": "That crew synergy belongs to %s." % " and ".join(PackedStringArray(Js.list(card["names"]).map(func(x: Variant) -> String: return str(x)))) }
+			if not _r["run"].has("crewSyn"):
+				_r["run"]["crewSyn"] = []
+			(_r["run"]["crewSyn"] as Array).append({ "id": card["id"], "keys": card["keys"] })
+			got = { "kind": "crew", "id": card["id"], "name": card["name"], "level": card["level"] }
+			for k9: Variant in card["keys"]:
+				_mark_seen(str(k9), str(card["id"]))
 		else:
 			var tr: int = next_tier(key, str(card["id"]))
 			if tr <= 0:
@@ -901,6 +993,10 @@ func _can_pick(key: String) -> bool:
 		if d["stamps"].has(str(i)):
 			continue
 		var card: Dictionary = d["cards"][i]
+		if card["card"] == "crew":
+			if Js.list(card["keys"]).has(key):
+				return true
+			continue
 		if card["card"] == "reprieve" or next_tier(key, str(card["id"])) > 0:
 			return true
 	return false
@@ -1391,6 +1487,8 @@ func _pay(key: String, s: Session, cleared: int, offer: Dictionary) -> Dictionar
 	}
 	var h: Dictionary = Gauntlet.haul(cleared, cd, v, float(run["pot"]), false, 0.0, Js.list(p.get("owned_ship_skins")), mults, offer, float(c["fenceSpent"]))
 	var db: CaptainStore = s.store
+	if str(run.get("mode", "solo")) == "coop":
+		_coop_rewards(key, s, h, cd)
 	if float(h["doubloons"]) > 0.0:
 		db.bump_stat(s.uid, "doubloons", float(h["doubloons"]))
 		db.ledger(s.uid, float(h["doubloons"]), "%s: banked at depth %d" % [Gauntlet.NAMES[v], cd])
@@ -1415,6 +1513,31 @@ func _pay(key: String, s: Session, cleared: int, offer: Dictionary) -> Dictionar
 	h["crewUp"] = crew_up
 	h["record"] = _record(key, s, cd, true)
 	return h
+
+
+## A co-op bank's own: the Fleet Chest (every captain afloat past the first
+## lifts everyone's doubloons) and skin vouchers by depth (port rules
+## battle.gauntlet.vouchers; a full crew of four deep enough rolls twice;
+## crew Fortune lifts the odds as it lifts the chase).
+func _coop_rewards(key: String, s: Session, h: Dictionary, cd: int) -> void:
+	var pc: Dictionary = Gauntlet.coop_cfg()
+	var afloat: int = _keys_in().size()
+	var fleet: float = 1.0 + float(pc.get("fleetPerCaptain", 0.05)) * maxi(0, afloat - 1)
+	h["fleet"] = fleet
+	h["doubloons"] = float(Js.round(float(h["doubloons"]) * fleet))
+	var rolls: int = 2 if afloat >= 4 and cd >= int(pc.get("fullCrewDepth", 20)) else 1
+	var got: Array = []
+	for kind: String in ["bosun", "captain"]:
+		var chance: float = 0.0
+		for st: Variant in Js.list(Js.obj(pc.get("vouchers")).get(kind)):
+			if cd >= int(st[0]):
+				chance = float(st[1])
+		chance = minf(0.25, chance * _fortune(key))
+		for k: int in rolls:
+			if chance > 0.0 and Dice.next() < chance:
+				Skins.grant(s.store, s.uid, kind)
+				got.append(kind)
+	h["vouchers"] = got
 
 
 ## A record for this captain: the deepest, the last run, the deepest run's
@@ -1452,6 +1575,16 @@ func _record(key: String, s: Session, cd: int, banked: bool) -> bool:
 				patch[pre + "best_depth_at"] = snap["at"]
 		elif float(cd) > Js.num(p.get(pre + "deepest_died")):
 			patch[pre + "deepest_died"] = float(cd)
+	# A crew's own record: these captains together, in this descent.
+	if str(run.get("mode", "solo")) == "coop" and banked:
+		var ks: Array = Js.obj(run.get("names")).keys()
+		ks.sort()
+		var ck: String = v + ":" + ",".join(PackedStringArray(ks))
+		var crews: Dictionary = Js.obj(p.get("gauntlet_crews")).duplicate(true)
+		var cr: Dictionary = Js.obj(crews.get(ck))
+		if float(cd) > Js.num(cr.get("deepest")) or (float(cd) == Js.num(cr.get("deepest")) and float(snap["ms"]) < Js.num(cr.get("ms", 1e18))):
+			crews[ck] = { "variant": v, "names": Js.obj(run.get("names")).values(), "deepest": float(cd), "ms": snap["ms"], "at": snap["at"] }
+			patch["gauntlet_crews"] = crews
 	if Js.num(c["stats"].get("highestHit")) > Js.num(p.get("gauntlet_max_hit")):
 		patch["gauntlet_max_hit"] = c["stats"]["highestHit"]
 	s.store.update_profile(s.uid, patch)

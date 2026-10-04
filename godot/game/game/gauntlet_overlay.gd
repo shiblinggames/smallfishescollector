@@ -308,7 +308,17 @@ func _draft(fresh: bool) -> void:
 		var cd: Dictionary = cards[i]
 		var c: GCard = _card(Vector2(x, y), Vector2(cw, ch))
 		c.delay = 0.08 * i if fresh else -1.0
-		if cd["card"] == "reprieve":
+		var crew_card: bool = cd["card"] == "crew"
+		if crew_card:
+			var cf: Dictionary = Gauntlet.confluence_def(str(cd["id"]))
+			c.art = _tx(cf.get("image"))
+			c.title = str(cd["name"])
+			c.kicker = "Crew synergy  ·  Level %s" % Gauntlet.tier_label(int(Js.num(cd.get("level"))))
+			c.tone = Color("#c79bff")
+			c.body = str(cd.get("desc", ""))
+			c.foot = "For %s.  Either may take it; both get it." % " and ".join(PackedStringArray(Js.list(cd.get("names")).map(func(x: Variant) -> String: return str(x))))
+			c.foot_tone = Dossier.WARN
+		elif cd["card"] == "reprieve":
 			c.title = str(cd["name"])
 			c.kicker = "A reprieve"
 			c.tone = Dossier.HELP
@@ -322,12 +332,14 @@ func _draft(fresh: bool) -> void:
 			c.art = _tx(fam.get("image"))
 			c.title = str(cd["name"])
 			c.tone = RARITY.get(rar, Dossier.SOFT)
+			c.role = str(fam.get("role", ""))
+			var pre: String = ("Bond  ·  %s  ·  " % c.role.capitalize()) if c.role != "" else ""
 			if nx > tiers.size():
-				c.kicker = "%s  ·  maxed" % rar.capitalize()
+				c.kicker = pre + "%s  ·  maxed" % rar.capitalize()
 				c.body = str(Js.obj(tiers[tiers.size() - 1]).get("desc", ""))
 				c.dim = true
 			else:
-				c.kicker = "%s  ·  %s" % [rar.capitalize(), ("Tier %s" % Gauntlet.tier_label(nx)) if nx > 1 else "New"]
+				c.kicker = pre + "%s  ·  %s" % [rar.capitalize(), ("Tier %s" % Gauntlet.tier_label(nx)) if nx > 1 else "New"]
 				c.body = str(Js.obj(tiers[nx - 1]).get("desc", ""))
 				var hints: Array = Gauntlet.confluence_hints(str(cd["id"]), nx, own, taken)
 				var hl: Array = []
@@ -340,7 +352,7 @@ func _draft(fresh: bool) -> void:
 			var sk: String = str(stamps[str(i)])
 			c.stamp = face_of.call(sk) if face_of.is_valid() else null
 			c.stamp_name = _name(sk)
-		c.live = mine and not stamps.has(str(i)) and not c.dim
+		c.live = mine and not stamps.has(str(i)) and not c.dim and (not crew_card or Js.list(cd.get("keys")).has(my_key))
 		var ii: int = i
 		c.pressed.connect(func() -> void:
 			if c.live:
@@ -706,8 +718,8 @@ func _haul() -> void:
 		["Navigation XP", "+%s" % Js.thousands(Js.num(p.get("navXp"))), Dossier.INK],
 		["Fathoms", "+%s" % Js.thousands(Js.num(p.get("fathoms"))), Color("#7fd6c8")],
 	]
-	if Js.num(p.get("bloodGems")) > 0.0:
-		rows.append(["Blood Gems", "+%s" % Js.thousands(Js.num(p.get("bloodGems"))), Dossier.HARM])
+	if Js.num(p.get("fleet")) > 1.0:
+		rows.append(["Fleet Chest", "+%d%% doubloons" % int(round((float(p["fleet"]) - 1.0) * 100.0)), Dossier.WARN])
 	if Js.num(p.get("crewXp")) > 0.0:
 		rows.append(["Every hand aboard", "+%s XP" % Js.thousands(Js.num(p.get("crewXp"))), Dossier.HELP])
 	var y: float = 126.0
@@ -721,6 +733,8 @@ func _haul() -> void:
 		drops.append(str(Gauntlet.DROP_NAMES.get(str(it), Armory.item(str(it)).get("name", it))))
 	for sk: Variant in Js.list(p.get("skins")):
 		drops.append(str(Gauntlet.DROP_NAMES.get(str(sk), sk)))
+	for vk: Variant in Js.list(p.get("vouchers")):
+		drops.append("a %s skin voucher" % ("Captain's" if str(vk) == "captain" else "Bosun's"))
 	if not drops.is_empty():
 		_label(Vector2(380, y + 6), "From the chest:  " + ", ".join(PackedStringArray(drops)), "karla", 800, 15, Dossier.WARN, w - 420.0)
 		y += 40.0
@@ -781,6 +795,7 @@ func _home_foot() -> void:
 ## what it does, a foot line. Taken, a captain's face is stamped on it.
 class GCard:
 	extends Button
+	const ROLE_TONE: Dictionary = { "tank": Color("#8fb4d8"), "healer": Color("#8fd8a8"), "support": Color("#e6c36f"), "gunner": Color("#e88a6a") }
 	var art: Texture2D
 	var tone: Color = Dossier.SOFT
 	var kicker: String = ""
@@ -798,6 +813,8 @@ class GCard:
 	var wide: bool = false
 	var short: bool = false
 	var voters: Array = []
+	## A bond's role: its mark in the card's corner.
+	var role: String = ""
 	var delay: float = -1.0
 	var _t: float = 0.0
 	var _frames: int = 0
@@ -837,6 +854,8 @@ class GCard:
 			rim = Color(Dossier.HARM, 0.9)
 		BattleLook.draw_box(self, rr, BattleLook.box(bg, rim, 2 if (hov or legend or banish) else 1, 14, 18.0 if hov else 8.0, Color(0, 0, 0, 0.45)))
 		var a: float = 0.45 if dim else 1.0
+		if role != "":
+			_role_mark(Vector2(rr.end.x - 26.0, rr.position.y + 26.0), a)
 		var x0: float = 18.0
 		var y: float = rr.position.y + 20.0
 		if wide:
@@ -872,6 +891,27 @@ class GCard:
 			var sc: Vector2 = Vector2(rr.get_center().x, rr.position.y + rr.size.y * 0.42)
 			BattleLook.medallion(self, sc, 34.0, stamp, BattleLook.GOLD, stamp_name.substr(0, 1), 1.0, Vector2(0.5, 0.5), 0.5)
 			BattleLook.say(self, Kit.font("cinzel", 700), sc.x, sc.y + 56.0, "Taken by %s" % stamp_name if stamp_name != "You" else "Yours", 15, BattleLook.GOLD)
+
+	## The role's mark: a shield (tank), a cross (healer), a pennant (support),
+	## a gunsight (gunner), drawn, in the role's colour.
+	func _role_mark(c: Vector2, a: float) -> void:
+		var col: Color = Color(ROLE_TONE.get(role, Dossier.SOFT), a)
+		draw_circle(c, 15.0, Color(col, 0.16 * a))
+		match role:
+			"tank":
+				draw_colored_polygon(PackedVector2Array([c + Vector2(-8, -9), c + Vector2(8, -9), c + Vector2(8, 1), c + Vector2(0, 10), c + Vector2(-8, 1)]), col)
+			"healer":
+				draw_rect(Rect2(c + Vector2(-2.5, -8), Vector2(5, 16)), col)
+				draw_rect(Rect2(c + Vector2(-8, -2.5), Vector2(16, 5)), col)
+			"support":
+				draw_line(c + Vector2(-6, -9), c + Vector2(-6, 10), col, 2.0, true)
+				draw_colored_polygon(PackedVector2Array([c + Vector2(-5, -9), c + Vector2(9, -4), c + Vector2(-5, 1)]), col)
+			_:
+				draw_arc(c, 7.5, 0.0, TAU, 24, col, 2.0, true)
+				draw_line(c + Vector2(0, -11), c + Vector2(0, -4), col, 2.0)
+				draw_line(c + Vector2(0, 4), c + Vector2(0, 11), col, 2.0)
+				draw_line(c + Vector2(-11, 0), c + Vector2(-4, 0), col, 2.0)
+				draw_line(c + Vector2(4, 0), c + Vector2(11, 0), col, 2.0)
 
 	func _words(at: Vector2, w: float, a: float) -> float:
 		var y: float = at.y

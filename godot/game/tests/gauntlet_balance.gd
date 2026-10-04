@@ -14,10 +14,16 @@ func _init() -> void:
 			for f: String in DirAccess.get_files_at(dd):
 				DirAccess.remove_absolute("%s/%s" % [dd, f])
 	await process_frame
+	# NOBONDS=1: the co-op tables deal no bonds and no crew synergies (a baseline).
+	if OS.get_environment("NOBONDS") == "1":
+		var gc: Dictionary = Js.obj(Battle.cfg().get("gauntlet"))
+		gc["bondChance"] = 0.0
+		gc["crewSynChance"] = 0.0
 	var runs: int = int(OS.get_environment("RUNS")) if OS.get_environment("RUNS") != "" else 6
-	for variant: String in ["davy", "don"]:
-		for n: int in [1, 2, 3, 4]:
+	for variant: String in (Array(OS.get_environment("VS").split(",")) if OS.get_environment("VS") != "" else ["davy", "don"]):
+		for n: int in (Array(OS.get_environment("NS").split(",")).map(func(x: String) -> int: return int(x)) if OS.get_environment("NS") != "" else [1, 2, 3, 4]):
 			var depths: Array = []
+			var bonds: int = 0
 			for k: int in runs:
 				Dice.install(Dice.Mulberry32.new(100 + k * 7 + n))
 				seed(100 + k)
@@ -45,10 +51,11 @@ func _init() -> void:
 				await act.call("k0", ["go"])
 				var r: Dictionary = await _play(gt, ss.keys(), act, 40, 20000)
 				depths.append(int(r["depth"]))
+				bonds += int(r.get("bonds", 0))
 				gt.queue_free()
 			depths.sort()
 			var tot: float = 0.0
 			for d: int in depths:
 				tot += d
-			print("  %s, %d captain%s: mean depth %.1f, median %d  %s" % [variant, n, "" if n == 1 else "s", tot / depths.size(), depths[depths.size() / 2], str(depths)])
+			print("  %s, %d captain%s: mean depth %.1f, median %d  %s" % [variant, n, "" if n == 1 else "s", tot / depths.size(), depths[depths.size() / 2], str(depths)] + ("  bond/crew picks %d" % bonds if n > 1 else ""))
 	quit(0)

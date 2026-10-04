@@ -887,6 +887,28 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Locker's depth gates read) and per mode (gauntlet_solo_*, gauntlet_coop_*): deepest banked and
   the time to it, deepest sunk, dives banked and sunk, the deepest dive's and the last dive's
   recap (depth, crew, pot, powers, synergies, Marks, curses, the guns); the biggest hit.
+  CO-OP'S OWN (Kong, 2026-10-03: "specialize into different helper class builds ... support
+  roles or healer or tank roles while others choose more classic damage", "balancing as
+  grounded as possible"; port rules battle.gauntlet). BOND POWERS (bonds, 21 families, icons
+  in port_art/gauntlet/bonds): dealt only at a co-op draft table, at most one per spread (it
+  takes the last card's place, chance bondChance), weighted by rarity like the powers. Roles:
+  TANK (Draw Fire, Shield Wall, Lashed Hulls, Covering Fire, Close Ranks), HEALER (Field
+  Dressing, Shared Spoils, Surgeon's Hand, Smelling Salts), SUPPORT (Powder Runner, Signal
+  Flags, Spotter's Mark, Rallying Cry, Sea Shanty, Boarding Action), GUNNER (Wolfpack, Kill Box,
+  Converging Fire, Crossed Guns, Raking Fire, Echoing Guns). The engine (Battle, the bond*
+  kinds) does nothing and rolls no die unless a ship holds one, so solo and raids are as they
+  were (parity unchanged). CREW SYNERGIES: at a co-op table, a synergy whose two powers two
+  different captains hold one each may be dealt (chance crewSynChance); either of the two takes
+  it with their pick and both get it, at the lower tier the pair holds (run.crewSyn). CO-OP
+  SYNERGIES (bondSynergies; a bond plus a power, one captain or split across two): Iron Bulwark
+  (Shield Wall + Ironhide), Field Hospital (Field Dressing + Bilge Pump), Powder Train (Powder
+  Runner + Powder Hoard), Death Mark (Spotter's Mark + Executioner), Rolling Broadside (Raking
+  Fire + Broadside Mastery), Rally the Line (Rallying Cry + Rising Tide). The Codex lists the
+  bonds by role and these apart. A co-op bank adds the FLEET CHEST (+fleetPerCaptain doubloons
+  per captain afloat past the first) and SKIN VOUCHERS by depth (vouchers; Bosun's from depth
+  10, Captain's from 20; a crew of four banking at fullCrewDepth rolls twice; Fortune lifts the
+  odds, capped at 25%). A crew's own record per descent (gauntlet_crews: the deepest these
+  captains reached together, and the time). Grapnel Line was CUT (Kong).
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the

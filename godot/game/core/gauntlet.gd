@@ -652,6 +652,12 @@ static func party_cfg() -> Dictionary:
 	return Js.obj(Js.obj(Battle.cfg().get("gauntlet")).get("party"))
 
 
+## Co-op's own (port rules battle.gauntlet): bond and crew synergy odds, the
+## Fleet Chest, the vouchers.
+static func coop_cfg() -> Dictionary:
+	return Js.obj(Battle.cfg().get("gauntlet"))
+
+
 # ══ Curses ════════════════════════════════════════════════════════════════════
 
 static func curse_def(id: String) -> Dictionary:
@@ -742,7 +748,54 @@ static func boon_def(id: String) -> Dictionary:
 	for b: Dictionary in Js.list(t().get("boons")):
 		if b["id"] == id:
 			return b
+	for b2: Dictionary in bonds():
+		if b2["id"] == id:
+			return b2
 	return {}
+
+
+## Every synergy: the web's, then the co-op ones (bond + power; port rules
+## battle.gauntlet.bondSynergies, none under the parity run).
+static func confluences() -> Array:
+	return Js.list(t().get("confluences")) + Js.list(Js.obj(Battle.cfg().get("gauntlet")).get("bondSynergies"))
+
+
+## The co-op bond powers (port rules battle.gauntlet.bonds; none under the
+## parity run, which reads the web's tables alone).
+static func bonds() -> Array:
+	return Js.list(Js.obj(Battle.cfg().get("gauntlet")).get("bonds"))
+
+
+## One bond card for a co-op spread, weighted by rarity like the powers,
+## among the families someone at the table can still take.
+static func draw_bond(lowest: Dictionary, banned: Array) -> Dictionary:
+	var meta: Dictionary = t()["rarity"]
+	var pool: Array = []
+	var tot: float = 0.0
+	for b: Dictionary in bonds():
+		if banned.has(b["id"]):
+			continue
+		var nx: int = int(Js.num(lowest.get(b["id"]))) + 1
+		if nx > Js.list(b["tiers"]).size():
+			continue
+		var w: float = float(Js.obj(meta.get(rarity(b))).get("weight", 1.0))
+		pool.append([b, nx, w])
+		tot += w
+	if pool.is_empty():
+		return {}
+	var r: float = Dice.next() * tot
+	for p: Array in pool:
+		r -= float(p[2])
+		if r <= 0.0:
+			var o: Dictionary = boon_offer(p[0], int(p[1]))
+			o["bond"] = true
+			o["role"] = p[0].get("role", "")
+			return o
+	var last: Array = pool[pool.size() - 1]
+	var o2: Dictionary = boon_offer(last[0], int(last[1]))
+	o2["bond"] = true
+	o2["role"] = last[0].get("role", "")
+	return o2
 
 
 static func rarity(b: Dictionary) -> String:
@@ -811,7 +864,7 @@ static func blood_oath_boon(variant: String) -> String:
 
 static func boon_effects(owned: Dictionary) -> Array:
 	var out: Array = []
-	for b: Dictionary in Js.list(t().get("boons")):
+	for b: Dictionary in Js.list(t().get("boons")) + bonds():
 		var tr: int = int(Js.num(owned.get(b["id"])))
 		if tr >= 1:
 			out.append(b["tiers"][mini(tr, Js.list(b["tiers"]).size()) - 1]["effect"])
@@ -834,7 +887,7 @@ static func hp_boon_mult(effects: Array, d: int, kills: int) -> float:
 # ── Confluences and convergences ──────────────────────────────────────────────
 
 static func confluence_def(id: String) -> Dictionary:
-	for c: Dictionary in Js.list(t().get("confluences")):
+	for c: Dictionary in confluences():
 		if c["id"] == id:
 			return c
 	return {}
@@ -857,7 +910,7 @@ static func confluence_level(c: Dictionary, owned: Dictionary) -> int:
 
 
 static func eligible_confluences(owned: Dictionary, taken: Array, variant: String) -> Array:
-	return Js.list(t().get("confluences")).filter(func(c: Dictionary) -> bool:
+	return confluences().filter(func(c: Dictionary) -> bool:
 		return in_pool(c.get("gauntlet"), variant) and not taken.has(c["id"]) and confluence_level(c, owned) >= 1)
 
 
@@ -865,7 +918,7 @@ static func confluence_hints(offer_id: String, offer_tier: int, owned: Dictionar
 	var after: Dictionary = owned.duplicate()
 	after[offer_id] = float(maxi(int(Js.num(owned.get(offer_id))), offer_tier))
 	var out: Array = []
-	for c: Dictionary in Js.list(t().get("confluences")):
+	for c: Dictionary in confluences():
 		if not Js.list(c["requires"]).any(func(r: Dictionary) -> bool: return r["boonId"] == offer_id):
 			continue
 		var before: int = confluence_level(c, owned)
@@ -910,7 +963,7 @@ static func draw_confluence(owned: Dictionary, taken: Array, offered: Array, mul
 
 static func confluence_effects(owned: Dictionary, taken: Array) -> Array:
 	var out: Array = []
-	for c: Dictionary in Js.list(t().get("confluences")):
+	for c: Dictionary in confluences():
 		if not taken.has(c["id"]):
 			continue
 		var lv: int = confluence_level(c, owned)
