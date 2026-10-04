@@ -12,7 +12,10 @@ signal closed
 
 var session: Session
 var _body: VBoxContainer
-var _tab: String = "crew"
+var _tab: String = "hull"
+## The Refit's re-walk: the picks made so far, chapter by chapter (null: not
+## re-walking).
+var _rewalk: Variant = null
 
 
 func _ready() -> void:
@@ -69,13 +72,21 @@ func _paint() -> void:
 	_body.add_child(head)
 	var tl: Label = Paper.text(head, "The Gunwharf", "display", Paper.ink())
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for t: Array in [["crew", "Raid party"], ["armory", "Armory"], ["ultimate", "Ultimate"], ["kit", "Repair kit"], ["yard", "Refits"]]:
+	for t: Array in [["hull", "Hull"], ["crew", "Raid party"], ["armory", "Armory"], ["ultimate", "Ultimate"], ["kit", "Repair kit"], ["yard", "Refits"], ["look", "Look"]]:
 		var tb: Pane.PaneButton = Paper.button(t[1], _tab == t[0])
 		var id: String = t[0]
 		tb.pressed.connect(func() -> void:
 			_tab = id
 			_paint())
 		head.add_child(tb)
+	if _tab == "hull":
+		_hull()
+		Paper.night = false
+		return
+	if _tab == "look":
+		_look()
+		Paper.night = false
+		return
 	if _tab == "armory":
 		_armory()
 		Paper.night = false
@@ -328,6 +339,169 @@ func _item_tile(id: Variant, mounted: bool, eq: Array, n: int = 1) -> Control:
 	return bt
 
 
+# ── Her hull ──────────────────────────────────────────────────────────────────
+
+func _field(text: String) -> LineEdit:
+	var field: LineEdit = LineEdit.new()
+	field.text = text
+	field.max_length = 32
+	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var fsb: StyleBoxFlat = StyleBoxFlat.new()
+	fsb.bg_color = Color(0.13, 0.105, 0.09)
+	fsb.border_color = Color(Paper.NIGHT_INK, 0.35)
+	fsb.set_border_width_all(1)
+	fsb.set_corner_radius_all(6)
+	fsb.content_margin_left = 10
+	fsb.content_margin_right = 10
+	for st: String in ["normal", "focus"]:
+		field.add_theme_stylebox_override(st, fsb)
+	field.add_theme_color_override("font_color", Paper.NIGHT_INK)
+	field.add_theme_color_override("font_placeholder_color", Paper.NIGHT_INK_FAINT)
+	return field
+
+
+func _hull() -> void:
+	var p: Dictionary = session.profile()
+	var tier: int = Hulls.tier_of(p)
+	var nav: int = Loadout.nav_level_from_xp(Js.num(p.get("expedition_xp")))
+	var cols: HBoxContainer = HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 28)
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_body.add_child(cols)
+	# Her, on the left: the picture the chart draws, her name, her numbers.
+	var left: VBoxContainer = VBoxContainer.new()
+	left.custom_minimum_size = Vector2(440, 0)
+	left.add_theme_constant_override("separation", 8)
+	cols.add_child(left)
+	var holder: Control = Control.new()
+	holder.custom_minimum_size = Vector2(0, 250)
+	left.add_child(holder)
+	Paper.blot(holder, Color(0.36, 0.5, 0.6), 0.6)
+	var pic: TextureRect = TextureRect.new()
+	pic.texture = Skipper.tex(str(North.ship_art(tier, p.get("equipped_ship_skin"))["art"]))
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	holder.add_child(pic)
+	var nm: HBoxContainer = HBoxContainer.new()
+	nm.add_theme_constant_override("separation", 6)
+	left.add_child(nm)
+	var field: LineEdit = _field(str(Js.nz(p.get("ship_name"), Hulls.hull(tier).get("name", "Sloop"))))
+	field.placeholder_text = "Name her"
+	nm.add_child(field)
+	var rb: Pane.PaneButton = Paper.button("Rename")
+	rb.pressed.connect(func() -> void:
+		var r: Variant = await session.act("renameShip", [field.text])
+		session.persist()
+		if r is Dictionary and (r as Dictionary).has("error"):
+			Sound.slack()
+		else:
+			Sound.plip()
+		_paint())
+	field.text_submitted.connect(func(_t: String) -> void: rb.pressed.emit())
+	nm.add_child(rb)
+	var c: Dictionary = Hulls.combat(tier)
+	Paper.stat(left, "Hull", "%s  ·  tier %d of %d" % [Hulls.hull(tier).get("name", "Sloop"), tier, Hulls.TOP])
+	Paper.stat(left, "Hull points", str(int(Js.num(c.get("durability")))))
+	Paper.stat(left, "Speed", str(int(Js.num(c.get("speed")))))
+	Paper.stat(left, "Crew seats", str(Crew.party_slots(p)))
+	Paper.stat(left, "Raid-item mounts", str(Armory.slots(p)))
+	# The ladder, on the right: every hull, hers marked, the next one for sale.
+	var right: VBoxContainer = VBoxContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.add_theme_constant_override("separation", 10)
+	cols.add_child(right)
+	Paper.text(right, "THE HULLS", "eyebrow", Paper.ink_soft())
+	Paper.text(right, "Each hull is bought in turn. A bigger hull seats more crew, mounts more raid items, takes more punishment and hits harder at its weakest.", "small", Paper.ink_soft(), true)
+	for h: Dictionary in Hulls.ladder():
+		var t: int = int(h["tier"])
+		var hc: Dictionary = Hulls.combat(t)
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 14)
+		row.modulate.a = 1.0 if t <= tier + 1 else 0.45
+		right.add_child(row)
+		var art: TextureRect = TextureRect.new()
+		art.texture = Skipper.tex(str(North.ship_art(t, null)["art"]))
+		art.custom_minimum_size = Vector2(84, 56)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		row.add_child(art)
+		var v: VBoxContainer = VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(v)
+		var mounts: int = int(Js.num(hc.get("itemSlots")))
+		Paper.text(v, str(h["name"]), "body_strong", Paper.ink())
+		Paper.text(v, "%d hull  ·  %d speed  ·  %d crew  ·  %d mount%s  ·  %d least damage" % [int(Js.num(hc.get("durability"))), int(Js.num(hc.get("speed"))), int(Js.num(hc.get("crewSlots"))), mounts, "" if mounts == 1 else "s", int(Js.num(hc.get("minDamage")))], "small", Paper.ink_soft())
+		if t == tier:
+			Paper.text(row, "Sailing her", "body_strong", Color(0.5, 0.86, 0.58))
+		elif t < tier:
+			Paper.text(row, "Outgrown", "small", Paper.ink_faint())
+		elif t == tier + 1:
+			var gated: bool = nav < int(h["navLevelReq"])
+			var cost: float = float(h["cost"])
+			var bb: Pane.PaneButton = Paper.button("Needs Navigation %d" % int(h["navLevelReq"]) if gated else "Buy  ·  %s ⟡" % Js.thousands(cost), not gated)
+			bb.disabled = gated or Js.num(p.get("doubloons")) < cost
+			bb.pressed.connect(func() -> void:
+				var r: Variant = await session.act("buyShip", [])
+				session.persist()
+				if r is Dictionary and (r as Dictionary).has("error"):
+					Sound.slack()
+				else:
+					Sound.chest(true)
+				_paint())
+			row.add_child(bb)
+		else:
+			Paper.text(row, "Navigation %d  ·  %s ⟡" % [int(h["navLevelReq"]), Js.thousands(float(h["cost"]))], "small", Paper.ink_faint())
+
+
+# ── Her paint ─────────────────────────────────────────────────────────────────
+
+func _look() -> void:
+	var p: Dictionary = session.profile()
+	var mow: bool = Hulls.tier_of(p) >= Hulls.SKIN_TIER
+	var worn: Variant = p.get("equipped_ship_skin")
+	Paper.text(_body, "HER PAINT", "eyebrow", Paper.ink_soft())
+	Paper.text(_body, "Paint shows on the Man-o-War only." + ("" if mow else " Buy her and every paint you hold can be worn."), "small", Paper.ink_soft(), true)
+	var owned: Array = Hulls.skins_owned(p)
+	if owned.is_empty():
+		Paper.text(_body, "No paint yet. Hull paints come off the deep end of the campaign and out of the gauntlets.", "body", Paper.ink_soft(), true)
+		return
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 14)
+	_body.add_child(grid)
+	var tiles: Array = [null]
+	tiles.append_array(owned)
+	for id: Variant in tiles:
+		var v: VBoxContainer = VBoxContainer.new()
+		v.custom_minimum_size = Vector2(240, 0)
+		v.add_theme_constant_override("separation", 4)
+		grid.add_child(v)
+		var pic: TextureRect = TextureRect.new()
+		pic.texture = Skipper.tex(str(North.ship_art(Hulls.SKIN_TIER, id)["art"]))
+		pic.custom_minimum_size = Vector2(240, 130)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		v.add_child(pic)
+		Paper.text(v, "Plain hull" if id == null else str(Hulls.skin(str(id)).get("name", id)), "body_strong", Paper.ink())
+		if worn == id:
+			Paper.text(v, "Worn", "small", Color(0.5, 0.86, 0.58))
+		elif not mow and id != null:
+			Paper.text(v, "Man-o-War only", "small", Paper.ink_faint())
+		else:
+			var b: Pane.PaneButton = Paper.button("Wear")
+			b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			var sid: Variant = id
+			b.pressed.connect(func() -> void:
+				await session.act("equipShipSkin", [sid])
+				session.persist()
+				Sound.plip()
+				_paint())
+			v.add_child(b)
+
+
 # ── The yard's refits ─────────────────────────────────────────────────────────
 
 func _yard() -> void:
@@ -360,6 +534,88 @@ func _yard() -> void:
 				Sound.chest(true)
 			_paint())
 		row.add_child(b)
+	_refit_panel(p)
+
+
+## THE REFIT: every class pick re-chosen at once, in the order they were
+## made, once the don is under. The first is free.
+func _refit_panel(p: Dictionary) -> void:
+	var picks: Dictionary = Js.obj(p.get("ship_classes"))
+	if picks.is_empty() or not session.store.has_cleared(session.uid, "the_throne"):
+		return
+	var sc: Dictionary = Rules.data()["shipClasses"]
+	var order: Array = Js.list(sc["chapterOrder"]).filter(func(ch: Variant) -> bool: return picks.has(ch))
+	var cost: float = Campaign.refit_cost(Js.num(p.get("ship_refits_used")))
+	Paper.rule(_body)
+	Paper.text(_body, "THE REFIT", "eyebrow", Paper.ink_soft())
+	Paper.text(_body, "Re-choose every Captain's Choice at once, in the order you made them. Your map stays as it is; only your classes change. %s" % ("The first refit is free." if cost == 0.0 else "Each refit after the first costs %s ⟡." % Js.thousands(cost)), "small", Paper.ink_soft(), true)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 18)
+	_body.add_child(row)
+	var walk: Dictionary = _rewalk if _rewalk is Dictionary else {}
+	for i: int in order.size():
+		var ch: String = order[i]
+		var v: VBoxContainer = VBoxContainer.new()
+		v.add_theme_constant_override("separation", 2)
+		row.add_child(v)
+		Paper.text(v, "CHAPTER %s" % ["I", "II", "III", "IV"][mini(i, 3)], "eyebrow", Paper.ink_faint())
+		var id: Variant = walk.get(ch) if _rewalk is Dictionary else picks.get(ch)
+		var c: Dictionary = Js.obj(Js.obj(sc["classes"]).get(id))
+		if c.is_empty():
+			Paper.text(v, "To choose", "body", Paper.ink_faint())
+		else:
+			Paper.text(v, str(c["name"]), "body_strong", Color(str(c.get("color", "#d8b26a"))))
+	if not (_rewalk is Dictionary):
+		var b: Pane.PaneButton = Paper.button("Begin a refit" + ("" if cost == 0.0 else "  ·  %s ⟡" % Js.thousands(cost)))
+		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		b.disabled = Js.num(p.get("doubloons")) < cost
+		b.pressed.connect(func() -> void:
+			_rewalk = {}
+			_paint())
+		_body.add_child(b)
+		return
+	# The next chapter's menu, given everything chosen before it.
+	var next_ch: String = ""
+	for ch: String in order:
+		if not walk.has(ch):
+			next_ch = ch
+			break
+	var acts: HBoxContainer = HBoxContainer.new()
+	acts.add_theme_constant_override("separation", 8)
+	_body.add_child(acts)
+	if next_ch != "":
+		for id: Variant in Campaign.offered_classes(walk):
+			var c: Dictionary = Js.obj(sc["classes"][id])
+			var ob: Pane.PaneButton = Paper.button(str(c["name"]))
+			ob.tooltip_text = str(c.get("tagline", ""))
+			var cid: Variant = id
+			var chk: String = next_ch
+			ob.pressed.connect(func() -> void:
+				walk[chk] = cid
+				_rewalk = walk
+				_paint())
+			acts.add_child(ob)
+	else:
+		var go: Pane.PaneButton = Paper.button("Refit her" + ("" if cost == 0.0 else "  ·  %s ⟡" % Js.thousands(cost)), true)
+		go.pressed.connect(func() -> void:
+			var r: Variant = await session.act("refitShipClasses", [walk])
+			session.persist()
+			if r is Dictionary and (r as Dictionary).get("ok") == true:
+				Sound.horn()
+			else:
+				Sound.slack()
+			_rewalk = null
+			_paint())
+		acts.add_child(go)
+	var cancel: Pane.PaneButton = Paper.button("Cancel")
+	cancel.pressed.connect(func() -> void:
+		_rewalk = null
+		_paint())
+	acts.add_child(cancel)
+	if next_ch != "":
+		for id: Variant in Campaign.offered_classes(walk):
+			var c: Dictionary = Js.obj(sc["classes"][id])
+			Paper.text(_body, "%s:  %s" % [c["name"], ",  ".join(Js.list(c.get("bullets")).map(func(bl: Dictionary) -> String: return str(bl["label"])))], "small", Paper.ink_soft())
 
 
 # ── The ultimate ──────────────────────────────────────────────────────────────

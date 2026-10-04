@@ -1589,6 +1589,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  THE SHIP'S PURCHASES (2026-10-04, the audit's third item: the Mega was unreachable without
+  them): core/hulls.gd ports buyShip (the Sloop to the Man-o-War a rung at a time, each behind
+  its Navigation rung, prices in port_rules.json "hulls" since the export carries only the sea
+  art), renameShip and equipShipSkin; Campaign.refit_classes ports refitShipClasses (after the
+  Throne, every Captain's Choice re-walked in play order, the first free, then 1,000,000 ⟡,
+  ship_classes only). The Gunwharf gains HULL (her picture, name and numbers; every hull with
+  its numbers, hers marked, the next for sale) as its first tab, LOOK (her paint), and THE
+  REFIT under Refits (pick a chapter at a time, each option's effects written out). A skin
+  shows on the Man-o-War only, now in North.ship_art itself, so every render site holds the
+  rule. Leaving the Gunwharf repaints her on the water and the HUD's Ship chip.
+  tests/hull_check.gd.
   SETTINGS AND THE ESC MENU (2026-10-04; Kong: "a much more robust settings page"):
   game/game_settings.gd keeps them (Prefs "set_*") and applies them at start and on change;
   game/settings_sheet.gd (night paper, from the title's corner or the Esc menu): SOUND (master,

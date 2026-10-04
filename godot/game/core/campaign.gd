@@ -621,6 +621,54 @@ static func pick_class(db: CaptainStore, uid: String, nid: String, class_id: Str
 	return { "ok": true }
 
 
+## THE REFIT (refitShipClasses): every class pick re-chosen at once, in play
+## order, once the don is under. The first is free, each after costs
+## shipClasses.refitCost. Writes ship_classes only: the class nodes stay
+## cleared (the Chapter II one is the Gauntlet's gate).
+static func refit_cost(used: float) -> float:
+	return 0.0 if floorf(maxf(0.0, used)) == 0.0 else float(Rules.data()["shipClasses"]["refitCost"])
+
+
+## validateClassPicks: a loadout the picker itself could have produced.
+static func validate_class_picks(next: Dictionary, allowed: Array) -> String:
+	if next.size() != allowed.size() or next.keys().any(func(k: Variant) -> bool: return not allowed.has(k)):
+		return "That is not the set of chapters you have sailed."
+	var so_far: Dictionary = {}
+	var classes: Dictionary = Rules.data()["shipClasses"]["classes"]
+	for ch: Variant in Rules.data()["shipClasses"]["chapterOrder"]:
+		if not allowed.has(ch):
+			continue
+		var id: Variant = next[ch]
+		if not classes.has(id):
+			return "Unknown class."
+		if not offered_classes(so_far).has(id):
+			return "%s is not on the menu at that point." % classes[id]["name"]
+		so_far[ch] = id
+	return ""
+
+
+static func refit_classes(db: CaptainStore, uid: String, next: Dictionary) -> Dictionary:
+	var p: Dictionary = db.profile(uid, "ship_classes, ship_refits_used, doubloons")
+	if not db.has_cleared(uid, "the_throne"):
+		return { "error": "The don is still sitting on his throne." }
+	var chapters: Array = Js.obj(p.get("ship_classes")).keys()
+	if chapters.is_empty():
+		return { "error": "You have no classes to refit." }
+	var bad: String = validate_class_picks(next, chapters)
+	if bad != "":
+		return { "error": bad }
+	var used: float = Js.num(p.get("ship_refits_used"))
+	var cost: float = refit_cost(used)
+	var left: Variant = null
+	if cost > 0.0:
+		left = db.deduct_doubloons(uid, cost)
+		if left == null:
+			return { "error": "A refit costs %s ⟡." % Js.thousands(cost) }
+		db.ledger(uid, -cost, "Ship refit: re-cut your class picks")
+	db.update_profile(uid, { "ship_classes": next.duplicate(), "ship_refits_used": used + 1.0 })
+	return { "ok": true, "doubloons": left }
+
+
 ## The spoils of the Sunken Hand: one side free, the other for SPOILS_PRICE.
 const SPOILS_PRICE: float = 2500000.0
 

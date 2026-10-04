@@ -1349,6 +1349,15 @@ func _held_at_bay(line: String) -> void:
 
 ## The Sea Gate opens with a captain seated to fight (an empty ship does not
 ## go out: every fight past it is fought by the crew in the seats).
+## Out of the Gunwharf: a new hull or paint shows on the water at once.
+func _reship() -> void:
+	_hud.refresh()
+	if not _boat.on_ship:
+		return
+	var sa: Dictionary = North.ship_art(session.profile().get("ship_tier"), session.profile().get("equipped_ship_skin"))
+	_boat.set_ship(true, sa["def"], Skipper.tex(sa["art"]), sa["wide"], false)
+
+
 func _open_sea_gate() -> void:
 	var seated: bool = false
 	for c: Dictionary in Crew.live(session.store):
@@ -1463,6 +1472,7 @@ func _dock(id: String) -> void:
 			var gw: GunwharfSheet = GunwharfSheet.new()
 			gw.session = session
 			gw.closed.connect(_open_sea_gate)
+			gw.closed.connect(_reship)
 			_hud.hold_for(gw)
 			_room_layer.add_child(gw)
 		_:

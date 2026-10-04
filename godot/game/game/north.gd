@@ -216,7 +216,8 @@ static func ship_art(ship_tier: Variant, skin: Variant) -> Dictionary:
 	var art: String = str(def.get("seaImageUrl", ""))
 	var wide: float = 1.0
 	for sk: Dictionary in Js.list(Rules.data().get("shipSkins")):
-		if sk["id"] == skin and sk.get("imageByTier") != null:
+		# A skin shows on the Man-o-War only (docs ship.md).
+		if sk["id"] == skin and tier >= Hulls.SKIN_TIER and sk.get("imageByTier") != null:
 			var by: Dictionary = sk["imageByTier"]
 			if by.has(str(tier)):
 				art = str(by[str(tier)])

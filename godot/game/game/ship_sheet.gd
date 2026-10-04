@@ -44,14 +44,9 @@ func _ready() -> void:
 	margin.add_child(col)
 	var p: Dictionary = session.profile()
 	var tier: int = clampi(int(Js.num(p.get("ship_tier"))), 2, 6)
-	var def: Dictionary = {}
-	for sd: Dictionary in Js.list(Rules.data().get("ships")):
-		if int(sd["tier"]) == tier:
-			def = sd
-	var art: String = str(def.get("seaImageUrl", ""))
-	for sk: Dictionary in Js.list(Rules.data().get("shipSkins")):
-		if sk["id"] == p.get("equipped_ship_skin") and sk.get("imageByTier") != null and (sk["imageByTier"] as Dictionary).has(str(tier)):
-			art = str(sk["imageByTier"][str(tier)])
+	var sa: Dictionary = North.ship_art(tier, p.get("equipped_ship_skin"))
+	var def: Dictionary = sa["def"]
+	var art: String = sa["art"]
 	var head: HBoxContainer = HBoxContainer.new()
 	col.add_child(head)
 	var titles: VBoxContainer = VBoxContainer.new()
@@ -76,7 +71,7 @@ func _ready() -> void:
 	holder.add_child(pic)
 	Paper.stat(col, "Class", "%s  ·  tier %d of 6" % [def.get("name", "Sloop"), tier])
 	Paper.rule(col)
-	Paper.text(col, "She carries your crew past the Sea Gate. Seat her crew, mount her arms, fit her repair kit and build her ultimate at the Gunwharf.", "note", Paper.ink_soft(), true)
+	Paper.text(col, "She carries your crew past the Sea Gate. Buy her a bigger hull, name her, paint her, seat her crew, mount her arms, fit her repair kit and build her ultimate at the Gunwharf.", "note", Paper.ink_soft(), true)
 	Paper.night = false
 
 

@@ -2071,5 +2071,13 @@
       0.35,
       0.2
     ]
-  }
+  },
+  "_hulls": "THE HULL LADDER (port of lib/ships.ts costs and gearGating navLevelReqForShip; the export carries only the sea art). core/hulls.gd buys a rung at a time.",
+  "hulls": [
+    { "tier": 2, "name": "Sloop", "cost": 0, "navLevelReq": 1 },
+    { "tier": 3, "name": "Schooner", "cost": 5000, "navLevelReq": 10 },
+    { "tier": 4, "name": "Brigantine", "cost": 22000, "navLevelReq": 18 },
+    { "tier": 5, "name": "Galleon", "cost": 80000, "navLevelReq": 30 },
+    { "tier": 6, "name": "Man-o-War", "cost": 200000, "navLevelReq": 45 }
+  ]
 }

@@ -1206,12 +1206,19 @@ func _init() -> void:
 				p["ship_tier"] = 6.0
 				p["raid_items"] = ["corsair_cannon", "corsair_prime_cannon", "navigators_compass", "gunners_sight", "reinforced_hull", "war_drum", "krusts_carapace", "the_standing_wall", "bloodletter", "leviathans_cannon", "chain_shot", "incendiary_cannonball"]
 				p["equipped_raid_items"] = ["the_standing_wall", "bloodletter", "gunners_sight"]
+				p["owned_ship_skins"] = ["finndicate_hull", "galaxy_hull", "corsair_hull", "pitch_black_hull"]
+				p["ship_name"] = "The Salt Widow"
 				sea._dock("gunwharf")
 				for f: int in 5:
 					await process_frame
 				for n: Node in sea._room_layer.get_children():
 					if n is GunwharfSheet:
 						n._tab = OS.get_environment("GW_TAB")
+						if OS.get_environment("GW_REWALK") != "":
+							p["ship_classes"] = { "thread": "master_gunner", "sunken_hand": "master_gunner_ii", "the_coffers": "ironside" }
+							if not Js.includes(n.session.store.save["clears"], "the_throne"):
+								n.session.store.save["clears"].append("the_throne")
+							n._rewalk = { "thread": "helmsman" }
 						n._paint()
 			if OS.get_environment("CAMP_CHART") != "":
 				sea._open_chart()
