@@ -502,6 +502,13 @@ static func reroll_wormhole(db: CaptainStore, uid: String) -> Dictionary:
 	return out
 
 
+## The Tide Turner's day: the sea day in the port (3 skips a sea day, the
+## Steam decision of 2026-09-30: it was held to a real day for a leaderboard
+## that is gone), the date under the parity run.
+static func tide_day() -> String:
+	return _now_iso().split("T")[0] if Rules.web_only else "sea-%d" % Clues.sea_day(Clock.now_ms())
+
+
 ## The Tide Turner: skip the fish on the line without breaking the streak.
 static func tide_turner_skip(db: CaptainStore, uid: String) -> Dictionary:
 	var p: Dictionary = db.profile(uid, "has_tide_turner, equipped_special, tide_turner_used, tide_turner_date")
@@ -509,10 +516,10 @@ static func tide_turner_skip(db: CaptainStore, uid: String) -> Dictionary:
 		return { "error": "No Tide Turner" }
 	if p.get("equipped_special") != "tide_turner":
 		return { "error": "Your Tide Turner is not equipped" }
-	var today: String = _now_iso().split("T")[0]
+	var today: String = tide_day()
 	var used: float = Js.num(p.get("tide_turner_used")) if p.get("tide_turner_date") == today else 0.0
 	if used >= 3:
-		return { "error": "No skips remaining today" }
+		return { "error": "No skips remaining today" if Rules.web_only else "No skips left this sea day" }
 	db.update_profile(uid, { "tide_turner_used": used + 1.0, "tide_turner_date": today, "catch_pending": false, "pending_cast": null })
 	return { "ok": true, "skipsLeft": 3.0 - (used + 1.0) }
 

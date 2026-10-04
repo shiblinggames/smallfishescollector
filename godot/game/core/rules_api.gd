@@ -70,6 +70,7 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"buyGauntletUpgrade": return Gauntlet.buy_upgrade(db, uid, str(a[0]))
 		"toggleGauntletUpgrade": return Gauntlet.toggle_upgrade(db, uid, str(a[0]))
 		"equipSpecialItem": return Loadout.equip_special_item(db, uid, a[0])
+		"equipSecondSpecial": return Loadout.equip_second_special(db, uid, a[0])
 		"buyHat": return Loadout.buy_hat(db, uid, a[0])
 		"equipHat": return Loadout.equip_hat(db, uid, a[0])
 		"buyBoat": return Loadout.buy_boat(db, uid, a[0])

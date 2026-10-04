@@ -51,6 +51,23 @@ static func buy_special_item(db: CaptainStore, uid: String, item_id: String) -> 
 	return { "ok": true }
 
 
+## equipSecondSpecial: the Sunken Hand's slot (opened by the fishing spoil)
+## seats the Primeval Eye and nothing else.
+static func equip_second_special(db: CaptainStore, uid: String, item_id: Variant) -> Dictionary:
+	var p: Dictionary = db.me(uid)
+	if not (p.get("finn_spoil_free") == "fishing" or p.get("finn_spoil_paid") == "fishing"):
+		return { "error": "You have not opened that slot." }
+	if item_id == null:
+		db.update_profile(uid, { "equipped_special_2": null })
+		return { "ok": true }
+	if item_id != "anglers_patience":
+		return { "error": "Only his eye seats in that slot." }
+	if p.get("has_anglers_patience") != true:
+		return { "error": "You do not carry The Primeval Eye." }
+	db.update_profile(uid, { "equipped_special_2": "anglers_patience" })
+	return { "ok": true }
+
+
 static func equip_special_item(db: CaptainStore, uid: String, item_id: Variant) -> Dictionary:
 	if item_id != null:
 		var def: Dictionary = _special(item_id)

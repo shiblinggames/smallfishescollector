@@ -88,6 +88,9 @@ static func open_crate(db: CaptainStore, uid: String, raid: Dictionary, fortune:
 			# A special item (the Primeval Eye off the Sunken Hand) is owned by
 			# its flag, as the web's ITEM_GRANTS does, not held as raid gear.
 			db.update_profile(uid, { (Rules.data()["specialOwnedColumn"] as Dictionary)[row["id"]]: true })
+			# The Eye seats itself in the Sunken Hand's slot (the web's grant).
+			if row["id"] == "anglers_patience":
+				db.update_profile(uid, { "equipped_special_2": "anglers_patience" })
 		else:
 			var held: Array = Js.list(prof.get("raid_items")).duplicate()
 			held.append(row["id"])

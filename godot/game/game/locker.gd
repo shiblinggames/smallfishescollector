@@ -753,6 +753,10 @@ func _options(s: String) -> Array:
 					out.append([id, b["name"], b["restImageUrl"], sea_blue, ""])
 		"special":
 			out.append([null, "No special", "", Paper.INK_FAINT, ""])
+			# The Sunken Hand's slot, beside the first: the Primeval Eye alone.
+			if p.get("has_anglers_patience") == true and (p.get("finn_spoil_free") == "fishing" or p.get("finn_spoil_paid") == "fishing"):
+				var eye: Dictionary = Locker.special_def("anglers_patience", p)
+				out.append(["anglers_patience", eye["name"], str(eye.get("image", "")), Color(str(eye.get("color", "#c4a96a"))).darkened(0.2), "Seated" if p.get("equipped_special_2") == "anglers_patience" else "Hand's slot"])
 			for d: Dictionary in Rules.data()["specialItems"]:
 				if d["finaleSlotOnly"] or d["id"] == "auto_catcher":
 					continue
@@ -885,7 +889,12 @@ func _choose(id: Variant) -> void:
 		"pet":
 			r = await session.act("equipPet", [id, "stern"])
 		"special":
-			r = await session.act("equipSpecialItem", [id])
+			if id == "anglers_patience":
+				# Its own slot: press to seat it, again to take it out.
+				var seated: bool = session.profile().get("equipped_special_2") == "anglers_patience"
+				r = await session.act("equipSecondSpecial", [null if seated else id])
+			else:
+				r = await session.act("equipSpecialItem", [id])
 	session.persist()
 	if r.get("error") != null:
 		hud.toast(str(r["error"]))

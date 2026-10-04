@@ -1589,6 +1589,15 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  SMALL ONES FROM THE REST (2026-10-04):
+  - THE PRIMEVAL EYE'S SLOT: the Eye seats itself in the Sunken Hand's slot when it drops (the
+    web's grant); Loadout.equip_second_special (equipSecondSpecial) seats or clears it, only with
+    the fishing spoil; the Locker's Special slot shows it beside the first ("Seated" / "Hand's
+    slot"), a press toggling it.
+  - THE TIDE TURNER: 3 skips a SEA DAY (Fishing.tide_day; the date under the parity run).
+  - THE DAMAGE GATE (Campaign.dps_preview) counts the raid items that touch one straight opening
+    shot at a ship that is no boss: non-crit, escort and first-shot multipliers from the battle
+    seat, tempered grades in (the web counted the non-crit cost alone).
   BADGES AND STEAM ACHIEVEMENTS (2026-10-04, the audit's ninth item): 213 of the 243 badges are
   now listed and earnable (81 before). Achievements.EXPEDITION checks the expedition side and the
   rooms off state (crew, voyages, trawls, Finn's jobs, raids and challenges, the ship, the Sunken

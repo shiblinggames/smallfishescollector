@@ -1460,13 +1460,12 @@ func _tackle() -> Dictionary:
 	}
 
 
-## The Tide Turner: how many skips are left today, or -1 without one seated.
+## The Tide Turner: how many skips are left this sea day, or -1 without one seated.
 func _skips_left() -> int:
 	var p: Dictionary = session.profile()
 	if not Js.truthy(p.get("has_tide_turner")) or p.get("equipped_special") != "tide_turner":
 		return -1
-	var today: String = Js.iso(Clock.now_ms()).split("T")[0]
-	var used: float = Js.num(p.get("tide_turner_used")) if p.get("tide_turner_date") == today else 0.0
+	var used: float = Js.num(p.get("tide_turner_used")) if p.get("tide_turner_date") == Fishing.tide_day() else 0.0
 	return int(3.0 - used)
 
 
@@ -1609,7 +1608,7 @@ func _skip() -> void:
 	Sound.dial_stop()
 	boat.set_pose("rest")
 	Rumble.tap(10)
-	toast("Thrown back. The streak holds. %d skip%s left today." % [int(r["skipsLeft"]), "" if int(r["skipsLeft"]) == 1 else "s"])
+	toast("Thrown back. The streak holds. %d skip%s left this sea day." % [int(r["skipsLeft"]), "" if int(r["skipsLeft"]) == 1 else "s"])
 	_set_phase("idle")
 	refresh()
 

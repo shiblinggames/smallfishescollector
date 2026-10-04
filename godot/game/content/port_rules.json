@@ -2094,7 +2094,7 @@
     "tide_turner": {
       "color": "#a78bfa",
       "image": "tideturner.png",
-      "effect": "3 skips a day",
+      "effect": "3 skips a sea day",
       "obtainedFrom": "The Howling Deep voyage",
       "description": "Skip a hooked fish during the catch phase without breaking your perfect streak. Your bait is consumed."
     },

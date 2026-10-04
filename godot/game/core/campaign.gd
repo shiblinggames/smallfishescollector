@@ -730,6 +730,11 @@ static func dps_preview(db: CaptainStore, uid: String, nid: String) -> Dictionar
 	var pmax: float = maxf(smin, float(Js.round(smin + 2.0 + floor(float(s["power"]) / 4.0))))
 	var lo: float = maxf(smin, floor(pmax * 0.4))
 	var mult: float = float(class_effects(db.me(uid).get("ship_classes"))["damageMult"])
+	# The raid items that touch one straight opening shot at a ship that is no
+	# boss (the port; the web counted the non-crit cost alone): the non-crit
+	# multiplier, escort damage and first-shot damage, tempered grades in.
+	var fx: Dictionary = s["fx"]
+	mult *= float(fx.get("noncritMult", 1.0)) * float(fx.get("nonbossMult", 1.0)) * float(fx.get("firstShot", 1.0))
 	var th: float = float(n["dpsCheck"]["threshold"])
 	var passing: int = 0
 	for r: int in range(int(lo), int(pmax) + 1):
