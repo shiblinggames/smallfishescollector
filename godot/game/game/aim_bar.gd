@@ -8,14 +8,14 @@ extends Control
 ## crit (a Sharpshot widens it), green the hit, the pale fringe a graze.
 ## Emits locked(result) with "critical", "hit", "graze" or "miss".
 ##
-## ITS LOOK (Kong, 2026-10-04: like the fishing dial, "more game-like ... fits
-## our aesthetic"): the dial's instrument laid flat (fx/aim_bar.gdshader): dark
-## wood with a brass line round a cream paper track, the bands as watercolour
-## washes, the one under the needle lit full. The needle is a tapered ink
-## pointer on a brass cap that takes the colour of the band it is over (gold:
-## press now for a crit), with a soft trail; the order's word in Cinzel under
-## it with its key; a lock bursts embers in the result's colour. It floats free
-## over the water (the deck's paper fades while you aim).
+## ITS LOOK (Kong, 2026-10-04: "more game-y", and its own, not the fishing
+## dial's): a gunnery sight (fx/aim_bar.gdshader): a gunmetal rail round a
+## smoked-glass track, the bands burning inside it (amber graze, green hit, a
+## white-hot gold crit seam that pulses), the one under the needle blazing.
+## The needle is a line of light in the colour of the band it is over (gold:
+## press now for a crit) with a streak behind it and targeting brackets; a lock
+## throws a shockwave and embers in the result's colour and floods the glass.
+## FIRE or VOLLEY bold under it with its key. It floats free over the water.
 ##
 ## WHAT THE ENEMY DOES TO IT (Battle.aim_for): the zone's speed stack (up to
 ## four times), a crit seam that drifts inside the zone (Rolling Plate), fog
@@ -39,6 +39,8 @@ var _burst_col: Color = Color(1.0, 0.85, 0.4)
 var _burst_x: float = 0.5
 var _embers: Array = []
 var _trail: Array = []
+## A lock's shockwave: its age (negative when none).
+var _ring: float = -1.0
 
 var enemy_speed: float = 4.0
 var nav: float = 0.0
@@ -146,6 +148,10 @@ func _process(delta: float) -> void:
 		sp["v"] = (sp["v"] as Vector2) + Vector2(0, 600.0 * delta)
 	_sparks = _sparks.filter(func(sp: Dictionary) -> bool: return float(sp["t"]) < 0.6)
 	_burst = maxf(0.0, _burst - delta * 2.2)
+	if _ring >= 0.0:
+		_ring += delta
+		if _ring > 0.6:
+			_ring = -1.0
 	for em: Dictionary in _embers:
 		em["t"] = float(em["t"]) + delta
 		em["p"] = (em["p"] as Vector2) + (em["v"] as Vector2) * delta
@@ -179,7 +185,7 @@ func _lit() -> int:
 	return 0
 
 
-const LIT_COL: Array = [Color(0.93, 0.89, 0.8), Color(0.95, 0.84, 0.58), Color(0.5, 0.9, 0.6), Color(1.0, 0.84, 0.38)]
+const LIT_COL: Array = [Color(0.82, 0.92, 1.0), Color(1.0, 0.66, 0.28), Color(0.35, 1.0, 0.58), Color(1.0, 0.86, 0.35)]
 
 
 func _feed() -> void:
@@ -198,6 +204,7 @@ func _feed() -> void:
 	m.set_shader_parameter("u_burst", _burst)
 	m.set_shader_parameter("u_burst_col", Vector3(_burst_col.r, _burst_col.g, _burst_col.b))
 	m.set_shader_parameter("u_burst_x", _burst_x)
+	m.set_shader_parameter("u_needle", _pos)
 
 
 func _gui_input(e: InputEvent) -> void:
@@ -268,6 +275,7 @@ func _lock_burst(res: String) -> void:
 	_burst = 1.0
 	_burst_col = col
 	_burst_x = _pos
+	_ring = 0.0
 
 
 func _draw() -> void:
@@ -320,22 +328,30 @@ func _draw() -> void:
 			var fa: float = dark.a * (1.0 - (k + 1) / 9.0)
 			draw_rect(Rect2(wx0 + k * 3.0, top, 3.0, hgt), Color(dark, fa))
 			draw_rect(Rect2(wx1 - (k + 1) * 3.0, top, 3.0, hgt), Color(dark, fa))
-	# The needle: a tapered ink pointer on a brass cap, in the colour of the
-	# band it is over, a soft trail behind it.
+	# The needle: a bright line of light in the colour of the band it is
+	# over, a streak of light trailing it, targeting brackets above and below.
 	var nx: float = px.call(_pos)
 	var ncol: Color = LIT_COL[_lit()] if blind <= 0.0 else LIT_COL[0]
+	var gt: Texture2D = _glow_tex()
 	for k: int in range(_trail.size() - 1, 0, -1):
 		var tx: float = px.call(float(_trail[k]))
-		draw_line(Vector2(tx, rail.position.y + 3), Vector2(tx, rail.end.y - 3), Color(ncol, 0.14 * (1.0 - float(k) / _trail.size())), 3.0)
-	var top: float = rail.position.y - 14.0
-	var bot: float = rail.end.y + 12.0
-	var mid: float = rail.get_center().y
-	var outline: PackedVector2Array = PackedVector2Array([Vector2(nx, top), Vector2(nx + 4.5, mid), Vector2(nx, bot), Vector2(nx - 4.5, mid)])
-	draw_colored_polygon(outline, Color(0.12, 0.09, 0.08, 0.95))
-	draw_colored_polygon(PackedVector2Array([Vector2(nx, top + 5), Vector2(nx + 2.2, mid), Vector2(nx, bot - 4), Vector2(nx - 2.2, mid)]), ncol)
-	draw_circle(Vector2(nx, top), 7.5, Color(0.12, 0.09, 0.08, 0.95))
-	draw_circle(Vector2(nx, top), 6.0, Color(0.79, 0.64, 0.36))
-	draw_circle(Vector2(nx - 1.8, top - 1.8), 2.0, Color(1.0, 0.94, 0.78, 0.9))
+		var fa: float = 1.0 - float(k) / _trail.size()
+		draw_rect(Rect2(tx - 1.5, rail.position.y + 4, 3.0, rail.size.y - 8), Color(ncol, 0.22 * fa))
+	draw_texture_rect(gt, Rect2(nx - 18.0, rail.position.y - 10.0, 36.0, rail.size.y + 20.0), false, Color(ncol, 0.55))
+	draw_rect(Rect2(nx - 2.0, rail.position.y - 6.0, 4.0, rail.size.y + 12.0), Color(ncol, 0.95))
+	draw_rect(Rect2(nx - 0.75, rail.position.y - 4.0, 1.5, rail.size.y + 8.0), Color(1, 1, 1, 0.95))
+	# The brackets: a sight closing on the line.
+	var bw: float = 9.0
+	var by0: float = rail.position.y - 12.0
+	var by1: float = rail.end.y + 12.0
+	for sx: float in [-1.0, 1.0]:
+		draw_polyline(PackedVector2Array([Vector2(nx + sx * bw, by0 + 6.0), Vector2(nx + sx * bw, by0), Vector2(nx + sx * 3.0, by0)]), Color(ncol, 0.95), 2.0, true)
+		draw_polyline(PackedVector2Array([Vector2(nx + sx * bw, by1 - 6.0), Vector2(nx + sx * bw, by1), Vector2(nx + sx * 3.0, by1)]), Color(ncol, 0.95), 2.0, true)
+	# A lock's shockwave out from the needle.
+	if _ring >= 0.0:
+		var ru: float = _ring / 0.6
+		var rr: float = 16.0 + ru * 120.0
+		draw_arc(Vector2(px.call(_burst_x), rail.get_center().y), rr, 0.0, TAU, 48, Color(_burst_col, 0.8 * (1.0 - ru)), 3.0 * (1.0 - ru) + 1.0, true)
 	# The embers of a lock.
 	if true:
 		for em: Dictionary in _embers:
@@ -353,24 +369,24 @@ func _draw() -> void:
 		draw_string_outline(f, Vector2(nx - tw / 2.0, rail.position.y - 22), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0, 0, 0, 0.7))
 		draw_string(f, Vector2(nx - tw / 2.0, rail.position.y - 22), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c2)
 	else:
-		# The order in Cinzel, its key in a chip beside it (as the dial's
-		# REEL IN), and what the enemy is doing to the bar under them.
+		# The order, bold, its key in a pill beside it, and what the enemy is
+		# doing to the bar under them.
 		var word: String = "VOLLEY" if volley else "FIRE"
-		var wf: Font = Kit.font("cinzel", 800)
-		var ww: float = wf.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x + 6.0 * word.length()
+		var wf: Font = Kit.font("karla", 800)
+		var fs2: int = 24
+		var ww: float = wf.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2).x + 3.0 * word.length()
 		var kf: Font = Kit.font("karla", 800)
-		var kw: float = kf.get_string_size("SPACE", HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 14.0
+		var kw: float = kf.get_string_size("SPACE", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 18.0
 		var x0: float = w / 2.0 - (ww + 12.0 + kw) / 2.0
-		var by: float = rail.end.y + 52.0
+		var by: float = rail.end.y + 50.0
 		var cx: float = x0
 		for ch: String in word:
-			draw_string_outline(wf, Vector2(cx, by), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, 5, Color(0, 0, 0, 0.55))
-			draw_string(wf, Vector2(cx, by), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(0.96, 0.9, 0.76))
-			cx += wf.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x + 6.0
-		var kr: Rect2 = Rect2(x0 + ww + 12.0, by - 16.0, kw, 18.0)
-		draw_rect(kr, Color(0, 0, 0, 0.35))
-		draw_rect(kr, Color(0.96, 0.9, 0.76, 0.6), false, 1.0)
-		draw_string(kf, Vector2(kr.position.x + 7.0, kr.position.y + 13.0), "SPACE", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.96, 0.9, 0.76, 0.9))
+			draw_string_outline(wf, Vector2(cx, by), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, 8, Color(0, 0, 0, 0.6))
+			draw_string(wf, Vector2(cx, by), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, Color(1, 0.97, 0.9))
+			cx += wf.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2).x + 3.0
+		var kr: Rect2 = Rect2(x0 + ww + 12.0, by - 18.0, kw, 20.0)
+		BattleLook.draw_box(self, kr, BattleLook.box(Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.3), 1, 10))
+		draw_string(kf, Vector2(kr.position.x + 9.0, kr.position.y + 14.5), "SPACE", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1, 1, 1, 0.9))
 		var hint: String = ""
 		if blind > 0.0:
 			hint = "BLINDED  ·  YOU SEE ONLY NEAR THE NEEDLE"
