@@ -909,6 +909,27 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   10, Captain's from 20; a crew of four banking at fullCrewDepth rolls twice; Fortune lifts the
   odds, capped at 25%). A crew's own record per descent (gauntlet_crews: the deepest these
   captains reached together, and the time). Grapnel Line was CUT (Kong).
+  CO-OP PACKS (Kong, 2026-10-03: enemy groups "fair yet more interesting"; roles are fine to show
+  because the enemy's card shows abilities; "mixed packs in middle-late runs"; port rules
+  battle.gauntlet.packs, Gauntlet.escorts). A co-op field's escorts are ONE FLEET'S CREW (the
+  lead's own fleet when it is one of the descent's crews), sized by a THREAT BUDGET instead of a
+  ship count: budget by party size (2/3/4 captains), one either way, bossCut fewer under a boss,
+  deepBonus deeper; each ship costs by its kind (scout 1, regular 2, brute or sniper 3 ...), +1
+  for a role, +2 for an elite affix; at most three escorts. ROLES come from the fleet's own list
+  (Krust's crew rally and break water, the Cartographer's hex and spot, the Coffers shield and
+  mend ...), at most one support (shieldwright, sawbones, rallier; these sail at supportHp) and
+  one other (hexer, breakwater, the new SPOTTER: Marks a captain, every hit lands harder) per
+  pack. Raids' co-op fields still deal roles their old way. MIXED PACKS from mixFrom (Davy's 12,
+  the Don's 4): two fleets in one pack. COMBOS from comboFrom (Davy's 8, the Don's 3), at most
+  one per fight, a role ship and a partner (the lead counts when it is a plain ship), never an
+  elite-affix ship: Hammer and Anvil (hexer + a heavy: hexed captains take more), Shield and
+  Sword (breakwater + a plain ship it covers more often), Called Shot (spotter + a plain ship:
+  more crits on a Marked captain), War Drums (rallier + a plain ship that loads a ball on the
+  rally), Field Surgeon (sawbones + breakwater: patched up when it takes a shot). Sinking either
+  half breaks it (announced). Shown on the enemy's card (the pack's name, the combo and its other
+  half). COUNTERPLAY from the bonds: Boarding Action costs a role ship its next role turn, our
+  Spotter's Mark gets a ship past any breakwater, Draw Fire pulls the enemy spotter's mark onto
+  the tank, Smelling Salts clears hexes and marks. Solo has no escorts, so it is untouched.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the

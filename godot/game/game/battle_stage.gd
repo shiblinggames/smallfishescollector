@@ -1025,6 +1025,16 @@ func _one(x: Dictionary) -> void:
 			pass
 		"role":
 			await _role_move(x)
+		"comboNote":
+			# A pack's combo (or a jammed role) at work: its name over the ship.
+			var fj2: int = int(x.get("foe", -1))
+			var at2: Vector2 = _seat_at(int(x["seat"])) + Vector2(0, -110) if x.has("seat") else _foe_at(maxi(0, fj2)) + Vector2(0, -80)
+			_num(at2, str(x.get("text", "")), Color(1.0, 0.62, 0.45))
+			if x.has("hp") and fj2 >= 0:
+				_shown_hp["e%d" % fj2] = float(x["hp"])
+		"comboBroken":
+			_num(_foe_at(int(x["foe"])) + Vector2(0, -80), "%s broken" % str(x.get("name", "")), Color(0.85, 0.85, 0.8))
+			_log_line("%s is broken: the %s fights alone now." % [str(x.get("name", "")), str(Battle.foes(b)[int(x["foe"])]["name"])])
 		"intercept":
 			_strip_lit = -1 - _cur
 			_react(-1 - _cur, "brace")
@@ -2306,6 +2316,12 @@ func _role_move(x: Dictionary) -> void:
 			_react(si, "hit")
 			_num(_seat_at(si) + Vector2(0, -60), "Blinded!" if x["status"] == "blinded" else "Narrowed!", Color(0.8, 0.6, 1.0), true)
 			_log_line("The %s hexes %s: %s." % [nm, "you" if si == me else b["seats"][si]["name"], "sight only near the needle" if x["status"] == "blinded" else "a smaller mark to hit"])
+		"spotter":
+			var sj: int = int(x["seat"])
+			_fx.tether(from, _seat_at(sj), Color(1.0, 0.45, 0.35))
+			await _wait(0.4)
+			_num(_seat_at(sj) + Vector2(0, -60), "Marked!", Color(1.0, 0.5, 0.4), true)
+			_log_line("The %s spots %s: Marked, every hit lands harder for a while." % [nm, "you" if sj == me else b["seats"][sj]["name"]])
 		"rallier":
 			_react(-1 - _cur, "brace")
 			for j: Variant in Js.list(x.get("all")):

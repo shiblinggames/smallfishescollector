@@ -441,8 +441,16 @@ static func _escorts(b: Dictionary, raid: Dictionary, f: Dictionary, n: int, hp_
 
 ## An escort's trappings: a role, each its own while any are left, and none
 ## of a boss's.
-static func _escort_of(b: Dictionary, foe: Dictionary) -> void:
+static func _escort_of(b: Dictionary, foe: Dictionary, given: Variant = null) -> void:
 	foe["escort"] = true
+	# A gauntlet pack gives its own (or none); a raid's field deals them out.
+	if given != null:
+		if str(given) != "":
+			foe["role"] = str(given)
+			foe["roleTurn"] = 0.0
+		foe["phases"] = []
+		foe["decoy"] = 0.0
+		return
 	var rl: Array = Js.list(roles_cfg().get("list")).duplicate()
 	for f2: Dictionary in Js.list(b.get("foes")):
 		rl.erase(f2.get("role", ""))
@@ -487,16 +495,31 @@ static func gauntlet_fight(b: Dictionary, field: Dictionary, variant: String) ->
 	b["enemy"] = _make_foe({}, e, boss, Js.obj(field.get("affix")), field.get("isElite", false) == true, hp)
 	b["enemy"]["wash"] = variant
 	b["enemy"]["apex"] = field.get("isApex", false) == true
+	b["enemy"]["kind"] = str(e.get("key", ""))
+	if field.has("pack"):
+		b["enemy"]["pack"] = field["pack"]
+	if field.has("leadCombo"):
+		b["enemy"]["combo"] = Js.obj(field["leadCombo"]).duplicate()
 	b["foes"] = [b["enemy"]]
+	var sup: Array = Js.list(Js.obj(Js.obj(Js.obj(cfg().get("gauntlet")).get("packs"))).get("support"))
 	for x: Dictionary in Js.list(field.get("escorts")):
 		var ex: Dictionary = Js.obj(x["enemy"]).duplicate(true)
 		for k2: String in ["minDmg", "maxDmg"]:
 			ex[k2] = maxf(1.0, float(Js.round(float(ex[k2]) * float(Js.nz(pc.get("dmgMult"), 1.0)))))
-		var hp2: float = maxf(1.0, float(Js.round(float(ex["hpBase"]) * float(Js.nz(pc.get("escortHp"), 0.62)) * hp_scale)))
+		var hp_k: float = float(Js.nz(pc.get("escortHp"), 0.62))
+		# A support ship sails a lighter hull.
+		if sup.has(str(x.get("role", ""))):
+			hp_k *= float(Js.nz(Js.obj(Js.obj(cfg().get("gauntlet")).get("packs")).get("supportHp"), 0.75))
+		var hp2: float = maxf(1.0, float(Js.round(float(ex["hpBase"]) * hp_k * hp_scale)))
 		ex["accuracy"] = float(ex["accuracy"]) - float(ex["shipSpeed"])
 		var foe: Dictionary = _make_foe({}, ex, false, Js.obj(x.get("affix")), x.get("isElite", false) == true, hp2)
 		foe["wash"] = variant
-		_escort_of(b, foe)
+		foe["kind"] = str(x.get("kind", ""))
+		if field.has("pack"):
+			foe["pack"] = field["pack"]
+		if x.has("combo"):
+			foe["combo"] = Js.obj(x["combo"]).duplicate()
+		_escort_of(b, foe, x.get("role") if x.has("role") else null)
 		(b["foes"] as Array).append(foe)
 	b["turn"] = 1.0
 	b["state"] = "plan"
@@ -1564,6 +1587,17 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 	var af: Dictionary = e["affix"]
 	var ta: Dictionary = tide_agg(t, e["boss"])
 	var eff_crit: float = 0.0 if act == "ultimate" else minf(1.0, float(e["crit"]) * float(Js.nz(af.get("critMult"), 1.0)))
+	var combo_ev: String = ""
+	if not Js.obj(e.get("combo")).is_empty() and str(e["combo"].get("half", "")) == "partner":
+		var st: Dictionary = t["statuses"]
+		if combo_partner(b, e, "hammer_anvil") >= 0 and (st.has("blinded") or st.has("narrowed")):
+			dmg = maxf(1.0, floor(dmg * (1.0 + float(Js.nz(combo_def(e, "hammer_anvil").get("pct"), 0.25)))))
+			combo_ev = "Hammer and Anvil"
+		if combo_partner(b, e, "called_shot") >= 0 and st.has("marked") and act != "ultimate":
+			eff_crit = minf(1.0, eff_crit + float(Js.nz(combo_def(e, "called_shot").get("crit"), 0.2)))
+			combo_ev = "Called Shot"
+	if combo_ev != "":
+		ev.append({ "t": "comboNote", "foe": foes(b).find(e), "seat": ti, "text": combo_ev })
 	if not frenzy and float(ta["inCritCut"]) != 0.0 and act != "ultimate":
 		eff_crit = clampf(eff_crit - float(ta["inCritCut"]), 0.0, 1.0)
 	var crit: bool = Dice.next() < eff_crit
@@ -1706,6 +1740,12 @@ static func _enemy_down(b: Dictionary, ev: Array, by_ability: bool) -> void:
 		return
 	ev.append({ "t": "sunkEnemy" })
 	_spoils(b, e, ev)
+	# A combo's half gone: the other is on its own now.
+	var cb: Dictionary = Js.obj(e.get("combo"))
+	if not cb.is_empty():
+		var j: int = int(cb["with"])
+		if j >= 0 and j < foes(b).size() and foe_up(foes(b)[j]):
+			ev.append({ "t": "comboBroken", "foe": j, "name": str(combo_def(e, str(cb["id"])).get("name", "")) })
 
 
 # ══ Mechanic checks (BossMechanicCheck) ═══════════════════════════════════════
@@ -2658,6 +2698,11 @@ static func _role_turn(b: Dictionary, e: Dictionary, ev: Array) -> bool:
 	e["roleTurn"] = float(e.get("roleTurn", 0.0)) + 1.0
 	if int(e["roleTurn"]) % int(Js.nz(rc.get("every"), 3.0)) != 2 % int(Js.nz(rc.get("every"), 3.0)):
 		return false
+	# Boarded: its crew are busy repelling boarders, and the turn is lost.
+	if e.get("jammed", false):
+		e.erase("jammed")
+		ev.append({ "t": "comboNote", "foe": foes(b).find(e), "text": "Boarders! No %s this turn" % str(Js.obj(rc.get(str(e["role"]))).get("name", "")) })
+		return false
 	var fs: Array = foes(b)
 	var me_j: int = fs.find(e)
 	var r: String = str(e["role"])
@@ -2699,6 +2744,18 @@ static func _role_turn(b: Dictionary, e: Dictionary, ev: Array) -> bool:
 					apply_status(fs[j2]["statuses"], "enrage", float(def["mag"]), float(def["turns"]))
 					to.append(j2)
 			ev.append({ "t": "role", "role": r, "foe": me_j, "all": to, "name": def.get("name", "") })
+			# War Drums: the partner loads a ball on the beat.
+			var pj: int = combo_partner(b, e, "war_drums")
+			if pj >= 0 and float(fs[pj]["charges"]) < float(fs[pj]["mag"]):
+				fs[pj]["charges"] = float(fs[pj]["charges"]) + 1.0
+				ev.append({ "t": "comboNote", "foe": pj, "text": "War Drums  +1 ball" })
+		"spotter":
+			# _target: Draw Fire pulls the spotter's eye to the tank as well.
+			var ts: int = _target(b, -1)
+			if ts < 0:
+				return false
+			seat_status(b["seats"][ts], "marked", float(def["mark"]), float(def["turns"]))
+			ev.append({ "t": "role", "role": r, "foe": me_j, "seat": ts, "status": "marked", "name": def.get("name", "") })
 		_:
 			return false
 	return true
@@ -2711,11 +2768,44 @@ static func breakwater(b: Dictionary, si: int, tj: int, ev: Array) -> int:
 	if fs.size() < 2:
 		return tj
 	var ch: float = float(Js.nz(Js.obj(roles_cfg().get("breakwater")).get("chance"), 0.35))
+	# A ship our spotter marked is in the open: nothing covers it.
+	if tj >= 0 and tj < fs.size() and not Js.obj(fs[tj].get("spot")).is_empty():
+		return tj
 	for j: int in fs.size():
-		if j != tj and foe_up(fs[j]) and fs[j].get("role", "") == "breakwater" and Dice.next() < ch:
+		if j == tj or not foe_up(fs[j]) or fs[j].get("role", "") != "breakwater":
+			continue
+		var c2: float = ch
+		if combo_partner(b, fs[j], "shield_sword") == tj:
+			c2 += float(Js.nz(combo_def(fs[j], "shield_sword").get("chance"), 0.25))
+		if Dice.next() < c2:
 			ev.append({ "t": "intercept", "foe": j, "from": tj, "seat": si })
+			if combo_partner(b, fs[j], "field_surgeon") >= 0:
+				var amt: float = minf(float(fs[j]["max"]) - float(fs[j]["hp"]), maxf(1.0, float(Js.round(float(fs[j]["max"]) * float(Js.nz(combo_def(fs[j], "field_surgeon").get("pct"), 0.06))))))
+				if amt > 0.0:
+					fs[j]["hp"] = float(fs[j]["hp"]) + amt
+					ev.append({ "t": "comboNote", "foe": j, "text": "Field Surgeon  +%d" % int(amt), "hp": fs[j]["hp"] })
 			return j
 	return tj
+
+
+## A co-op pack's combo: the other half's index when this ship is in the
+## named combo and both halves still float; else -1.
+static func combo_partner(b: Dictionary, e: Dictionary, id: String) -> int:
+	var cb: Dictionary = Js.obj(e.get("combo"))
+	if cb.is_empty() or str(cb["id"]) != id or not foe_up(e):
+		return -1
+	var fs: Array = foes(b)
+	var j: int = int(cb["with"])
+	if j < 0 or j >= fs.size() or not foe_up(fs[j]):
+		return -1
+	return j
+
+
+static func combo_def(_e: Dictionary, id: String) -> Dictionary:
+	for c: Dictionary in Js.list(Js.obj(Js.obj(cfg().get("gauntlet")).get("packs")).get("combos")):
+		if c["id"] == id:
+			return c
+	return {}
 
 
 
@@ -2856,6 +2946,8 @@ static func _bond_landed(b: Dictionary, si: int, e: Dictionary, act: String, cri
 			if best > 0.0:
 				e["boarded"] = true
 				e["charges"] = maxf(0.0, float(e["charges"]) - 1.0)
+				if str(e.get("role", "")) != "":
+					e["jammed"] = true
 				apply_status(e["statuses"], "marked", best, 2.0)
 				_bond_note(ev, si, -1, "Boarded!")
 	if xf > 1.0:

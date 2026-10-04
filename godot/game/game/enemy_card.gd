@@ -38,6 +38,7 @@ const ROLE_DESC: Dictionary = {
 	"hexer": "Every few turns it hexes a captain: Blinded (you see only near the needle) or Narrowed (a smaller mark to hit).",
 	"rallier": "Every few turns it rallies its whole line: they hit harder for a while.",
 	"breakwater": "It may throw itself in front of a shot aimed at an ally, taking the blow instead.",
+	"spotter": "Every few turns it spots a captain: Marked, every hit on them lands harder for a while.",
 }
 const RESPONSE: Dictionary = { "brace": "a defensive one", "shield": "a defensive one", "snare": "a disrupting one", "heal": "a recovery one", "burst": "a heavy-hitting one" }
 
@@ -47,7 +48,7 @@ func _ready() -> void:
 	var elite: bool = e.get("elite", false)
 	art = portrait
 	disc = Color("#e0a63a") if boss else (Color("#8b6cf0") if elite else Color("#4f8ea6"))
-	lead = ("Boss" if boss else ("Elite" if elite else "Enemy")) + ("  ·  " + where if where != "" else "")
+	lead = ("Boss" if boss else ("Elite" if elite else "Enemy")) + ("  ·  " + str(e["pack"]).substr(0, 1).to_upper() + str(e["pack"]).substr(1) if str(e.get("pack", "")) != "" else "") + ("  ·  " + where if where != "" else "")
 	title = str(e.get("name", ""))
 	hull = hp
 	hull_max = float(e.get("max", 1.0))
@@ -70,6 +71,11 @@ func _content() -> void:
 	if str(e.get("role", "")) != "":
 		var rd: Dictionary = Js.obj(Battle.roles_cfg().get(str(e["role"])))
 		does.append([str(rd.get("name", "")), "role", str(ROLE_DESC.get(str(e["role"]), ""))])
+	# A co-op pack's combo, and the other half it needs.
+	var cb: Dictionary = Js.obj(e.get("combo"))
+	if not cb.is_empty():
+		var cd: Dictionary = Battle.combo_def(e, str(cb["id"]))
+		does.append([str(cd.get("name", "")), "combo", _combo_desc(cd, cb) + " Sink either ship and the combo breaks."])
 	var af: Dictionary = Js.obj(e.get("affix"))
 	if not af.is_empty():
 		does.append([str(af.get("name", "")), "elite affix", str(af.get("description", ""))])
@@ -225,3 +231,17 @@ func _behavior() -> String:
 	return " ".join(PackedStringArray(parts))
 
 
+## A combo in plain words, naming the other half.
+func _combo_desc(cd: Dictionary, cb: Dictionary) -> String:
+	var role_half: bool = str(cb.get("half", "")) == "role"
+	var other: String = str(cb.get("withName", "its partner"))
+	var me: String = str(e.get("name", "this ship"))
+	var heavy: String = me if not role_half else other
+	var lead: String = "With the %s.  " % other
+	match str(cd.get("id", "")):
+		"hammer_anvil": return lead + "The %s hits a Blinded or Narrowed captain %d%% harder." % [heavy, int(round(float(cd.get("pct", 0.25)) * 100.0))]
+		"shield_sword": return lead + "The Breakwater is %d%% more likely to take a shot aimed at the %s." % [int(round(float(cd.get("chance", 0.25)) * 100.0)), heavy]
+		"called_shot": return lead + "The %s has +%d%% crit chance against a Marked captain." % [heavy, int(round(float(cd.get("crit", 0.2)) * 100.0))]
+		"war_drums": return lead + "When the Rallier rallies the line, the %s also loads a cannonball." % heavy
+		"field_surgeon": return lead + "Whenever the Breakwater takes a shot for an ally, it is patched up for %d%% of its hull." % int(round(float(cd.get("pct", 0.06)) * 100.0))
+	return lead

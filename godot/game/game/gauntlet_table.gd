@@ -339,7 +339,7 @@ func _roll_field(n: int) -> Dictionary:
 	var run: Dictionary = _r["run"]
 	var lead: Dictionary = Gauntlet.generate_fight(run["roll"], int(run["skip"]), run["tm"], str(run["variant"]))
 	var out: Dictionary = lead.duplicate()
-	out["escorts"] = Gauntlet.escorts(lead, n, run["tm"], str(run["variant"])) if not lead["isApex"] else []
+	out["escorts"] = Gauntlet.escorts(out, n, run["tm"], str(run["variant"])) if not lead["isApex"] else []
 	return out
 
 
