@@ -23,6 +23,10 @@ extends Node2D
 ##   A SWERVE     a dodge: a curl of foam and spray where the hull leant away.
 ## Drawn here in the World's space: un-squashed for what stands out of the
 ## water (balls, smoke, shards), flat for what lies on it (rings, foam).
+## PAINTED (Kong on the web: drawn gradient blobs read "elementary"; painted
+## sheets are the answer): smoke, flashes, embers, flames, ice, frost, ward
+## arcs, sparks, spray and fireballs are cells of the web's fx-sheet.webp
+## (FRAMES), drawn as sprites; the additive ones (light) on a child layer.
 
 const GROUND: float = 0.58
 
@@ -38,10 +42,54 @@ var _sparks: Array = []
 var _t: float = 0.0
 ## A soft white glow (tinted as drawn): flashes fall off rather than sit flat.
 var _glow: Texture2D = Glow.radial(128, Color.WHITE)
+## The painted sheet (128 px cells, the element centred in each).
+const FRAMES: Dictionary = {
+	"flame": Rect2(0, 0, 128, 128), "ember": Rect2(128, 0, 128, 128), "ice": Rect2(256, 0, 128, 128), "frost": Rect2(384, 0, 128, 128),
+	"ward": Rect2(0, 128, 128, 128), "smoke": Rect2(128, 128, 128, 128), "spark": Rect2(256, 128, 128, 128), "splash": Rect2(384, 128, 128, 128),
+	"flash": Rect2(0, 256, 128, 128), "fireball": Rect2(128, 256, 128, 128),
+}
+const LIGHT: Array = ["flame", "ember", "spark", "flash", "fireball", "ward"]
+static var sheet: Texture2D
+## Painted particles: { k, p (un-squashed), v, t, life, s0, s1 (px across),
+## rot, spin, c, a, g, drag }.
+var _paint: Array = []
+var _add: Node2D
+
+
+func _ready() -> void:
+	if sheet == null:
+		sheet = Skipper.tex("fx-sheet.webp")
+	_add = Node2D.new()
+	var m: CanvasItemMaterial = CanvasItemMaterial.new()
+	m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_add.material = m
+	_add.draw.connect(_draw_light)
+	add_child(_add)
+
+
+## One painted particle. `at` is un-squashed (BattleFx.up of a World point,
+## then lifted); `size` the width in px at birth, `grow` its width at death.
+func paint(k: String, at: Vector2, v: Vector2, life: float, size: float, grow: float = -1.0, c: Color = Color.WHITE, opts: Dictionary = {}) -> void:
+	var p: Dictionary = { "k": k, "p": at, "v": v, "t": float(opts.get("delay", 0.0)) * -1.0, "life": life, "s0": size, "s1": size if grow < 0.0 else grow,
+		"rot": float(opts.get("rot", randf() * TAU)), "spin": float(opts.get("spin", randf_range(-1.2, 1.2))), "c": c, "a": float(opts.get("a", 1.0)),
+		"g": float(opts.get("g", 0.0)), "drag": float(opts.get("drag", 0.0)), "fade": float(opts.get("fade", 0.6)), "in": float(opts.get("in", 0.08)) }
+	_paint.append(p)
 
 
 func _process(delta: float) -> void:
 	_t += delta
+	for pp: Dictionary in _paint:
+		pp["t"] = float(pp["t"]) + delta
+		if float(pp["t"]) < 0.0:
+			continue
+		if float(pp["drag"]) > 0.0:
+			pp["v"] = (pp["v"] as Vector2) * exp(-delta * float(pp["drag"]))
+		pp["v"] = (pp["v"] as Vector2) + Vector2(0, float(pp["g"]) * delta)
+		pp["p"] = (pp["p"] as Vector2) + (pp["v"] as Vector2) * delta
+		pp["rot"] = float(pp["rot"]) + float(pp["spin"]) * delta
+	_paint = _paint.filter(func(pp: Dictionary) -> bool: return float(pp["t"]) < float(pp["life"]))
+	if _add != null:
+		_add.queue_redraw()
 	for b: Dictionary in _balls:
 		b["t"] = float(b["t"]) + delta
 		# Smoke left along the flight.
@@ -183,6 +231,7 @@ func nuke(from: Vector2, to: Vector2, lands: bool, on_fire: Callable = Callable(
 func blast(at: Vector2) -> void:
 	var u: Vector2 = up(at)
 	_puffs.append({ "p": u + Vector2(0, -60), "v": Vector2.ZERO, "t": 0.0, "life": 0.55, "r": 95.0, "c": Color(1.0, 0.85, 0.55), "flash": true, "world": false })
+	paint("fireball", u + Vector2(0, -80), Vector2(0, -30), 1.0, 120.0, 260.0, Color(1.0, 0.85, 0.7), { "fade": 0.35, "spin": 0.3 })
 	_waves.append({ "p": at, "t": 0.0, "life": 1.4, "r": 560.0 })
 	_waves.append({ "p": at, "t": -0.15, "life": 1.2, "r": 380.0 })
 	# The stem, then the cap rolling outward.
@@ -223,6 +272,7 @@ func splash(at: Vector2) -> void:
 	_rings.append({ "p": at, "t": 0.0, "life": 1.1, "r": 70.0 })
 	_rings.append({ "p": at, "t": -0.12, "life": 1.0, "r": 45.0 })
 	var u: Vector2 = up(at)
+	paint("splash", u + Vector2(0, -40), Vector2.ZERO, 0.75, 70.0, 120.0, Color(0.95, 0.98, 1.0, 0.95), { "rot": 0.0, "spin": 0.0, "fade": 0.4 })
 	for k: int in 22:
 		var a: float = -PI / 2.0 + randf_range(-0.32, 0.32)
 		_bits.append({ "p": u, "v": Vector2.from_angle(a) * randf_range(260, 520), "t": 0.0, "life": 0.95, "r": randf_range(2.5, 5.0), "c": Color(0.9, 0.96, 1.0, 0.9), "g": 900.0 })
@@ -240,11 +290,14 @@ func burst(at: Vector2, crit: bool) -> void:
 		var a: float = randf_range(-PI, 0.0)
 		_bits.append({ "p": u, "v": Vector2.from_angle(a) * randf_range(140, 360 if crit else 240), "t": 0.0, "life": 1.0, "r": randf_range(3.0, 6.0), "c": Color(0.5, 0.34, 0.18) if k % 3 else Color(0.72, 0.52, 0.3), "shard": true, "spin": randf_range(-14, 14), "rot": randf() * TAU })
 	for k: int in (10 if crit else 5):
-		_bits.append({ "p": u, "v": Vector2.from_angle(randf_range(-PI, 0.0)) * randf_range(120, 300), "t": 0.0, "life": 0.7, "r": randf_range(1.5, 2.8), "c": Color(1.0, 0.72, 0.3), "g": 200.0 })
+		_bits.append({ "p": u, "v": Vector2.from_angle(randf_range(-PI, 0.0)) * randf_range(120, 300), "t": 0.0, "life": 0.7, "r": randf_range(1.5, 2.8), "c": Color(1.0, 0.72, 0.3), "g": 200.0, "ember": true, "rot": randf() * TAU })
 	for k: int in (8 if crit else 5):
 		_puffs.append({ "p": u + Vector2(randf_range(-20, 20), randf_range(-10, 10)), "v": Vector2(randf_range(-30, 30), randf_range(-70, -30)), "t": 0.0, "life": 1.5 + randf() * 0.7, "r": 15.0 + randf() * 12.0, "c": Color(0.33, 0.31, 0.3), "world": false, "drag": 1.6, "a": 0.55 })
 	_puffs.append({ "p": u, "v": Vector2.ZERO, "t": 0.0, "life": 0.2 if not crit else 0.3, "r": 50.0 if crit else 32.0, "c": Color(1.0, 0.78, 0.35), "flash": true, "world": false })
+	paint("flame", u + Vector2(0, -6), Vector2(0, -40), 0.45, 40.0 if not crit else 60.0, 80.0 if not crit else 120.0, Color(1.0, 0.75, 0.45), { "spin": 0.0, "rot": 0.0, "fade": 0.3 })
 	if crit:
+		for k2: int in 5:
+			paint("spark", u, Vector2.from_angle(randf_range(-PI, 0.0)) * randf_range(160, 300), 0.5, 34.0, 10.0, Color(1.0, 0.9, 0.55), { "drag": 3.0, "spin": randf_range(-6, 6) })
 		_rings.append({ "p": at, "t": 0.0, "life": 0.6, "r": 150.0, "gold": true })
 		for k: int in 12:
 			_sparks.append({ "kind": "streak", "a": u, "v": Vector2.from_angle(randf() * TAU) * randf_range(400, 760), "t": 0.0, "life": 0.25 + randf() * 0.15, "c": Color(1.0, 0.88, 0.5) })
@@ -318,10 +371,12 @@ func _draw() -> void:
 		var u: float = float(p["t"]) / float(p["life"])
 		var pos: Vector2 = (p["p"] as Vector2) if p.get("world", true) == false else up(p["p"])
 		if p.get("flash", false):
-			var rr: float = float(p["r"]) * ((0.3 + u) if p.get("grow", false) else (1.0 + 0.6 * u))
-			var fa: float = 1.0 - u * u
-			draw_texture_rect(_glow, Rect2(pos - Vector2(rr, rr) * 2.2, Vector2(rr, rr) * 4.4), false, Color(p["c"], 0.55 * fa))
-			draw_texture_rect(_glow, Rect2(pos - Vector2(rr, rr), Vector2(rr, rr) * 2.0), false, Color(Color.WHITE.lerp(p["c"], 0.4), 0.95 * fa))
+			continue
+		if sheet != null:
+			if not p.has("rot"):
+				p["rot"] = randf() * TAU
+			var w: float = float(p["r"]) * 2.8 * (0.7 + 0.9 * u)
+			_sprite(self, "smoke", pos, w, float(p["rot"]) + u * 0.6, Color(p["c"], minf(1.0, float(p.get("a", 0.45)) * 1.5) * (1.0 - u) * minf(1.0, u * 8.0 + 0.25)))
 		else:
 			draw_circle(pos, float(p["r"]) * (0.7 + 0.9 * u), Color(p["c"], float(p.get("a", 0.45)) * (1.0 - u)))
 	for sp: Dictionary in _sparks:
@@ -364,9 +419,56 @@ func _draw() -> void:
 			var ax: Vector2 = Vector2.from_angle(rot) * r1 * 1.6
 			var ay: Vector2 = Vector2.from_angle(rot + PI / 2.0) * r1 * 0.5
 			draw_colored_polygon(PackedVector2Array([c0 + ax, c0 + ay, c0 - ax, c0 - ay]), col)
+		elif q.get("ember", false) and sheet != null:
+			continue
 		else:
 			draw_circle(q["p"], float(q["r"]) * (1.0 - u5 * 0.5), col)
+	# The painted particles that are not light.
+	for pp: Dictionary in _paint:
+		if not LIGHT.has(pp["k"]) and float(pp["t"]) >= 0.0:
+			_paint_one(self, pp)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## The light: painted flashes, embers, flames, sparks and fireballs, added.
+func _draw_light() -> void:
+	if sheet == null:
+		return
+	for p: Dictionary in _puffs:
+		if not p.get("flash", false) or float(p["t"]) < 0.0:
+			continue
+		var u: float = float(p["t"]) / float(p["life"])
+		var pos: Vector2 = (p["p"] as Vector2) if p.get("world", true) == false else up(p["p"])
+		var rr: float = float(p["r"]) * ((0.3 + u) if p.get("grow", false) else (1.0 + 0.6 * u))
+		var fa: float = 1.0 - u * u
+		if not p.has("rot"):
+			p["rot"] = randf() * TAU
+		_sprite(_add, "flash", pos, rr * 3.4, float(p["rot"]), Color(Color.WHITE.lerp(p["c"], 0.35), fa))
+	for q: Dictionary in _bits:
+		if q.get("ember", false):
+			var u5: float = float(q["t"]) / float(q["life"])
+			_sprite(_add, "ember", q["p"], float(q["r"]) * 7.0 * (1.0 - u5 * 0.4), float(q.get("rot", 0.0)), Color(q["c"], 1.0 - u5 * u5))
+	for pp: Dictionary in _paint:
+		if LIGHT.has(pp["k"]) and float(pp["t"]) >= 0.0:
+			_paint_one(_add, pp)
+
+
+func _paint_one(on: CanvasItem, pp: Dictionary) -> void:
+	var u: float = clampf(float(pp["t"]) / float(pp["life"]), 0.0, 1.0)
+	var w: float = lerpf(float(pp["s0"]), float(pp["s1"]), u)
+	var fade_at: float = float(pp["fade"])
+	var a: float = float(pp["a"]) * minf(1.0, u / maxf(0.001, float(pp["in"]))) * (1.0 if u < fade_at else 1.0 - (u - fade_at) / maxf(0.001, 1.0 - fade_at))
+	_sprite(on, str(pp["k"]), pp["p"], w, float(pp["rot"]), Color(pp["c"], (pp["c"] as Color).a * a))
+
+
+## One cell of the sheet, `w` px across, centred at `at` (un-squashed).
+func _sprite(on: CanvasItem, k: String, at: Vector2, w: float, rot: float, c: Color) -> void:
+	if c.a <= 0.003 or w <= 0.5:
+		return
+	var m: Transform2D = Transform2D(0.0, Vector2(1.0, 1.0 / GROUND), 0.0, Vector2.ZERO) * Transform2D(rot, Vector2(w / 128.0, w / 128.0), 0.0, at)
+	on.draw_set_transform_matrix(m)
+	on.draw_texture_rect_region(sheet, Rect2(-64, -64, 128, 128), FRAMES[k], c)
+	on.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0 / GROUND) if on == self else Vector2.ONE)
 
 
 
@@ -384,4 +486,70 @@ func tether(from: Vector2, to: Vector2, col: Color) -> void:
 ## A rally: a pulse of light out from a hull and a ring on the water.
 func pulse(at: Vector2, col: Color) -> void:
 	_puffs.append({ "p": up(at) + Vector2(0, -50), "v": Vector2.ZERO, "t": 0.0, "life": 0.5, "r": 46.0, "c": col, "flash": true, "world": false })
+	paint("ward", up(at) + Vector2(0, -50), Vector2.ZERO, 0.7, 90.0, 220.0, col, { "spin": 2.0, "fade": 0.3 })
 	_rings.append({ "p": at, "t": 0.0, "life": 0.9, "r": 150.0 })
+
+
+# ══ Painted moments (the kit the stage calls for effects, statuses, bonds) ══
+
+## Fire licking up from a hull: a burn's tick.
+func flare_up(at: Vector2, big: bool = false) -> void:
+	var u: Vector2 = up(at) + Vector2(0, -26)
+	for k: int in (6 if big else 4):
+		paint("flame", u + Vector2(randf_range(-50, 50), randf_range(-6, 6)), Vector2(randf_range(-10, 10), randf_range(-90, -50)), 0.7 + randf() * 0.3, 40.0, 90.0, Color(1.0, 0.8, 0.55), { "rot": 0.0, "spin": randf_range(-0.3, 0.3), "delay": k * 0.05, "fade": 0.4 })
+	for k2: int in 6:
+		paint("ember", u + Vector2(randf_range(-40, 40), -20), Vector2(randf_range(-40, 40), randf_range(-160, -80)), 0.9, 18.0, 8.0, Color(1.0, 0.7, 0.35), { "drag": 1.2, "delay": k2 * 0.04 })
+	for k3: int in 3:
+		paint("smoke", u + Vector2(randf_range(-30, 30), -60), Vector2(randf_range(-10, 10), -40), 1.4, 50.0, 110.0, Color(0.3, 0.28, 0.27, 0.6), { "delay": 0.15 + k3 * 0.1, "drag": 0.8 })
+
+
+## Ice snapping over a hull: shards thrown, frost blooming.
+func freeze_snap(at: Vector2) -> void:
+	var u: Vector2 = up(at) + Vector2(0, -30)
+	paint("frost", u, Vector2.ZERO, 0.9, 80.0, 190.0, Color(0.8, 0.92, 1.0, 0.9), { "fade": 0.4, "spin": 0.2 })
+	for k: int in 8:
+		paint("ice", u, Vector2.from_angle(randf_range(-PI, 0.0)) * randf_range(120, 260), 0.8, 30.0, 18.0, Color(0.85, 0.95, 1.0), { "g": 520.0, "spin": randf_range(-8, 8) })
+	Sound.clunk()
+
+
+## Motes streaming from one point to another (a heal, a gift of powder, a
+## mark): painted sparks drawn along a soft arc.
+func motes(from: Vector2, to: Vector2, col: Color, n: int = 10, kind: String = "spark") -> void:
+	var a: Vector2 = up(from) + Vector2(0, -50)
+	var b: Vector2 = up(to) + Vector2(0, -50)
+	for k: int in n:
+		var dur: float = 0.55 + randf() * 0.15
+		var mid: Vector2 = (a + b) / 2.0 + Vector2(randf_range(-40, 40), -90.0 - randf() * 40.0)
+		_arc_mote(kind, a, mid, b, dur, col, k * 0.04)
+
+
+func _arc_mote(kind: String, a: Vector2, mid: Vector2, b: Vector2, dur: float, col: Color, delay: float) -> void:
+	await _wait(delay)
+	var p: Dictionary = { "k": kind, "p": a, "v": Vector2.ZERO, "t": 0.0, "life": dur, "s0": 26.0, "s1": 18.0, "rot": randf() * TAU, "spin": 4.0, "c": col, "a": 1.0, "g": 0.0, "drag": 0.0, "fade": 0.85, "in": 0.1 }
+	_paint.append(p)
+	var tw: Tween = create_tween()
+	tw.tween_method(func(f: float) -> void:
+		var q0: Vector2 = a.lerp(mid, f)
+		var q1: Vector2 = mid.lerp(b, f)
+		p["p"] = q0.lerp(q1, f), 0.0, 1.0, dur).set_ease(Tween.EASE_IN_OUT)
+	await _wait(dur)
+	paint(kind, b, Vector2.ZERO, 0.3, 30.0, 60.0, col, { "fade": 0.2 })
+
+
+## A sigil settling over a hull (a status landing): a painted ward ring
+## closing in on the ship in the status's colour, with glints.
+func sigil(at: Vector2, col: Color) -> void:
+	var u: Vector2 = up(at) + Vector2(0, -60)
+	paint("ward", u, Vector2.ZERO, 0.6, 240.0, 90.0, col, { "spin": -3.0, "fade": 0.5 })
+	for k: int in 6:
+		_sparks.append({ "kind": "glint", "a": u + Vector2.from_angle(TAU * k / 6.0) * 60.0, "t": -0.25, "life": 0.35, "c": col.lightened(0.3) })
+
+
+## A painted fireball flung on an arc (a rake skipping on, a powder keg's
+## debris).
+func fling(from: Vector2, to: Vector2, kind: String = "fireball", col: Color = Color.WHITE, size: float = 46.0) -> void:
+	var a: Vector2 = up(from) + Vector2(0, -40)
+	var b: Vector2 = up(to) + Vector2(0, -40)
+	_arc_mote(kind, a, (a + b) / 2.0 + Vector2(0, -120), b, 0.45, col, 0.0)
+	await _wait(0.45)
+	burst(to, false)

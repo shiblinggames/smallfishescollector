@@ -50,7 +50,7 @@ const ART = [
   'sea/port-*.webp', 'sea/tally-house-v2.webp', 'crew/hall_1.png', 'crew/drill_1.png', 'crew/stores_1.png', 'sea/posting-house-v3.webp',
   'forge/forge.png', 'sea/gunwharf-v3.webp', 'sea/charterhouse-v2.webp', 'sea/trawl-harbor-v3.webp', 'sea/shipyard-v3.webp', 'sea/smack.png',
   'sea/mainland-town.png', 'sea/isle-*.webp', 'sea/isle-chest.png', 'sea/isle-chest-deep.png', 'sea/isle-chest-open.png',
-  'sea/isle-note.png', 'sea/dig-box.png', 'sea/sea-bottle.png', 'sea-clouds.webp', 'sea/kelp-deep.webp', 'sea/kelp-canopy.webp', 'sea/tavern.png', 'sea/market.png', 'sea/tackle.png', 'sea/parlor.png', 'sea/den.png', 'sea/charting.png',
+  'sea/isle-note.png', 'sea/dig-box.png', 'sea/sea-bottle.png', 'sea-clouds.webp', 'fx-sheet.webp', 'sea/kelp-deep.webp', 'sea/kelp-canopy.webp', 'sea/tavern.png', 'sea/market.png', 'sea/tackle.png', 'sea/parlor.png', 'sea/den.png', 'sea/charting.png',
   // The crew: every species' card art, and the Crew Hall's backdrop.
   'card-arts', 'crew-bg.jpg', 'crew', 'enemy-arts',
   // North of the reef: the rock of the reef and the anchorage, and the ships.
