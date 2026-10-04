@@ -200,7 +200,6 @@ const COMING: Dictionary = {
 	"posting_house": "The bounty board: the day's hunts out past the Sea Gate, and what each one pays.",
 	"forge_isle": "The bench where two raid items go in and one stronger one comes out.",
 	"gunwharf": "Where your ship lies at her berth, is refitted and armed for the campaign.",
-	"charterhouse": "The voyage board: routes, crews and the day's voyage.",
 }
 
 

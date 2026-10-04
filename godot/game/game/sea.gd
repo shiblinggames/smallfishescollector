@@ -1466,6 +1466,14 @@ func _dock(id: String) -> void:
 			ch.closed.connect(func() -> void: _hud.refresh())
 			_hud.hold_for(ch)
 			_room_layer.add_child(ch)
+		"charterhouse":
+			Rumble.buzz([18, 40, 24])
+			Sound.bell()
+			var vb: VoyageBoard = VoyageBoard.new()
+			vb.session = session
+			vb.closed.connect(func() -> void: _hud.refresh())
+			_hud.hold_for(vb)
+			_room_layer.add_child(vb)
 		"trawl_fleet":
 			Rumble.buzz([18, 40, 24])
 			Sound.bell()

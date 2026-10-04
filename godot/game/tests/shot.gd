@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -1394,6 +1394,44 @@ func _init() -> void:
 				await process_frame
 			sea._locker._show_tab("boat")
 			for f: int in 40:
+				await process_frame
+		"voyages":
+			var vdb: CaptainStore = sea.session.store
+			p["expedition_xp"] = float(Rules.data()["navXpTable"][31])
+			p["ship_tier"] = 5.0
+			var vc: Array = Crew.cards()
+			var vids: Array = []
+			for k: int in 6:
+				var vid: float = vdb.next_id()
+				vids.append(vid)
+				(vdb.save["crew"] as Array).append({ "id": vid, "card_id": vc[k * 5 + 2]["id"], "rarity": 2.0, "power": 8.0 + k * 3.0, "dodge": 10.0, "fortune": 6.0 + k, "effects": [], "pending_trait": null, "voyage_slot": null, "raid_slot": null, "xp": 3000.0 * k, "nickname": null, "recruited_at": "2026-10-01T00:00:00.000Z", "died_at": null })
+			for k: int in 3:
+				Crew.assign(vdb, sea.session.uid, vids[k], "voyage", float(k))
+			var vstep: String = OS.get_environment("VOY")
+			if vstep == "out" or vstep == "haul":
+				var sent: Dictionary = Voyages.send(vdb, sea.session.uid, "deep")
+				if vstep == "haul":
+					sent["voyage"]["created_ms"] = Clock.now_ms() - float(sent["voyage"]["duration_ms"]) - 1000.0
+				else:
+					sent["voyage"]["created_ms"] = Clock.now_ms() - float(sent["voyage"]["duration_ms"]) * 0.4
+			hud._set_phase("idle")
+			hud._dial.visible = false
+			sea._dock("charterhouse")
+			for f: int in 10:
+				await process_frame
+			for n: Node in sea._room_layer.get_children():
+				if n is VoyageBoard:
+					if vstep == "pick":
+						n._chosen = "deep"
+						n._paint()
+					if vstep == "seat":
+						n._seat = 1
+						n._paint()
+					if vstep == "haul":
+						var hv: Dictionary = Voyages.out(vdb)
+						n._haul = Voyages.reveal(vdb, sea.session.uid, float(hv["id"]))
+						n._paint()
+			for f: int in 20:
 				await process_frame
 		"trawls":
 			var tdb: CaptainStore = sea.session.store

@@ -1589,6 +1589,26 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  VOYAGES (2026-10-04, the audit's sixth item; voyages.md's decisions of 2026-09-30):
+  core/voyages.gd ports planVoyage, the single event and loot roll, revealVoyageResults and
+  voyagePayout; the tables and story pools are content/voyages.json (tools/export_voyages.py,
+  run once off the frozen web; em-dashes in the stories turned to commas). RUNS ARE SEA DAYS:
+  Coastal 2, Open 4, Deep 6, Triangle 8, Shroud 11, cut a little by Navigation level, the crew's
+  Navigation and Swift Sails as before; the payouts stand as the web's (the runs are within a
+  few minutes of its hours). GEMS ARE GONE; the expedition crate meant to stand in for them is
+  NOT BUILT (its chance and table are still to set; Kong tabled the end rewards of the gem
+  activities, 2026-10-04). Also as the web: one at sea, the voyage seats held while out, one
+  flat crew-loss roll that Fortune takes to nothing at the route's Navigation level, Safe
+  Passage removing it, the lost remembered (died_at, died_on_voyage_id) not deleted, crew XP
+  to the survivors, lures, Massive Booty, the Primeval Eye charged, Navigator (and the Sky look)
+  at Navigation 50, Fleet Admiral at 100 voyages. Route levels are enforced here (the web only
+  locked them in the panel). THE CHARTERHOUSE'S BOARD (game/voyage_board.gd): the voyage seats,
+  filled from the free hands right there, with the crew's Power, Navigation and Fortune; the
+  five routes as tall cards (painting, pay, XP, sea days, how it tends to go, the risk in red
+  with the Fortune that clears it); a press chooses, Set Sail sends; while out, how long; home,
+  their tale and the haul; past voyages behind a button. Safe Passage and Swift Sails are on
+  sale in the Locker again. NOTE: the web's voyages no longer drop the Tide Turner, Phantom Hook
+  or Perfected Sigil (their drop flags are always false), so in both builds they have no source.
   SPECIALS AND HATS (2026-10-04, the audit's fifth item): the rules were ported already
   (Loadout.buy_special_item / equip_special_item / buy_hat); the shops were missing. The
   TACKLE SHOP gains HATS (every bandana: for sale with its price, a press buys and wears it;

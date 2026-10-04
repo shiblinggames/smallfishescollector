@@ -5,7 +5,8 @@ Half of the Expeditions score (with raids). Deliberately simple — the depth li
 composition, not in the voyage itself.
 
 
-**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong; see steam-port.md "Working it
+**DECIDED 2026-09-30; SEA DAYS AND NO GEMS BUILT IN THE GODOT PORT 2026-10-04** (core/voyages.gd;
+the expedition crate is not built; the web is frozen) (Steam prep, with Kong; see steam-port.md "Working it
 through"):
 - Voyage lengths are measured in SEA DAYS (48 minutes each, `lib/seaClock`), shown as "your
   crew sails for 6 days". Coastal 2, Open 4, Deep 6, Triangle 8, Shroud 11 sea days, close to
