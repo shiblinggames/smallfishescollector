@@ -76,7 +76,7 @@ func _ready() -> void:
 	holder.add_child(pic)
 	Paper.stat(col, "Class", "%s  ·  tier %d of 6" % [def.get("name", "Sloop"), tier])
 	Paper.rule(col)
-	Paper.text(col, "She carries your crew past the Sea Gate. Her refits, her arms and her crew's seats come with the Gunwharf and the campaign, later in the port.", "note", Paper.ink_soft(), true)
+	Paper.text(col, "She carries your crew past the Sea Gate. Seat her crew, mount her arms, fit her repair kit and build her ultimate at the Gunwharf.", "note", Paper.ink_soft(), true)
 	Paper.night = false
 
 

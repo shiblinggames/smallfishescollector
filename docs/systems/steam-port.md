@@ -1589,7 +1589,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
-  THE STEAM PLAYTEST PIPELINE (2026-10-04; Kong: "I would want to leverage steam playtest"):
+  AUDIT FIXES (2026-10-04): the Locker's permanent upgrades all work or are off sale
+  (Gauntlet.NOT_SOLD): Seasoned Timbers (repair kits +25%), Deep-Sea Plating (+10% max hull in
+  every fight), Kingpin's Cut (legendaries twice as often in raid crates, the entry's odds too)
+  now apply; Safe Passage, Swift Sails, the Forge, the Abyssal Forge and the Accelerator are off
+  sale until voyages and the forge are built; the Don's Tribute and the Crimson Tithe are off sale
+  for good. Both Lockers are read together (Gauntlet.owns), which fixed the Relentless Catcher.
+  No gems are paid anywhere (level rewards, digs, isle landings; the parity run keeps them). The
+  Crew Hall reads Navigation (crewPort.navFromFishing off). Stale copy fixed (looks and boats
+  "bought with gems", the shore's doors, the ship page).
+; Kong: "I would want to leverage steam playtest"):
   - BUILD: `node tools/build.mjs` (from godot/game; `--channel game` for the store app). It
     fetches Godot's export templates once if missing (about 1 GB), runs tools/setup.mjs (the art
     is not committed, so the build always packs the current art), exports the "Windows" preset

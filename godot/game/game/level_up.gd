@@ -309,7 +309,7 @@ static func reward_label(r: Dictionary) -> String:
 	var parts: Array[String] = []
 	if Js.num(r.get("doubloons")) > 0:
 		parts.append("%s ⟡" % Js.thousands(float(r["doubloons"])))
-	if Js.num(r.get("gems")) > 0:
+	if Js.num(r.get("gems")) > 0 and Rules.web_only:
 		parts.append("%d ◆" % int(r["gems"]))
 	for type: Variant in Js.obj(r.get("bait")):
 		if int((r["bait"] as Dictionary)[type]) > 0:

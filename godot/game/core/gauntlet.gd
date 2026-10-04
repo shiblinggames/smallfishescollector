@@ -1427,8 +1427,19 @@ static func upgrade_def(id: String) -> Dictionary:
 	return {}
 
 
+## The Locker's upgrades the port does not sell: their systems are not built
+## yet (voyages, the forge and the Accelerator), or they are gone by decision
+## (the Don's Tribute; the Crimson Tithe with Blood Gems).
+const NOT_SOLD: Array = ["safe_voyages", "swift_sails", "forge", "dg_abyssal_forge", "dg_abyssal_accel", "dg_daily_tribute", "dg_crimson_tithe"]
+
+
 static func upgrades_for(variant: String) -> Array:
-	return Js.list(t().get("upgrades")).filter(func(u: Dictionary) -> bool: return str(Js.nz(u.get("gauntlet"), "davy")) == variant)
+	return Js.list(t().get("upgrades")).filter(func(u: Dictionary) -> bool: return str(Js.nz(u.get("gauntlet"), "davy")) == variant and not NOT_SOLD.has(u["id"]))
+
+
+## A permanent upgrade owned in either Locker (the web reads the two together).
+static func owns(p: Dictionary, id: String) -> bool:
+	return (Js.list(p.get("gauntlet_upgrades")) + Js.list(p.get("dons_gauntlet_upgrades"))).has(id)
 
 
 ## The Run Upgrades this captain has on for a dive (owned, not switched off).
@@ -1530,7 +1541,7 @@ static func blood_gem_mult(ups: Array) -> float:
 ## Locker, the descent's deepest past its depth).
 static func buy_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary:
 	var u: Dictionary = upgrade_def(id)
-	if u.is_empty():
+	if u.is_empty() or NOT_SOLD.has(id):
 		return { "error": "There is no such upgrade." }
 	var v: String = str(Js.nz(u.get("gauntlet"), "davy"))
 	var col: String = "dons_gauntlet_upgrades" if v == "don" else "gauntlet_upgrades"

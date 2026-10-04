@@ -73,7 +73,7 @@ static func open_crate(db: CaptainStore, uid: String, raid: Dictionary, fortune:
 		# row rolls (at 0 too), as the web's does.
 		if not rollable(row, owned):
 			continue
-		var p: float = item_chance(raid, row, fortune, tier, owned)
+		var p: float = item_chance(raid, row, fortune, tier, owned, 2.0 if Gauntlet.owns(prof, "dg_kingpin_cut") else 1.0)
 		# A tier's extra rolls: each a fresh chance, the item at most once.
 		for k: int in rolls:
 			if Dice.next() < p:
@@ -112,22 +112,24 @@ static func rollable(row: Dictionary, owned_skins: Array) -> bool:
 	return not (row.get("shipSkinId") != null and owned_skins.has(row["shipSkinId"]))
 
 
-static func item_chance(raid: Dictionary, row: Dictionary, fortune: float, tier: Dictionary = {}, owned_skins: Array = []) -> float:
+static func item_chance(raid: Dictionary, row: Dictionary, fortune: float, tier: Dictionary = {}, owned_skins: Array = [], legend_mult: float = 1.0) -> float:
 	if not rollable(row, owned_skins):
 		return 0.0
 	var challenge: bool = str(raid["raidId"]).ends_with("_challenge")
 	var flm: float = 1.0 + minf(1.0, fortune / 150.0)
 	var rarity: Dictionary = { "epic": 0.20 if challenge else 0.10, "legendary": 0.10 if challenge else 0.05, "cosmetic": 0.05 if challenge else 0.025, "ancient": 0.10 if challenge else 0.05 }
-	return minf(0.95, float(rarity.get(str(row.get("rarity", "")), 0.0)) * flm * float(Js.nz(tier.get("rarityMult"), 1.0)))
+	# Kingpin's Cut (the Don's Locker): legendaries twice as often.
+	var lm: float = legend_mult if str(row.get("rarity", "")) == "legendary" else 1.0
+	return minf(0.95, float(rarity.get(str(row.get("rarity", "")), 0.0)) * flm * float(Js.nz(tier.get("rarityMult"), 1.0)) * lm)
 
 
 ## The crate as the entry screen shows it: each item it can pay and the chance
 ## this captain's crate holds it (all a tier's rolls together), and the coin.
-static func crate_odds(raid: Dictionary, fortune: float, tier: Dictionary = {}, owned_skins: Array = []) -> Dictionary:
+static func crate_odds(raid: Dictionary, fortune: float, tier: Dictionary = {}, owned_skins: Array = [], legend_mult: float = 1.0) -> Dictionary:
 	var rolls: int = 1 + int(Js.num(tier.get("extraRolls")))
 	var out: Array = []
 	for row: Dictionary in Js.list(raid.get("loot")):
-		var p: float = item_chance(raid, row, fortune, tier, owned_skins)
+		var p: float = item_chance(raid, row, fortune, tier, owned_skins, legend_mult)
 		if p > 0.0:
 			out.append({ "id": row["id"], "label": row.get("label", row["id"]), "rarity": row.get("rarity", ""), "chance": 1.0 - pow(1.0 - p, rolls), "image": row.get("image", "") })
 	var cm: float = float(Js.nz(tier.get("coin"), 1.0))

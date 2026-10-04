@@ -1037,7 +1037,7 @@ func _land(isle: Dictionary) -> void:
 	var haul: Array = []
 	if Js.num(res.get("doubloons")) > 0:
 		haul.append([res["doubloons"], "doubloons"])
-	if Js.num(res.get("gems")) > 0:
+	if Js.num(res.get("gems")) > 0 and Rules.web_only:
 		haul.append([res["gems"], "gems"])
 	if res.get("salvage") != null:
 		lines.append(["Salvaged: %s. Nobody sells one. It is waiting at the Homestead." % res["salvage"]["name"], "body"])
@@ -1057,7 +1057,7 @@ func _dig(site: Dictionary) -> void:
 		_hud.toast(str((r as Dictionary).get("error", "The spade turned nothing up. Try again.")) if r is Dictionary else "The spade turned nothing up. Try again.")
 		return
 	Sound.chest(true)
-	_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Hauled up from the bottom", r["name"], [[str(r["found"]), "note"]], [[r["doubloons"], "doubloons"], [r["gems"], "gems"]]))
+	_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Hauled up from the bottom", r["name"], [[str(r["found"]), "note"]], [[r["doubloons"], "doubloons"]]))
 	_hud.refresh()
 
 

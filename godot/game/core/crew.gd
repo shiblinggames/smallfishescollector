@@ -15,9 +15,10 @@ extends RefCounted
 ##   - boardEveryMs / boardOffsetMs: a fresh free board every sea day, at
 ##     sunrise (Kong, 2026-10-02: "crew should refresh based on in-game days"),
 ##     rather than once a real day;
-##   - navFromFishing: the Navigation the hall reads (roster capacity, the
-##     hall's gates) is the Fishing level until Navigation is earned in the
-##     port (Kong, 2026-10-01: "focus on Fishing for now").
+##   - navFromFishing: once, the hall read the Fishing level until Navigation
+##     was earned in the port (Kong, 2026-10-01: "focus on Fishing for now").
+##     Off since 2026-10-04: raids earn Navigation, and the hall reads it as
+##     the web's does.
 
 static var _cards: Array = []
 

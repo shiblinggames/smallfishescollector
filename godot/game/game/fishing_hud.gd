@@ -1126,10 +1126,11 @@ func _auto_tier() -> int:
 
 
 func _auto_max_rarity() -> int:
-	var u: Array = Js.list(session.profile().get("gauntlet_upgrades"))
-	if Js.includes(u, "dg_master_catcher"):
+	# Either Locker (the Relentless Catcher is bought in the Don's).
+	var p: Dictionary = session.profile()
+	if Gauntlet.owns(p, "dg_master_catcher"):
 		return 4
-	if Js.includes(u, "tireless_catcher"):
+	if Gauntlet.owns(p, "tireless_catcher"):
 		return 3
 	return 2
 

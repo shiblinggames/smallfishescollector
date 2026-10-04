@@ -1680,7 +1680,7 @@
   "crewPort": {
     "boardEveryMs": 2880000,
     "boardOffsetMs": 1920000,
-    "navFromFishing": true,
+    "navFromFishing": false,
     "_notices": "NOTICES (Kong, 2026-10-02). Per face, three faces a board. The free board is the Tavern Notice: an Epic on 5% of boards, never a Legendary. A Harbor Bill: Epic on 15% of boards, a Legendary on 1 in 100. A Captain's Proclamation: Epic on 20%, a Legendary on about 1 in 34. Drops: Ship's Letter and Torn Map caskets 25% a Bill; Last Will caskets always a Bill and 10% a Proclamation; gold and diamond crates 3% a Bill; ancient crates 5% a Bill and 1% a Proclamation.",
     "freeWeights": [
       76,

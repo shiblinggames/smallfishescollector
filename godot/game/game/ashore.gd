@@ -2,9 +2,9 @@ class_name Ashore
 extends Control
 ## GOING ASHORE AT THE MAINLAND (Godot port of MainlandAshore in
 ## app/(app)/sea/SeaMap.tsx and ashoreDoors.ts, docking): not a town screen but
-## a picker over the chart, two rows of three doors. The Market and the Tackle
-## Shop are built; the Tavern, the Parlor, the Den and the Chart Room come with
-## their own slices and say so.
+## a picker over the chart, two rows of three doors: the Market, the Tackle
+## Shop, the Parlor, the Den and the Chart Room; the Tavern is still to come
+## and says so.
 
 signal closed
 signal chose(door: String)

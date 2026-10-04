@@ -600,7 +600,8 @@ static func claim_fishing_level_rewards(db: CaptainStore, uid: String) -> Dictio
 	if not db.move_level_watermark(uid, null if p.get("claimed_fishing_levels") == null else claimed, level):
 		return { "granted": [], "from": claimed, "to": claimed, "newDoubloons": 0.0, "newGems": 0.0, "newHoldTier": 0.0 }
 	var new_d: float = db.grant(uid, "doubloons", doubloons)
-	var new_g: float = db.grant(uid, "gems", gems)
+	# Gems are retired in the port: a level's gems are not paid.
+	var new_g: float = db.grant(uid, "gems", gems) if Rules.web_only else Js.num(p.get("gems"))
 	db.raise_hold_tier(uid, hold_tier)
 	for type: Variant in bait:
 		if float(bait[type]) > 0.0:

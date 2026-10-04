@@ -114,6 +114,9 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 	var might: float = maxf(0.0, floor(Js.num(ren.get("might"))))
 	var bulwark: float = maxf(0.0, floor(Js.num(ren.get("bulwark"))))
 	var max_hp: float = float(Js.round((float(hull["durability"]) + nav + 3.0 * bulwark) * float(fx["maxHp"]) * float(cls_fx["hpMult"])))
+	# Deep-Sea Plating (the Don's Locker): a tenth more hull in every fight.
+	if Gauntlet.owns(prof, "dg_deep_plating"):
+		max_hp = float(Js.round(max_hp * 1.10))
 	return {
 		"uid": uid, "name": name if name != "" else str(prof.get("username", "Captain")),
 		"face": { "characterColor": str(Js.nz(prof.get("character_color"), "default")), "hat": prof.get("equipped_hat") },
@@ -123,6 +126,7 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 		"fortune": ft + floor(nav / 5.0), "dmgMult": float(cls_fx["damageMult"]) * (1.0 + 0.005 * might),
 		"maxCharges": float(MAX_CHARGES + (1 if Armory.has_rack(prof) else 0)), "mega": Armory.mega_of(prof),
 		"crew": crew, "used": [], "repairKit": prof.get("equipped_repair_kit"),
+		"repairMult": 1.25 if Gauntlet.owns(prof, "seasoned_timbers") else 1.0,
 		"items": items, "fx": fx, "saves": float(fx["lethalSave"]), "drum": false,
 	}
 
@@ -1230,7 +1234,7 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 				s["kitUsed"] = true
 				var rg: Vector2 = repair_range(s)
 				var roll: float = rg.x + floor(Dice.next() * (rg.y - rg.x + 1.0))
-				roll = float(Js.round(roll * float(tide_agg(s)["repairHeal"]) * float(s.get("healMult", 1.0))))
+				roll = float(Js.round(roll * float(tide_agg(s)["repairHeal"]) * float(s.get("healMult", 1.0)) * float(s.get("repairMult", 1.0))))
 				var got: float = _heal(s, roll)
 				ev.append({ "t": "repair", "seat": si, "heal": got, "hp": s["hp"], "name": kit.get("name", "Repair Kit") })
 		"fire", "volley", "mega":

@@ -535,7 +535,8 @@ static func dig_here(db: CaptainStore, uid: String, site_id: String) -> Dictiona
 		return { "ok": false, "error": "This one is already up. The hole is still here." }
 	row["dug_at"] = Js.iso(Clock.now_ms())
 	db.grant(uid, "doubloons", float(site["doubloons"]))
-	db.grant(uid, "gems", float(site["gems"]))
+	if Rules.web_only:
+		db.grant(uid, "gems", float(site["gems"]))
 	db.ledger(uid, float(site["doubloons"]), "Dug up: %s" % site["name"])
 	var purse: Dictionary = db.profile(uid, "doubloons, gems")
 	return {
@@ -561,7 +562,8 @@ static func go_ashore(db: CaptainStore, uid: String, isle_id: String) -> Diction
 	found.append(i["id"])
 	var gems: float = Js.num(i.get("gems"))
 	var doubloons: float = Js.num(i.get("doubloons"))
-	if gems > 0:
+	# Gems are retired in the port.
+	if gems > 0 and Rules.web_only:
 		db.grant(uid, "gems", gems)
 	if doubloons > 0:
 		db.grant(uid, "doubloons", doubloons)

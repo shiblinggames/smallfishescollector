@@ -191,7 +191,7 @@ func _paint() -> void:
 		if m2["key"] == _mine():
 			my_card = Js.obj(m2.get("card"))
 	var tc: Dictionary = Js.obj(Js.obj(Battle.cfg().get("tiers")).get(_st.get("tier", "normal")))
-	bp.odds = RaidRun.crate_odds(raid, Js.num(my_card.get("fortune")), tc, Js.list(my_card.get("ownedSkins")))
+	bp.odds = RaidRun.crate_odds(raid, Js.num(my_card.get("fortune")), tc, Js.list(my_card.get("ownedSkins")), 2.0 if Gauntlet.owns(sea.session.profile(), "dg_kingpin_cut") else 1.0)
 	_body.add_child(bp)
 	# THE FOOT.
 	var foot_y: float = h - 88.0

@@ -13,9 +13,9 @@ signal changed
 
 const HOW_TO_GET: Dictionary = {
 	"rod": "Buy new rods at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.",
-	"skin": "Skins are bought with doubloons or gems, earned by levels and achievements, or found in crates.",
+	"skin": "Looks are earned by levels and achievements, or found in crates.",
 	"hat": "Hats are bought with doubloons. A few only come out of crates.",
-	"boat": "Boats are bought with doubloons or gems, earned by levels and achievements, or found in crates.",
+	"boat": "Boats are earned by levels and achievements, or found in crates.",
 	"pet": "Pets come out of supply crates.",
 }
 const TABS: Array = [["rod", "Rod"], ["skin", "Look"], ["hat", "Hat"], ["boat", "Boat"], ["pet", "Pet"]]
