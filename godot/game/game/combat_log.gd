@@ -45,6 +45,7 @@ var _filter: String = "all"
 ## While an event the log already wrote is playing, the stage's caption for it
 ## is not written again (a boss's words and a check's lines still are).
 var covering: bool = false
+var _last_note: String = ""
 var _open: bool = true
 var _panel: Control
 var _scroll: ScrollContainer
@@ -54,12 +55,16 @@ var _tip: PanelContainer
 var _tip_label: RichTextLabel
 var _handle: Button
 var _lines: Array = []
+## The log in the deck: the last few lines (the stage seats it there).
+var mini: VBoxContainer
+var _mini_rows: VBoxContainer
+const MINI: int = 4
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_open = bool(Prefs.get_value("combat_log_open", true))
+	_open = bool(Prefs.get_value("combat_log_open", false))
 	# No box: the lines sit on a soft dark fade that deepens toward the edge.
 	_panel = Control.new()
 	_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -146,7 +151,41 @@ func _ready() -> void:
 	_tip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tip.add_child(_tip_label)
 	add_child(_tip)
+	_build_mini()
 	_apply_open()
+
+
+## The deck's log: LOG, the last few lines, Full log (L) and Recap.
+func _build_mini() -> void:
+	mini = VBoxContainer.new()
+	mini.add_theme_constant_override("separation", 4)
+	mini.mouse_filter = Control.MOUSE_FILTER_PASS
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 2)
+	mini.add_child(head)
+	var title: Label = Kit.text(head, "LOG", "small", SYS)
+	title.add_theme_font_override("font", Kit.font("karla", 800))
+	title.add_theme_font_size_override("font_size", 10)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(_link_button("Recap", func() -> void: _show_recap()))
+	var full: Button = _link_button("Full log  L", func() -> void: toggle())
+	full.tooltip_text = "The whole log down the right edge"
+	head.add_child(full)
+	_mini_rows = VBoxContainer.new()
+	_mini_rows.add_theme_constant_override("separation", 2)
+	_mini_rows.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_mini_rows.clip_contents = true
+	mini.add_child(_mini_rows)
+
+
+func _mini_add(e: Dictionary) -> void:
+	if _mini_rows == null:
+		return
+	_mini_rows.add_child(_row(e, 12))
+	while _mini_rows.get_child_count() > MINI:
+		var old: Node = _mini_rows.get_child(0)
+		_mini_rows.remove_child(old)
+		old.queue_free()
 
 
 ## A word that acts as a button (no box until hovered).
@@ -206,7 +245,7 @@ func toggle() -> void:
 
 func _apply_open() -> void:
 	_panel.visible = _open
-	_handle.visible = not _open
+	_handle.visible = false
 	_tip.visible = false
 
 
@@ -240,8 +279,9 @@ func fight_begins(title: String) -> void:
 
 ## A line the stage said aloud (rewards, a boss's words): logged as told.
 func note(text: String) -> void:
-	if text.strip_edges() == "" or covering or text.begins_with("Fight ") or text.begins_with("Depth "):
+	if text.strip_edges() == "" or covering or text.begins_with("Fight ") or text.begins_with("Depth ") or text == _last_note:
 		return
+	_last_note = text
 	_push("sys", false, "[color=#%s][i]%s[/i][/color]" % [SYS.to_html(false), _esc(text)])
 
 
@@ -310,6 +350,7 @@ func _title() -> String:
 func _push(who: String, dmg: bool, bb: String, col: Color = SYS) -> void:
 	var e: Dictionary = { "fight": _fight, "turn": _turn, "who": who, "dmg": dmg, "bb": bb, "col": col }
 	entries.append(e)
+	_mini_add(e)
 	if _passes(e):
 		var bar: VScrollBar = _scroll.get_v_scroll_bar()
 		var at_end: bool = bar.value >= bar.max_value - bar.page - 12.0
@@ -370,7 +411,7 @@ func _write(e: Dictionary) -> void:
 ## One line: who acted (a mark in their colour), what happened, and the number
 ## in a column of its own (gold for a crit, red for a hit on a captain, green
 ## for a heal).
-func _row(e: Dictionary) -> Control:
+func _row(e: Dictionary, fs: int = 13) -> Control:
 	var bb: String = str(e["bb"])
 	var num: String = ""
 	var ncol: Color = INK
@@ -400,7 +441,7 @@ func _row(e: Dictionary) -> Control:
 	rt.add_theme_font_override("bold_font", Kit.font("karla", 800))
 	rt.add_theme_font_override("italics_font", Kit.font("karla", 500))
 	for k: String in ["normal_font_size", "bold_font_size", "italics_font_size"]:
-		rt.add_theme_font_size_override(k, 13)
+		rt.add_theme_font_size_override(k, fs)
 	rt.add_theme_color_override("default_color", INK)
 	rt.meta_underlined = false
 	rt.meta_hover_started.connect(_on_hover)
@@ -410,7 +451,7 @@ func _row(e: Dictionary) -> Control:
 	if num != "":
 		var nl: Label = Kit.text(row, num, "body_strong", ncol)
 		nl.add_theme_font_override("font", Kit.font("karla", 800))
-		nl.add_theme_font_size_override("font_size", 15)
+		nl.add_theme_font_size_override("font_size", fs + 2)
 		nl.custom_minimum_size = Vector2(38, 0)
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.modulate.a = 0.0

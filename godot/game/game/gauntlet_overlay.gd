@@ -131,7 +131,7 @@ func _height() -> float:
 	match str(_st.get("phase", "")):
 		"held": return 420.0
 		"draft": return 640.0
-		"breather": return 660.0
+		"breather": return 660.0 if not Js.obj(Js.obj(_run().get("offer")).get("live")).is_empty() else 560.0
 		"haul", "dead": return 600.0
 		"curse", "jobResult": return 470.0
 	return 560.0
@@ -688,7 +688,7 @@ func _breather() -> void:
 	# The crew's hulls and the run so far, on the right.
 	var crew: CrewPane = CrewPane.new()
 	crew.position = Vector2(left_w, 30)
-	crew.size = Vector2(w - left_w - 36.0, 420)
+	crew.size = Vector2(w - left_w - 36.0, _sheet.size.y - 140.0)
 	for k: String in _keys():
 		var s: Dictionary = _seat(k)
 		crew.rows.append({ "name": _name(k), "face": face_of.call(k) if face_of.is_valid() else null, "hp": Js.num(s.get("hp")), "max": Js.num(s.get("max")),

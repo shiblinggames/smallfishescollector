@@ -58,6 +58,10 @@ var _log: Label
 var _clog: CombatLog
 ## The deck's paper and panel (faded away while the aim bar floats free).
 var _deck_bg: Array = []
+## The deck: orders on the left, the log's last lines on the right.
+const DECK_W: float = 1280.0
+const LOG_W: float = 400.0
+var _deck_log: Control
 var _strip: Array = []
 var _strip_lit: int = -99
 var _plan: Dictionary = {}
@@ -292,10 +296,12 @@ func _process(delta: float) -> void:
 		# As tall as what is on it (an order row, the aim bar, the die).
 		var dh: float = maxf(150.0, _deck_box.get_combined_minimum_size().y + 34.0)
 		var top_y: float = -BAR - 12.0 - dh
-		# Dipped, it tucks wholly under the bar.
-		var dip: float = _drop * (dh + 30.0) / 190.0
+		# While a round plays the deck stays up (its log is being written);
+		# only the orders dim, out of play.
+		var dip: float = 0.0
 		_deck.offset_top = top_y + dip
 		_deck.offset_bottom = -BAR - 12.0 + dip
+		_deck_box.modulate.a = 1.0 - 0.65 * clampf(_drop / 190.0, 0.0, 1.0)
 		_log.offset_top = top_y - 54.0
 		_log.offset_bottom = top_y - 22.0
 	for n: Dictionary in _numbers:
@@ -479,8 +485,8 @@ func _from_mark() -> bool:
 func _build_deck() -> void:
 	_deck = Control.new()
 	_deck.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	_deck.offset_left = -520
-	_deck.offset_right = 520
+	_deck.offset_left = -DECK_W / 2.0
+	_deck.offset_right = DECK_W / 2.0
 	_deck.offset_top = -BAR - 150
 	_deck.offset_bottom = -BAR + 6
 	_deck.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -503,13 +509,28 @@ func _build_deck() -> void:
 	_deck_bg.append(sheet)
 	var pad: MarginContainer = MarginContainer.new()
 	pad.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: Array in [["left", 20], ["right", 20], ["top", 20], ["bottom", 14]]:
+	for side: Array in [["left", 22], ["right", LOG_W + 34], ["top", 16], ["bottom", 14]]:
 		pad.add_theme_constant_override("margin_" + side[0], side[1])
 	_deck.add_child(pad)
 	_deck_box = VBoxContainer.new()
 	_deck_box.add_theme_constant_override("separation", 8)
 	_deck_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	pad.add_child(_deck_box)
+	# The log's last lines, on the deck's right, a rule between.
+	_deck_log = Control.new()
+	_deck_log.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+	_deck_log.offset_left = -LOG_W - 18.0
+	_deck_log.offset_right = -18.0
+	_deck_log.offset_top = 14.0
+	_deck_log.offset_bottom = -12.0
+	_deck_log.mouse_filter = Control.MOUSE_FILTER_PASS
+	_deck.add_child(_deck_log)
+	var rule: ColorRect = ColorRect.new()
+	rule.color = Color(1, 1, 1, 0.07)
+	rule.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	rule.offset_left = -14.0
+	rule.offset_right = -13.0
+	_deck_log.add_child(rule)
 	_log = Kit.text(self, "", "body_strong", CREAM)
 	_log.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_log.offset_left = -470
@@ -517,12 +538,16 @@ func _build_deck() -> void:
 	_log.offset_top = -BAR - 186
 	_log.offset_bottom = -BAR - 156
 	_log.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# The deck's log says it now: the floating line stays hidden.
+	_log.visible = false
 	_log.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	_log.add_theme_constant_override("shadow_outline_size", 8)
 	if _clog == null:
 		_clog = CombatLog.new()
 		_clog.stage = self
 		add_child(_clog)
+		_clog.mini.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_deck_log.add_child(_clog.mini)
 	create_tween().tween_property(self, "_drop", 0.0, 0.6).set_delay(0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
@@ -566,80 +591,58 @@ func _await_plan() -> void:
 func _paint_actions() -> void:
 	_clear_deck()
 	var s: Dictionary = b["seats"][me]
+	# The actions: words and their keys, the rack after them.
 	var top: HBoxContainer = HBoxContainer.new()
-	top.add_theme_constant_override("separation", 8)
+	top.add_theme_constant_override("separation", 6)
 	_deck_box.add_child(top)
 	var lg: Dictionary = Battle.legal(b, s)
-	var acts: Array = [["fire", "Fire", "1 ball", "1"], ["volley", "Volley", "3 balls, double", "2"], ["reload", "Reload", "+1 ball", "3"], ["dodge", "Dodge", "brace for a shot", "4"]]
+	var acts: Array = [["fire", "Fire", "1 ball", "1"], ["volley", "Volley", "3 balls, double damage", "2"], ["reload", "Reload", "+1 ball", "3"], ["dodge", "Dodge", "brace for a shot", "4"]]
 	var mg: Dictionary = Js.obj(s.get("mega"))
 	if not mg.is_empty():
 		acts.insert(2, ["mega", str(mg["name"]), "%d balls" % int(Armory.aug()["megaCost"]), "6"])
-	var drum: Dictionary = Battle.drum_of(s)
-	var n: int = acts.size() + (0 if drum.is_empty() else 1)
-	var kw: float = minf(150.0, (1000.0 - 112.0 - 150.0 - 8.0 * float(n + 2)) / float(n))
 	for a: Array in acts:
 		var on: bool = lg.get(a[0], false)
-		var k: BattleLook.ActionKey = BattleLook.ActionKey.new()
-		k.kind = a[0]
-		k.label = a[1]
-		k.sub = a[2]
-		k.key_hint = a[3]
-		k.primary = on and a[0] in ["fire", "mega"]
-		if a[0] == "mega":
-			k.accent = Color(str(mg.get("color", "#d8b26b")))
-		k.disabled = not on
-		k.tooltip_text = str(mg.get("tagline", "")) if a[0] == "mega" else str(a[2])
-		k.custom_minimum_size = Vector2(kw, 60)
-		var act: String = a[0]
-		k.pressed.connect(func() -> void: _choose(act))
-		top.add_child(k)
+		top.add_child(_word_key(a[1], a[3], on, a[0] in ["fire", "mega"], str(mg.get("tagline", "")) if a[0] == "mega" else str(a[2]), Color(str(mg.get("color", "#d8b26b"))) if a[0] == "mega" else BattleLook.GOLD, func() -> void: _choose(a[0])))
+	var drum: Dictionary = Battle.drum_of(s)
 	if not drum.is_empty():
-		var dk: BattleLook.ActionKey = BattleLook.ActionKey.new()
-		dk.kind = "drum"
-		dk.label = str(drum["name"])
-		dk.sub = "beaten" if s.get("drum", false) else "a free beat"
-		dk.key_hint = "5"
-		dk.disabled = s.get("drum", false) or (s["used"] as Array).is_empty()
-		dk.tooltip_text = str(drum.get("description", ""))
-		dk.custom_minimum_size = Vector2(kw, 60)
-		dk.pressed.connect(_beat_drum)
+		var dk: BattleLook.ActionKey = _word_key(str(drum["name"]), "5", not (s.get("drum", false) or (s["used"] as Array).is_empty()), false, str(drum.get("description", "")), BattleLook.GOLD, _beat_drum)
 		top.add_child(dk)
-	var sp: Control = Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(sp)
-	var fl: BattleLook.ActionKey = BattleLook.ActionKey.new()
-	fl.visible = gauntlet == ""
-	fl.kind = "flee"
-	fl.label = "Flee"
-	fl.sub = "need %d+" % Battle.flee_need(b, me)
-	fl.key_hint = "F"
-	fl.accent = BattleLook.MUTED
-	fl.tooltip_text = "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me)
-	fl.custom_minimum_size = Vector2(112, 60)
-	fl.pressed.connect(_flee)
-	top.add_child(fl)
-	# The shot in the rack.
+	if gauntlet == "":
+		top.add_child(_word_key("Flee", "F", true, false, "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me), BattleLook.MUTED, _flee))
+	# The shot in the rack: the balls themselves.
 	var mag: Control = Control.new()
-	mag.custom_minimum_size = Vector2(150, 60)
+	var cnt: int = int(s["maxCharges"])
+	var step: float = minf(22.0, 110.0 / maxf(1.0, float(cnt)))
+	mag.custom_minimum_size = Vector2(18.0 + step * cnt, 42)
+	mag.tooltip_text = "Shot in the rack: %d of %d" % [int(s["charges"]), cnt]
 	mag.draw.connect(func() -> void:
-		var r: Rect2 = Rect2(Vector2(4, 0), Vector2(146, 60))
-		BattleLook.draw_box(mag, r, BattleLook.box(Color(0, 0, 0, 0.25), Color(0, 0, 0, 0), 0, 10))
-		mag.draw_string(Kit.font("karla", 800), Vector2(16, 17), "SHOT  %d / %d" % [int(s["charges"]), int(s["maxCharges"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, BattleLook.MUTED)
-		var cnt: int = int(s["maxCharges"])
-		var step: float = minf(28.0, 120.0 / maxf(1.0, float(cnt)))
 		for k: int in cnt:
-			BattleLook.ball(mag, Vector2(26 + k * step, 39), 10.0, k < int(s["charges"])))
+			BattleLook.ball(mag, Vector2(16 + k * step, 21), 8.0, k < int(s["charges"])))
 	top.add_child(mag)
-	# The crew's orders.
+	# The crew's orders, under them.
 	var crew: Array = s["crew"]
 	if not crew.is_empty():
 		var row: HBoxContainer = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
+		row.add_theme_constant_override("separation", 6)
 		_deck_box.add_child(row)
-		Kit.text(row, "ORDERS", "eyebrow", BattleLook.MUTED).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		for c: Dictionary in crew:
 			row.add_child(_order_card(s, c))
 	_target_row()
+
+
+## An action on the deck: its word and its key, nothing else.
+func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, accent: Color, f: Callable) -> BattleLook.ActionKey:
+	var k: BattleLook.ActionKey = BattleLook.ActionKey.new()
+	k.label = word
+	k.key_hint = key
+	k.primary = on and primary
+	k.accent = accent
+	k.disabled = not on
+	k.tooltip_text = tip
+	var w: float = Kit.font("karla", 800).get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 52.0
+	k.custom_minimum_size = Vector2(maxf(92.0, w), 42)
+	k.pressed.connect(f)
+	return k
 
 
 func _order_card(s: Dictionary, c: Dictionary) -> Control:
@@ -654,7 +657,7 @@ func _order_card(s: Dictionary, c: Dictionary) -> Control:
 	bt.state = ("ORDERED" if chosen else str(cls.get("shortLabel", "")).to_upper()) if why == "" else ("USED" if why.begins_with("Already") else why.to_upper())
 	bt.disabled = why != ""
 	bt.tooltip_text = "%s  ·  %s" % [cls.get("name", ""), Js.obj(c["ms"]).get("desc", "")] if why == "" else why
-	bt.custom_minimum_size = Vector2(152 if (s["crew"] as Array).size() <= 5 else 132, 52)
+	bt.custom_minimum_size = Vector2(150 if (s["crew"] as Array).size() <= 4 else 124, 42)
 	bt.pressed.connect(func() -> void:
 		if chosen:
 			_plan.erase("ability")
@@ -1583,7 +1586,7 @@ func _draw() -> void:
 		BattleLook.draw_box(self, cr, BattleLook.box(Color(BattleLook.LACQUER_HI, 0.95), Color(0, 0, 0, 0), 0, 15))
 		BattleLook.say(self, f, vp.x / 2.0, cr.get_center().y + 5.0, cd, 15, BattleLook.BRASS_HI)
 	# The log's backing, and the banner's brass flourish.
-	if _log.text != "" and _log.modulate.a > 0.01:
+	if _log.visible and _log.text != "" and _log.modulate.a > 0.01:
 		var la: float = _log.modulate.a
 		var lw: float = _log.get_minimum_size().x
 		var lr: Rect2 = Rect2(vp.x / 2.0 - lw / 2.0 - 24.0, _log.position.y + _log.size.y / 2.0 - 17.0, lw + 48.0, 34.0)

@@ -243,7 +243,7 @@ class ActionKey:
 		if sub != "":
 			draw_string(Kit.font("karla", 600), Vector2(tx, cy + 15.0), sub, HORIZONTAL_ALIGNMENT_LEFT, avail + 20.0, 11, Color(BattleLook.MUTED, a))
 		if key_hint != "":
-			var kr: Rect2 = Rect2(Vector2(r.end.x - 22, r.position.y + 7), Vector2(15, 15))
+			var kr: Rect2 = Rect2(Vector2(r.end.x - 22, r.position.y + 7 if sub != "" else r.get_center().y - 7.5), Vector2(15, 15))
 			BattleLook.draw_box(self, kr, BattleLook.box(Color(1, 1, 1, 0.08 * a), Color(0, 0, 0, 0), 0, 4))
 			BattleLook.say(self, Kit.font("karla", 800), kr.get_center().x, kr.end.y - 4.0, key_hint, 10, Color(BattleLook.MUTED, a))
 
