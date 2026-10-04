@@ -1466,6 +1466,14 @@ func _dock(id: String) -> void:
 			ch.closed.connect(func() -> void: _hud.refresh())
 			_hud.hold_for(ch)
 			_room_layer.add_child(ch)
+		"forge_isle":
+			Rumble.buzz([18, 40, 24])
+			Sound.bell()
+			var fb: ForgeBench = ForgeBench.new()
+			fb.session = session
+			fb.closed.connect(func() -> void: _hud.refresh())
+			_hud.hold_for(fb)
+			_room_layer.add_child(fb)
 		"posting_house":
 			Rumble.buzz([18, 40, 24])
 			Sound.bell()

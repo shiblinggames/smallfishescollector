@@ -197,7 +197,6 @@ static func hold(from: Vector2, to: Vector2) -> Dictionary:
 ## What each northern building will be (shown on mooring until it is built).
 const COMING: Dictionary = {
 	"crew_hall": "Your crew sleep, drill and are signed on here: recruiting, the roster, the bunks and who sails in which seat.",
-	"forge_isle": "The bench where two raid items go in and one stronger one comes out.",
 	"gunwharf": "Where your ship lies at her berth, is refitted and armed for the campaign.",
 }
 

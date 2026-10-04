@@ -108,7 +108,8 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 	var cls_fx: Dictionary = Campaign.class_effects(prof.get("ship_classes"))
 	# The raid items on the hull (the loadout's cap, and the finale's mount).
 	var items: Array = Armory.live_items(prof)
-	var fx: Dictionary = item_fx(items)
+	var grades: Dictionary = {} if Rules.web_only else Js.obj(prof.get("raid_item_grades"))
+	var fx: Dictionary = item_fx(items, grades)
 	# Navigation Renown: Might (damage) and Bulwark (hull).
 	var ren: Dictionary = Js.obj(prof.get("nav_renown_alloc"))
 	var might: float = maxf(0.0, floor(Js.num(ren.get("might"))))
@@ -127,7 +128,7 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 		"maxCharges": float(MAX_CHARGES + (1 if Armory.has_rack(prof) else 0)), "mega": Armory.mega_of(prof),
 		"crew": crew, "used": [], "repairKit": prof.get("equipped_repair_kit"),
 		"repairMult": 1.25 if Gauntlet.owns(prof, "seasoned_timbers") else 1.0,
-		"items": items, "fx": fx, "saves": float(fx["lethalSave"]), "drum": false,
+		"items": items, "grades": grades, "fx": fx, "saves": float(fx["lethalSave"]), "drum": false,
 	}
 
 
@@ -183,7 +184,7 @@ static func _ready_seat(s: Dictionary) -> void:
 	s["sunk"] = s.get("sunk", false) == true
 	if s.has("items"):
 		s["live"] = (s["items"] as Array).duplicate()
-		s["fx"] = item_fx(s["live"])
+		s["fx"] = item_fx(s["live"], Js.obj(s.get("grades")))
 	if not s.has("tfx"):
 		s["tfx"] = []
 
@@ -556,7 +557,7 @@ static func _seats_into_fight(b: Dictionary, raid: Dictionary, e: Dictionary, f:
 			var pool: Array = edge if not edge.is_empty() else live
 			var taken: Variant = pool[int(floor(Dice.next() * pool.size()))]
 			live.erase(taken)
-			s["fx"] = item_fx(live)
+			s["fx"] = item_fx(live, Js.obj(s.get("grades")))
 			s["repossessed"] = taken
 		else:
 			s.erase("repossessed")
@@ -2426,7 +2427,7 @@ static func seat_status(s: Dictionary, id: String, mag: float, turns: float) -> 
 ## An item list's effects, folded the way RaidCombat reads each type:
 ## products for multipliers, sums for the ward, crit upgrades, lifesteal and
 ## saves, the best for chances.
-static func item_fx(ids: Array) -> Dictionary:
+static func item_fx(ids: Array, grades: Dictionary = {}) -> Dictionary:
 	var fx: Dictionary = {
 		"bossMult": 1.0, "nonbossMult": 1.0, "critMult": 1.0, "noncritMult": 1.0, "inMult": 1.0, "maxHp": 1.0,
 		"firstShot": 1.0, "afflicted": 1.0, "avengeElite": 1.0, "ramp": 0.0, "critUpgrade": 0.0, "lifesteal": 0.0,
@@ -2447,7 +2448,8 @@ static func item_fx(ids: Array) -> Dictionary:
 	}
 	var offensive: Array = ["boss_damage_mult", "crit_damage_mult", "noncrit_damage_mult", "nonboss_damage_mult", "ramp_damage_per_turn", "burn_chance", "freeze_chance", "parry_chance", "parry_reflect_pct"]
 	for id: Variant in ids:
-		for e: Dictionary in Armory.effects_of(str(id)):
+		# A tempered item (the port's forge) adds to its bonus part.
+		for e: Dictionary in Forge.tempered_effects(Armory.effects_of(str(id)), int(Js.num(grades.get(str(id))))):
 			var t: String = str(e["type"])
 			var v: float = float(e["value"])
 			if offensive.has(t):

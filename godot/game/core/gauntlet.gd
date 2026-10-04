@@ -1423,19 +1423,33 @@ static func tier_label(tier: int) -> String:
 static func upgrade_def(id: String) -> Dictionary:
 	for u: Dictionary in Js.list(t().get("upgrades")):
 		if u["id"] == id:
-			return u
+			return _worded(u)
 	return {}
 
 
-## The Locker's upgrades the port does not sell: their bench is not built yet
-## (the forge and the Accelerator; core/forge.gd holds the rules, the bench is
-## being redesigned), or they are gone by decision (the Don's Tribute; the
-## Crimson Tithe with Blood Gems).
-const NOT_SOLD: Array = ["forge", "dg_abyssal_forge", "dg_abyssal_accel", "dg_daily_tribute", "dg_crimson_tithe"]
+static func _worded(u: Dictionary) -> Dictionary:
+	if Rules.web_only or not PORT_WORDS.has(u["id"]):
+		return u
+	var w: Dictionary = u.duplicate()
+	w["description"] = PORT_WORDS[u["id"]]
+	return w
+
+
+## The Locker's upgrades the port does not sell: gone by decision (the Don's
+## Tribute; the Crimson Tithe with Blood Gems).
+const NOT_SOLD: Array = ["dg_daily_tribute", "dg_crimson_tithe"]
+
+## The forge's three upgrades, said as the port's redesigned forge works
+## (core/forge.gd): no recipe toll, no gems, no day's wait.
+const PORT_WORDS: Dictionary = {
+	"forge": "Opens the anvil at the forge island: put two raid items on it to find the recipes that fuse them, forge what you find, temper spare copies to +1, +2 and +3, and break unwanted copies into scrap.",
+	"dg_abyssal_forge": "Lets the anvil fuse two forged items into a tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.",
+	"dg_abyssal_accel": "Transmuting at the anvil: an epic boss item, a second copy of itself and 25 scrap become its legendary chase counterpart at once.",
+}
 
 
 static func upgrades_for(variant: String) -> Array:
-	return Js.list(t().get("upgrades")).filter(func(u: Dictionary) -> bool: return str(Js.nz(u.get("gauntlet"), "davy")) == variant and not NOT_SOLD.has(u["id"]))
+	return Js.list(t().get("upgrades")).filter(func(u: Dictionary) -> bool: return str(Js.nz(u.get("gauntlet"), "davy")) == variant and not NOT_SOLD.has(u["id"])).map(func(u: Dictionary) -> Dictionary: return _worded(u))
 
 
 ## A permanent upgrade owned in either Locker (the web reads the two together).

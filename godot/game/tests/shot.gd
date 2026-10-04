@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -1394,6 +1394,34 @@ func _init() -> void:
 				await process_frame
 			sea._locker._show_tab("boat")
 			for f: int in 40:
+				await process_frame
+		"forge":
+			p["gauntlet_upgrades"] = ["forge"]
+			p["dons_gauntlet_upgrades"] = ["dg_abyssal_forge", "dg_abyssal_accel"]
+			p["gauntlet_fathoms"] = 340.0
+			p["forge_scrap"] = 60.0
+			p["raid_items"] = ["gunners_sight", "reinforced_hull", "reinforced_hull", "war_drum", "war_drum", "corsair_prime_cannon", "corsair_prime_cannon", "corsair_prime_cannon", "captains_carapace", "davys_hand_cannon", "navigators_compass", "quartermasters_anchor", "incendiary_cannonball", "frozen_cannonball", "thunder_drum"]
+			p["equipped_raid_items"] = ["corsair_prime_cannon", "gunners_sight"]
+			p["raid_item_grades"] = { "corsair_prime_cannon": 1.0 }
+			p["forge_recipes_learned"] = ["heavy_gunners_sight", "dreadnought_cannon", "marauders_cannon", "last_bastion"]
+			p["forge_notes"] = { "emberfrost_cannonball": { "part": "incendiary_cannonball", "with": "frozen_cannonball" } }
+			hud._set_phase("idle")
+			hud._dial.visible = false
+			sea._dock("forge_isle")
+			for f: int in 10:
+				await process_frame
+			for n: Node in sea._room_layer.get_children():
+				if n is ForgeBench:
+					n._tab = OS.get_environment("FORGE_TAB") if OS.get_environment("FORGE_TAB") != "" else "anvil"
+					if OS.get_environment("FORGE_PAIR") != "":
+						var pr: PackedStringArray = OS.get_environment("FORGE_PAIR").split(",")
+						n._slots = [pr[0], pr[1]]
+						n._try()
+					elif OS.get_environment("FORGE_PICK") != "":
+						n._slots = ["corsair_prime_cannon", ""]
+						n._picking = 1
+					n._paint()
+			for f: int in 20:
 				await process_frame
 		"bounties":
 			var bdb2: CaptainStore = sea.session.store

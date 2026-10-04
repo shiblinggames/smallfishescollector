@@ -1589,6 +1589,25 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  THE FORGE, REDESIGNED (2026-10-04; Kong: "a lot of room to improve the forge and recipes",
+  then chose every proposal): core/forge.gd and the anvil at the forge island
+  (game/forge_bench.gd). The 33 recipes are unchanged; how you use them is not.
+  - DISCOVERY replaces the Fathom toll: two items on the anvil either take to each other (the
+    recipe goes into the book for good, no forging needed) or do not (forge_tried, never tested
+    twice). Fathoms buy RECIPE NOTES (60): one undiscovered pair that uses something you hold.
+    The web's learned recipes count as found.
+  - PREVIEWS: both parts' effects, the result's, what the forge takes (a last copy losing its
+    grade or its mount, in red), the base drops behind a tier-3 result. The picker marks pairs
+    that fuse and pairs already tried. The book shows every found recipe against what you hold.
+  - TEMPERING: a spare copy and scrap (10, 25, 50) raise an item to +1, +2, +3, shared by every
+    copy (profile raid_item_grades); each grade adds a tenth of the BONUS part (1.20 to 1.22; 30%
+    to 33%); costs and on/off effects stay; a drum, whose power is its beat, cannot be tempered.
+    The grades ride into battle (seat "grades", Battle.item_fx), never under the parity run.
+  - SALVAGE: a copy into scrap (rare 5, epic 10, legendary 25), never the last mounted copy.
+  - TRANSMUTING folds the Abyssal Accelerator in: an epic boss item, a second copy and 25 scrap
+    make its legendary at once (no building, no day, no charge). The Locker's three forge
+    upgrades are on sale again with words for this forge (Gauntlet.PORT_WORDS).
+  - Effects are said in plain words (Forge.effect_line).
   BOUNTIES (2026-10-04, the audit's seventh item; bounties.md's decisions of 2026-09-30):
   core/bounties.gd ports the board, its meters, the claim, the swap, the milestone ladder and
   the rung announcement; the catalogue, rungs, milestones and ranks are content/bounties.json

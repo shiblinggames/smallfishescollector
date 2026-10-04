@@ -1,5 +1,9 @@
 # Forge & Abyssal Accelerator
 
+**THE GODOT PORT REDESIGNED THE FORGE (2026-10-04):** recipes found by trying pairs, notes for
+Fathoms, previews, tempering duplicates, salvage for scrap, and the Accelerator folded in as
+instant transmuting. See steam-port.md "THE FORGE, REDESIGNED". The web is frozen as below.
+
 Raid-item crafting: fuse items you have into items you want, and cook epics into
 legendaries on a timer. The sink for surplus raid loot.
 
