@@ -90,6 +90,8 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 		"upgradeFishHold": return Harbour.upgrade_fish_hold(db, uid)
 		"claimCompletionistRod": return Harbour.claim_completionist_rod(db, uid)
 		"buyShipyardTier": return Shipyard.buy_tier(db, uid, a[0])
+		"buyRepairKit": return RepairKits.buy(db, uid)
+		"equipRepairKit": return RepairKits.equip(db, uid, str(a[0]))
 		"equipRod": return Shipyard.equip_rod(db, uid, float(a[0]))
 		"folkState": return Folk.state(db, uid)
 		"parlorState": return Parlor.state(db, uid)

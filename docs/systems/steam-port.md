@@ -1010,8 +1010,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   edge). The deck stays up while a round plays (the orders dim). THE REPAIR KITS (web
   lib/repairKits.ts, never ported until now; port rules battle.repairKits): a Special that heals
   the kit's baseMin..baseMax + floor(Fortune x 0.25), times repairHealMult (Field Repairs), costs
-  the turn, ONCE A FIGHT (the web's "once per battle"). NOT YET: buying the better kits (the
-  web's Nav-gated shipyard ladder); every captain carries the Basic Kit they start with.
+  the turn, ONCE A FIGHT (the web's "once per battle"). THE LADDER (core/repair_kits.gd, the
+  web's buyRepairKit): the Gunwharf's Repair kit tab; bought in tier order, each behind its
+  Navigation level (6, 12, 20, 30) and price (4k, 12k, 30k, 65k), worn at once; an owned kit can
+  be carried again; each row's heal shown with this crew's Fortune. tests/repair_kit_check.gd.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the

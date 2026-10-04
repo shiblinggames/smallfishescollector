@@ -69,7 +69,7 @@ func _paint() -> void:
 	_body.add_child(head)
 	var tl: Label = Paper.text(head, "The Gunwharf", "display", Paper.ink())
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for t: Array in [["crew", "Raid party"], ["armory", "Armory"], ["ultimate", "Ultimate"], ["yard", "Refits"]]:
+	for t: Array in [["crew", "Raid party"], ["armory", "Armory"], ["ultimate", "Ultimate"], ["kit", "Repair kit"], ["yard", "Refits"]]:
 		var tb: Pane.PaneButton = Paper.button(t[1], _tab == t[0])
 		var id: String = t[0]
 		tb.pressed.connect(func() -> void:
@@ -86,6 +86,10 @@ func _paint() -> void:
 		return
 	if _tab == "ultimate":
 		_ultimate()
+		Paper.night = false
+		return
+	if _tab == "kit":
+		_kits()
 		Paper.night = false
 		return
 	var st: Dictionary = RulesApi.run(session.store, session.uid, "getCrewState", [])
@@ -146,6 +150,73 @@ func _seat(k: int, who: Dictionary, roster: Array) -> Control:
 		_paint())
 	v.add_child(pick)
 	return v
+
+
+# ── The repair kits ─────────────────────────────────────────────────────────
+
+## The kit she carries (its heal with this crew's Fortune) and the ladder: the
+## kits owned (press one to carry it), the next to buy (its price and its
+## Navigation gate), the rest still to come.
+func _kits() -> void:
+	var p: Dictionary = session.profile()
+	var fortune: float = Js.num(Battle.seat_for(session.store, session.uid).get("fortune"))
+	var nav: int = Loadout.nav_level_from_xp(Js.num(p.get("expedition_xp")))
+	var worn: Dictionary = RepairKits.by_id(Js.nz(p.get("equipped_repair_kit"), "basic_repair_kit"))
+	var have: Array = RepairKits.owned(p)
+	var nx: Dictionary = RepairKits.next_kit(p)
+	Paper.text(_body, "THE REPAIR KIT  ·  A SPECIAL IN EVERY FIGHT", "eyebrow", Paper.ink_soft())
+	Paper.text(_body, "Press Special (S) in a fight to patch the hull: it costs your turn, once a fight. Your crew's Fortune lifts the top of the heal.", "small", Paper.ink_soft(), true)
+	var list: VBoxContainer = VBoxContainer.new()
+	list.add_theme_constant_override("separation", 8)
+	_body.add_child(list)
+	for k: Dictionary in RepairKits.all():
+		var id: String = k["id"]
+		var own: bool = have.has(id)
+		var is_next: bool = not nx.is_empty() and nx["id"] == id
+		var wearing: bool = not worn.is_empty() and worn["id"] == id
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 14)
+		row.modulate.a = 1.0 if (own or is_next) else 0.45
+		list.add_child(row)
+		var pic: TextureRect = TextureRect.new()
+		pic.texture = Skipper.tex(str(k.get("image", "")))
+		pic.custom_minimum_size = Vector2(64, 64)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		row.add_child(pic)
+		var v: VBoxContainer = VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(v)
+		var rg: Vector2 = RepairKits.range_for(k, fortune)
+		Paper.text(v, "%s%s" % [k["name"], "  ·  carried" if wearing else ""], "body_strong", Paper.ink())
+		Paper.text(v, "Heals %d to %d  ·  %s" % [int(rg.x), int(rg.y), str(k.get("description", "")).replace(" Once per fight.", "")], "small", Paper.ink_soft(), true)
+		var id2: String = id
+		if own and not wearing:
+			var eb: Pane.PaneButton = Paper.button("Carry it")
+			eb.pressed.connect(func() -> void:
+				await session.act("equipRepairKit", [id2])
+				session.persist()
+				_paint())
+			row.add_child(eb)
+		elif is_next:
+			var gated: bool = nav < int(k["navLevelReq"])
+			var bb: Pane.PaneButton = Paper.button("Needs Navigation %d" % int(k["navLevelReq"]) if gated else "Buy  ·  %s ⟡" % Js.thousands(float(k["cost"])), not gated)
+			bb.disabled = gated
+			bb.pressed.connect(func() -> void:
+				var r: Variant = await session.act("buyRepairKit", [])
+				session.persist()
+				if r is Dictionary and (r as Dictionary).has("error"):
+					Sound.slack()
+					push_warning(str(r["error"]))
+				else:
+					Sound.chest(true)
+				_paint())
+			row.add_child(bb)
+		elif not own:
+			Paper.text(row, "Navigation %d  ·  %s ⟡" % [int(k["navLevelReq"]), Js.thousands(float(k["cost"]))], "small", Paper.ink_faint())
+	if nx.is_empty():
+		Paper.text(_body, "Every repair kit is yours.", "small", Paper.ink_soft())
 
 
 # ── The armory ────────────────────────────────────────────────────────────────
