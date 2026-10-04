@@ -55,6 +55,7 @@ var voter: Callable = Callable()
 var tables: DenTables = null
 ## The Charter's raid together, run on the founder's game (game/raid_table.gd).
 var raids: RaidTable = null
+var gauntlets: GauntletTable = null
 
 
 static func _dir() -> String:
@@ -290,6 +291,10 @@ func run(s: Session, op: String, args: Array) -> Variant:
 		if tables == null:
 			return { "error": "The Den's tables are not open." }
 		return tables.handle(key, s, args)
+	if op == "gauntletTable":
+		if gauntlets == null:
+			return { "error": "The crew cannot dive together here." }
+		return gauntlets.handle(key, s, args)
 	if op == "raidTable":
 		if raids == null:
 			return { "error": "The crew cannot muster for a raid here." }

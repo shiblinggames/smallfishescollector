@@ -2032,7 +2032,9 @@
       "coopc": { "name": "Co-op Challenge", "minCaptains": 2, "needs": "coop", "leadHp": 1.45, "bossHp": 0.9, "escortHp": 0.62, "hpMult": 1.1, "dmgMult": 1.2, "extraFoeChance": 0.2, "eliteEscorts": true, "coin": 2.0, "xp": 2.0, "extraRolls": 2, "rarityMult": 1.5, "escortPay": 0.5 }
     },
     "party": { "enemyHpMult": [1, 1.8, 2.5, 3.2], "shots": [1, 2, 3, 4], "focus": true },
-    "broadside": { "bossActions": ["volley", "ultimate"], "enemyVolleys": ["corsair"] }
+    "broadside": { "bossActions": ["volley", "ultimate"], "enemyVolleys": ["corsair"] },
+    "_gauntlet": "A GAUNTLET PARTY'S FIELD (Kong, 2026-10-03: multiple ships for enemies just like in raids). Alone, a dive is the web's one ship a depth. Two to four captains meet the party's size in ships (sometimes one fewer, now and then one more, 1 to 4): the lead at leadHp of the depth's curve, escorts (mobs of the same depth, each with its own elite roll and a co-op role) at escortHp; a boss at bossHp times the party's HP table, with escorts. Damage times dmgMult. Each escort sunk adds half a mob's pot.",
+    "gauntlet": { "party": { "leadHp": 1.2, "bossHp": 0.7, "escortHp": 0.5, "dmgMult": 1.0, "fewerChance": 0.5, "extraChance": 0.05, "escortElite": 0.5 } }
   },
   "_parlorPort": "THE PARLOR IN THE PORT (Kong, 2026-10-02/03, SETTLED): one Captain's Board card dealt every 8 real hours (10 sea days), a hand of 3, 4 at Fishing 30 and 5 at 60, never lost; the tier of a dealt card weighted 45/35/20; the Pirate King at Fishing 25 (levelGates.feature.parlor_king); every question drawn unseen first from content/trivia_bank.json. core/parlor.gd.",
   "parlorPort": {

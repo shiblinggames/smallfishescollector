@@ -168,6 +168,12 @@ static func _ready_seat(s: Dictionary) -> void:
 	s["firstBlow"] = false
 	s["cheated"] = false
 	s["anchorUsed"] = false
+	# The run effects' per-fight counts: shots locked (duds too), volleys
+	# loosed, the crit streak, the counter-battery's roll.
+	s["locked"] = 0.0
+	s["volleys"] = 0.0
+	s["streak"] = 0.0
+	s.erase("counterOn")
 	s["sunk"] = s.get("sunk", false) == true
 	if s.has("items"):
 		s["live"] = (s["items"] as Array).duplicate()
@@ -380,7 +386,26 @@ static func _make_foe(raid: Dictionary, e: Dictionary, boss: bool, affix: Dictio
 	var sp: float = maxf(Js.nz(e.get("shieldPct"), 0.0), Js.nz(affix.get("shieldPctMaxHp"), 0.0))
 	foe["shield"] = float(Js.round(hp * sp))
 	foe["shieldMax"] = foe["shield"]
+	foe["shieldPct"] = sp
 	return foe
+
+
+## The line's curses and Terms on the enemy at a fight's start: a barrier
+## (the strongest of its own, its affix's, the curse's), loaded guns, hidden
+## bars.
+static func _line_into_foes(b: Dictionary) -> void:
+	b.erase("line")
+	var l: Dictionary = _line(b)
+	for f: Dictionary in foes(b):
+		if float(l["enemyShield"]) > Js.num(f.get("shieldPct")):
+			f["shield"] = float(Js.round(float(f["max"]) * float(l["enemyShield"])))
+			f["shieldMax"] = f["shield"]
+		if float(l["enemyStartCharges"]) != 0.0:
+			f["charges"] = clampf(float(f["charges"]) + float(l["enemyStartCharges"]), 0.0, float(f["mag"]))
+		if float(l["hideHp"]) > 0.0:
+			f["hideHp"] = Dice.next() < float(l["hideHp"])
+		if float(l["hideCharges"]) > 0.0:
+			f["hideCharges"] = Dice.next() < float(l["hideCharges"])
 
 
 ## The rest of a field (a co-op tier): escorts from the raid's own crew. An
@@ -409,18 +434,74 @@ static func _escorts(b: Dictionary, raid: Dictionary, f: Dictionary, n: int, hp_
 		e["maxDmg"] = maxf(1.0, float(Js.round(float(e["maxDmg"]) * float(tc["dmgMult"]))))
 		var hp: float = maxf(1.0, float(Js.round(float(e["hpBase"]) * float(tc["escortHp"]) * float(tc["hpMult"]) * hp_scale)))
 		var foe: Dictionary = _make_foe(raid, e, false, affix, elite, hp)
-		foe["escort"] = true
-		# A role, each escort its own while any are left.
-		var rl: Array = Js.list(roles_cfg().get("list")).duplicate()
-		for f2: Dictionary in b["foes"]:
-			rl.erase(f2.get("role", ""))
-		if not rl.is_empty():
-			foe["role"] = rl[int(floor(Dice.next() * rl.size()))]
-			foe["roleTurn"] = 0.0
-		# Escorts carry no boss's trappings.
-		foe["phases"] = []
-		foe["decoy"] = 0.0
+		_escort_of(b, foe)
 		(b["foes"] as Array).append(foe)
+
+
+## An escort's trappings: a role, each its own while any are left, and none
+## of a boss's.
+static func _escort_of(b: Dictionary, foe: Dictionary) -> void:
+	foe["escort"] = true
+	var rl: Array = Js.list(roles_cfg().get("list")).duplicate()
+	for f2: Dictionary in Js.list(b.get("foes")):
+		rl.erase(f2.get("role", ""))
+	if not rl.is_empty():
+		foe["role"] = rl[int(floor(Dice.next() * rl.size()))]
+		foe["roleTurn"] = 0.0
+	foe["phases"] = []
+	foe["decoy"] = 0.0
+
+
+# ══ A gauntlet's fights (core/gauntlet.gd rolls them, GauntletTable runs the
+#    dive) ═══════════════════════════════════════════════════════════════════════
+
+## A dive's battle: the party and its first field. HP carries from fight to
+## fight; the table lays the run's effects on each ship (s.tfx) before each.
+static func begin_gauntlet(seats: Array, field: Dictionary, variant: String) -> Dictionary:
+	var b: Dictionary = { "raidId": "", "gauntlet": variant, "round": 0.0, "fight": -1.0, "seats": seats, "turn": 1.0, "state": "plan", "events": [], "tier": "normal",
+		"elites": {}, "bonusAffix": {}, "tides": [], "tideFired": [] }
+	gauntlet_fight(b, field, variant)
+	return b
+
+
+## The next field: { enemy, isBoss, isElite, isApex, affix, depth, escorts }.
+static func gauntlet_fight(b: Dictionary, field: Dictionary, variant: String) -> void:
+	var n: int = maxi(1, alive(b).size())
+	var pc: Dictionary = Js.obj(Js.obj(cfg().get("gauntlet")).get("party"))
+	var hp_scale: float = 1.0
+	for s0: Dictionary in b["seats"]:
+		hp_scale *= float(tide_agg(s0)["enemyHpScale"])
+	var e: Dictionary = Js.obj(field["enemy"]).duplicate(true)
+	var boss: bool = field["isBoss"] == true
+	var hp_mult: float = 1.0
+	if n > 1:
+		hp_mult = party_hp_mult(n) * float(Js.nz(pc.get("bossHp"), 0.9)) if boss else float(Js.nz(pc.get("leadHp"), 1.45))
+		for k: String in ["minDmg", "maxDmg"]:
+			e[k] = maxf(1.0, float(Js.round(float(e[k]) * float(Js.nz(pc.get("dmgMult"), 1.0)))))
+	var hp: float = maxf(1.0, float(Js.round(float(e["hpBase"]) * hp_mult * hp_scale)))
+	# The gauntlet's curve already folds the hull's speed into its aim.
+	e["accuracy"] = float(e["accuracy"]) - float(e["shipSpeed"])
+	b["fight"] = float(b["fight"]) + 1.0
+	b["depth"] = field["depth"]
+	b["enemy"] = _make_foe({}, e, boss, Js.obj(field.get("affix")), field.get("isElite", false) == true, hp)
+	b["enemy"]["wash"] = variant
+	b["enemy"]["apex"] = field.get("isApex", false) == true
+	b["foes"] = [b["enemy"]]
+	for x: Dictionary in Js.list(field.get("escorts")):
+		var ex: Dictionary = Js.obj(x["enemy"]).duplicate(true)
+		for k2: String in ["minDmg", "maxDmg"]:
+			ex[k2] = maxf(1.0, float(Js.round(float(ex[k2]) * float(Js.nz(pc.get("dmgMult"), 1.0)))))
+		var hp2: float = maxf(1.0, float(Js.round(float(ex["hpBase"]) * float(Js.nz(pc.get("escortHp"), 0.62)) * hp_scale)))
+		ex["accuracy"] = float(ex["accuracy"]) - float(ex["shipSpeed"])
+		var foe: Dictionary = _make_foe({}, ex, false, Js.obj(x.get("affix")), x.get("isElite", false) == true, hp2)
+		foe["wash"] = variant
+		_escort_of(b, foe)
+		(b["foes"] as Array).append(foe)
+	b["turn"] = 1.0
+	b["state"] = "plan"
+	b.erase("flares")
+	b.erase("line")
+	_seats_into_fight(b, {}, e, { "boss": boss })
 
 
 ## The seats readied for a new fight (charges, tides, the palisade, the
@@ -434,8 +515,10 @@ static func _seats_into_fight(b: Dictionary, raid: Dictionary, e: Dictionary, f:
 		# their banked sure dodges.
 		var ta: Dictionary = tide_agg(s, f["boss"])
 		var mx: float = float(s["max"])
-		var hp1: float = float(s["hp"]) + float(Js.round(float(ta["startHpPct"]) * mx)) + float(Js.round(float(ta["startHealPct"]) * mx))
-		s["hp"] = clampf(hp1, 1.0, mx)
+		s["healMult"] = float(ta["healMult"])
+		s["healCap"] = float(Js.round(mx * (1.0 + float(ta["overheal"]))))
+		var hp1: float = float(s["hp"]) + float(Js.round(float(ta["startHpPct"]) * mx)) + float(Js.round(float(ta["startHealPct"]) * mx * float(ta["healMult"])))
+		s["hp"] = clampf(hp1, 1.0, float(s["healCap"]))
 		# The Quartermaster takes back one item he sold you, for this fight.
 		if e.get("repossess") == true and not Js.list(s.get("live")).is_empty():
 			var live: Array = s["live"]
@@ -456,13 +539,33 @@ static func _seats_into_fight(b: Dictionary, raid: Dictionary, e: Dictionary, f:
 			primed += 1.0
 		if float(fx.get("extraStart", 0.0)) > 0.0 and Dice.next() < float(fx["extraStart"]):
 			primed += 1.0
-		s["charges"] = clampf(primed + float(ta["startCharges"]), 0.0, float(s["maxCharges"]))
+		# A gauntlet's carried balls (Powder Hoard) come aboard on top.
+		s["charges"] = clampf(primed + float(ta["startCharges"]) + Js.num(s.get("carry")), 0.0, float(s["maxCharges"]))
+		s.erase("carry")
 		s["dodgeToken"] = float(ta["guaranteedDodge"])
-		# The palisade: a ward over the hull every fight.
+		# The palisade: a ward over the hull every fight; a run's fight shield
+		# (Bulwark, the Whale's Mark) adds to it.
 		s["wardMax"] = float(Js.round(float(fx.get("wardPct", 0.0)) * mx))
 		s["wardRefill"] = float(Js.round(float(s["wardMax"]) * float(fx.get("wardRefill", 0.0))))
-		if float(s["wardMax"]) > 0.0:
-			s["shield"] = float(s["wardMax"])
+		var pool: float = float(Js.round(float(ta["fightShield"]) * mx)) + float(s["wardMax"])
+		if pool > 0.0:
+			s["shield"] = pool
+		# The run's opening statuses (a curse's Feeble), then the Don's Favor.
+		for st0: Dictionary in ta["startStatus"]:
+			seat_status(s, str(st0["status"]), float(st0["magnitude"]), float(st0["turns"]))
+		if float(ta["favor"]) > 0.0:
+			var mag: float = float(ta["favor"])
+			var r: float = Dice.next()
+			if r < 0.34:
+				apply_status(s["statuses"], "enrage", mag, 99.0)
+				s["favor"] = "enrage"
+			elif r < 0.67:
+				apply_status(s["statuses"], "fortify", mag, 99.0)
+				s["favor"] = "fortify"
+			else:
+				apply_status(s["statuses"], "regen", maxf(3.0, float(Js.round(mx * (0.03 + mag * 0.06)))), 99.0)
+				s["favor"] = "regen"
+	_line_into_foes(b)
 	# A boss's opening mechanic check.
 	if b["enemy"]["boss"] and e.get("openingCheck") != null:
 		_arm_check(b, e["openingCheck"], [])
@@ -523,12 +626,17 @@ static func aim_for(b: Dictionary, si: int, target: int = -1) -> Dictionary:
 		return out
 	var e: Dictionary = b["enemy"]
 	var s: Dictionary = b["seats"][si]
-	var stack: float = minf(4.0, float(e["zoneMult"]) * float(Js.nz(Js.obj(e["affix"]).get("zoneSpeedMult"), 1.0)))
+	var ta: Dictionary = tide_agg(s)
+	var stack: float = minf(4.0, float(ta["zoneSpeed"]) * float(e["zoneMult"]) * float(Js.nz(Js.obj(e["affix"]).get("zoneSpeedMult"), 1.0)))
+	var clear: float = 1.0 - float(ta["clarity"])
 	var out: Dictionary = {
-		"enemySpeed": float(e["speed"]), "zoneStack": stack, "needleMult": float(e["aimSpeed"]),
-		"critDrift": float(e["critDrift"]), "fog": minf(0.92, float(e["fog"])), "critZone": float(tide_agg(s)["critZone"]),
+		"enemySpeed": float(e["speed"]), "zoneStack": stack, "needleMult": float(e["aimSpeed"]) * float(ta["aimSpeed"]),
+		"critDrift": float(e["critDrift"]), "fog": minf(0.95, float(e["fog"]) + float(ta["fog"])) * clear, "critZone": float(ta["critZone"]),
 		"afflict": "", "decoys": 0,
 		"blind": 0.0, "narrow": 1.0,
+		# The run's own: a dark veil that comes and goes (render only), and
+		# phantom zones (the bar rolls whether they come, 45%).
+		"blackout": float(ta["blackout"]) * clear, "decoyN": 0 if float(ta["clarity"]) >= 1.0 else int(ta["decoys"]),
 	}
 	var st: Dictionary = Js.obj(s.get("statuses"))
 	if st.has("blinded"):
@@ -538,7 +646,7 @@ static func aim_for(b: Dictionary, si: int, target: int = -1) -> Dictionary:
 	var af: Dictionary = s["afflict"]
 	if not af.is_empty() and float(af["passes"]) > 0.0:
 		out["afflict"] = af["kind"]
-		if af["kind"] == "decoys":
+		if af["kind"] == "decoys" and float(ta["clarity"]) < 1.0:
 			out["decoys"] = 2
 		af["passes"] = float(af["passes"]) - 1.0
 		if float(af["passes"]) <= 0.0:
@@ -587,8 +695,8 @@ static func legal(b: Dictionary, s: Dictionary) -> Dictionary:
 	var c: float = float(s.get("charges", 0.0))
 	var mg: Dictionary = Js.obj(s.get("mega"))
 	return {
-		"fire": c >= 1.0, "volley": c >= float(VOLLEY_COST), "reload": c < float(s["maxCharges"]),
-		"mega": not mg.is_empty() and c >= float(Armory.aug()["megaCost"]),
+		"fire": c >= 1.0, "volley": c >= volley_cost(s), "reload": c < float(s["maxCharges"]),
+		"mega": not mg.is_empty() and c >= mega_cost(s),
 		"dodge": s.get("last", "") != "dodge",
 		"repair": false,
 	}
@@ -635,13 +743,13 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 	match str(c["cls"]):
 		"mender":
 			var heal: float = float(Js.round(float(t["max"]) * float(ms["pctMaxHp"])))
-			out["heal"] = _heal(t, heal)
+			out["heal"] = _heal_m(t, heal)
 			t["burn"] = {}
 			if ms.get("cleanseDebuff", false):
 				_cleanse(t)
 			flags = ["heal"]
 		"abyssal_tide":
-			out["heal"] = _heal(t, float(Js.round(float(t["max"]) * float(ms["pctMaxHp"]))))
+			out["heal"] = _heal_m(t, float(Js.round(float(t["max"]) * float(ms["pctMaxHp"]))))
 			t["burn"] = {}
 			var sh: float = float(Js.round(float(t["max"]) * float(ms["shieldPctMaxHp"])))
 			t["shield"] = float(t["shield"]) + sh
@@ -703,6 +811,11 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 				e["markPierce"] = float(ms["markTurns"])
 			flags = ["snare", "burst"]
 	_note_check(b, flags)
+	# Second Calling: the order may stay unspent.
+	var rf: float = float(tide_agg(s)["abilityRefund"])
+	if rf > 0.0 and Dice.next() < rf:
+		(s["used"] as Array).erase(c["id"])
+		out["refund"] = true
 	ev.append(out)
 	if float(e["hp"]) <= 0.0:
 		_enemy_down(b, ev, true)
@@ -710,17 +823,33 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 
 static func _heal(t: Dictionary, n: float) -> float:
 	var before: float = float(t["hp"])
-	t["hp"] = minf(float(t["max"]), before + n)
+	t["hp"] = maxf(before, minf(float(t.get("healCap", t["max"])), before + n))
 	return float(t["hp"]) - before
 
 
+## A heal the run's heal multiplier scales (Iron Rations, Mending).
+static func _heal_m(t: Dictionary, n: float) -> float:
+	return _heal(t, float(Js.round(n * float(t.get("healMult", 1.0)))))
+
+
 static func _cleanse(t: Dictionary) -> void:
+	if tide_agg(t)["noCleanse"]:
+		return
 	for id: String in ["weaken", "feeble", "marked", "slowed", "silence", "corrode"]:
 		(t["statuses"] as Dictionary).erase(id)
 
 
 static func _ability_mult(b: Dictionary, s: Dictionary) -> float:
-	var raw: float = float(s["dmgMult"]) * (1.0 + float(s["vBuff"])) * float(mods(s["statuses"])["dealt"]) * float(mods(b["enemy"]["statuses"])["taken"])
+	var e: Dictionary = b["enemy"]
+	var ta: Dictionary = tide_agg(s, e["boss"])
+	var raw: float = float(s["dmgMult"]) * (1.0 + float(s["vBuff"])) * float(mods(s["statuses"])["dealt"]) * float(mods(e["statuses"])["taken"]) * float(ta["dmgMult"])
+	# A crew order counts an elite as big game (a shot counts only a boss).
+	if e["boss"] or e.get("elite", false):
+		raw *= float(ta["bossMult"])
+	if Js.num(e.get("freeze")) > 0.0 and float(ta["frozenDmg"]) > 1.0:
+		raw *= float(ta["frozenDmg"])
+	if float(ta["lowHp"]) > 0.0:
+		raw *= 1.0 + float(ta["lowHp"]) * maxf(0.0, 1.0 - float(s["hp"]) / float(s["max"]))
 	return 1.0 + (raw - 1.0) * 0.7
 
 
@@ -848,16 +977,36 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 		var e_act: String = pick_enemy(b)
 		e["action"] = e_act
 		ev.append({ "t": "intent", "action": e_act, "jammed": e.get("jammed", false) })
+		# A curse's barrier grows back toward its opening size.
+		var rg: float = float(_line(b)["regrow"])
+		if rg > 0.0 and Js.num(e.get("shieldMax")) > 0.0 and float(e["hp"]) > 0.0 and float(e["shield"]) < float(e["shieldMax"]):
+			e["shield"] = minf(float(e["shieldMax"]), float(e["shield"]) + float(Js.round(float(e["shieldMax"]) * rg)))
 		e["frozenNow"] = float(e.get("freeze", 0.0)) > 0.0
 		if e["frozenNow"]:
 			e["freeze"] = float(e["freeze"]) - 1.0
 		var eb: Dictionary = e.get("burn", {})
 		if not eb.is_empty() and float(e["hp"]) > 0.0 and (e["aegis"] as Dictionary).is_empty():
-			e["hp"] = _ward_floor(b, float(e["hp"]) - float(eb["dmg"]), ev)
-			ev.append({ "t": "eBurn", "dmg": eb["dmg"], "hp": e["hp"] })
+			# Backdraft: the flames flare a second time; the fire feeds the
+			# ship that lit it.
+			var tick: float = float(eb["dmg"])
+			var flare: float = float(Js.round(tick * 0.7)) if eb.get("backdraft", false) and Dice.next() < 0.35 else 0.0
+			e["hp"] = _ward_floor(b, float(e["hp"]) - (tick + flare), ev)
+			var bev: Dictionary = { "t": "eBurn", "dmg": tick + flare, "flare": flare, "hp": e["hp"] }
+			var by: int = int(Js.nz(eb.get("by"), -1.0))
+			if by >= 0 and float(eb.get("feed", 0.0)) > 0.0 and not _out(b["seats"][by]) and float(b["seats"][by]["hp"]) > 0.0:
+				var bs: Dictionary = b["seats"][by]
+				var pf: float = float(eb["feed"])
+				var feed: float = minf(minf(float(Js.round(float(bs["max"]) * minf(pf, 0.35) * 2.0)), float(bs.get("healCap", bs["max"])) - float(bs["hp"])), float(Js.round((tick + flare) * pf)))
+				if feed > 0.0:
+					bs["hp"] = float(bs["hp"]) + feed
+					bev["feed"] = feed
+					bev["seat"] = by
+			ev.append(bev)
 			eb["turns"] = float(eb["turns"]) - 1.0
 			if float(eb["turns"]) <= 0.0:
 				e["burn"] = {}
+			if by >= 0:
+				finish_check(b, by, false, ev)
 			if float(e["hp"]) <= 0.0:
 				_enemy_down(b, ev, false)
 				if not b.get("revived", false):
@@ -893,14 +1042,34 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 		if crits.size() >= 2:
 			fs[int(tj3)]["xfire"] = float(crits.size())
 			ev.append({ "t": "crossfire", "seats": crits, "mult": crossfire_mult(crits.size()), "foe": int(tj3) })
+	# Counter-Battery: a ship shooting into a foe that is shooting back may
+	# smash its shot out of the air (rolled now, spent on the foe's turn).
+	for i: int in plans.size():
+		var sc2: Dictionary = b["seats"][i]
+		sc2.erase("counterOn")
+		sc2["counterProc"] = false
+		if _out(sc2) or sc2.get("frozenNow", false):
+			continue
+		var pc2: Dictionary = Js.obj(plans[i])
+		var ta0: Dictionary = tide_agg(sc2)
+		if float(ta0["counter"]) <= 0.0 or not (str(pc2.get("action", "")) in ["fire", "volley", "mega"]) or str(pc2.get("aim", "")) in ["miss", "fumble"]:
+			continue
+		var tjc: int = target_of(b, pc2)
+		if tjc >= 0 and str(fs[tjc].get("action", "")) in ["fire", "volley"] and Dice.next() < float(ta0["counter"]) + float(ta0["counterChance"]):
+			sc2["counterOn"] = tjc
+			sc2["counterProc"] = true
 	# Initiative: every ship and every enemy (an enemy's place is -1 - its
-	# index: -1 the lead).
+	# index: -1 the lead). A ship may seize the opening (Weather Gauge).
 	var order: Array = []
 	for i: int in plans.size():
 		var s: Dictionary = b["seats"][i]
 		if _out(s):
 			continue
-		var roll: int = d20() + int(maxf(1.0, float(s["speed"]) + float(tide_agg(s)["speed"]) + float(mods(s["statuses"])["speed"]))) + int(floor(float(s["nav"]) * float(Js.obj(s.get("fx")).get("navSpeed", 0.0))))
+		var ta1: Dictionary = tide_agg(s)
+		var roll: int = d20() + int(maxf(1.0, float(s["speed"]) + float(ta1["speed"]) + float(mods(s["statuses"])["speed"]))) + int(floor(float(s["nav"]) * float(Js.obj(s.get("fx")).get("navSpeed", 0.0))))
+		if float(ta1["firstStrike"]) > 0.0 and Dice.next() < float(ta1["firstStrike"]):
+			roll += 1000
+			ev.append({ "t": "seize", "seat": i })
 		order.append({ "who": i, "roll": roll })
 	var e_mods: Array = []
 	for j: int in fs.size():
@@ -917,6 +1086,7 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			return x["who"] >= 0
 		return absi(x["who"]) < absi(y["who"]))
 	ev.append({ "t": "order", "order": order.map(func(o: Dictionary) -> int: return o["who"]) })
+	var acted: Dictionary = {}
 	for o: Dictionary in order:
 		if first_foe(b) < 0 or alive(b).is_empty():
 			break
@@ -927,6 +1097,7 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			if not foe_up(ef):
 				continue
 			b["enemy"] = ef
+			acted[j2] = true
 			var n2: int = ev.size()
 			_enemy_act(b, str(ef["action"]), e_mods[j2], plans, ev)
 			_tag(ev, n2, j2)
@@ -945,6 +1116,7 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 				tj4 = breakwater(b, who, tj4, ev)
 			var et: Dictionary = fs[tj4]
 			b["enemy"] = et
+			s2["firstVs"] = not acted.has(tj4)
 			var n3: int = ev.size()
 			_seat_act(b, who, Js.obj(plans[who]), str(et["action"]), e_mods[tj4], ev)
 			_tag(ev, n3, tj4)
@@ -977,8 +1149,13 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 			ev.append({ "t": "brace", "seat": si })
 		"fire", "volley", "mega":
 			var mega: Dictionary = Js.obj(s.get("mega")) if act == "mega" else {}
-			var cost: float = 1.0 if act == "fire" else (float(VOLLEY_COST) if act == "volley" else float(Armory.aug()["megaCost"]))
+			var cost: float = 1.0 if act == "fire" else (volley_cost(s) if act == "volley" else mega_cost(s))
 			var res: String = str(plan.get("aim", "miss"))
+			# Every locked shot counts (a dud too): the every-Nth crit and the
+			# opening double strike read it.
+			var out_every: bool = false
+			var locked_before: float = Js.num(s.get("locked"))
+			s["locked"] = locked_before + 1.0
 			# A crit may cost nothing (the Primeval Maw).
 			var refund: float = float(Js.obj(s.get("fx")).get("critRefund", 0.0))
 			if res == "critical" and refund > 0.0 and Dice.next() < refund:
@@ -994,16 +1171,20 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 			var ta2: Dictionary = tide_agg(s, e["boss"])
 			var fx: Dictionary = Js.obj(s.get("fx"))
 			s["shots"] = float(s.get("shots", 0.0)) + 1.0
-			# A hit may still come up a crit (a tide's chance, a crow's nest).
+			# A hit may still come up a crit (a tide's chance, a crow's nest),
+			# and every Nth locked shot that hits does (Gunner's Count).
 			var up: float = float(ta2["critBonus"]) + float(fx.get("critUpgrade", 0.0))
 			if res == "hit" and up > 0.0 and Dice.next() < up:
 				res = "critical"
+			if res == "hit" and float(ta2["critEvery"]) > 0.0 and int(locked_before + 1.0) % int(ta2["critEvery"]) == 0:
+				res = "critical"
+				out_every = true
 			var sh: Dictionary = s["sharp"]
 			if not sh.is_empty():
 				sh["shots"] = float(sh["shots"]) - 1.0
 				if float(sh["shots"]) <= 0.0:
 					s["sharp"] = {}
-			var tmult: float = float(ta2["dmgMult"]) * (float(ta2["fireMult"]) if act == "fire" else (float(ta2["volleyMult"]) if act == "volley" else 1.0))
+			var tmult: float = float(ta2["dmgMult"]) * (float(ta2["fireMult"]) if act == "fire" else (float(ta2["volleyMult"]) if act == "volley" else float(ta2["megaMult"])))
 			if e["boss"]:
 				tmult *= float(ta2["bossMult"]) * (float(ta2["bossVolMult"]) if act != "fire" else 1.0)
 			tmult *= float(fx.get("fireMult", 1.0)) if act == "fire" else (float(fx.get("volleyMult", 1.0)) if act == "volley" else float(fx.get("megaMult", 1.0)))
@@ -1020,11 +1201,34 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 			if s.get("cheated", false) and (e.get("elite", false) or not (e["affix"] as Dictionary).is_empty()):
 				imult *= float(fx.get("avengeElite", 1.0))
 			var base_mult: float = 1.0 if act == "fire" else (2.0 if act == "volley" else float(Js.nz(mega.get("megaMult"), 2.6)))
-			var mult: float = base_mult * float(s["dmgMult"]) * (1.0 + float(s["vBuff"])) * float(mods(s["statuses"])["dealt"]) * float(e_mods["taken"]) * tmult * imult * xf
+			# The run's riders on this shot: crit and plain-shot lanes, the
+			# low-hull fury, a frozen hull (brittle doubles it on a crit), the
+			# volley ramp, the crit streak, the opening double strike.
+			var rmult: float = float(ta2["critDmg"]) if crit_shot else float(ta2["noncrit"])
+			if float(ta2["lowHp"]) > 0.0:
+				rmult *= 1.0 + float(ta2["lowHp"]) * maxf(0.0, 1.0 - float(s["hp"]) / float(s["max"]))
+			if e.get("frozenNow", false) and float(ta2["frozenDmg"]) > 1.0:
+				var fm: float = float(ta2["frozenDmg"])
+				rmult *= 1.0 + 2.0 * (fm - 1.0) if crit_shot and ta2["brittle"] else fm
+			if act == "volley" and float(ta2["volleyRamp"]) > 0.0:
+				rmult *= 1.0 + minf(float(ta2["volleyRamp"]) * Js.num(s.get("volleys")), 1.0)
+			if crit_shot and float(ta2["streakPer"]) > 0.0:
+				rmult *= 1.0 + float(ta2["streakPer"]) * minf(float(ta2["streakMax"]), Js.num(s.get("streak")) + 1.0)
+			var doubled: bool = false
+			if float(ta2["doubleStrike"]) > 0.0 and locked_before == 0.0 and s.get("firstVs", false) and act != "mega" and res != "miss" and Dice.next() < float(ta2["doubleStrike"]):
+				rmult *= 2.0
+				doubled = true
+			var mult: float = base_mult * float(s["dmgMult"]) * (1.0 + float(s["vBuff"])) * float(mods(s["statuses"])["dealt"]) * float(e_mods["taken"]) * tmult * imult * xf * rmult
 			var dmg: float = floor(roll_shot(res, float(s["shipMin"]), float(s["power"])) * mult)
 			var out: Dictionary = { "t": "shot", "seat": si, "action": act, "aim": res, "raw": dmg, "mega": mega.get("id") }
 			if xf > 1.0:
 				out["crossfire"] = xf
+			if doubled:
+				out["double"] = true
+			if out_every:
+				out["every"] = true
+			if act == "volley":
+				s["volleys"] = Js.num(s.get("volleys")) + 1.0
 			var af: Dictionary = e["affix"]
 			# Carapace: armour takes a slice off a single shot (not a volley).
 			if float(e["dr"]) > 0.0 and dmg > 0.0 and act == "fire":
@@ -1088,26 +1292,51 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 				out["enemyHp"] = e["hp"]
 				ev.append(out)
 				_aegis_hit(b, 2.0 if act == "volley" else 1.0, ev)
+				_streak(s, ta2, crit_shot, ev, si)
 				return
-			# The enemy's shield.
+			# A curse's parry: the shot turned aside (never a Mega).
+			if dmg > 0.0 and act != "mega" and float(_line(b)["enemyParry"]) > 0.0 and Dice.next() < float(_line(b)["enemyParry"]):
+				dmg = 0.0
+				out["eParried"] = true
+			# The enemy's shield (a run's piercing shot sends part past it).
 			var to_hull: float = dmg
 			if dmg > 0.0 and float(e["shield"]) > 0.0 and float(e["markPierce"]) <= 0.0 and not mega.get("pierce", false):
-				var bite: float = float(Js.round(dmg * float(e_mods["shieldTaken"])))
+				var bypass: float = float(Js.round(dmg * minf(1.0, float(ta2["shieldPierce"])))) if float(ta2["shieldPierce"]) > 0.0 else 0.0
+				var soakable: float = dmg - bypass
+				var bite: float = float(Js.round(soakable * float(e_mods["shieldTaken"])))
 				var absorbed: float = minf(float(e["shield"]), bite)
 				e["shield"] = float(e["shield"]) - absorbed
-				to_hull = maxf(0.0, dmg - ceil(absorbed / float(e_mods["shieldTaken"])))
+				to_hull = maxf(0.0, soakable - ceil(absorbed / float(e_mods["shieldTaken"]))) + bypass
 				out["shielded"] = absorbed
 			var before: float = float(e["hp"])
+			var overkill: float = maxf(0.0, to_hull - before)
 			e["hp"] = _ward_floor(b, float(e["hp"]) - to_hull, ev)
 			out["dmg"] = to_hull
 			out["enemyHp"] = e["hp"]
 			ev.append(out)
+			if dmg > 0.0:
+				# Press-Gang: a ball ripped off its rack and rammed into yours.
+				if float(ta2["steal"]) > 0.0 and float(e["hp"]) > 0.0 and float(e["charges"]) > 0.0 and Dice.next() < float(ta2["steal"]):
+					e["charges"] = float(e["charges"]) - 1.0
+					var kept: bool = float(s["charges"]) < float(s["maxCharges"])
+					if kept:
+						s["charges"] = float(s["charges"]) + 1.0
+					ev.append({ "t": "steal", "seat": si, "kept": kept, "charges": s["charges"], "eCharges": e["charges"] })
+				_leech(b, si, dmg, ta2, ev)
+				if overkill > 0.0 and float(ta2["overkillHeal"]) > 0.0 and float(s["hp"]) > 0.0:
+					var pk: float = float(ta2["overkillHeal"])
+					var got2: float = _heal(s, float(Js.round(minf(float(Js.round(float(s["max"]) * minf(pk, 0.35) * 2.0)), maxf(1.0, float(Js.round(overkill * pk)))) * float(s.get("healMult", 1.0)))))
+					if got2 > 0.0:
+						ev.append({ "t": "overkill", "seat": si, "heal": got2, "hp": s["hp"] })
+				finish_check(b, si, crit_shot, ev)
 			if dmg > 0.0 and float(e["hp"]) > 0.0:
 				_on_hit(b, si, dmg, crit_shot, ev, Js.list(mega.get("hits")).size())
 				# The Nuke's fallout: the wreck burns.
 				if mega.get("fallout") is Dictionary:
 					e["burn"] = { "turns": float(mega["fallout"]["turns"]), "dmg": maxf(1.0, float(Js.round(dmg * float(mega["fallout"]["pct"])))) }
 					ev.append({ "t": "eAblaze", "seat": si, "dmg": e["burn"]["dmg"], "fallout": true })
+			if not out.get("dodged", false):
+				_streak(s, ta2, crit_shot, ev, si)
 			# Reflective: a slice of the blow comes back.
 			if dmg > 0.0 and af.has("reflectPct") and Dice.next() < float(Js.nz(af.get("reflectChance"), 1.0)):
 				_hit_seat(b, si, maxf(1.0, float(Js.round(dmg * float(af["reflectPct"])))), ev, "reflect", "Reflective")
@@ -1153,9 +1382,35 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 	var cost: float = float(e["mag"]) if act == "ultimate" else (float(VOLLEY_COST) if act == "volley" else (1.0 if act == "fire" else 0.0))
 	if float(e["charges"]) < cost:
 		act = "reload"
+	# Counter-Battery: a ship that rolled it smashes this shot out of the air.
+	if act in ["fire", "volley"]:
+		var me_j: int = foes(b).find(e)
+		for ci: int in (b["seats"] as Array).size():
+			var cs: Dictionary = b["seats"][ci]
+			if _out(cs) or int(Js.nz(cs.get("counterOn"), -1.0)) != me_j:
+				continue
+			cs.erase("counterOn")
+			e["charges"] = maxf(0.0, float(e["charges"]) - cost)
+			var cta: Dictionary = tide_agg(cs)
+			var gain: float = minf(float(cs["maxCharges"]) - float(cs["charges"]), float(cta["counterRefund"]))
+			if gain > 0.0:
+				cs["charges"] = float(cs["charges"]) + gain
+			var cev: Dictionary = { "t": "counter", "seat": ci, "gain": gain }
+			if float(cta["counterReflect"]) > 0.0 and float(e["hp"]) > 0.0:
+				var pm: float = float(Js.nz(_phase(e).get("damageMult"), 1.0))
+				var back: float = maxf(1.0, floor(float(rand_int(int(e["min"]), int(e["maxDmg"]))) * (2.0 if act == "volley" else 1.0) * pm * float(cta["counterReflect"])))
+				e["hp"] = maxf(0.0, float(e["hp"]) - back)
+				cev["reflect"] = back
+				cev["enemyHp"] = e["hp"]
+			ev.append(cev)
+			finish_check(b, ci, false, ev)
+			if float(e["hp"]) <= 0.0:
+				_enemy_down(b, ev, false)
+			return
 	match act:
 		"reload":
-			e["charges"] = minf(float(e["mag"]), float(e["charges"]) + 1.0)
+			var more: float = 1.0 if float(_line(b)["enemyUltCharge"]) > 0.0 and Dice.next() < float(_line(b)["enemyUltCharge"]) else 0.0
+			e["charges"] = minf(float(e["mag"]), float(e["charges"]) + 1.0 + more)
 			ev.append({ "t": "eReload", "charges": e["charges"] })
 		"dodge":
 			ev.append({ "t": "eDodge" })
@@ -1171,7 +1426,7 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 				else:
 					var tg: int = _target(b, -1)
 					if tg >= 0:
-						apply_status(b["seats"][tg]["statuses"], str(sp["status"]), Js.nz(sp.get("magnitude"), 0.0), Js.nz(sp.get("turns"), 1.0))
+						seat_status(b["seats"][tg], str(sp["status"]), Js.nz(sp.get("magnitude"), 0.0), Js.nz(sp.get("turns"), 1.0))
 			ev.append({ "t": "eSpecial", "name": sp.get("name", ""), "line": sp.get("line", "") })
 		"fire", "volley", "ultimate":
 			e["charges"] = maxf(0.0, float(e["charges"]) - cost)
@@ -1252,7 +1507,7 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 	var base: float = float(rand_int(int(e["min"]), int(e["maxDmg"])))
 	var dmg: float
 	if act == "ultimate":
-		dmg = maxf(1.0, floor(base * Js.nz(Js.obj(e.get("ultimate")).get("mult"), 2.6)))
+		dmg = maxf(1.0, floor(base * Js.nz(Js.obj(e.get("ultimate")).get("mult"), 2.6) * float(_line(b)["enemyUlt"])))
 	else:
 		dmg = base * (2.0 if act == "volley" else 1.0)
 	if float(e_mods["dealt"]) != 1.0:
@@ -1262,12 +1517,14 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 	if float(e["wardBuff"]) > 0.0:
 		dmg = maxf(1.0, floor(dmg * (1.0 + float(e["wardBuff"]))))
 	var af: Dictionary = e["affix"]
+	var ta: Dictionary = tide_agg(t, e["boss"])
 	var eff_crit: float = 0.0 if act == "ultimate" else minf(1.0, float(e["crit"]) * float(Js.nz(af.get("critMult"), 1.0)))
+	if not frenzy and float(ta["inCritCut"]) != 0.0 and act != "ultimate":
+		eff_crit = clampf(eff_crit - float(ta["inCritCut"]), 0.0, 1.0)
 	var crit: bool = Dice.next() < eff_crit
 	if crit:
 		dmg = floor(dmg * 1.5)
 	var out: Dictionary = { "t": "eShot", "action": act, "target": ti, "crit": crit, "extra": not main, "all": all, "frenzy": frenzy }
-	var ta: Dictionary = tide_agg(t, e["boss"])
 	# The target's dodge stance (a frozen ship cannot; the Frenzied shot
 	# comes in under it).
 	if str(Js.obj(plans[ti]).get("action", "")) == "dodge" and not t.get("frozenNow", false) and not frenzy:
@@ -1288,6 +1545,9 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 				var would: float = dmg
 				dmg = 0.0
 				out["dodged"] = true
+				# Spiteful Wake: a slipped shot lashes back.
+				if float(ta["retaliateDodge"]) > 0.0 and would > 0.0 and float(e["hp"]) > 0.0:
+					_reflect(b, ti, maxf(1.0, float(Js.round(would * float(ta["retaliateDodge"])))), ev, "Spiteful Wake")
 				# An astrolabe's parry throws some of it back.
 				var tfx: Dictionary = Js.obj(t.get("fx"))
 				if float(tfx.get("parry", 0.0)) > 0.0 and float(tfx.get("parryReflect", 0.0)) > 0.0 and Dice.next() < float(tfx["parry"]):
@@ -1296,6 +1556,14 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 				dmg = maxf(1.0, floor(dmg * 0.3))
 				out["partial"] = true
 	var tfx2: Dictionary = Js.obj(t.get("fx"))
+	var raw_in: float = dmg
+	# Cutlass Guard: the blow turned aside, maybe lashing back.
+	if dmg > 0.0 and not frenzy and float(ta["parry"]) > 0.0 and Dice.next() < float(ta["parry"]):
+		dmg = 0.0
+		out["parried"] = true
+		out["guard"] = true
+		if float(ta["parryReflect"]) > 0.0 and float(e["hp"]) > 0.0:
+			_reflect(b, ti, maxf(1.0, float(Js.round(raw_in * float(ta["parryReflect"])))), ev, "Cutlass Guard")
 	# The first blow of a fight, turned aside outright.
 	if dmg > 0.0 and not t.get("firstBlow", false):
 		t["firstBlow"] = true
@@ -1335,9 +1603,13 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 		t["charges"] = float(t["charges"]) + 1.0
 		ev.append({ "t": "loaded", "seat": ti, "charges": t["charges"] })
 	# The shark's bite: a landed shot knocks a ball out of the rack.
-	if not frenzy and float(e["bite"]) > 0.0 and float(t["charges"]) > 0.0 and Dice.next() < minf(1.0, float(e["bite"])):
+	var bite_c: float = minf(1.0, float(e["bite"]) + float(_line(b)["enemyBite"]))
+	if not frenzy and bite_c > 0.0 and float(t["charges"]) > 0.0 and Dice.next() < bite_c:
 		t["charges"] = float(t["charges"]) - 1.0
 		ev.append({ "t": "bite", "seat": ti, "charges": t["charges"] })
+	# Spiteful Wake's thorns, off the blow before it was cut down.
+	if not frenzy and float(ta["retaliate"]) > 0.0 and raw_in > 0.0 and float(e["hp"]) > 0.0 and not out.get("parried", false):
+		_reflect(b, ti, maxf(1.0, float(Js.round(raw_in * float(ta["retaliate"]) * float(ta["retaliateBoost"])))), ev, "Spiteful Wake")
 	# Scorching, else Glacial.
 	if float(t["hp"]) > 0.0:
 		if af.has("burnChance") and Dice.next() < float(af["burnChance"]):
@@ -1346,9 +1618,10 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 		elif af.has("freezeChance") and Dice.next() < float(af["freezeChance"]):
 			t["freeze"] = 1.0
 			ev.append({ "t": "iced", "seat": ti })
-	# Vampiric: it drinks some of it back.
-	if af.has("lifestealPct") and float(e["hp"]) < float(e["max"]) and Dice.next() < float(Js.nz(af.get("lifestealChance"), 1.0)):
-		var h: float = minf(float(e["max"]) - float(e["hp"]), maxf(1.0, float(Js.round(dmg * float(af["lifestealPct"])))))
+	# Vampiric (or a curse's leech): it drinks some of it back.
+	var steal_pct: float = maxf(Js.num(af.get("lifestealPct")), 0.0 if frenzy else float(_line(b)["enemyLeech"]))
+	if steal_pct > 0.0 and float(e["hp"]) > 0.0 and float(e["hp"]) < float(e["max"]) and Dice.next() < float(Js.nz(af.get("lifestealChance"), 1.0)):
+		var h: float = minf(float(e["max"]) - float(e["hp"]), maxf(1.0, float(Js.round(dmg * steal_pct))))
 		e["hp"] = float(e["hp"]) + h
 		ev.append({ "t": "eHeal", "hp": e["hp"], "heal": h, "why": "Vampiric" })
 
@@ -1430,7 +1703,7 @@ static func _check_fail(b: Dictionary, ev: Array) -> void:
 			"burnDot":
 				s["burn"] = { "turns": float(c["turns"]), "dmg": maxf(1.0, float(Js.round(float(s["max"]) * float(c["pctPerTurn"])))) }
 			"status":
-				apply_status(s["statuses"], str(c["status"]), float(c["magnitude"]), float(c["turns"]))
+				seat_status(s, str(c["status"]), float(c["magnitude"]), float(c["turns"]))
 				if c.get("dmgPct") != null:
 					s["hp"] = maxf(0.0, float(s["hp"]) - maxf(1.0, float(Js.round(float(s["max"]) * float(c["dmgPct"])))))
 	if str(c["kind"]) == "enemyHealPctMaxHp":
@@ -1521,7 +1794,7 @@ static func _round_end(b: Dictionary, ev: Array) -> Array:
 			var per: float = float(Js.round(maxf(float(Js.round(float(e["min"]) * 0.7)), 0.0) * float(e["flareDmg"])))
 			b["flares"] = {
 				"name": e["decoyName"], "count": 3 + tier * 2, "feint": 0.22 if tier >= 3 else 0.0, "cluster": 0.34 if tier >= 2 else 0.20,
-				"fuse": (0.9 if tier >= 3 else (1.02 if tier == 2 else 1.18)) * float(e["flareFuse"]), "per": per,
+				"fuse": (0.9 if tier >= 3 else (1.02 if tier == 2 else 1.18)) * float(e["flareFuse"]) * float(_line(b)["flareFuse"]), "per": float(Js.round(per * float(_line(b)["flareDmg"]))),
 			}
 			ev.append({ "t": "flares", "name": e["decoyName"], "count": b["flares"]["count"] })
 		_tag(ev, n0, j)
@@ -1532,7 +1805,7 @@ static func _round_end(b: Dictionary, ev: Array) -> Array:
 			continue
 		var rg: float = float(mods(s["statuses"])["regen"])
 		if rg > 0.0:
-			_heal(s, rg)
+			_heal_m(s, rg)
 		tick_statuses(s["statuses"])
 		var w2: Dictionary = s["ward"]
 		if not w2.is_empty():
@@ -1577,6 +1850,8 @@ static func flares_land(b: Dictionary, results: Array) -> Array:
 ## After a fight is won: the next one (HP carries), or the raid is done. A
 ## Rest Stop refreshes crew orders once, halfway through a long raid.
 static func next_fight(b: Dictionary) -> Dictionary:
+	if b.has("gauntlet"):
+		return { "done": true }
 	var raid: Dictionary = raid_def(str(b["raidId"]))
 	var n: int = Js.list(raid.get("sequence")).size()
 	var r: int = int(b["fight"]) + 1
@@ -1644,7 +1919,7 @@ static func _boss_ability(b: Dictionary, a: Dictionary, ev: Array) -> void:
 			e["ward"] = Js.nz(a.get("turns"), 4.0)
 		"requiem":
 			for s2: Dictionary in alive(b):
-				apply_status(s2["statuses"], "marked", Js.nz(a.get("value"), 0.3), Js.nz(a.get("turns"), 3.0))
+				seat_status(s2, "marked", Js.nz(a.get("value"), 0.3), Js.nz(a.get("turns"), 3.0))
 	out["enemyHp"] = e["hp"]
 	ev.append(out)
 
@@ -1811,24 +2086,57 @@ static func expire_tides(fx: Array) -> Array:
 	return out
 
 
-## A captain's tides, added up (multipliers multiply, the rest add).
+## A captain's run effects, added up the web's way (RaidCombat's tide memo):
+## the tides a raid offers, and the gauntlet's boons, curses, synergies, Marks
+## and Terms, which ride the same list (s.tfx). Multipliers multiply, flat
+## bonuses add, the strongest of a kind wins where the web takes the max. The
+## momentum axes (kills, depth) fold in once, off s.runKills and s.runDepth.
 static func tide_agg(s: Dictionary, boss: bool = false) -> Dictionary:
 	var a: Dictionary = {
-		"dmgMult": 1.0, "fireMult": 1.0, "volleyMult": 1.0, "bossMult": 1.0, "bossVolMult": 1.0, "critBonus": 0.0, "critZone": 1.0,
+		"dmgMult": 1.0, "fireMult": 1.0, "volleyMult": 1.0, "megaMult": 1.0, "bossMult": 1.0, "bossVolMult": 1.0, "critBonus": 0.0, "critZone": 1.0,
 		"inDmg": 1.0, "speed": 0.0, "reloadChance": 0.0, "reloadBonus": 0.0, "dodgeBonus": 0.0, "startHpPct": 0.0, "startHealPct": 0.0,
 		"startCharges": 0.0, "enemyHpScale": 1.0, "guaranteedDodge": 0.0, "doubloonsAtEnd": 0.0,
+		"critDmg": 1.0, "noncrit": 1.0, "healMult": 1.0, "statusDur": 1.0, "aimSpeed": 1.0, "zoneSpeed": 1.0,
+		"overkillHeal": 0.0, "volleyCut": 0.0, "megaCut": 0.0, "lifesteal": 0.0, "retaliate": 0.0, "retaliateDodge": 0.0, "retaliateBoost": 1.0,
+		"fightShield": 0.0, "inCritCut": 0.0, "execute": 0.0, "lowHp": 0.0, "overheal": 0.0, "firstStrike": 0.0, "doubleStrike": 0.0,
+		"blackout": 0.0, "decoys": 0.0, "fog": 0.0, "clarity": 0.0, "confuse": 0.0,
+		"freezeChance": 0.0, "frozenDmg": 1.0, "brittle": false, "deepFreeze": false,
+		"burnChance": 0.0, "burnTurns": 0.0, "burnTick": 1.0, "reignite": false, "backdraft": false,
+		"thermal": 0.0, "critExecute": 0.0, "volleyRamp": 0.0, "executeHeal": 0.0, "burnTickHeal": 0.0,
+		"counter": 0.0, "counterRefund": 0.0, "counterStack": 0.0, "counterChance": 0.0, "counterReflect": 0.0,
+		"shieldPierce": 0.0, "steal": 0.0, "favor": 0.0, "abilityRefund": 0.0,
+		"streakPer": 0.0, "streakMax": 0.0, "gripHits": 0.0, "gripTurns": 0.0, "gripCrush": 0.0, "critEvery": 0.0,
+		"parry": 0.0, "parryReflect": 0.0, "onHit": [], "startStatus": [], "noCleanse": false,
+		# What the line's effects do to the enemy (curses and Terms; line_fx).
+		"enemyShield": 0.0, "regrow": 0.0, "enemyParry": 0.0, "enemyLeech": 0.0, "enemyBite": 0.0, "enemyStartCharges": 0.0,
+		"enemyUlt": 1.0, "enemyUltCharge": 0.0, "flareFuse": 1.0, "flareDmg": 1.0, "hideHp": 0.0, "hideCharges": 0.0,
 	}
+	var kills: float = maxf(0.0, Js.num(s.get("runKills")))
+	var depth: float = maxf(0.0, Js.num(s.get("runDepth")))
+	var kill_rate: float = 0.0
+	var kill_cap: float = 0.0
+	var depth_rate: float = 0.0
+	var depth_cap: float = 0.0
 	for e: Dictionary in Js.list(s.get("tfx")):
 		var scope: String = str(e.get("scope", ""))
+		var n: Callable = func(k: String) -> float: return Js.num(e.get(k))
 		match str(e["kind"]):
 			"damageMult": a["dmgMult"] = float(a["dmgMult"]) * float(e["mult"])
 			"fireDmgMult": a["fireMult"] = float(a["fireMult"]) * float(e["mult"])
 			"volleyDmgMult": a["volleyMult"] = float(a["volleyMult"]) * float(e["mult"])
+			"megaDmgMult": a["megaMult"] = float(a["megaMult"]) * float(e["mult"])
 			"bossDamageMult": a["bossMult"] = float(a["bossMult"]) * float(e["mult"])
 			"bossVolleyDmgMult": a["bossVolMult"] = float(a["bossVolMult"]) * float(e["mult"])
 			"critChanceBonus": a["critBonus"] = float(a["critBonus"]) + float(e["chance"])
 			"critZoneScale": a["critZone"] = float(a["critZone"]) * float(e["mult"])
+			"critDmgMult": a["critDmg"] = float(a["critDmg"]) * float(e["mult"])
+			"noncritDmgMult": a["noncrit"] = float(a["noncrit"]) * float(e["mult"])
 			"incomingDmgMult": a["inDmg"] = float(a["inDmg"]) * float(e["mult"])
+			"depthScaleMitigation": a["inDmg"] = float(a["inDmg"]) * (1.0 - minf(n.call("max"), n.call("perDepth") * depth))
+			"healMult": a["healMult"] = float(a["healMult"]) * float(e["mult"])
+			"playerStatusDuration": a["statusDur"] = float(a["statusDur"]) * float(e["mult"])
+			"aimSpeedMult": a["aimSpeed"] = float(a["aimSpeed"]) * float(e["mult"])
+			"zoneSpeedMult": a["zoneSpeed"] = float(a["zoneSpeed"]) * float(e["mult"])
 			"speedDelta": a["speed"] = float(a["speed"]) + float(e["n"])
 			"reloadProc":
 				a["reloadChance"] = minf(1.0, float(a["reloadChance"]) + float(e["chance"]))
@@ -1843,7 +2151,133 @@ static func tide_agg(s: Dictionary, boss: bool = false) -> Dictionary:
 			"enemyHpScale": a["enemyHpScale"] = float(a["enemyHpScale"]) * float(e["mult"])
 			"guaranteedDodge": a["guaranteedDodge"] = float(a["guaranteedDodge"]) + float(e["n"])
 			"doubloonsAtRaidEnd": a["doubloonsAtEnd"] = float(a["doubloonsAtEnd"]) + float(e["n"])
+			"overkillHealPct": a["overkillHeal"] = float(a["overkillHeal"]) + n.call("pct")
+			"volleyCostReduction": a["volleyCut"] = float(a["volleyCut"]) + n.call("n")
+			"megaCostReduction": a["megaCut"] = float(a["megaCut"]) + n.call("n")
+			"lifestealPct": a["lifesteal"] = float(a["lifesteal"]) + n.call("pct")
+			"lifestealKillScale": a["lifesteal"] = float(a["lifesteal"]) + minf(n.call("max"), n.call("perKill") * kills)
+			"retaliatePct":
+				a["retaliate"] = float(a["retaliate"]) + n.call("pct")
+				a["retaliateDodge"] = float(a["retaliateDodge"]) + n.call("dodgePct")
+			"retaliateBoost": a["retaliateBoost"] = maxf(float(a["retaliateBoost"]), n.call("mult"))
+			"fightShield": a["fightShield"] = float(a["fightShield"]) + n.call("pctMax")
+			"incomingCritReduction": a["inCritCut"] = float(a["inCritCut"]) + n.call("chance")
+			"executeThreshold": a["execute"] = maxf(float(a["execute"]), n.call("pct"))
+			"lowHpDamage": a["lowHp"] = maxf(float(a["lowHp"]), n.call("maxBonus"))
+			"overhealPct": a["overheal"] = maxf(float(a["overheal"]), n.call("pct"))
+			"firstStrikeChance": a["firstStrike"] = maxf(float(a["firstStrike"]), n.call("chance"))
+			"doubleStrikeOnFirst": a["doubleStrike"] = maxf(float(a["doubleStrike"]), n.call("chance"))
+			"aimBlackout": a["blackout"] = minf(0.95, maxf(float(a["blackout"]), n.call("intensity")))
+			"aimDecoys": a["decoys"] = maxf(float(a["decoys"]), n.call("n"))
+			"aimFog": a["fog"] = minf(0.92, float(a["fog"]) + n.call("density"))
+			"aimClarity": a["clarity"] = maxf(float(a["clarity"]), n.call("reduce"))
+			"confuse": a["confuse"] = maxf(float(a["confuse"]), n.call("chance"))
+			"iceAffinity":
+				a["freezeChance"] = maxf(float(a["freezeChance"]), n.call("freezeChance"))
+				a["frozenDmg"] = maxf(float(a["frozenDmg"]), Js.nz(e.get("frozenDmgMult"), 1.0))
+				a["brittle"] = a["brittle"] or e.get("brittle") == true
+				a["deepFreeze"] = a["deepFreeze"] or e.get("deepFreeze") == true
+			"fireAffinity":
+				a["burnChance"] = maxf(float(a["burnChance"]), n.call("burnChance"))
+				a["burnTurns"] = maxf(float(a["burnTurns"]), n.call("burnTurnsBonus"))
+				a["burnTick"] = maxf(float(a["burnTick"]), Js.nz(e.get("burnTickMult"), 1.0))
+				a["reignite"] = a["reignite"] or e.get("reignite") == true
+				a["backdraft"] = a["backdraft"] or e.get("backdraft") == true
+			"thermalShock": a["thermal"] = maxf(float(a["thermal"]), n.call("burstMult"))
+			"critExecute": a["critExecute"] = maxf(float(a["critExecute"]), n.call("pct"))
+			"volleyRamp": a["volleyRamp"] = maxf(float(a["volleyRamp"]), n.call("perVolley"))
+			"executeHeal": a["executeHeal"] = maxf(float(a["executeHeal"]), n.call("pctMaxHp"))
+			"burnTickHeal": a["burnTickHeal"] = maxf(float(a["burnTickHeal"]), n.call("pctTick"))
+			"counterFireChance": a["counter"] = maxf(float(a["counter"]), n.call("chance"))
+			"counterBonus":
+				a["counterRefund"] = maxf(float(a["counterRefund"]), n.call("refund"))
+				a["counterStack"] = maxf(float(a["counterStack"]), n.call("bonusStack"))
+				a["counterChance"] = maxf(float(a["counterChance"]), n.call("chanceBonus"))
+			"counterReflect": a["counterReflect"] = maxf(float(a["counterReflect"]), n.call("pct"))
+			"shieldPierce": a["shieldPierce"] = maxf(float(a["shieldPierce"]), n.call("pct"))
+			"stealCharge": a["steal"] = maxf(float(a["steal"]), n.call("chance"))
+			"randomFightBuff": a["favor"] = maxf(float(a["favor"]), n.call("magnitude"))
+			"abilityRefundChance": a["abilityRefund"] = maxf(float(a["abilityRefund"]), n.call("chance"))
+			"critStreakDamage":
+				if n.call("perStack") > float(a["streakPer"]):
+					a["streakPer"] = n.call("perStack")
+					a["streakMax"] = n.call("maxStacks")
+			"gripStacks":
+				if n.call("hits") > 0.0 and (float(a["gripHits"]) == 0.0 or n.call("hits") < float(a["gripHits"])):
+					a["gripHits"] = n.call("hits")
+				a["gripTurns"] = maxf(float(a["gripTurns"]), n.call("turns"))
+				a["gripCrush"] = maxf(float(a["gripCrush"]), n.call("crushPerStack"))
+			"guaranteedCritEvery":
+				if n.call("n") > 0.0 and (float(a["critEvery"]) == 0.0 or n.call("n") < float(a["critEvery"])):
+					a["critEvery"] = n.call("n")
+			"parryChance":
+				if n.call("chance") > float(a["parry"]):
+					a["parry"] = n.call("chance")
+					a["parryReflect"] = n.call("reflectPct")
+			"statusOnHit": (a["onHit"] as Array).append(e)
+			"playerStartStatus": (a["startStatus"] as Array).append(e)
+			"noCleanse": a["noCleanse"] = true
+			"killStackDamage":
+				kill_rate += n.call("perKill")
+				kill_cap += n.call("maxBonus")
+			"depthScaleDamage":
+				depth_rate += n.call("perDepth")
+				depth_cap += n.call("maxBonus")
+			"enemyShield": a["enemyShield"] = maxf(float(a["enemyShield"]), n.call("pctMax"))
+			"barrierRegrow": a["regrow"] = maxf(float(a["regrow"]), n.call("pctMax"))
+			"enemyParry": a["enemyParry"] = maxf(float(a["enemyParry"]), n.call("chance"))
+			"enemyLifesteal": a["enemyLeech"] = maxf(float(a["enemyLeech"]), n.call("pct"))
+			"enemyChargeSteal": a["enemyBite"] = maxf(float(a["enemyBite"]), n.call("bonus"))
+			"enemyStartChargesDelta": a["enemyStartCharges"] = float(a["enemyStartCharges"]) + n.call("n")
+			"enemyUltimateBoost":
+				a["enemyUlt"] = float(a["enemyUlt"]) * Js.nz(e.get("dmgMult"), 1.0)
+				a["enemyUltCharge"] = maxf(float(a["enemyUltCharge"]), n.call("chargeChance"))
+			"flareStorm":
+				a["flareFuse"] = float(a["flareFuse"]) * Js.nz(e.get("fuseMult"), 1.0)
+				a["flareDmg"] = float(a["flareDmg"]) * Js.nz(e.get("dmgMult"), 1.0)
+			"hideEnemyHp": a["hideHp"] = maxf(float(a["hideHp"]), n.call("chance"))
+			"hideEnemyCharges": a["hideCharges"] = maxf(float(a["hideCharges"]), n.call("chance"))
+	if kill_rate > 0.0:
+		a["dmgMult"] = float(a["dmgMult"]) * (1.0 + minf(kill_cap, kill_rate * kills))
+	if depth_rate > 0.0:
+		a["dmgMult"] = float(a["dmgMult"]) * (1.0 + minf(depth_cap, depth_rate * depth))
 	return a
+
+
+## What the line's curses and Terms do to the enemy, from every ship still in
+## the fight (the strongest of each; the Locker's curses are the party's).
+static func line_fx(b: Dictionary) -> Dictionary:
+	var l: Dictionary = { "enemyShield": 0.0, "regrow": 0.0, "enemyParry": 0.0, "enemyLeech": 0.0, "enemyBite": 0.0, "enemyStartCharges": 0.0,
+		"enemyUlt": 1.0, "enemyUltCharge": 0.0, "flareFuse": 1.0, "flareDmg": 1.0, "hideHp": 0.0, "hideCharges": 0.0 }
+	for s: Dictionary in b["seats"]:
+		if _out(s):
+			continue
+		var a: Dictionary = tide_agg(s)
+		for k: String in ["enemyShield", "regrow", "enemyParry", "enemyLeech", "enemyBite", "enemyStartCharges", "enemyUlt", "enemyUltCharge", "flareDmg", "hideHp", "hideCharges"]:
+			l[k] = maxf(float(l[k]), float(a[k]))
+		l["flareFuse"] = minf(float(l["flareFuse"]), float(a["flareFuse"]))
+	return l
+
+
+static func _line(b: Dictionary) -> Dictionary:
+	if not b.has("line"):
+		b["line"] = line_fx(b)
+	return b["line"]
+
+
+## A volley's and a Mega's cost on this ship (the run's cost cuts).
+static func volley_cost(s: Dictionary) -> float:
+	return maxf(2.0, float(VOLLEY_COST) - float(tide_agg(s)["volleyCut"]))
+
+
+static func mega_cost(s: Dictionary) -> float:
+	return maxf(3.0, float(Armory.aug()["megaCost"]) - float(tide_agg(s)["megaCut"]))
+
+
+## A status laid on a ship (its run may lengthen every one: Bad Blood).
+static func seat_status(s: Dictionary, id: String, mag: float, turns: float) -> void:
+	var dur: float = float(tide_agg(s)["statusDur"])
+	apply_status(s["statuses"], id, mag, ceil(turns * dur) if dur != 1.0 else turns)
 
 
 # ══ Raid items (lib/raidItems effects) ═════════════════════════════════════════
@@ -1923,8 +2357,69 @@ static func _reflect(b: Dictionary, si: int, dmg: float, ev: Array, name: String
 	e["shield"] = float(e["shield"]) - absorbed
 	e["hp"] = _ward_floor(b, float(e["hp"]) - (dmg - absorbed), ev)
 	ev.append({ "t": "reflect", "seat": si, "dmg": dmg - absorbed, "enemyHp": e["hp"], "name": name })
+	finish_check(b, si, false, ev)
 	if float(e["hp"]) <= 0.0:
 		_enemy_down(b, ev, false)
+
+
+## Lifesteal off a landed blow (the run's and the items', capped at 35%),
+## through the heal multiplier, up to the heal cap.
+static func _leech(b: Dictionary, si: int, dmg: float, ta: Dictionary, ev: Array) -> void:
+	var s: Dictionary = b["seats"][si]
+	var rate: float = minf(0.35, float(ta["lifesteal"]) + float(Js.obj(s.get("fx")).get("lifesteal", 0.0)))
+	if rate <= 0.0 or float(s["hp"]) <= 0.0:
+		return
+	var heal: float = float(Js.round(minf(float(Js.round(float(s["max"]) * rate * 2.0)), maxf(1.0, float(Js.round(dmg * rate)))) * float(s.get("healMult", 1.0))))
+	var got: float = _heal(s, heal)
+	if got > 0.0:
+		ev.append({ "t": "leech", "seat": si, "heal": got, "hp": s["hp"] })
+
+
+## The crit streak (Cannonade): a crit adds a stack (a won counter-battery
+## adds its bonus), anything else breaks it unless the counter kept it.
+static func _streak(s: Dictionary, ta: Dictionary, crit: bool, ev: Array, si: int) -> void:
+	if float(ta["streakPer"]) <= 0.0:
+		return
+	var prior: float = Js.num(s.get("streak"))
+	var bonus: float = float(ta["counterStack"]) if s.get("counterProc", false) else 0.0
+	if crit:
+		s["streak"] = minf(float(ta["streakMax"]), prior + 1.0 + bonus)
+		if float(s["streak"]) >= 2.0:
+			ev.append({ "t": "streak", "seat": si, "n": s["streak"], "pct": float(Js.round(float(ta["streakPer"]) * float(s["streak"]) * 100.0)) })
+	elif bonus > 0.0:
+		s["streak"] = minf(float(ta["streakMax"]), prior + bonus)
+	else:
+		s["streak"] = 0.0
+		if prior >= 2.0:
+			ev.append({ "t": "streakBroken", "seat": si })
+
+
+## finishCheck: the run's kill riders after any blow that lowered the hull:
+## the Executioner's line, the crit's Coup de Grace, the Reaper's Tithe.
+static func finish_check(b: Dictionary, si: int, crit: bool, ev: Array) -> void:
+	var e: Dictionary = b["enemy"]
+	if si < 0 or si >= (b["seats"] as Array).size():
+		return
+	var s: Dictionary = b["seats"][si]
+	var ta: Dictionary = tide_agg(s, e["boss"])
+	var hp: float = float(e["hp"])
+	var mx: float = float(e["max"])
+	var done: bool = false
+	if hp > 0.0 and float(ta["execute"]) > 0.0 and hp <= ceil(mx * float(ta["execute"])):
+		e["hp"] = _ward_floor(b, 0.0, ev)
+		if float(e["hp"]) <= 0.0:
+			done = true
+			ev.append({ "t": "execute", "seat": si, "kind": "execute" })
+	if not done and crit and float(e["hp"]) > 0.0 and float(ta["critExecute"]) > 0.0 and float(e["hp"]) <= ceil(mx * float(ta["critExecute"])):
+		e["hp"] = _ward_floor(b, 0.0, ev)
+		if float(e["hp"]) <= 0.0:
+			ev.append({ "t": "execute", "seat": si, "kind": "coup" })
+	var revives: bool = int(e["phase"]) - 1 < (e["phases"] as Array).size()
+	if float(e["hp"]) <= 0.0 and hp > 0.0 and float(ta["executeHeal"]) > 0.0 and float(s["hp"]) > 0.0 and not revives:
+		var heal: float = minf(minf(float(s["max"]) - float(s["hp"]), float(Js.round(mx * float(ta["executeHeal"])))), float(Js.round(float(s["max"]) * 0.15)))
+		if heal > 0.0:
+			s["hp"] = float(s["hp"]) + heal
+			ev.append({ "t": "tithe", "seat": si, "heal": heal, "hp": s["hp"] })
 
 
 ## A shot that landed and left it afloat: the items' riders (crit strip,
@@ -1941,23 +2436,57 @@ static func _on_hit(b: Dictionary, si: int, dmg: float, crit: bool, ev: Array, h
 	var s: Dictionary = b["seats"][si]
 	var e: Dictionary = b["enemy"]
 	var fx: Dictionary = Js.obj(s.get("fx"))
-	if fx.is_empty():
-		return
 	if crit and float(e["charges"]) > 0.0 and float(fx.get("critStrip", 0.0)) > 0.0 and Dice.next() < float(fx["critStrip"]):
 		e["charges"] = float(e["charges"]) - 1.0
 		ev.append({ "t": "strip", "seat": si, "charges": e["charges"] })
-	var rate: float = minf(0.35, float(fx.get("lifesteal", 0.0)))
-	if rate > 0.0 and float(s["hp"]) > 0.0:
-		var heal: float = float(Js.round(minf(float(Js.round(float(s["max"]) * rate * 2.0)), maxf(1.0, float(Js.round(dmg * rate))))))
-		var got: float = _heal(s, heal)
-		if got > 0.0:
-			ev.append({ "t": "leech", "seat": si, "heal": got, "hp": s["hp"] })
-	if float(fx.get("burn", 0.0)) > 0.0 and _proc(minf(0.20, float(fx["burn"])), hits):
-		e["burn"] = { "turns": 2.0, "dmg": maxf(1.0, float(Js.round(dmg * 0.10))) }
-		ev.append({ "t": "eAblaze", "seat": si, "dmg": e["burn"]["dmg"] })
-	if float(fx.get("freeze", 0.0)) > 0.0 and _proc(minf(0.20, float(fx["freeze"])), hits):
-		e["freeze"] = 1.0
-		ev.append({ "t": "eIced", "seat": si })
+	var ta: Dictionary = tide_agg(s, e["boss"])
+	# Fire: a hit may set it ablaze (and a burning hull may be stoked again).
+	var old_burn: Dictionary = Js.obj(e.get("burn"))
+	if ta["reignite"] and not old_burn.is_empty():
+		old_burn["turns"] = 2.0 + float(ta["burnTurns"])
+	var bc: float = minf(0.20, float(fx.get("burn", 0.0)) + float(ta["burnChance"]))
+	if bc > 0.0 and _proc(bc, hits):
+		var turns: float = 2.0 + float(ta["burnTurns"])
+		var tick: float = maxf(1.0, float(Js.round(dmg * minf(0.20, 0.10 * float(ta["burnTick"])))))
+		e["burn"] = { "turns": turns, "dmg": maxf(tick, float(old_burn.get("dmg", 0.0)) if ta["reignite"] else 0.0), "by": float(si), "backdraft": ta["backdraft"], "feed": ta["burnTickHeal"] }
+		ev.append({ "t": "eAblaze", "seat": si, "dmg": e["burn"]["dmg"], "turns": turns })
+	# Ice: the next turn (two, in deep ice) frozen.
+	var fc: float = minf(0.20, float(fx.get("freeze", 0.0)) + float(ta["freezeChance"]))
+	if fc > 0.0 and _proc(fc, hits):
+		e["freeze"] = 2.0 if ta["deepFreeze"] else 1.0
+		ev.append({ "t": "eIced", "seat": si, "deep": ta["deepFreeze"] })
+	# Statuses a run's shot leaves.
+	for so: Dictionary in ta["onHit"]:
+		if _proc(float(so["chance"]), hits):
+			apply_status(e["statuses"], str(so["status"]), float(so["magnitude"]), float(so["turns"]))
+			ev.append({ "t": "eStatus", "seat": si, "status": so["status"] })
+	# Kraken's Grip: coils build; when they close the hull is held and crushed.
+	if float(ta["gripHits"]) > 0.0:
+		var gk: String = str(si)
+		if not e.has("grip"):
+			e["grip"] = {}
+		var coils: float = Js.num(e["grip"].get(gk)) + 1.0
+		e["grip"][gk] = coils
+		var hits_need: float = float(ta["gripHits"])
+		if coils >= hits_need or Dice.next() < pow(coils / hits_need, 2.0):
+			e["grip"][gk] = 0.0
+			e["freeze"] = maxf(Js.num(e.get("freeze")), float(ta["gripTurns"]))
+			var crush: float = maxf(1.0, float(Js.round(float(e["max"]) * float(ta["gripCrush"]) * coils)))
+			e["hp"] = maxf(0.0, float(e["hp"]) - crush)
+			ev.append({ "t": "grip", "seat": si, "coils": coils, "crush": crush, "enemyHp": e["hp"], "turns": ta["gripTurns"] })
+			finish_check(b, si, false, ev)
+		else:
+			ev.append({ "t": "coil", "seat": si, "coils": coils, "of": hits_need })
+	# Thermal Shock: ice meets fire and the frozen hull bursts.
+	if float(ta["thermal"]) > 0.0 and float(e["hp"]) > 0.0 and (e.get("frozenNow", false) or Js.num(e.get("freeze")) > 0.0) and not Js.obj(e.get("burn")).is_empty():
+		var burst: float = maxf(1.0, float(Js.round(dmg * float(ta["thermal"]))))
+		var ab: float = minf(float(e["shield"]), burst)
+		e["shield"] = float(e["shield"]) - ab
+		e["hp"] = _ward_floor(b, float(e["hp"]) - (burst - ab), ev)
+		e["freeze"] = 0.0
+		e["frozenNow"] = false
+		ev.append({ "t": "thermal", "seat": si, "dmg": burst - ab, "enemyHp": e["hp"] })
+		finish_check(b, si, false, ev)
 	var rack: float = maxf(float(fx.get("weaken", 0.0)), maxf(float(fx.get("corrode", 0.0)), float(fx.get("feeble", 0.0))))
 	var fired: bool = rack > 0.0 and _proc(rack, hits)
 	if not fired and rack > 0.0 and crit and float(fx.get("critSpread", 0.0)) > 0.0 and Dice.next() < float(fx["critSpread"]):
@@ -2102,7 +2631,7 @@ static func _role_turn(b: Dictionary, e: Dictionary, ev: Array) -> bool:
 			if ti < 0:
 				return false
 			var blind: bool = Dice.next() < 0.5
-			apply_status(b["seats"][ti]["statuses"], "blinded" if blind else "narrowed", float(def["blind"]) if blind else float(def["narrow"]), float(def["turns"]))
+			seat_status(b["seats"][ti], "blinded" if blind else "narrowed", float(def["blind"]) if blind else float(def["narrow"]), float(def["turns"]))
 			ev.append({ "t": "role", "role": r, "foe": me_j, "seat": ti, "status": "blinded" if blind else "narrowed", "name": def.get("name", "") })
 		"rallier":
 			var to: Array = []

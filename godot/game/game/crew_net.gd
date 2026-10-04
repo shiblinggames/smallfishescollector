@@ -58,6 +58,7 @@ var _looks: Dictionary = {}
 
 var tables: DenTables
 var raids: RaidTable
+var gauntlets: GauntletTable
 
 
 func _ready() -> void:
@@ -66,6 +67,8 @@ func _ready() -> void:
 	add_child(tables)
 	raids = RaidTable.new()
 	add_child(raids)
+	gauntlets = GauntletTable.new()
+	add_child(gauntlets)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected)
@@ -94,6 +97,8 @@ func host(c: Charter) -> Error:
 	c.tables = tables
 	raids.charter = c
 	c.raids = raids
+	gauntlets.charter = c
+	c.gauntlets = gauntlets
 	if not c.shared_changed.is_connected(_on_shared_changed):
 		c.shared_changed.connect(_on_shared_changed)
 	c.voter = ask_crew
@@ -226,6 +231,7 @@ func _on_peer_disconnected(id: int) -> void:
 			_tally(int(n), str(k), false)
 	if k != null:
 		raids.drop(str(k))
+		gauntlets.drop(str(k))
 		mate_left.emit(k)
 		_left.rpc(k)
 		charter.write()

@@ -21,6 +21,10 @@ extends RefCounted
 ## Charter's wire, and the party's table holds one per captain).
 
 const VARIANTS: Array = ["davy", "don"]
+## Davy's opens at the second chapter's Captain's Choice (GAUNTLET_UNLOCK_NODE);
+## hardcore once a captain has reached this depth on the descent.
+const UNLOCK_NODE: String = "chapter_2_class"
+const HC_UNLOCK_DEPTH: int = 5
 const NAMES: Dictionary = { "davy": "Davy's Gauntlet", "don": "Don's Gauntlet" }
 
 const POT_GROWTH: float = 42.0
@@ -628,12 +632,18 @@ static func escorts(fight: Dictionary, n: int, terms: Dictionary, variant: Strin
 		k -= 1
 	if Dice.next() < float(pc.get("extraChance", 0.15)):
 		k += 1
+	# A boss brings one ship fewer (its own hull is the weight of the field).
+	if fight["isBoss"]:
+		k -= 1
 	k = clampi(k, 1, 4)
 	var mp: Array = Js.list(t()["pools"]["donMobs" if variant == "don" else "davyMobs"])
+	# Escorts roll elite less often than the lead (a field of affixes stacks).
+	var tm2: Dictionary = tm.duplicate()
+	tm2["eliteChanceMult"] = float(tm["eliteChanceMult"]) * float(pc.get("escortElite", 1.0))
 	var out: Array = []
 	for j: int in range(1, k):
 		var en: Dictionary = scale_to_curve(hand(mp[int(floor(Dice.next() * mp.size()))]), d, false, variant)
-		var r: Dictionary = _elite_roll(en, d, tm)
+		var r: Dictionary = _elite_roll(en, d, tm2)
 		out.append({ "enemy": r["enemy"], "isElite": r["elite"], "affix": r["affix"] })
 	return out
 
