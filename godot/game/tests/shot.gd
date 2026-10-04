@@ -679,6 +679,13 @@ func _init() -> void:
 						for bar: Node in bst.find_children("", "AimBar", true, false):
 							(bar as AimBar)._pos = (bar as AimBar)._zone
 							(bar as AimBar).lock()
+					"stamp":
+						bst._stamp(OS.get_environment("TIER") if OS.get_environment("TIER") != "" else "coop", true)
+						await create_timer(float(OS.get_environment("FX_S")) if OS.get_environment("FX_S") != "" else 0.6).timeout
+						root.get_texture().get_image().save_png(out)
+						print("  saved ", out)
+						quit()
+						return
 					"fx":
 						# One crafted event, captured FX_S seconds in: FX_EV fire,
 						# volley, crit, edodge, ecrit, reload, railgun, barrage, nuke.
@@ -767,7 +774,8 @@ func _init() -> void:
 			var ru: String = sea.session.uid
 			p["expedition_xp"] = 2000.0
 			p["ship_tier"] = 4.0
-			p["coop_pennants"] = ["captain_krust", "cartographer"]
+			rdb.add_clear(ru, "corsairs_reckoning", 9000.0)
+			rdb.add_clear(ru, "corsairs_reckoning@coop", 9000.0)
 			for d: int in 2:
 				var rst: Dictionary = RulesApi.run(rdb, ru, "getCrewState", [])
 				for c: Dictionary in rst["board"]:

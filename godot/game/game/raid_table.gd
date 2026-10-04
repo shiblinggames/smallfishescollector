@@ -13,7 +13,7 @@ extends Node
 ##   entry screen opens (game/ready_screen.gd); everyone aboard hears it. Only
 ##   a captain whose map has reached that raid, and whose ship is at it
 ##   (within NEAR of its dock), may join, up to four. Each captain's card
-##   (avatar, ship, hull, crew, pennants) is made here and sent with the
+##   (avatar, ship, hull, crew, the tiers beaten) is made here and sent with the
 ##   state. The caller picks the TIER (Normal; Co-op and Co-op Challenge need
 ##   two or more, Challenge once every captain has cleared the raid on Co-op;
 ##   a change of tier asks everyone again), every other captain says Ready,
@@ -395,10 +395,9 @@ func _crates() -> Array:
 		charter._lend(ss)
 		var tc2: Dictionary = Battle.tier_cfg(b)
 		var r: Dictionary = RaidRun.open_crate(ss.store, ss.uid, raid, float(s["fortune"]), tc2)
-		var pennant: bool = RaidRun.record_tier_clear(ss.store, ss.uid, str(_r["raidId"]), str(b.get("tier", "normal")), tc2, ms)
+		var first: bool = RaidRun.record_tier_clear(ss.store, ss.uid, str(_r["raidId"]), str(b.get("tier", "normal")), tc2, ms)
 		charter._take(ss)
-		if pennant:
-			out.append({ "t": "pennant", "key": s["key"], "raidId": _r["raidId"] })
+		out.append({ "t": "tierClear", "key": s["key"], "tier": str(b.get("tier", "normal")), "first": first })
 		if Js.num(r.get("coin")) > 0.0:
 			charter._note(ss.captain_name(), float(r["coin"]), "%s: the crate" % raid.get("raidTitle", "Raid"))
 		out.append({ "t": "crate", "key": s["key"], "coin": r.get("coin", 0.0), "items": (Js.list(r.get("items"))).map(func(x: Dictionary) -> String: return str(x.get("label", x["id"]))) })
@@ -560,7 +559,7 @@ static func tiers_open(members: Array) -> Dictionary:
 
 
 ## What the entry screen shows of a captain: their face, their ship, its hull
-## and Navigation, the hands seated for raids, their pennants, and whether
+## and Navigation, the hands seated for raids, the tiers of this raid they have beaten, and whether
 ## they have cleared this raid on Co-op (for the Challenge).
 static func card_of(s: Session, raid_id: String) -> Dictionary:
 	var p: Dictionary = s.profile()
@@ -572,7 +571,7 @@ static func card_of(s: Session, raid_id: String) -> Dictionary:
 	return {
 		"face": seat.get("face"), "shipTier": seat.get("tier"), "shipSkin": seat.get("shipSkin"),
 		"hull": seat.get("max"), "nav": Loadout.nav_level_from_xp(Js.num(p.get("expedition_xp"))), "fortune": seat.get("fortune"),
-		"crew": crew, "pennants": Js.list(p.get("coop_pennants")).size(),
+		"crew": crew, "clears": RaidRun.tier_clears(s.store, s.uid, raid_id),
 		"coopClear": s.store.clear_count(s.uid, raid_id + "@coop") > 0,
 		"ownedSkins": Js.list(p.get("owned_ship_skins")),
 	}

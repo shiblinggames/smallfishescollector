@@ -106,6 +106,8 @@ func refresh() -> void:
 		var vis2: bool = shown(nid)
 		s.visible = vis2
 		s.set_state(str(status.get(nid, "locked")), nid == next_id, _primed and vis2 and not _seen.get(nid, false), sea._field)
+		var rid: String = str(Campaign.node(nid).get("raidId", ""))
+		s.seals = RaidRun.tier_clears(sea.session.store, sea.session.uid, rid) if rid != "" and not rid.ends_with("_challenge") and Battle.raid_def(rid).get("skirmish", false) != true else {}
 		_seen[nid] = vis2
 	for h: WayHome in _homes:
 		h.open = status.get(h.info["node"]) == "cleared"
@@ -473,10 +475,18 @@ class Ship:
 
 	## The dock: the patch of water you fight from, gold when you are in it.
 	var fighting: bool = false
+	## The tiers of this raid beaten (gold seals under the hull).
+	var seals: Dictionary = {}
 
 	func _draw() -> void:
 		if _st == "locked" or fighting:
 			return
+		# Its tiers beaten: Normal, Co-op, Co-op Challenge, as seals on the water.
+		if not seals.is_empty() and seals.get("normal", false):
+			draw_set_transform(Vector2(0, 64), 0.0, Vector2(1.0, 1.0 / Chart.GROUND * 0.6))
+			for q: int in 3:
+				ReadyScreen.seal(self, Vector2(-44.0 + q * 44.0, 0), 15.0, seals.get(["normal", "coop", "coopc"][q], false) == true)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		var inside: bool = boat_at.distance_to(dock()) < ENCOUNTER_REACH
 		var col: Color = GOLD if inside else Color(0.85, 0.92, 1.0)
 		var a: float = 0.32 if inside else 0.14

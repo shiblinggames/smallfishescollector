@@ -136,13 +136,17 @@ static func crate_odds(raid: Dictionary, fortune: float, tier: Dictionary = {}, 
 
 
 ## A tier clear's record: the clear of the raid itself (the campaign reads
-## it) and the tier's own ("raid@coop"), and a Co-op Challenge clear's pennant.
+## it) and the tier's own ("raid@coop"). Returns whether it is this captain's
+## first clear of that tier (the stamp says so).
 static func record_tier_clear(db: CaptainStore, uid: String, raid_id: String, tier_id: String, tier: Dictionary, ms: Variant = null) -> bool:
+	var key: String = raid_id if tier_id == "normal" or tier.is_empty() else "%s@%s" % [raid_id, tier_id]
+	var first: bool = db.clear_count(uid, key) == 0
 	record_clear(db, uid, raid_id, ms)
-	if tier_id == "normal" or tier.is_empty():
-		return false
-	db.add_clear(uid, "%s@%s" % [raid_id, tier_id], ms)
-	if tier.get("pennant", false) and not Js.list(db.me(uid).get("coop_pennants")).has(raid_id):
-		db.add_to_list(uid, "coop_pennants", raid_id)
-		return true
-	return false
+	if key != raid_id:
+		db.add_clear(uid, key, ms)
+	return first
+
+
+## Which tiers of a raid this captain has beaten.
+static func tier_clears(db: CaptainStore, uid: String, raid_id: String) -> Dictionary:
+	return { "normal": db.clear_count(uid, raid_id) > 0, "coop": db.clear_count(uid, raid_id + "@coop") > 0, "coopc": db.clear_count(uid, raid_id + "@coopc") > 0 }

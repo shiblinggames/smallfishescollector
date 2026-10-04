@@ -10,7 +10,7 @@ extends Control
 ##              why. The caller picks; a new pick asks everyone again.
 ##   THE LINE   four seats: each captain who has joined as a card (their
 ##              avatar, ship, Navigation and hull, the hands seated for raids,
-##              their pennants) with Ready or Not ready; an empty seat waits
+##              the tiers they have beaten) with Ready or Not ready; an empty seat waits
 ##              for a crewmate at the raid to join.
 ##   THE BOSS   its portrait and what the crate can pay: each item and the
 ##              chance it is in this captain's crate on this tier, the coin.
@@ -136,6 +136,9 @@ func _paint() -> void:
 		tab.note = t[2]
 		tab.shut = str(Js.obj(_st.get("tiers")).get(t[0], ""))
 		tab.chosen = _st.get("tier", "normal") == t[0]
+		for m4: Dictionary in Js.list(_st.get("members")):
+			if m4["key"] == _mine():
+				tab.cleared = Js.obj(Js.obj(m4.get("card")).get("clears")).get(t[0], false) == true
 		tab.can = caller
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.custom_minimum_size = Vector2(0, 74)
@@ -167,6 +170,13 @@ func _paint() -> void:
 			var m: Dictionary = members[i]
 			sc.member = m
 			sc.face = _face_tex(Js.obj(Js.obj(m.get("card")).get("face")))
+			# Pictures loaded here, never first inside _draw (they come out white).
+			var cd0: Dictionary = Js.obj(m.get("card"))
+			var sa0: Dictionary = North.ship_art(cd0.get("shipTier"), cd0.get("shipSkin"))
+			sc.ship_tex = Skipper.tex(str(sa0["art"]).trim_prefix("/"))
+			sc.ship_name = str(Js.obj(sa0["def"]).get("name", "Ship"))
+			for cm0: Variant in Js.list(cd0.get("crew")):
+				sc.crew_tex.append(Skipper.tex("card_thumbs/%s.png" % str(Js.obj(cm0).get("filename", "")).get_basename()))
 			sc.me = m["key"] == _mine()
 			sc.leader = m["key"] == _st.get("by")
 		seats.add_child(sc)
@@ -226,7 +236,7 @@ static func _terms(tier: String, tc: Dictionary) -> String:
 		"coop":
 			return "Co-op: enemies come one to four at a time and hit harder. x%s coin and XP, %d extra crate roll." % [str(tc.get("coin", 1.5)), int(Js.num(tc.get("extraRolls")))]
 		"coopc":
-			return "Co-op Challenge: more ships, tougher, elite escorts. x%s coin and XP, %d extra crate rolls, rarer finds, and the raid's pennant." % [str(tc.get("coin", 2.0)), int(Js.num(tc.get("extraRolls")))]
+			return "Co-op Challenge: more ships, tougher, elite escorts. x%s coin and XP, %d extra crate rolls, rarer finds." % [str(tc.get("coin", 2.0)), int(Js.num(tc.get("extraRolls")))]
 	return "Normal: one enemy at a time, as the raid was charted."
 
 
@@ -289,6 +299,7 @@ class TierTab:
 	var shut: String = ""
 	var chosen: bool = false
 	var can: bool = false
+	var cleared: bool = false
 
 	func _init() -> void:
 		flat = true
@@ -307,7 +318,9 @@ class TierTab:
 		BattleLook.draw_box(self, r, BattleLook.box(bg, Color(BattleLook.GOLD, 0.9) if chosen else Color(1, 1, 1, 0.07), 2 if chosen else 1, 12))
 		var a: float = 0.45 if shut != "" else 1.0
 		draw_string(Kit.font("cinzel", 700), Vector2(16, 32), title, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 18, Color(Dossier.INK, a))
-		draw_string(Kit.font("karla", 600), Vector2(16, 54), shut if shut != "" else note, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 12, Color(Dossier.HARM if shut != "" else Dossier.SOFT, 0.8 if shut != "" else 1.0))
+		draw_string(Kit.font("karla", 600), Vector2(16, 54), shut if shut != "" else note, HORIZONTAL_ALIGNMENT_LEFT, size.x - 56, 12, Color(Dossier.HARM if shut != "" else Dossier.SOFT, 0.8 if shut != "" else 1.0))
+		if cleared:
+			ReadyScreen.seal(self, Vector2(size.x - 26.0, size.y / 2.0), 14.0, true)
 
 
 ## A seat in the line: a captain's card, or an open seat.
@@ -318,6 +331,9 @@ class SeatCard:
 	var me: bool = false
 	var leader: bool = false
 	var solo: bool = false
+	var ship_tex: Texture2D
+	var ship_name: String = "Ship"
+	var crew_tex: Array = []
 	var _frames: int = 0
 
 	# A texture first loaded in _draw is white until the next frame: draw again.
@@ -345,26 +361,27 @@ class SeatCard:
 		if role != "":
 			BattleLook.say(self, Kit.font("karla", 600), cx, 144, role.trim_prefix("  ·  "), 12, Dossier.FAINT)
 		# Their ship.
-		var sa: Dictionary = North.ship_art(c.get("shipTier"), c.get("shipSkin"))
-		var tex: Texture2D = Skipper.tex(str(sa["art"]).trim_prefix("/"))
+		var tex: Texture2D = ship_tex
 		if tex != null:
 			var box: Vector2 = Vector2(r.size.x - 40.0, 70.0)
 			var sc: float = minf(box.x / float(tex.get_width()), box.y / float(tex.get_height()))
 			var ts: Vector2 = tex.get_size() * sc
 			draw_texture_rect(tex, Rect2(Vector2(cx - ts.x / 2.0, 156), ts), false)
-		BattleLook.say(self, Kit.font("karla", 700), cx, 244, "%s  ·  Nav %d  ·  Hull %d" % [str(Js.obj(sa["def"]).get("name", "Ship")), int(Js.num(c.get("nav"))), int(Js.num(c.get("hull")))], 12, Dossier.SOFT)
+		BattleLook.say(self, Kit.font("karla", 700), cx, 244, "%s  ·  Nav %d  ·  Hull %d" % [ship_name, int(Js.num(c.get("nav"))), int(Js.num(c.get("hull")))], 12, Dossier.SOFT)
 		# The hands seated for raids.
 		var crew: Array = Js.list(c.get("crew"))
 		var n: int = mini(crew.size(), 6)
 		var x0: float = cx - (n * 26.0 - 4.0) / 2.0 + 11.0
 		for k: int in n:
 			var cm: Dictionary = crew[k]
-			BattleLook.medallion(self, Vector2(x0 + k * 26.0, 268), 11.0, Skipper.tex("card_thumbs/%s.png" % str(cm.get("filename", "")).get_basename()), Color(str(cm.get("color", "#cccccc"))), str(cm.get("name", "?")).substr(0, 1), 1.0, Vector2(0.5, 0.36), 0.36)
+			BattleLook.medallion(self, Vector2(x0 + k * 26.0, 268), 11.0, crew_tex[k] if k < crew_tex.size() else null, Color(str(cm.get("color", "#cccccc"))), str(cm.get("name", "?")).substr(0, 1), 1.0, Vector2(0.5, 0.36), 0.36)
 		if crew.is_empty():
 			BattleLook.say(self, Kit.font("karla", 600), cx, 272, "no hands seated", 11, Dossier.FAINT)
-		var pn: int = int(Js.num(c.get("pennants")))
-		if pn > 0:
-			BattleLook.say(self, Kit.font("karla", 600), cx, 298, "%d pennant%s" % [pn, "" if pn == 1 else "s"], 11, BattleLook.GOLD)
+		# The tiers of this raid they have beaten, as seals.
+		var cl: Dictionary = Js.obj(c.get("clears"))
+		for q: int in 3:
+			var tid: String = ["normal", "coop", "coopc"][q]
+			ReadyScreen.seal(self, Vector2(cx - 26.0 + q * 26.0, 300), 9.0, cl.get(tid, false) == true)
 		# Ready or not.
 		var st: String = "Ready" if ready else "Not ready"
 		var f: Font = Kit.font("karla", 800)
@@ -430,3 +447,15 @@ class BossPane:
 			var pw: float = Kit.font("karla", 800).get_string_size(pct, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 			draw_string(Kit.font("karla", 800), Vector2(r.size.x - 28 - pw, y), pct, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Dossier.SOFT)
 			y += 24.0
+
+
+
+## A gold seal with a check: a tier beaten. Hollow and faint when not yet.
+static func seal(ci: CanvasItem, c: Vector2, r: float, won: bool) -> void:
+	if not won:
+		ci.draw_arc(c, r, 0.0, TAU, 32, Color(1, 1, 1, 0.18), 1.2, true)
+		return
+	ci.draw_circle(c, r + 2.0, Color(0, 0, 0, 0.35))
+	ci.draw_circle(c, r, BattleLook.GOLD.darkened(0.15))
+	ci.draw_arc(c, r * 0.78, 0.0, TAU, 32, Color(1, 0.95, 0.75, 0.6), 1.0, true)
+	ci.draw_polyline(PackedVector2Array([c + Vector2(-r * 0.42, 0), c + Vector2(-r * 0.1, r * 0.32), c + Vector2(r * 0.45, -r * 0.34)]), Color(0.18, 0.12, 0.05), maxf(1.6, r * 0.2), true)

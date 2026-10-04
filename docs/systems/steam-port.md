@@ -840,9 +840,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   captains; Co-op 26/57/35%; Co-op Challenge about 10/24/11%.
   PAY (core/raid_run.gd): kills x coin and x xp of the tier, escorts at escortPay of theirs; the
   crate rolls 1 + extraRolls times (each item at most once) with rarities x rarityMult, its coin
-  x coin; clears recorded as the raid's and "raid@coop"/"raid@coopc"; a Co-op Challenge clear
-  adds the raid to coop_pennants (the ledger and the entry screen count them; NOT YET flown from
-  the mast). Normal pays exactly as the web (parity unchanged, the crate's dice in the web's order).
+  x coin; clears recorded as the raid's and "raid@coop"/"raid@coopc". KONG: NO PENNANTS (removed).
+  THE MARK OF COMPLETION (Kong: "a satisfying mark of completion if you've beaten one"): each tier
+  of a raid beaten is a gold seal with a check (ReadyScreen.seal): on the entry screen's tier tab
+  (your own), under each captain's card (theirs), and in a row of three under the raid's ship on
+  the campaign water (Normal, Co-op, Challenge; hollow until beaten). Winning a raid slams a
+  "RAID CLEARED" seal down mid-screen with the tier under it (BattleStage.Stamp: the sea dims, a
+  ring of light, a thump); the first clear of that tier adds a FIRST CLEAR ribbon and a burst of
+  gold (RaidRun.record_tier_clear returns first; the table sends "tierClear"). Normal pays exactly as the web (parity unchanged, the crate's dice in the web's order).
   THE ENTRY SCREEN (game/ready_screen.gd; Kong: "like going into a group dungeon in Warcraft"):
   the raid, the three tiers side by side (a shut one says why), four seats (each captain's avatar,
   ship, Navigation, hull, seated hands, pennants, Ready / Not ready; open seats), the boss and

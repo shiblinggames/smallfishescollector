@@ -1045,6 +1045,10 @@ func _one(x: Dictionary) -> void:
 				_log_line("Your crate: %s ⟡%s" % [Js.thousands(Js.num(x.get("coin"))), ("  ·  " + ", ".join(PackedStringArray(items))) if not items.is_empty() else ""])
 				Sound.chest(true)
 				await _wait(3.2)
+		"tierClear":
+			if x["key"] == my_key:
+				_stamp(str(x.get("tier", "normal")), x.get("first", false) == true)
+				await _wait(1.6)
 		"tided":
 			var r: Dictionary = Js.obj(Js.obj(x.get("picks")).get(my_key))
 			if Js.num(r.get("heal")) > 0.0:
@@ -1212,8 +1216,10 @@ func _won() -> void:
 func _crate() -> void:
 	var s: Dictionary = b["seats"][me]
 	var r: Dictionary = RaidRun.open_crate(sea.session.store, sea.session.uid, _raid, float(s["fortune"]))
-	RaidRun.record_clear(sea.session.store, sea.session.uid, raid_id, float(Time.get_ticks_msec() - _began_ms))
+	var first: bool = RaidRun.record_tier_clear(sea.session.store, sea.session.uid, raid_id, "normal", {}, float(Time.get_ticks_msec() - _began_ms))
 	sea.session.persist()
+	if not _raid.get("skirmish", false):
+		_stamp("normal", first)
 	_say(str(_raid.get("bossDefeatedText", "Victory")) if str(_raid.get("bossDefeatedText", "")) != "" else "Victory")
 	if not r.is_empty():
 		var items: Array = (r["items"] as Array).map(func(x: Dictionary) -> String: return str(x.get("label", x["id"])))
@@ -2158,3 +2164,70 @@ func _role_move(x: Dictionary) -> void:
 			_log_line("The %s rallies the line: they hit harder for a while." % nm)
 	Sound.seal(true)
 	await _wait(0.45)
+
+
+
+## THE MARK OF A RAID BEATEN: a gold seal slams down mid-screen (a thump, a
+## ring of light), "RAID CLEARED" over it and the tier under it; the first
+## clear of that tier says so on a ribbon, with a burst of gold.
+func _stamp(tier: String, first: bool) -> void:
+	var st: Stamp = Stamp.new()
+	st.tier = { "normal": "Normal", "coop": "Co-op", "coopc": "Co-op Challenge" }.get(tier, "Normal")
+	st.first = first
+	add_child(st)
+	Sound.impact(true)
+	Sound.seal(true)
+	if first:
+		Sound.chest(true)
+	Rumble.buzz([0, 70, 40, 50])
+
+
+class Stamp:
+	extends Control
+	var tier: String = ""
+	var first: bool = false
+	var _t: float = 0.0
+
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(delta: float) -> void:
+		_t += delta
+		if _t > 3.2:
+			queue_free()
+		queue_redraw()
+
+	func _draw() -> void:
+		var c: Vector2 = Vector2(size.x / 2.0, size.y * 0.42)
+		var land: float = clampf(_t / 0.22, 0.0, 1.0)
+		var k: float = lerpf(2.6, 1.0, 1.0 - pow(1.0 - land, 3.0))
+		var a: float = clampf(_t / 0.12, 0.0, 1.0) * (1.0 - smoothstep(2.6, 3.2, _t))
+		# The sea dims behind it, so the seal reads.
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.62 * a))
+		# The ring of light where it lands.
+		if land >= 1.0:
+			var u: float = clampf((_t - 0.22) / 0.6, 0.0, 1.0)
+			draw_arc(c, 90.0 + 160.0 * u, 0.0, TAU, 64, Color(1.0, 0.85, 0.45, 0.6 * (1.0 - u)), 6.0 * (1.0 - u) + 1.0, true)
+			if first:
+				for q: int in 18:
+					var ang: float = TAU * q / 18.0 + 0.3
+					var d: float = 100.0 + 220.0 * u
+					draw_circle(c + Vector2(cos(ang), sin(ang)) * d, 4.0 * (1.0 - u), Color(1.0, 0.85, 0.4, 1.0 - u))
+		draw_set_transform(c, -0.06, Vector2(k, k))
+		var r: float = 78.0
+		draw_circle(Vector2(0, 4), r + 8.0, Color(0, 0, 0, 0.35 * a))
+		draw_circle(Vector2.ZERO, r, Color(BattleLook.GOLD.darkened(0.12), a))
+		draw_arc(Vector2.ZERO, r - 8.0, 0.0, TAU, 64, Color(1, 0.95, 0.75, 0.55 * a), 2.0, true)
+		draw_arc(Vector2.ZERO, r - 14.0, 0.0, TAU, 64, Color(0.3, 0.2, 0.08, 0.35 * a), 1.0, true)
+		draw_polyline(PackedVector2Array([Vector2(-30, 2), Vector2(-8, 24), Vector2(32, -22)]), Color(0.18, 0.12, 0.05, a), 9.0, true)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var f: Font = Kit.font("cinzel", 800)
+		BattleLook.say(self, f, c.x, c.y - 110.0, "RAID CLEARED", 30, Color(BattleLook.CREAM, a), 8)
+		BattleLook.say(self, Kit.font("karla", 800), c.x, c.y + 122.0, tier.to_upper(), 16, Color(BattleLook.GOLD, a), 6)
+		if first:
+			var rib: String = "FIRST CLEAR"
+			var rw: float = Kit.font("karla", 800).get_string_size(rib, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 30.0
+			var rr: Rect2 = Rect2(Vector2(c.x - rw / 2.0, c.y + 136.0), Vector2(rw, 26))
+			BattleLook.draw_box(self, rr, BattleLook.box(Color(BattleLook.GOLD.darkened(0.5), 0.95 * a), Color(BattleLook.GOLD, a), 1, 13))
+			BattleLook.say(self, Kit.font("karla", 800), c.x, rr.end.y - 8.0, rib, 13, Color(BattleLook.GOLD.lightened(0.3), a))
