@@ -132,6 +132,7 @@ var _music_started: bool = false
 
 
 func _ready() -> void:
+	SteamLayer.presence_home()
 	var water_layer: CanvasLayer = CanvasLayer.new()
 	water_layer.layer = -10
 	add_child(water_layer)

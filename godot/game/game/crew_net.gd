@@ -162,7 +162,9 @@ func _on_lobby_created(ok: int, lobby: int) -> void:
 	var peer: Object = ClassDB.instantiate("SteamMultiplayerPeer")
 	peer.call("create_host", 0)
 	multiplayer.multiplayer_peer = peer
-	steam.call("setRichPresence", "steam_display", "#Charter")
+	SteamLayer.charter_name = str(charter.data["name"])
+	SteamLayer.joinable(lobby)
+	SteamLayer.presence_home()
 	_send_roster()
 
 
@@ -173,6 +175,9 @@ func _on_lobby_joined(lobby: int, _perms: int, _locked: bool, response: int) -> 
 		_drop("That Charter's lobby would not let you in.")
 		return
 	lobby_id = lobby
+	SteamLayer.charter_name = str(SteamLayer.steam().call("getLobbyData", lobby, "charter"))
+	SteamLayer.joinable(lobby)
+	SteamLayer.presence_home()
 	var owner: int = int(SteamLayer.steam().call("getLobbyOwner", lobby))
 	var peer: Object = ClassDB.instantiate("SteamMultiplayerPeer")
 	peer.call("create_client", owner, 0)
@@ -192,6 +197,9 @@ func leave() -> void:
 	if SteamLayer.up and lobby_id != 0:
 		SteamLayer.steam().call("leaveLobby", lobby_id)
 	lobby_id = 0
+	SteamLayer.charter_name = ""
+	SteamLayer.joinable(0)
+	SteamLayer.presence_home()
 	_fail_open("You left the Charter.")
 	if charter != null and hosting:
 		charter.write()

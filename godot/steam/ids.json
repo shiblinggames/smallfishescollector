@@ -1,0 +1,5 @@
+{
+  "_": "Steamworks IDs per channel, filled in once Steamworks gives them (docs/systems/steam-port.md, THE STEAM PLAYTEST PIPELINE). appId: the app the build runs as (it goes into the build's override.cfg); depotId: the depot SteamPipe uploads to (usually appId + 1); branch: the branch a successful upload is set live on (\"\" leaves it for you to set live in Steamworks; Valve does not let steamcmd set the default branch of a released app).",
+  "playtest": { "appId": 0, "depotId": 0, "branch": "" },
+  "game": { "appId": 0, "depotId": 0, "branch": "" }
+}

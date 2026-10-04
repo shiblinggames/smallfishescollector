@@ -1,0 +1,11 @@
+"lang"
+{
+	"Language"	"english"
+	"Tokens"
+	{
+		"#Sea"	"At sea"
+		"#Charter"	"Sailing with %charter%"
+		"#Raid"	"On a raid: %raid%"
+		"#Gauntlet"	"%gauntlet%, depth %depth%"
+	}
+}

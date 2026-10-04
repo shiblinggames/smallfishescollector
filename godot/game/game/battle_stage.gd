@@ -126,6 +126,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	theme = UiTheme.make()
 	_raid = Battle.raid_def(raid_id)
+	tree_exiting.connect(SteamLayer.presence_home)
+	if gauntlet == "":
+		SteamLayer.presence("#Raid", { "raid": str(_raid.get("raidTitle", "a raid")) })
 	if table != null:
 		b = (Js.obj(table.get("state"))["b"] as Dictionary).duplicate(true)
 		for i: int in (b["seats"] as Array).size():
@@ -2756,6 +2759,7 @@ func _depth_call() -> void:
 	var dn: Dictionary = Js.obj(_latest.get("descent"))
 	if dn.is_empty():
 		return
+	SteamLayer.presence("#Gauntlet", { "gauntlet": str(Gauntlet.NAMES.get(gauntlet, "The gauntlet")), "depth": str(int(Js.num(dn.get("depth")))) })
 	if gauntlet != "":
 		sea.water_theme = _water_theme(dn)
 	var dc: DepthCall = DepthCall.new()

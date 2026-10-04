@@ -1582,6 +1582,30 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     runs two headless copies (host and crew): join, Set Sail, each sees the other named, the
     crewmate fishes for real on the founder's clock and buys bait, a refusal comes back as a
     refusal, the Charter file holds it all, and leaving is seen.
+  THE STEAM PLAYTEST PIPELINE (2026-10-04; Kong: "I would want to leverage steam playtest"):
+  - BUILD: `node tools/build.mjs` (from godot/game; `--channel game` for the store app). It
+    fetches Godot's export templates once if missing (about 1 GB), runs tools/setup.mjs (the art
+    is not committed, so the build always packs the current art), exports the "Windows" preset
+    (export_presets.cfg; content/*.json included, tests/tools/port_art left out) into
+    build/steam/content/ (SeasTheBooty.exe, .pck, GodotSteam's DLLs), and writes override.cfg
+    beside the exe: the channel's Steam App ID (SteamLayer reads steam/app_id) and a build stamp.
+  - IDS: godot/steam/ids.json, per channel (playtest, game): appId, depotId, and the branch an
+    upload is set live on ("" to set it live by hand in Steamworks).
+  - UPLOAD: the build writes SteamPipe's app_build and depot_build scripts to
+    build/steam/scripts/ and prints the one line: `steamcmd +login <builder> +run_app_build
+    <app_build vdf> +quit`. Kong runs it (steamcmd asks for the password and Steam Guard code
+    itself; credentials never pass through anything here). steamcmd: Valve's zip, unpacked
+    anywhere (e.g. C:\steamcmd).
+  - IN STEAMWORKS (Kong): the app (Steam Direct), its store page to Coming Soon (the Request
+    Access button lives there), the Playtest (its own App ID and depot: put them in ids.json),
+    Installation > General: launch SeasTheBooty.exe on Windows; Community > Rich Presence: upload
+    godot/steam/rich_presence.vdf as English; Steam Cloud: Auto-Cloud on the user folder's
+    captains/ (%APPDATA%/Seas the Booty/captains on Windows); then grant access (sign-ups or keys).
+  - WHAT FRIENDS SEE: rich presence (SteamLayer.presence): "At sea", "Sailing with <Charter>",
+    "On a raid: <raid>", "<gauntlet>, depth N"; a Charter's lobby is set as the "connect" string,
+    so Join Game from a friend's list works (main.gd reads +connect_lobby on launch).
+  - The Steam path (lobby, invites, the peer) has still never run with two real accounts: the
+    first playtest session is its first test.
   THE SHARED RULES, BUILT (2026-10-01), `game/charter.gd`:
   - The Charter keeps the shared parts and LENDS them into a captain's save before each
     action, TAKES them back after, and lends the result to every other captain. So the

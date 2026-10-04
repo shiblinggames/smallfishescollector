@@ -37,6 +37,35 @@ static func steam() -> Object:
 	return Engine.get_singleton("Steam") if up else null
 
 
+## The Charter this captain sails with (its name), for what friends see.
+static var charter_name: String = ""
+
+
+## WHAT FRIENDS SEE (rich presence; godot/steam/rich_presence.vdf is the
+## English localization to upload in Steamworks): a token and its values.
+static func presence(token: String, vars: Dictionary = {}) -> void:
+	if not up:
+		return
+	for k: Variant in vars:
+		steam().call("setRichPresence", str(k), str(vars[k]))
+	steam().call("setRichPresence", "steam_display", token)
+
+
+## Back on the water: with the Charter, or alone at sea.
+static func presence_home() -> void:
+	if charter_name != "":
+		presence("#Charter", { "charter": charter_name })
+	else:
+		presence("#Sea")
+
+
+## The lobby friends can join from their list (Join Game): "" when none.
+static func joinable(lobby: int) -> void:
+	if not up:
+		return
+	steam().call("setRichPresence", "connect", "+connect_lobby %d" % lobby if lobby != 0 else "")
+
+
 ## Who is playing: their Steam ID, or on the local network a key this machine
 ## keeps (a second copy on the same machine passes --as=<name> to be someone
 ## else).
