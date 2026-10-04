@@ -1595,6 +1595,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     the fishing spoil; the Locker's Special slot shows it beside the first ("Seated" / "Hand's
     slot"), a press toggling it.
   - THE TIDE TURNER: 3 skips a SEA DAY (Fishing.tide_day; the date under the parity run).
+  - RENOWN (core/renown.gd; the guide's Renown tab, from the level bar): both boards, Fishing
+    and Navigation, on the web's curve (50,000 past 100, +15,000 a level, steady at 200,000);
+    spend a point a press; a respec token clears one board and costs 200,000 ⟡ (the web's 2,000
+    gems x 100). The effects were already read (Rules.fishing_renown, the battle seat).
   - THE DAMAGE GATE (Campaign.dps_preview) counts the raid items that touch one straight opening
     shot at a ship that is no boss: non-crit, escort and first-shot multipliers from the battle
     seat, tempered grades in (the web counted the non-crit cost alone).

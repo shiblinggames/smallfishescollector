@@ -106,7 +106,7 @@ func _build_levels() -> void:
 	_body.add_child(head)
 	var ht: Label = Paper.text(head, "Fishing %d" % lv, "heading", Paper.INK)
 	ht.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for o: Array in [["levels", "Every level"], ["skills", "Skills"], ["achievements", "Achievements"]]:
+	for o: Array in [["levels", "Every level"], ["skills", "Skills"], ["renown", "Renown"], ["achievements", "Achievements"]]:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == _levels_view)
 		b.pressed.connect(func() -> void:
 			_levels_view = o[0]
@@ -116,6 +116,10 @@ func _build_levels() -> void:
 	if _levels_view == "achievements":
 		ht.text = "Achievements"
 		_build_achievements()
+		return
+	if _levels_view == "renown":
+		ht.text = "Renown"
+		_build_renown()
 		return
 	Paper.text(_body, "Skills are free and yours for good. They save you time or show you more; catching is down to your gear." if _levels_only_skills else "Every level and what it brings. Gear unlocks are for sale at the shops from that level; skills, upgrades and gifts are free.", "note", Paper.INK_SOFT, true)
 	var scroll: ScrollContainer = ScrollContainer.new()
@@ -164,6 +168,77 @@ func _build_levels() -> void:
 		await get_tree().process_frame
 		if is_instance_valid(scroll) and is_instance_valid(next_row):
 			scroll.scroll_vertical = int(maxf(0.0, next_row.position.y - 120.0))
+
+
+## RENOWN (core/renown.gd): past level 100, Fishing and Navigation each earn
+## Renown points to spend on their own board; a respec token clears one.
+func _build_renown() -> void:
+	Paper.text(_body, "Past level 100, every skill keeps going: its XP earns Renown levels, each a point to spend on that skill's board. Points stay where you put them; a respec token clears one board.", "note", Paper.INK_SOFT, true)
+	var tokens: HBoxContainer = HBoxContainer.new()
+	tokens.add_theme_constant_override("separation", 10)
+	_body.add_child(tokens)
+	var tl: Label = Paper.text(tokens, "Respec tokens: %d" % int(Js.num(session.profile().get("renown_respecs"))), "small", Paper.INK_SOFT)
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var buy: Pane.PaneButton = Paper.button("Buy a token  ·  %s ⟡" % Js.thousands(Renown.RESPEC_COST))
+	buy.disabled = Js.num(session.profile().get("doubloons")) < Renown.RESPEC_COST
+	buy.pressed.connect(func() -> void: _renown_act("buyRenownRespec", []))
+	tokens.add_child(buy)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(scroll)
+	var list: VBoxContainer = VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	scroll.add_child(list)
+	for skill: String in ["fishing", "nav"]:
+		var st: Dictionary = RulesApi.run(session.store, session.uid, "renownState", [skill])
+		var title: String = "Fishing" if skill == "fishing" else "Navigation"
+		var h: HBoxContainer = HBoxContainer.new()
+		list.add_child(h)
+		var hl: Label = Paper.text(h, "%s Renown %d" % [title, int(st["level"])], "heading", Paper.INK)
+		hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		Paper.text(h, "%d to spend" % int(st["available"]) if int(st["available"]) > 0 else "", "body_strong", Paper.RED)
+		if not st["reached"]:
+			Paper.text(list, "Opens at %s 100." % title, "small", Paper.INK_FAINT)
+		else:
+			var pg: Array = st["progress"]
+			Paper.text(list, "%s of %s XP to the next point." % [Js.thousands(float(pg[0])), Js.thousands(float(pg[1]))], "small", Paper.INK_SOFT)
+		for s: Dictionary in Renown.STATS[skill]:
+			var pts: float = Js.num(Js.obj(st["alloc"]).get(s["id"]))
+			var row: HBoxContainer = HBoxContainer.new()
+			row.add_theme_constant_override("separation", 10)
+			list.add_child(row)
+			var v: VBoxContainer = VBoxContainer.new()
+			v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			v.add_theme_constant_override("separation", 0)
+			row.add_child(v)
+			Paper.text(v, "%s  ·  %d point%s" % [s["name"], int(pts), "" if int(pts) == 1 else "s"], "body_strong", Paper.INK)
+			Paper.text(v, "%s  Now %s; each point %s." % [s["blurb"], Renown.total_text(s, pts), Renown.total_text(s, 1.0)], "small", Paper.INK_SOFT, true)
+			var add: Pane.PaneButton = Paper.button("Spend a point")
+			add.disabled = int(st["available"]) <= 0
+			add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			var sid: String = s["id"]
+			add.pressed.connect(func() -> void: _renown_act("allocateRenown", [skill, sid]))
+			row.add_child(add)
+		if int(st["spent"]) > 0:
+			var rs: Pane.PaneButton = Paper.button("Clear this board  ·  a token")
+			rs.disabled = int(st["respecs"]) <= 0
+			rs.size_flags_horizontal = Control.SIZE_SHRINK_END
+			rs.pressed.connect(func() -> void: _renown_act("respecRenown", [skill]))
+			list.add_child(rs)
+		Paper.rule(list)
+
+
+func _renown_act(op: String, args: Array) -> void:
+	var r: Variant = await session.act(op, args)
+	session.persist()
+	if r is Dictionary and (r as Dictionary).has("error"):
+		Sound.slack()
+	else:
+		Sound.plip()
+	_rebuild()
 
 
 ## ACHIEVEMENTS (port rules): your points, the colours they unlock (the only

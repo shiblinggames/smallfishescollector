@@ -1384,7 +1384,12 @@ func _init() -> void:
 			for f: int in 30:
 				await process_frame
 		"levels":
-			hud.open_guide()
+			if OS.get_environment("GUIDE") == "renown":
+				p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[99]) + 400000.0
+				p["expedition_xp"] = float((Rules.data()["navXpTable"] as Array)[99]) + 60000.0
+				p["fishing_renown_alloc"] = { "wisdom": 2.0, "providence": 1.0 }
+				p["renown_respecs"] = 1.0
+			hud.open_guide(OS.get_environment("GUIDE") if OS.get_environment("GUIDE") != "" else "levels")
 			for f: int in 40:
 				await process_frame
 		"boattab":
