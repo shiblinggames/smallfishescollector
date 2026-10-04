@@ -8,14 +8,14 @@ extends Control
 ## crit (a Sharpshot widens it), green the hit, the pale fringe a graze.
 ## Emits locked(result) with "critical", "hit", "graze" or "miss".
 ##
-## ITS LOOK (Kong, 2026-10-04: "more game-y", and its own, not the fishing
-## dial's): a gunnery sight (fx/aim_bar.gdshader): a gunmetal rail round a
-## smoked-glass track, the bands burning inside it (amber graze, green hit, a
-## white-hot gold crit seam that pulses), the one under the needle blazing.
-## The needle is a line of light in the colour of the band it is over (gold:
-## press now for a crit) with a streak behind it and targeting brackets; a lock
-## throws a shockwave and embers in the result's colour and floods the glass.
-## FIRE or VOLLEY bold under it with its key. It floats free over the water.
+## ITS LOOK (Kong, 2026-10-04: its own, not the fishing dial's, and "more
+## flat looking to still match our overall aesthetic"): flat
+## (fx/aim_bar.gdshader): a lacquer panel with a hairline edge round a dark
+## track, the bands solid (a muted amber graze, the hit green, a gold crit
+## seam), the one under the needle at full strength. The needle a flat bar in
+## its band's colour with flat brackets; a lock flashes its band, rings out
+## once and throws embers. FIRE or VOLLEY bold under it with its key in a
+## pill. It floats free over the water.
 ##
 ## WHAT THE ENEMY DOES TO IT (Battle.aim_for): the zone's speed stack (up to
 ## four times), a crit seam that drifts inside the zone (Rolling Plate), fog
@@ -185,7 +185,7 @@ func _lit() -> int:
 	return 0
 
 
-const LIT_COL: Array = [Color(0.82, 0.92, 1.0), Color(1.0, 0.66, 0.28), Color(0.35, 1.0, 0.58), Color(1.0, 0.86, 0.35)]
+const LIT_COL: Array = [Color(0.94, 0.88, 0.77), Color(0.92, 0.7, 0.38), Color(0.5, 0.85, 0.6), Color(1.0, 0.84, 0.38)]
 
 
 func _feed() -> void:
@@ -328,30 +328,25 @@ func _draw() -> void:
 			var fa: float = dark.a * (1.0 - (k + 1) / 9.0)
 			draw_rect(Rect2(wx0 + k * 3.0, top, 3.0, hgt), Color(dark, fa))
 			draw_rect(Rect2(wx1 - (k + 1) * 3.0, top, 3.0, hgt), Color(dark, fa))
-	# The needle: a bright line of light in the colour of the band it is
-	# over, a streak of light trailing it, targeting brackets above and below.
+	# The needle: a flat bar in the colour of the band it is over (gold:
+	# press now for a crit), flat brackets above and below, a faint trail.
 	var nx: float = px.call(_pos)
 	var ncol: Color = LIT_COL[_lit()] if blind <= 0.0 else LIT_COL[0]
-	var gt: Texture2D = _glow_tex()
 	for k: int in range(_trail.size() - 1, 0, -1):
 		var tx: float = px.call(float(_trail[k]))
-		var fa: float = 1.0 - float(k) / _trail.size()
-		draw_rect(Rect2(tx - 1.5, rail.position.y + 4, 3.0, rail.size.y - 8), Color(ncol, 0.22 * fa))
-	draw_texture_rect(gt, Rect2(nx - 18.0, rail.position.y - 10.0, 36.0, rail.size.y + 20.0), false, Color(ncol, 0.55))
-	draw_rect(Rect2(nx - 2.0, rail.position.y - 6.0, 4.0, rail.size.y + 12.0), Color(ncol, 0.95))
-	draw_rect(Rect2(nx - 0.75, rail.position.y - 4.0, 1.5, rail.size.y + 8.0), Color(1, 1, 1, 0.95))
-	# The brackets: a sight closing on the line.
-	var bw: float = 9.0
-	var by0: float = rail.position.y - 12.0
-	var by1: float = rail.end.y + 12.0
+		draw_rect(Rect2(tx - 1.0, rail.position.y + 4, 2.0, rail.size.y - 8), Color(ncol, 0.12 * (1.0 - float(k) / _trail.size())))
+	draw_rect(Rect2(nx - 2.0, rail.position.y - 6.0, 4.0, rail.size.y + 12.0), ncol)
+	var bw: float = 8.0
+	var by0: float = rail.position.y - 11.0
+	var by1: float = rail.end.y + 11.0
 	for sx: float in [-1.0, 1.0]:
-		draw_polyline(PackedVector2Array([Vector2(nx + sx * bw, by0 + 6.0), Vector2(nx + sx * bw, by0), Vector2(nx + sx * 3.0, by0)]), Color(ncol, 0.95), 2.0, true)
-		draw_polyline(PackedVector2Array([Vector2(nx + sx * bw, by1 - 6.0), Vector2(nx + sx * bw, by1), Vector2(nx + sx * 3.0, by1)]), Color(ncol, 0.95), 2.0, true)
+		draw_polyline(PackedVector2Array([Vector2(nx + sx * bw, by0 + 5.0), Vector2(nx + sx * bw, by0), Vector2(nx + sx * 3.0, by0)]), ncol, 2.0)
+		draw_polyline(PackedVector2Array([Vector2(nx + sx * bw, by1 - 5.0), Vector2(nx + sx * bw, by1), Vector2(nx + sx * 3.0, by1)]), ncol, 2.0)
 	# A lock's shockwave out from the needle.
 	if _ring >= 0.0:
 		var ru: float = _ring / 0.6
 		var rr: float = 16.0 + ru * 120.0
-		draw_arc(Vector2(px.call(_burst_x), rail.get_center().y), rr, 0.0, TAU, 48, Color(_burst_col, 0.8 * (1.0 - ru)), 3.0 * (1.0 - ru) + 1.0, true)
+		draw_arc(Vector2(px.call(_burst_x), rail.get_center().y), rr, 0.0, TAU, 48, Color(_burst_col, 0.6 * (1.0 - ru)), 2.0, true)
 	# The embers of a lock.
 	if true:
 		for em: Dictionary in _embers:
@@ -381,7 +376,6 @@ func _draw() -> void:
 		var by: float = rail.end.y + 50.0
 		var cx: float = x0
 		for ch: String in word:
-			draw_string_outline(wf, Vector2(cx, by), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, 8, Color(0, 0, 0, 0.6))
 			draw_string(wf, Vector2(cx, by), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, Color(1, 0.97, 0.9))
 			cx += wf.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2).x + 3.0
 		var kr: Rect2 = Rect2(x0 + ww + 12.0, by - 18.0, kw, 20.0)
