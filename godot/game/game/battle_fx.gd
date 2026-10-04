@@ -23,10 +23,9 @@ extends Node2D
 ##   A SWERVE     a dodge: a curl of foam and spray where the hull leant away.
 ## Drawn here in the World's space: un-squashed for what stands out of the
 ## water (balls, smoke, shards), flat for what lies on it (rings, foam).
-## PAINTED (Kong on the web: drawn gradient blobs read "elementary"; painted
-## sheets are the answer): smoke, flashes, embers, flames, ice, frost, ward
-## arcs, sparks, spray and fireballs are cells of the web's fx-sheet.webp
-## (FRAMES), drawn as sprites; the additive ones (light) on a child layer.
+## PARTICLES, never painted art (Kong, 2026-10-04): flashes, embers, flames,
+## sparks, ice slivers, mist and spray are particle shapes (FxSheet); the
+## additive ones (light) on a child layer.
 
 const GROUND: float = 0.58
 
@@ -42,27 +41,18 @@ var _sparks: Array = []
 var _t: float = 0.0
 ## A soft white glow (tinted as drawn): flashes fall off rather than sit flat.
 var _glow: Texture2D = Glow.radial(128, Color.WHITE)
-## The painted sheet (128 px cells, the element centred in each).
-const FRAMES: Dictionary = {
-	"flame": Rect2(0, 0, 128, 128), "ember": Rect2(128, 0, 128, 128), "ice": Rect2(256, 0, 128, 128), "frost": Rect2(384, 0, 128, 128),
-	"ward": Rect2(0, 128, 128, 128), "smoke": Rect2(128, 128, 128, 128), "spark": Rect2(256, 128, 128, 128), "splash": Rect2(384, 128, 128, 128),
-	"flash": Rect2(0, 256, 128, 128), "fireball": Rect2(128, 256, 128, 128),
-}
-const LIGHT: Array = ["flame", "ember", "spark", "flash", "fireball", "ward"]
-static var sheet: Texture2D
-## Painted particles: { k, p (un-squashed), v, t, life, s0, s1 (px across),
+const LIGHT: Array = FxSheet.LIGHT
+## Particles: { k, p (un-squashed), v, t, life, s0, s1 (px across),
 ## rot, spin, c, a, g, drag }.
 var _paint: Array = []
 var _add: Node2D
 ## Standing links between two hulls (a pack's combo), set by the stage each
-## frame: [[World a, World b, colour]]; drawn as a painted rope sagging
-## between them, fading in.
+## frame: [[World a, World b, colour]]; drawn as motes running along a sag
+## between them.
 var links: Array = []
 
 
 func _ready() -> void:
-	if sheet == null:
-		sheet = Skipper.tex("fx-sheet.webp")
 	_add = Node2D.new()
 	var m: CanvasItemMaterial = CanvasItemMaterial.new()
 	m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -71,7 +61,7 @@ func _ready() -> void:
 	add_child(_add)
 
 
-## One painted particle. `at` is un-squashed (BattleFx.up of a World point,
+## One particle. `at` is un-squashed (BattleFx.up of a World point,
 ## then lifted); `size` the width in px at birth, `grow` its width at death.
 func paint(k: String, at: Vector2, v: Vector2, life: float, size: float, grow: float = -1.0, c: Color = Color.WHITE, opts: Dictionary = {}) -> void:
 	var p: Dictionary = { "k": k, "p": at, "v": v, "t": float(opts.get("delay", 0.0)) * -1.0, "life": life, "s0": size, "s1": size if grow < 0.0 else grow,
@@ -376,13 +366,7 @@ func _draw() -> void:
 		var pos: Vector2 = (p["p"] as Vector2) if p.get("world", true) == false else up(p["p"])
 		if p.get("flash", false):
 			continue
-		if sheet != null:
-			if not p.has("rot"):
-				p["rot"] = randf() * TAU
-			var w: float = float(p["r"]) * 2.8 * (0.7 + 0.9 * u)
-			_sprite(self, "smoke", pos, w, float(p["rot"]) + u * 0.6, Color(p["c"], minf(1.0, float(p.get("a", 0.45)) * 1.5) * (1.0 - u) * minf(1.0, u * 8.0 + 0.25)))
-		else:
-			draw_circle(pos, float(p["r"]) * (0.7 + 0.9 * u), Color(p["c"], float(p.get("a", 0.45)) * (1.0 - u)))
+		draw_circle(pos, float(p["r"]) * (0.7 + 0.9 * u), Color(p["c"], float(p.get("a", 0.45)) * (1.0 - u)))
 	for sp: Dictionary in _sparks:
 		if float(sp["t"]) < 0.0:
 			continue
@@ -423,32 +407,29 @@ func _draw() -> void:
 			var ax: Vector2 = Vector2.from_angle(rot) * r1 * 1.6
 			var ay: Vector2 = Vector2.from_angle(rot + PI / 2.0) * r1 * 0.5
 			draw_colored_polygon(PackedVector2Array([c0 + ax, c0 + ay, c0 - ax, c0 - ay]), col)
-		elif q.get("ember", false) and sheet != null:
+		elif q.get("ember", false):
 			continue
 		else:
 			draw_circle(q["p"], float(q["r"]) * (1.0 - u5 * 0.5), col)
-	# A combo's rope between its two hulls.
+	# A combo's link between its two hulls: amber motes running along a sag.
 	for ln: Array in links:
 		var a0: Vector2 = up(ln[0]) + Vector2(0, -70)
 		var b0: Vector2 = up(ln[1]) + Vector2(0, -70)
-		var mid: Vector2 = (a0 + b0) / 2.0 + Vector2(0, 50.0 + 6.0 * sin(_t * 1.5))
-		var steps: int = maxi(2, int(a0.distance_to(b0) / 80.0))
-		for k: int in steps:
-			var f: float = (k + 0.5) / steps
+		var mid: Vector2 = (a0 + b0) / 2.0 + Vector2(0, 50.0)
+		for k: int in 14:
+			var f: float = fposmod(k / 14.0 + _t * 0.18, 1.0)
 			var q: Vector2 = a0.lerp(mid, f).lerp(mid.lerp(b0, f), f)
-			var q2: Vector2 = a0.lerp(mid, f + 0.01).lerp(mid.lerp(b0, f + 0.01), f + 0.01)
-			FxSheet.draw(self, "rope", q, 96.0, (q2 - q).angle(), Color(ln[2], 0.55 + 0.1 * sin(_t * 3.0 + k)), 1.0, Transform2D(0.0, Vector2(1.0, 1.0 / GROUND), 0.0, Vector2.ZERO))
-	# The painted particles that are not light.
+			var fade: float = sin(f * PI)
+			draw_circle(q, 2.4, Color(ln[2], 0.75 * fade))
+	# The particles that are not light.
 	for pp: Dictionary in _paint:
 		if not LIGHT.has(pp["k"]) and float(pp["t"]) >= 0.0:
 			_paint_one(self, pp)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-## The light: painted flashes, embers, flames, sparks and fireballs, added.
+## The light: flashes, embers, flames, sparks and fireballs, added.
 func _draw_light() -> void:
-	if sheet == null:
-		return
 	for p: Dictionary in _puffs:
 		if not p.get("flash", false) or float(p["t"]) < 0.0:
 			continue
@@ -476,14 +457,9 @@ func _paint_one(on: CanvasItem, pp: Dictionary) -> void:
 	_sprite(on, str(pp["k"]), pp["p"], w, float(pp["rot"]), Color(pp["c"], (pp["c"] as Color).a * a))
 
 
-## One cell of the sheet, `w` px across, centred at `at` (un-squashed).
+## One particle, `w` px across, centred at `at` (un-squashed).
 func _sprite(on: CanvasItem, k: String, at: Vector2, w: float, rot: float, c: Color) -> void:
-	if c.a <= 0.003 or w <= 0.5:
-		return
-	var m: Transform2D = Transform2D(0.0, Vector2(1.0, 1.0 / GROUND), 0.0, Vector2.ZERO) * Transform2D(rot, Vector2(w / 128.0, w / 128.0), 0.0, at)
-	on.draw_set_transform_matrix(m)
-	on.draw_texture_rect_region(sheet, Rect2(-64, -64, 128, 128), FRAMES[k], c)
-	on.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0 / GROUND) if on == self else Vector2.ONE)
+	FxSheet.draw(on, k, at, w, rot, c, GROUND, Transform2D(0.0, Vector2(1.0, 1.0 / GROUND), 0.0, Vector2.ZERO) if on == self else Transform2D.IDENTITY)
 
 
 
@@ -506,7 +482,7 @@ func pulse(at: Vector2, col: Color) -> void:
 	_rings.append({ "p": at, "t": 0.0, "life": 0.9, "r": 150.0 })
 
 
-# ══ Painted moments (the kit the stage calls for effects, statuses, bonds) ══
+# ══ Particle moments (the kit the stage calls for effects, statuses, bonds) ══
 
 ## Fire licking up from a hull: a burn's tick.
 func flare_up(at: Vector2, big: bool = false) -> void:
@@ -529,7 +505,7 @@ func freeze_snap(at: Vector2) -> void:
 
 
 ## Motes streaming from one point to another (a heal, a gift of powder, a
-## mark): painted sparks drawn along a soft arc.
+## mark): sparks drawn along a soft arc.
 func motes(from: Vector2, to: Vector2, col: Color, n: int = 10, kind: String = "spark") -> void:
 	var a: Vector2 = up(from) + Vector2(0, -50)
 	var b: Vector2 = up(to) + Vector2(0, -50)
@@ -552,8 +528,8 @@ func _arc_mote(kind: String, a: Vector2, mid: Vector2, b: Vector2, dur: float, c
 	paint(kind, b, Vector2.ZERO, 0.3, 30.0, 60.0, col, { "fade": 0.2 })
 
 
-## A sigil settling over a hull (a status landing): a painted ward ring
-## closing in on the ship in the status's colour, with glints.
+## A sigil settling over a hull (a status landing): sparks closing in on the
+## ship in the status's colour, with glints.
 func sigil(at: Vector2, col: Color) -> void:
 	var u: Vector2 = up(at) + Vector2(0, -60)
 	# Stars closing in on the ship, then a flash where they meet.
@@ -563,7 +539,7 @@ func sigil(at: Vector2, col: Color) -> void:
 		_sparks.append({ "kind": "glint", "a": u + Vector2.from_angle(TAU * k / 6.0) * 60.0, "t": -0.25, "life": 0.35, "c": col.lightened(0.3) })
 
 
-## A painted fireball flung on an arc (a rake skipping on, a powder keg's
+## A fireball of light flung on an arc (a rake skipping on, a powder keg's
 ## debris).
 func fling(from: Vector2, to: Vector2, kind: String = "fireball", col: Color = Color.WHITE, size: float = 46.0) -> void:
 	var a: Vector2 = up(from) + Vector2(0, -40)

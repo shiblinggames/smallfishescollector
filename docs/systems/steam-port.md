@@ -948,16 +948,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   off; then it is written for every captain in that fight (gauntlet_reactions_seen) and their
   screen says "Reaction discovered". Each has its own moment on the water. Checked by
   tests/reaction_check.gd.
-  THE LOOK OF A FIGHT (Kong, 2026-10-04: "everything should look and feel good"): effects draw
-  from PAINTED cells, never drawn blobs: the web's fx-sheet.webp (flame, ember, ice, frost, a
-  shield shell, smoke, a star, spray, a flash, a fireball) and the port's own
-  port_art/fx-sheet-2.webp (tentacle, reticle, acid, padlock, plank, rope, cutlass, anchor;
-  Kie, keyed, packed), both through game/fx_sheet.gd. A ship WEARS what is on it
-  (game/hull_aura.gd: fire, ice, every status, Kraken coils, Fog Bank, our Spotter's Mark,
-  boarders), a pack combo's halves are roped together, and every battle event has motion
-  (BattleFx: flare-ups, freeze snaps, motes for heals, a ball tossed for powder given or
-  stolen, sigils for statuses, a fizzle, a finishing blow). BATTLE_SHOW=allev in tests/shot.gd
-  plays every one; BATTLE_SHOW=wear stages the statuses.
+  THE LOOK OF A FIGHT (Kong, 2026-10-04: "everything should look and feel good"; then, on painted
+  effect sprites and Kie object art on the ships: "way too much ... a lot of things can just be
+  particle effects ... I don't like the art style"): every effect is PARTICLES (game/fx_sheet.gd
+  draws glows, embers, sparks, puffs, slivers, droplets, rings in code; no sprite sheet, no art).
+  A ship WEARS what is on it (game/hull_aura.gd): Marked a ring of red embers over the masthead
+  (our Spotter's Mark gold stars), Weakened grey motes sinking, Feeble splinters, Corroded green
+  droplets, Slowed foam astern, Silenced dark wisps from the gunports, Enraged red embers,
+  Mending green motes, Fortified a crescent of glints, Blinded or Narrowed a swirl at the crow's
+  nest, Kraken coils a spiral of droplets (a turn per coil), Fog Bank low mist, Boarded two
+  lines of amber motes; a pack combo's halves are linked by running motes. Every battle event
+  has motion (BattleFx: flare-ups, freeze snaps, motes for heals, a ball tossed for powder given
+  or stolen, sigils of sparks for statuses, a fizzle, a finishing blow). BATTLE_SHOW=allev in
+  tests/shot.gd plays every one; BATTLE_SHOW=wear stages the statuses.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the

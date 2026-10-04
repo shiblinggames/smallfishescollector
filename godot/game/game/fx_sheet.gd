@@ -1,56 +1,66 @@
 class_name FxSheet
 extends RefCounted
-## THE PAINTED EFFECT CELLS (Godot over the web, 2026-10-04): the web's
-## fx-sheet.webp (fire, ice, smoke, light) and the port's own fx-sheet-2.webp
-## (port_art/: the things a ship wears: a kraken's tentacle, a hunter's mark,
-## acid, a padlock on the guns, splintered planks, rope, a broken cutlass, an
-## anchor), each a 128 px cell with the element centred. Drawn as sprites by
-## the battle's effects (BattleFx) and the hulls' wear (HullAura).
+## THE BATTLE'S PARTICLES (Godot port, 2026-10-04). Every effect a fight draws
+## (BattleFx) and everything a ship wears (HullAura) is built from these
+## particle shapes, drawn in code: soft glows, embers, four-point sparks,
+## smoke and mist puffs, ice slivers, droplets, rings. NO painted art: Kong
+## turned down painted effect sprites and object art on the ships ("a lot of
+## things can just be particle effects").
 
-const CELL: float = 128.0
-const ONE: Dictionary = {
-	"flame": Rect2(0, 0, 128, 128), "ember": Rect2(128, 0, 128, 128), "ice": Rect2(256, 0, 128, 128), "frost": Rect2(384, 0, 128, 128),
-	"ward": Rect2(0, 128, 128, 128), "smoke": Rect2(128, 128, 128, 128), "spark": Rect2(256, 128, 128, 128), "splash": Rect2(384, 128, 128, 128),
-	"flash": Rect2(0, 256, 128, 128), "fireball": Rect2(128, 256, 128, 128),
-}
-const TWO: Dictionary = {
-	"tentacle": Rect2(0, 0, 128, 128), "reticle": Rect2(128, 0, 128, 128), "acid": Rect2(256, 0, 128, 128), "padlock": Rect2(384, 0, 128, 128),
-	"plank": Rect2(0, 128, 128, 128), "rope": Rect2(128, 128, 128, 128), "cutlass": Rect2(256, 128, 128, 128), "anchor": Rect2(384, 128, 128, 128),
-}
 ## What is light (drawn added, on a light layer).
 const LIGHT: Array = ["flame", "ember", "spark", "flash", "fireball", "ward"]
 
-static var _one: Texture2D
-static var _two: Texture2D
+static var _glow: Texture2D
 
 
-static func has(k: String) -> bool:
-	return (ONE.has(k) and _sheet_one() != null) or (TWO.has(k) and _sheet_two() != null)
+static func has(_k: String) -> bool:
+	return true
 
 
-static func _sheet_one() -> Texture2D:
-	if _one == null:
-		_one = Skipper.tex("fx-sheet.webp")
-	return _one
+static func glow() -> Texture2D:
+	if _glow == null:
+		_glow = Glow.radial(128, Color.WHITE)
+	return _glow
 
 
-static func _sheet_two() -> Texture2D:
-	if _two == null:
-		_two = Skipper.tex("fx-sheet-2.webp")
-	return _two
-
-
-## One cell, `w` px across, centred at `at` in a standing space (y un-squashed
-## by 1/ground; ground 1.0 for a plain canvas), turned `rot`, tinted `c`.
-## `flip` mirrors it. Leaves the canvas transform as `rest`.
-static func draw(on: CanvasItem, k: String, at: Vector2, w: float, rot: float, c: Color, ground: float, rest: Transform2D, flip: bool = false) -> void:
+## One particle, `w` px across, centred at `at` in a standing space (y
+## un-squashed by 1/ground; 1.0 for a plain canvas), turned `rot`, coloured
+## `c`. Leaves the canvas transform as `rest`.
+static func draw(on: CanvasItem, k: String, at: Vector2, w: float, rot: float, c: Color, ground: float, rest: Transform2D, _flip: bool = false) -> void:
 	if c.a <= 0.003 or w <= 0.5:
 		return
-	var tex: Texture2D = _sheet_one() if ONE.has(k) else _sheet_two()
-	if tex == null:
-		return
-	var sc: float = w / CELL
-	var m: Transform2D = Transform2D(0.0, Vector2(1.0, 1.0 / ground), 0.0, Vector2.ZERO) * Transform2D(rot, Vector2(-sc if flip else sc, sc), 0.0, at)
+	var m: Transform2D = Transform2D(0.0, Vector2(1.0, 1.0 / ground), 0.0, Vector2.ZERO) * Transform2D(rot, Vector2.ONE, 0.0, at)
 	on.draw_set_transform_matrix(m)
-	on.draw_texture_rect_region(tex, Rect2(-64, -64, 128, 128), ONE[k] if ONE.has(k) else TWO[k], c)
+	var g: Texture2D = glow()
+	var h: float = w / 2.0
+	match k:
+		"flame":
+			# A tongue of fire: a tall soft glow, a hotter core low in it.
+			on.draw_texture_rect(g, Rect2(-h * 0.55, -h * 1.1, w * 0.55, w * 1.1), false, c)
+			on.draw_texture_rect(g, Rect2(-h * 0.25, -h * 0.35, w * 0.25, w * 0.5), false, Color(1.0, 0.95, 0.8, c.a))
+		"ember":
+			on.draw_texture_rect(g, Rect2(-h, -h, w, w), false, Color(c, c.a * 0.7))
+			on.draw_circle(Vector2.ZERO, maxf(1.0, w * 0.1), Color(c.lightened(0.5), c.a))
+		"spark":
+			on.draw_texture_rect(g, Rect2(-h * 0.6, -h * 0.6, w * 0.6, w * 0.6), false, Color(c, c.a * 0.6))
+			var l: float = h * 0.8
+			on.draw_line(Vector2(-l, 0), Vector2(l, 0), c, maxf(1.0, w * 0.05), true)
+			on.draw_line(Vector2(0, -l), Vector2(0, l), c, maxf(1.0, w * 0.05), true)
+		"flash", "fireball":
+			on.draw_texture_rect(g, Rect2(-h, -h, w, w), false, c)
+			on.draw_texture_rect(g, Rect2(-h * 0.4, -h * 0.4, w * 0.4, w * 0.4), false, Color(1, 1, 1, c.a))
+		"ward":
+			on.draw_arc(Vector2.ZERO, h * 0.9, 0.0, TAU, 48, c, maxf(1.5, w * 0.02), true)
+		"ice":
+			# A sliver: a long thin diamond, a bright edge.
+			var pts: PackedVector2Array = PackedVector2Array([Vector2(0, -h), Vector2(h * 0.22, 0), Vector2(0, h * 0.4), Vector2(-h * 0.22, 0)])
+			on.draw_colored_polygon(pts, c)
+			on.draw_line(Vector2(0, -h), Vector2(0, h * 0.4), Color(1, 1, 1, c.a * 0.7), 1.2, true)
+		"splash":
+			for j: int in 5:
+				var a: float = -PI / 2.0 + (j - 2) * 0.35
+				on.draw_circle(Vector2.from_angle(a) * h * 0.6, maxf(1.0, w * 0.06), c)
+		_:
+			# Smoke, mist, frost: a soft puff.
+			on.draw_texture_rect(g, Rect2(-h, -h, w, w), false, c)
 	on.draw_set_transform_matrix(rest)
