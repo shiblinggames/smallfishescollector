@@ -1427,9 +1427,10 @@ static func upgrade_def(id: String) -> Dictionary:
 	return {}
 
 
-## The Locker's upgrades the port does not sell: their systems are not built
-## yet (the forge and the Accelerator), or they are gone by decision
-## (the Don's Tribute; the Crimson Tithe with Blood Gems).
+## The Locker's upgrades the port does not sell: their bench is not built yet
+## (the forge and the Accelerator; core/forge.gd holds the rules, the bench is
+## being redesigned), or they are gone by decision (the Don's Tribute; the
+## Crimson Tithe with Blood Gems).
 const NOT_SOLD: Array = ["forge", "dg_abyssal_forge", "dg_abyssal_accel", "dg_daily_tribute", "dg_crimson_tithe"]
 
 
