@@ -665,6 +665,21 @@ func _init() -> void:
 						en["ward"] = 2.0
 						bst.b["seats"][0]["shield"] = 20.0
 						bst.b["seats"][0]["freeze"] = 1.0
+					"crewsummon":
+						# A crew summon (SUM_CLS, SUM_SKIN a skin's filename), captured FX_S in.
+						while bst._busy:
+							await process_frame
+						var sc: Dictionary = bst.b["seats"][0]["crew"][0]
+						if OS.get_environment("SUM_SKIN") != "":
+							sc["filename"] = OS.get_environment("SUM_SKIN")
+						var scls: String = OS.get_environment("SUM_CLS") if OS.get_environment("SUM_CLS") != "" else "blitz"
+						var sev: Dictionary = { "t": "ability", "seat": 0, "crew": sc["id"], "cls": scls, "name": sc.get("name", ""), "target": 0, "heal": 12.0, "hits": [4.0, 5.0, 6.0], "dmg": 15.0, "charges": 2.0, "shield": 8.0 }
+						bst._one(sev)
+						await create_timer(float(OS.get_environment("FX_S")) if OS.get_environment("FX_S") != "" else 1.0).timeout
+						root.get_texture().get_image().save_png(out)
+						print("  saved ", out)
+						quit()
+						return
 					"allev":
 						# Every motion the stage has, played in turn (a runtime check).
 						while bst._busy:

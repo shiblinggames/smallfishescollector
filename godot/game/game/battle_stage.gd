@@ -1305,73 +1305,114 @@ func _broadside(x: Dictionary, group: Array) -> void:
 
 
 func _ability_card(x: Dictionary) -> void:
-	var s: Dictionary = b["seats"][int(x["seat"])]
+	var si: int = int(x["seat"])
+	var s: Dictionary = b["seats"][si]
 	var c: Dictionary = {}
 	for cc: Dictionary in s["crew"]:
 		if cc["id"] == x["crew"]:
 			c = cc
-	var cls: Dictionary = Js.obj(Js.obj(Crew.t().get("classes")).get(x["cls"]))
-	var col: Color = Color(str(cls.get("color", "#cccccc")))
-	# The hand steps up: their card rises over the deck, the class's colour
-	# behind it, the order's name under it.
-	var card: Control = Control.new()
-	card.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	card.offset_left = -110
-	card.offset_right = 110
-	card.offset_top = -BAR - 470
-	card.offset_bottom = -BAR - 190
-	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.pivot_offset = Vector2(110, 280)
-	add_child(card)
-	var glow: TextureRect = TextureRect.new()
-	glow.texture = Glow.radial(128, col)
-	glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	glow.offset_left = -60
-	glow.offset_right = 60
-	glow.offset_top = -30
-	glow.offset_bottom = 30
-	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	glow.modulate = Color(1, 1, 1, 0.5)
-	card.add_child(glow)
-	var pic: TextureRect = TextureRect.new()
-	pic.texture = Skipper.tex("card-arts/%s.webp" % str(c.get("filename", "")).get_basename())
-	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	pic.offset_bottom = -44
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	card.add_child(pic)
-	var nm: Label = Kit.text(card, "%s  ·  %s" % [c.get("name", ""), cls.get("shortLabel", "")], "heading", col.lightened(0.3))
-	nm.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	nm.offset_top = -40
-	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	nm.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
-	nm.add_theme_constant_override("shadow_outline_size", 8)
-	card.scale = Vector2(0.6, 0.6)
-	card.modulate.a = 0.0
-	Sound.seal(true)
-	var tw: Tween = card.create_tween().set_parallel()
-	tw.tween_property(card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(card, "modulate:a", 1.0, 0.2)
-	await _wait(0.45)
-	# What it did, on the water.
-	var tgt: int = int(x.get("target", x["seat"]))
+	var cid: String = str(x["cls"])
+	var cls: Dictionary = Js.obj(Js.obj(Crew.t().get("classes")).get(cid))
+	# The equipped skin themes the whole summon; a chase skin brings its
+	# signature strike.
+	var skin: Dictionary = {}
+	for k: Dictionary in Skins.all():
+		if str(k.get("filename", "")) == str(c.get("filename", "")):
+			skin = k
+	var col: Color = Color(str(skin.get("color", cls.get("color", "#cccccc"))))
+	var chase: String = str(skin.get("id", "")) if skin.get("chase", false) else ""
+	var big: float = 1.5 if chase != "" else 1.0
+	# The sigil turns on the water under the caster as the summon plays.
+	_strip_lit = si
+	_fx.summon_circle(_seat_at(si), col, big)
+	var cast: SummonCast = SummonCast.new()
+	cast.tex = Skipper.tex("card-arts/%s.webp" % str(c.get("filename", "")).get_basename())
+	cast.col = col
+	cast.crew_name = str(c.get("name", x.get("name", "")))
+	cast.order = "%s  ·  %s" % [cls.get("name", ""), cls.get("shortLabel", "")]
+	cast.skin = skin
+	add_child(cast)
+	await cast.done
+	# What it did, on the water: each order its own strike.
+	var tgt: int = int(x.get("target", si))
+	var tat: Vector2 = _seat_at(tgt if tgt >= 0 else si)
+	match cid:
+		"mender":
+			if chase == "catfish_galaxy":
+				_fx.cosmic(tat, col)
+			await _fx.heal_rain(tat, col if chase != "" else FxSheet.status_color("regen"))
+		"abyssal_tide":
+			await _fx.tide(tat, col)
+		"sharpshot":
+			_fx.mark("reticle", _enemy_at, col, 1.2)
+			_num(_seat_at(si) + Vector2(0, -90), "Steady aim: a wider crit", col.lightened(0.3))
+		"snare":
+			_fx.mark("chains", _enemy_at, col, 1.4)
+			await _wait(0.4)
+			_fx.status_burst(_enemy_at, "slowed")
+			_num(_enemy_at + Vector2(0, -90), "Snared: it cannot dodge", col.lightened(0.3))
+		"anchor":
+			_fx.splash(tat)
+			_fx.status_burst(tat, "fortify")
+			_num(tat + Vector2(0, -90), "Braced", col.lightened(0.3))
+		"navigator":
+			var got: int = int(Js.num(x.get("charges")))
+			for k2: int in got:
+				_fx.toss(tat + Vector2(randf_range(-120, 120), -420), tat)
+				await _wait(0.15)
+		"leviathan":
+			if chase == "dole_krakenhunter":
+				_fx.splash(_enemy_at)
+				_fx.glyph_burst(_enemy_at, "ember", col, 24, 300.0, 16.0, 500.0)
+			await _breach(cast.tex, col)
+		"blitz":
+			var hits: Array = Js.list(x.get("hits"))
+			for h: Variant in hits:
+				if chase == "mako_tempest":
+					_fx.lightning(_enemy_at, col)
+				else:
+					_fx.shot(_seat_at(si), _enemy_at + Vector2(randf_range(-40, 40), 0), "hit")
+				_num(_enemy_at + Vector2(randf_range(-40, 40), -20), "%d" % int(Js.num(h)), col.lightened(0.3))
+				await _wait(0.16)
+		"foresight":
+			_fx.mark("glyphs", _enemy_at, col, 1.8, big)
+		"vengeance":
+			_fx.mark("aureole", tat, col, 1.8, big)
+			_fx.status_burst(tat, "fortify")
+		"requiem":
+			_fx.mark("reticle", _enemy_at, col, 1.6, big)
+			await _wait(0.45)
+			_fx.status_burst(_enemy_at, "marked")
+	# The numbers.
 	if x.has("heal") and float(x["heal"]) > 0.0:
-		_num(_seat_at(tgt), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6), true)
+		_num(tat, "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6), true)
 		_shown_hp[tgt] = float(b["seats"][tgt]["hp"])
 	if x.has("shield"):
-		_num(_seat_at(tgt) + Vector2(0, -40), "+%d shield" % int(x["shield"]), Color(0.55, 0.8, 1.0))
+		_num(tat + Vector2(0, -40), "+%d shield" % int(x["shield"]), Color(0.55, 0.8, 1.0))
 	if x.has("charges"):
-		_num(_seat_at(tgt), "+%d ball%s" % [int(x["charges"]), "" if int(x["charges"]) == 1 else "s"] if float(x["charges"]) > 0.0 else "No luck", CREAM)
+		_num(tat, "+%d ball%s" % [int(x["charges"]), "" if int(x["charges"]) == 1 else "s"] if float(x["charges"]) > 0.0 else "No luck", CREAM)
 	if x.has("dmg"):
-		_fx.burst(_enemy_at, true)
+		_fx.finisher(_enemy_at) if cid == "leviathan" else _fx.burst(_enemy_at, true)
 		_num(_enemy_at, "%d!" % int(x["dmg"]), col.lightened(0.3), true)
 		_shown_hp[_ek()] = float(b["enemy"]["hp"])
 	if x.has("reveal"):
 		_log_line("Next: %s" % ", ".join(PackedStringArray(x["reveal"])))
-	await _wait(0.5)
-	var out: Tween = card.create_tween()
-	out.tween_property(card, "modulate:a", 0.0, 0.25)
-	out.tween_callback(card.queue_free)
+	await _wait(0.4)
+
+
+## The Leviathan's salvo: the crew's own creature breaches beside the enemy
+## and slams into it.
+func _breach(tex: Texture2D, col: Color) -> void:
+	var sm: BattleSummon = BattleSummon.new()
+	sm.field = sea._field
+	sm.tex = tex
+	sm.col = col
+	sm.position = _enemy_at + Vector2(-220, 200)
+	sm.z_index = 3
+	sea._world.add_child(sm)
+	await sm.rise()
+	await sm.lunge(_enemy_at)
+	sm.sink()
 
 
 func _wait(s: float) -> void:

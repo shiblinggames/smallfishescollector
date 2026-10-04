@@ -50,6 +50,9 @@ var _add: Node2D
 ## frame: [[World a, World b, colour]]; drawn as motes running along a sag
 ## between them.
 var links: Array = []
+## Standing light for a while (a summon's sigil on the water, an aureole, glyph
+## rings, a reticle, lightning): { kind, p, t, life, c, big, pts }.
+var _marks: Array = []
 
 
 func _ready() -> void:
@@ -113,6 +116,9 @@ func _process(delta: float) -> void:
 	_waves = _waves.filter(func(w: Dictionary) -> bool: return float(w["t"]) < float(w["life"]))
 	_cones = _cones.filter(func(c: Dictionary) -> bool: return float(c["t"]) < float(c["life"]))
 	_sparks = _sparks.filter(func(c: Dictionary) -> bool: return float(c["t"]) < float(c["life"]))
+	for mk: Dictionary in _marks:
+		mk["t"] = float(mk["t"]) + delta
+	_marks = _marks.filter(func(mk: Dictionary) -> bool: return float(mk["t"]) < float(mk["life"]))
 	for bm: Dictionary in _beams:
 		bm["t"] = float(bm["t"]) + delta
 	_beams = _beams.filter(func(bm: Dictionary) -> bool: return float(bm["t"]) < float(bm.get("life", 0.9)))
@@ -337,6 +343,19 @@ func _draw() -> void:
 			continue
 		var u2: float = float(w["t"]) / float(w["life"])
 		draw_arc(w["p"], float(w["r"]) * (0.1 + u2), 0.0, TAU, 72, Color(1.0, 0.88, 0.65, 0.75 * (1.0 - u2)), 9.0 * (1.0 - u2) + 1.0, true)
+	# A summon's sigil on the water: two rune rings turning opposite ways.
+	for mk: Dictionary in _marks:
+		if str(mk["kind"]) != "sigil" or float(mk["t"]) < 0.0:
+			continue
+		var su: float = float(mk["t"]) / float(mk["life"])
+		var sa: float = minf(1.0, su * 6.0) * (1.0 - smoothstep(0.7, 1.0, su))
+		var sr: float = 150.0 * float(mk["big"]) * (0.7 + 0.3 * minf(1.0, su * 4.0))
+		for ring: Array in [[sr, 1.2, 40], [sr * 0.72, -1.6, 28]]:
+			for k: int in int(ring[2]):
+				var an: float = float(mk["t"]) * float(ring[1]) + TAU * k / float(ring[2])
+				var on: bool = k % 5 == 0
+				draw_circle(mk["p"] + Vector2(cos(an), sin(an)) * float(ring[0]), 4.0 if on else 2.0, Color(mk["c"], sa * (0.95 if on else 0.55)))
+		draw_arc(mk["p"], sr * 1.08, 0.0, TAU, 64, Color(mk["c"], sa * 0.35), 2.0, true)
 	# Standing up: everything else, drawn un-squashed.
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0 / GROUND))
 	for bm: Dictionary in _beams:
@@ -449,6 +468,61 @@ func _draw_light() -> void:
 	for pp: Dictionary in _paint:
 		if LIGHT.has(pp["k"]) and float(pp["t"]) >= 0.0:
 			_paint_one(_add, pp)
+	_draw_marks()
+
+
+## The standing light a strike leaves for a moment (on the light layer).
+func _draw_marks() -> void:
+	var gt: Transform2D = Transform2D(0.0, Vector2(1.0, 1.0 / GROUND), 0.0, Vector2.ZERO)
+	_add.draw_set_transform_matrix(gt)
+	for mk: Dictionary in _marks:
+		if float(mk["t"]) < 0.0:
+			continue
+		var u: float = float(mk["t"]) / float(mk["life"])
+		var a: float = minf(1.0, u * 8.0) * (1.0 - smoothstep(0.6, 1.0, u))
+		var c: Color = mk["c"]
+		var p: Vector2 = up(mk["p"]) + Vector2(0, -70)
+		match str(mk["kind"]):
+			"aureole":
+				# Rays of gilded light turning round the ship.
+				var n: int = 16 if mk["big"] > 1.0 else 12
+				for k: int in n:
+					var an: float = float(mk["t"]) * 0.6 + TAU * k / n
+					var l: float = (150.0 + 30.0 * sin(float(mk["t"]) * 4.0 + k)) * float(mk["big"])
+					_add.draw_colored_polygon(PackedVector2Array([p + Vector2.from_angle(an) * 40.0, p + Vector2.from_angle(an - 0.06) * l, p + Vector2.from_angle(an + 0.06) * l]), Color(c, 0.35 * a))
+				_add.draw_texture_rect(_glow, Rect2(p - Vector2(90, 90), Vector2(180, 180)), false, Color(c, 0.5 * a))
+			"glyphs":
+				# Two glyph rings turning opposite ways over the ship.
+				for ring: Array in [[110.0, 1.0, 24], [76.0, -1.4, 16]]:
+					for k: int in int(ring[2]):
+						var an: float = float(mk["t"]) * float(ring[1]) + TAU * k / float(ring[2])
+						var q: Vector2 = p + Vector2.from_angle(an) * float(ring[0]) * float(mk["big"])
+						if k % 3 == 0:
+							_add.draw_line(q - Vector2.from_angle(an) * 6.0, q + Vector2.from_angle(an) * 6.0, Color(c, a), 2.0, true)
+						else:
+							_add.draw_circle(q, 2.0, Color(c, 0.7 * a))
+				_add.draw_arc(p, 24.0 * (1.0 + 0.1 * sin(float(mk["t"]) * 6.0)), 0.0, TAU, 32, Color(c, a), 2.0, true)
+			"reticle":
+				# A crosshair closing on the ship, then holding.
+				var r: float = lerpf(200.0, 54.0, smoothstep(0.0, 0.35, u)) * float(mk["big"])
+				_add.draw_arc(p, r, 0.0, TAU, 48, Color(c, a), 3.0, true)
+				for k: int in 4:
+					var an: float = TAU * k / 4.0 + float(mk["t"]) * 0.8
+					_add.draw_line(p + Vector2.from_angle(an) * (r - 14.0), p + Vector2.from_angle(an) * (r + 18.0), Color(c, a), 4.0, true)
+				_add.draw_circle(p, 4.0, Color(c, a))
+			"bolt":
+				# A bolt of lightning from the sky, flickering.
+				var pts: PackedVector2Array = mk["pts"]
+				var fl: float = a * (0.6 + 0.4 * absf(sin(float(mk["t"]) * 60.0)))
+				_add.draw_polyline(pts, Color(c, 0.35 * fl), 10.0, true)
+				_add.draw_polyline(pts, Color(c.lightened(0.6), fl), 3.0, true)
+			"chains":
+				# Rings of light pulling tight round the hull.
+				for k: int in 3:
+					var rr: float = lerpf(170.0, 70.0 + k * 14.0, smoothstep(0.0, 0.4, u))
+					var hb: Vector2 = up(mk["p"]) + Vector2(0, -30.0 - k * 22.0)
+					_add.draw_arc(hb, rr, 0.0, TAU, 48, Color(c, a * (0.9 - k * 0.2)), 3.0, true)
+	_add.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
 func _paint_one(on: CanvasItem, pp: Dictionary) -> void:
@@ -625,3 +699,74 @@ func fire_leap(from: Vector2, to: Vector2, col: Color) -> void:
 		_arc_mote("flame", a, mid, b, 0.5, col, k * 0.04)
 	await _wait(0.6)
 	flare_up(to, true)
+
+
+# ══ Crew summons on the water (BattleStage._ability_card) ══════════════════════
+
+## The caster's sigil: rune rings turning on the water under the ship, and a
+## helix of motes climbing out of it.
+func summon_circle(at: Vector2, col: Color, big: float = 1.0) -> void:
+	_marks.append({ "kind": "sigil", "p": at, "t": 0.0, "life": 2.4, "c": col, "big": big })
+	for k: int in int(28 * big):
+		var an: float = k * 0.55
+		var from: Vector2 = up(at) + Vector2(cos(an) * 90.0 * big, sin(an) * 30.0 * big)
+		paint("ember", from, Vector2(-sin(an) * 40.0, -150.0), 1.1, 16.0, 6.0, col.lightened(0.3), { "delay": k * 0.03, "drag": 0.4 })
+	if field != null:
+		field.ring(at, 180.0 * big, 1.6, 0.8)
+
+
+func mark(kind: String, at: Vector2, col: Color, life: float = 1.4, big: float = 1.0) -> void:
+	_marks.append({ "kind": kind, "p": at, "t": 0.0, "life": life, "c": col, "big": big })
+
+
+## Healing falling on a ship: plus signs drifting down out of the sky onto it,
+## then rising off it.
+func heal_rain(at: Vector2, col: Color, n: int = 14) -> void:
+	var u: Vector2 = up(at)
+	for k: int in n:
+		paint("plus", u + Vector2(randf_range(-110, 110), randf_range(-260, -200)), Vector2(randf_range(-8, 8), randf_range(220, 300)), 0.65, 26.0, 22.0, col, { "delay": k * 0.04, "spin": 0.0, "rot": 0.0, "fade": 0.75 })
+	await _wait(0.6)
+	rise(at, col, 12)
+
+
+## A tide across a ship: spray swept along it, a shell of water left over it.
+func tide(at: Vector2, col: Color) -> void:
+	var u: Vector2 = up(at)
+	for k: int in 26:
+		var x: float = -170.0 + k * 13.0
+		paint("smoke", u + Vector2(x, -20.0 - sin(k * 0.5) * 30.0), Vector2(90.0, -60.0), 0.8, 30.0, 70.0, Color(col, 0.55), { "delay": k * 0.018, "drag": 1.5 })
+		paint("ember", u + Vector2(x, -40.0), Vector2(randf_range(40, 120), randf_range(-260, -120)), 0.7, 12.0, 6.0, col.lightened(0.4), { "delay": k * 0.018, "g": 600.0 })
+	splash(at)
+	await _wait(0.4)
+	status_burst(at, "fortify")
+
+
+## Lightning from the sky onto a ship (Mako's Tempest).
+func lightning(at: Vector2, col: Color) -> void:
+	var tip: Vector2 = up(at) + Vector2(randf_range(-30, 30), -40)
+	var pts: PackedVector2Array = PackedVector2Array()
+	var y: float = tip.y - 520.0
+	var x: float = tip.x + randf_range(-80, 80)
+	pts.append(Vector2(x, y))
+	while y < tip.y:
+		y += randf_range(40, 80)
+		x = lerpf(x, tip.x, 0.35) + randf_range(-36, 36)
+		pts.append(Vector2(x, minf(y, tip.y)))
+	# Drawn in the light layer's standing space (un-squashed y).
+	var flat: PackedVector2Array = PackedVector2Array()
+	for q: Vector2 in pts:
+		flat.append(Vector2(q.x, q.y * GROUND))
+	_marks.append({ "kind": "bolt", "p": at, "pts": pts, "t": 0.0, "life": 0.32, "c": col, "big": 1.0 })
+	paint("flash", tip, Vector2.ZERO, 0.25, 60.0, 200.0, col.lightened(0.5), { "fade": 0.1 })
+	glyph_burst(at, "spark", col.lightened(0.4), 8, 260.0, 20.0)
+	Sound.impact(true)
+
+
+## Stars spiralling in onto a ship (the Galaxy's heal).
+func cosmic(at: Vector2, col: Color) -> void:
+	var u: Vector2 = up(at) + Vector2(0, -50)
+	for k: int in 24:
+		var an: float = TAU * k / 24.0
+		_arc_mote("spark", u + Vector2.from_angle(an) * 220.0, u + Vector2.from_angle(an + 1.4) * 110.0, u, 0.7, col.lightened(0.2) if k % 2 else Color(1, 0.95, 0.9), k * 0.015)
+	for k2: int in 6:
+		paint("smoke", u + Vector2(randf_range(-80, 80), randf_range(-40, 40)), Vector2.ZERO, 1.4, 60.0, 140.0, Color(col, 0.35), { "delay": 0.2 })

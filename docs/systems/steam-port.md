@@ -978,6 +978,30 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   log already wrote that event. RECAP (a button): per captain, per fight or the whole run: damage,
   taken, healed, given (bond heals and shields on crewmates), crits, best hit, assists (bonds and
   reactions). Only what happened, never an enemy's next move. RECAP=1 in tests/shot.gd opens it.
+  The log has no box (a soft fade into the edge, as tall as its lines): a mark in the actor's
+  colour per line, the number in its own column, thin turn rules, older lines settling back, one
+  chip cycling the filter. THE AIM BAR (game/aim_bar.gd, fx/aim_bar.gdshader; Kong: like the
+  fishing dial, "more game-like ... fits our aesthetic"): the dial's instrument laid flat (dark
+  wood, a brass line, a cream paper track with ink ticks, the bands as watercolour washes, the
+  one under the needle lit full), a tapered ink needle on a brass cap in the colour of the band
+  it is over, FIRE or VOLLEY in Cinzel with its key; it floats free (the deck's paper fades while
+  aiming). CREW SUMMONS (game/summon_cast.gd + BattleFx; Kong: "I want using crew summons to feel
+  very satisfying"; the web's AbilitySummonFx and chase strikes, never ported until now): a
+  sigil turns on the water under the caster and a helix climbs out of it; the screen sinks into
+  the dark in the crew's colour (the equipped skin's, else the class's), motes gather, a flash,
+  and the crew blooms out of it (the skin's portrait, its foot faded into the light) with rays,
+  two rune rings and a burst of sparks; the name lands in Cinzel, its letters drawing together,
+  the order over it; it holds, breathing, then comes apart into motes. A CHASE SKIN gets a wider
+  bloom, a second flash in its colour, more of everything, and its ChaseFx signature over the
+  portrait. Then each order its own strike: Mender heal raining down (the Galaxy's stars spiral
+  in), Tidecaller a tide swept across and a shell, Sharpshot a reticle, Snare rings of light
+  pulling tight, Anchor a splash and a shell, Navigator balls tossed in, Leviathan the crew's own
+  creature breaching beside the enemy and slamming into it (the Krakenhunter's sea erupts first),
+  Apex a volley per hit (the Tempest's lightning instead), Oracle glyph rings, Vengeance an
+  aureole of rays, Requiem a reticle closing (the Huntersbane's blood red). Click or Space hurries
+  it. BATTLE_SHOW=crewsummon (SUM_CLS, SUM_SKIN) in tests/shot.gd stages one. OPEN: Oracle's
+  Foresight still reveals the enemy's next moves (its web design), against the no-prediction
+  rule.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the
