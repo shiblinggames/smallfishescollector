@@ -78,10 +78,20 @@ func _work(db: CaptainStore, uid: String, q: Dictionary, sea: Sea) -> void:
 			check(not Finn.state(db, uid)["quest"]["done"], "%s: the wrong fish does not count" % q["id"])
 			_land(db, uid, float(q["speciesId"]))
 		"catch_condition", "catch_hotspot", "catch_trophy":
-			# A catch in the water, not under the condition: nothing.
+			# A catch in the water, not under the condition: nothing. (At a
+			# moment the condition is not on: the weather follows the clock.)
 			prof["finn_cast_at"] = { "x": 0.0, "y": 99999.0 }
+			if q["type"] == "catch_condition":
+				var t0: float = Clock.now_ms()
+				for k: int in 400:
+					if not FishBias.conditions(Vector2(0.0, 99999.0), t0 + k * 600000.0).has(str(q.get("cond", ""))):
+						t0 += k * 600000.0
+						break
+				var fixed: float = t0
+				Clock.install(func() -> float: return fixed)
 			Finn.on_catch(db, uid, { "fish": { "habitat": q["zone"] }, "sizeTier": "small" })
 			check(Finn.state(db, uid)["quest"]["have"] == 0.0, "%s: an ordinary catch does not count" % q["id"])
+			Clock.install(Callable())
 			var tally: Dictionary = Js.obj(prof.get("finn_tally")).duplicate()
 			tally[Finn.tally_key(q)] = Js.num(tally.get(Finn.tally_key(q))) + target
 			prof["finn_tally"] = tally
