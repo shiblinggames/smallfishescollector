@@ -2,8 +2,12 @@ class_name Trawls
 extends RefCounted
 ## TRAWLS (Godot port of lib/core/voyages.ts getTrawlState, deployTrawl and
 ## collectTrawl, lib/trawlRules.ts and fishing/trawls/constants.ts): send ONE
-## hand to fish a water for a hard-locked cycle (68 minutes in the Shallows to
-## 3 hours in the Ancient Deep); collect for fishing XP (their Savvy) and
+## hand to fish a water for a hard-locked run of SEA DAYS (Kong, 2026-10-04:
+## "trawls will follow in game days"; a sea day is SeaClock.CYCLE_MS, 48
+## minutes): one in the Shallows, two in Open Waters, the Deep and the Abyss,
+## four in the Ancient Deep, the nearest whole days to the web's 68 to 180
+## minutes. The haul scales by the new run over the web's, so what a trawl
+## earns an hour is the web's exactly. Collect for fishing XP (their Savvy) and
 ## doubloons (their Fortune). One trawl per water; up to four at once, each
 ## slot behind a Fishing AND a Navigation level. Sending a hand takes them out
 ## of their seat; a hand on a voyage or mid-stint in a bunk cannot go.
@@ -11,11 +15,11 @@ extends RefCounted
 ## Kept in the save as "trawls": [{ id, zone, crew_id, ends_ms }].
 
 const ZONES: Array = [
-	{ "key": "shallows", "label": "Shallows", "minLevel": 4, "activeXpHr": 2000.0, "activeDblHr": 1300.0, "durationMin": 68.0 },
-	{ "key": "open_waters", "label": "Open Waters", "minLevel": 18, "activeXpHr": 5000.0, "activeDblHr": 2100.0, "durationMin": 83.0 },
-	{ "key": "deep", "label": "Deep", "minLevel": 33, "activeXpHr": 11000.0, "activeDblHr": 2850.0, "durationMin": 98.0 },
-	{ "key": "abyss", "label": "Abyss", "minLevel": 53, "activeXpHr": 19000.0, "activeDblHr": 5800.0, "durationMin": 117.0, "xpPct": 0.29 },
-	{ "key": "ancient_deep", "label": "Ancient Deep", "minLevel": 78, "activeXpHr": 42000.0, "activeDblHr": 5400.0, "durationMin": 180.0, "xpPct": 0.24 },
+	{ "key": "shallows", "label": "Shallows", "minLevel": 4, "activeXpHr": 2000.0, "activeDblHr": 1300.0, "durationMin": 68.0, "seaDays": 1 },
+	{ "key": "open_waters", "label": "Open Waters", "minLevel": 18, "activeXpHr": 5000.0, "activeDblHr": 2100.0, "durationMin": 83.0, "seaDays": 2 },
+	{ "key": "deep", "label": "Deep", "minLevel": 33, "activeXpHr": 11000.0, "activeDblHr": 2850.0, "durationMin": 98.0, "seaDays": 2 },
+	{ "key": "abyss", "label": "Abyss", "minLevel": 53, "activeXpHr": 19000.0, "activeDblHr": 5800.0, "durationMin": 117.0, "seaDays": 2, "xpPct": 0.29 },
+	{ "key": "ancient_deep", "label": "Ancient Deep", "minLevel": 78, "activeXpHr": 42000.0, "activeDblHr": 5400.0, "durationMin": 180.0, "seaDays": 4, "xpPct": 0.24 },
 ]
 const UNLOCK_LEVEL: int = 25
 const SLOT_LADDER: Array = [[25, 0], [45, 20], [70, 45], [90, 50]]
@@ -119,11 +123,18 @@ static func stat_factor(stat: float) -> float:
 	return maxf(FACTOR_FLOOR, minf(1.0, stat / STAT_REF))
 
 
+## How long a run is, in milliseconds (its sea days).
+static func run_ms(key: String) -> float:
+	return float(zone(key).get("seaDays", 1)) * SeaClock.CYCLE_MS
+
+
 static func expected(key: String, savvy: float, fortune: float) -> Dictionary:
 	var z: Dictionary = zone(key)
+	# The web's haul per cycle, scaled to the run in sea days.
+	var scale: float = run_ms(key) / (float(z["durationMin"]) * 60000.0)
 	return {
-		"xp": float(Js.round(float(z["activeXpHr"]) * float(z.get("xpPct", XP_PCT)) * stat_factor(savvy))),
-		"doubloons": float(Js.round(float(z["activeDblHr"]) * DBL_PCT * stat_factor(fortune))),
+		"xp": float(Js.round(float(z["activeXpHr"]) * float(z.get("xpPct", XP_PCT)) * stat_factor(savvy) * scale)),
+		"doubloons": float(Js.round(float(z["activeDblHr"]) * DBL_PCT * stat_factor(fortune) * scale)),
 	}
 
 
@@ -184,7 +195,7 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 			continue
 		var v: Dictionary = crew_view(c)
 		var e: Dictionary = expected(t["zone"], v["savvy"], v["fortune"])
-		by_zone[t["zone"]] = { "zone": t["zone"], "crew": v, "endsMs": float(t["ends_ms"]), "ready": float(t["ends_ms"]) <= now, "expectedXp": e["xp"], "expectedDoubloons": e["doubloons"] }
+		by_zone[t["zone"]] = { "zone": t["zone"], "crew": v, "endsMs": float(t["ends_ms"]), "runMs": run_ms(t["zone"]), "ready": float(t["ends_ms"]) <= now, "expectedXp": e["xp"], "expectedDoubloons": e["doubloons"] }
 	var free: Array = []
 	for c: Dictionary in Crew.live(db):
 		if at_sea.has(float(c["id"])) or Crew._reassign_error(db, uid, c) != "":
@@ -194,7 +205,7 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 	var zones: Array = []
 	var anc: bool = _ancient_open(db, uid, p)
 	for z: Dictionary in ZONES:
-		zones.append({ "key": z["key"], "label": z["label"], "minLevel": z["minLevel"], "durationMin": z["durationMin"],
+		zones.append({ "key": z["key"], "label": z["label"], "minLevel": z["minLevel"], "seaDays": int(z["seaDays"]),
 			"unlocked": fishing >= int(z["minLevel"]) and (z["key"] != "ancient_deep" or anc), "trawl": by_zone.get(z["key"]) })
 	return { "fishingLevel": fishing, "navLevel": nav, "unlockedSlots": unlocked_slots(fishing, nav), "nextSlot": next_slot(fishing, nav), "zones": zones, "freeCrew": free }
 
@@ -226,7 +237,7 @@ static func deploy(db: CaptainStore, uid: String, key: String, crew_id: float) -
 	var why: String = Crew._reassign_error(db, uid, c)
 	if why != "":
 		return { "error": why }
-	active.append({ "id": db.next_id(), "zone": key, "crew_id": crew_id, "ends_ms": Clock.now_ms() + float(z["durationMin"]) * 60000.0 })
+	active.append({ "id": db.next_id(), "zone": key, "crew_id": crew_id, "ends_ms": Clock.now_ms() + run_ms(key) })
 	# Out of their seat: the trawl holds them now.
 	c["voyage_slot"] = null
 	c["raid_slot"] = null

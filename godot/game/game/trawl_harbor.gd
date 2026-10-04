@@ -74,6 +74,14 @@ func _process(delta: float) -> void:
 		_paint()
 
 
+## Time left on a run, in sea days (and the last day in minutes).
+static func _back(ms: float) -> String:
+	var days: float = maxf(0.0, ms) / SeaClock.CYCLE_MS
+	if days > 1.0:
+		return "Back within %d sea days" % int(ceil(days))
+	return "Back today, in %s" % _left(ms)
+
+
 static func _left(ms: float) -> String:
 	var mins: int = int(ceil(maxf(0.0, ms) / 60000.0))
 	return "%dm" % mins if mins < 60 else "%dh %dm" % [mins / 60, mins % 60]
@@ -118,8 +126,8 @@ func _paint() -> void:
 		v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(v)
 		Paper.text(v, str(z["label"]), "body_strong", Paper.ink() if z["unlocked"] else Paper.ink_faint())
-		var mins: int = int(z["durationMin"])
-		Paper.text(v, "Runs %s" % _left(float(mins) * 60000.0), "small", Paper.ink_soft())
+		var days: int = int(z["seaDays"])
+		Paper.text(v, "Runs %d sea day%s" % [days, "" if days == 1 else "s"], "small", Paper.ink_soft())
 		var mid: HBoxContainer = HBoxContainer.new()
 		mid.add_theme_constant_override("separation", 10)
 		mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -146,8 +154,9 @@ func _paint() -> void:
 				cb.pressed.connect(func() -> void: _collect(key))
 				row.add_child(cb)
 			else:
-				var bl: Label = Paper.text(row, "Back in %s" % _left(float(td["endsMs"]) - now), "small", Paper.ink_soft())
+				var bl: Label = Paper.text(row, _back(float(td["endsMs"]) - now), "small", Paper.ink_soft())
 				bl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				bl.tooltip_text = "About %s of real time" % _left(float(td["endsMs"]) - now)
 			continue
 		if _picking == key:
 			var pl: Label = Paper.text(mid, "Who goes? Pick a hand below.", "small", Paper.ink())

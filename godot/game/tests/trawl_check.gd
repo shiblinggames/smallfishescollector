@@ -49,12 +49,14 @@ func _init() -> void:
 	check(Trawls.deploy(db, uid, "open_waters", ids[1]).has("error"), "a second trawl needs a second slot")
 	check(Crew.assign(db, uid, ids[0], "raid", 0.0).has("error"), "a hand on a trawl cannot be seated")
 	check(Trawls.collect(db, uid, "shallows").has("error"), "not home yet")
-	now[0] += 68.0 * 60000.0
+	check(Trawls.state(db, uid)["zones"][0]["trawl"]["endsMs"] == now[0] + SeaClock.CYCLE_MS, "the Shallows runs one sea day")
+	now[0] += SeaClock.CYCLE_MS
 	var d0: float = Js.num(db.me(uid).get("doubloons"))
 	var x0: float = Js.num(db.me(uid).get("fishing_xp"))
 	r = Trawls.collect(db, uid, "shallows")
 	var e: Dictionary = Trawls.expected("shallows", 40.0, 40.0)
-	check(r.has("xpGained") and float(r["xpGained"]) >= float(e["xp"]) * 0.79 and float(r["xpGained"]) <= float(e["xp"]) * 1.21, "the XP near 700 (%s)" % str(r.get("xpGained")))
+	check(is_equal_approx(float(e["xp"]), round(2000.0 * 0.35 * 48.0 / 68.0)), "the haul scaled to the run (%s)" % str(e["xp"]))
+	check(r.has("xpGained") and float(r["xpGained"]) >= float(e["xp"]) * 0.79 and float(r["xpGained"]) <= float(e["xp"]) * 1.21, "the XP near its expected (%s)" % str(r.get("xpGained")))
 	check(Js.num(db.me(uid).get("fishing_xp")) == x0 + float(r["xpGained"]) and Js.num(db.me(uid).get("doubloons")) == d0 + float(r["doubloonsGained"]), "paid in XP and doubloons")
 	check(Trawls.collect(db, uid, "shallows").has("error"), "collected once")
 	check((Trawls.state(db, uid)["freeCrew"] as Array).size() == 2, "both hands free again")

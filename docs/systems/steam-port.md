@@ -1607,8 +1607,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     leaves their seat, voyages and bunk stints hold a hand, the Ancient Deep behind the
     Quartermaster, the haul's luck band and flavour line, the Borrowed Jaw charged. The Trawl
     Harbor (mooring at trawl_fleet) lists every water, sends a hand from a picker that shows
-    each one's expected haul, and brings a finished trawl in. The cycles keep the web's real
-    minutes (68 to 180); whether to shorten them or tie them to play time is still open.
+    each one's expected haul, and brings a finished trawl in. RUNS ARE SEA DAYS (Kong:
+    "trawls will follow in game days instead"): Shallows 1, Open Waters, Deep and Abyss 2,
+    Ancient Deep 4 (48 minutes each, the nearest whole days to the web's 68 to 180 minutes); the
+    haul is scaled by the new run over the web's, so a trawl's earnings per hour are unchanged.
   - No gems anywhere in the port (Kong, 2026-10-04). Activities that paid gems on the web
     (voyages first, bounties, the World Chart) need new end rewards, e.g. skin or recruit-roll
     vouchers: TABLED, to settle as each is ported.
