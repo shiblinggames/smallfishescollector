@@ -86,10 +86,6 @@ func _req(rod: Dictionary) -> int:
 	return int(((Rules.data()["rodShop"] as Dictionary)[Js.key(rod["tier"])] as Dictionary)["levelReq"])
 
 
-func _captain_rod(rod: Dictionary) -> bool:
-	return ((Rules.data()["rodShop"] as Dictionary)[Js.key(rod["tier"])] as Dictionary)["captainRod"] == true
-
-
 ## Every rod held, with the free Bamboo counted as always owned.
 func _owned_rods() -> Dictionary:
 	var out: Dictionary = {}
@@ -197,7 +193,7 @@ func _summaries() -> Dictionary:
 	var owned: Dictionary = _owned_rods()
 	var rods: Array = Rules.data()["rods"]
 	var buyable: Array = rods.filter(func(r: Dictionary) -> bool:
-		return not owned.has(float(r["tier"])) and not _captain_rod(r) and r.get("traderOnly") != true and float(r["tier"]) != COMPLETIONIST_TIER)
+		return not owned.has(float(r["tier"])) and r.get("traderOnly") != true and float(r["tier"]) != COMPLETIONIST_TIER)
 	buyable.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["cost"]) < float(b["cost"]))
 	var next: Dictionary = {}
 	for r: Dictionary in buyable:
@@ -662,10 +658,7 @@ func _rod_row(rod: Dictionary, owned: bool) -> void:
 	if not owned:
 		var req: int = _req(rod)
 		var btn: Button
-		if _captain_rod(rod) and not Rules.premium_active(_p()):
-			btn = Room.tinted("Captain only", Color("#c9a7ff"), 13, 36)
-			btn.disabled = true
-		elif _lvl() < req:
+		if _lvl() < req:
 			btn = Room.tinted("Fishing Lv %d · %d to go" % [req, req - _lvl()], Color("#60a5fa"), 13, 36)
 			btn.disabled = true
 		elif _dbl() >= float(rod["cost"]):

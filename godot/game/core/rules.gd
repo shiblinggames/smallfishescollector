@@ -345,6 +345,10 @@ const CAPTAIN_WATER_ANCIENT: String = "The Ancient Deep is Captain's water. Kip 
 
 
 static func premium_active(p: Dictionary) -> bool:
+	# The port's rule (steam-port.md: buying the game is being a Captain):
+	# every captain is one. The parity run keeps the web's membership.
+	if not web_only:
+		return true
 	if not Js.truthy(p.get("is_premium")):
 		return false
 	if not Js.truthy(p.get("premium_expires_at")):

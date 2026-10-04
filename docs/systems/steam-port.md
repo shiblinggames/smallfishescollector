@@ -1582,6 +1582,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     runs two headless copies (host and crew): join, Set Sail, each sees the other named, the
     crewmate fishes for real on the founder's clock and buys bait, a refusal comes back as a
     refusal, the Charter file holds it all, and leaving is seen.
+  SCOPE DECISIONS (Kong, 2026-10-04, after the completeness audit): NO CAPTAIN TIER ("You get
+  the whole game. It's a full game that you buy": Rules.premium_active is true outside the
+  parity run; the Captain-only rod lock is gone). NO TUTORIALS PORTED (no tours, coach lines,
+  first-voyage or skirmish tutor); later, basic HELP MENUS, "a lot more on discovery like
+  Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
+  the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
+  PAGE is to be built.
   THE STEAM PLAYTEST PIPELINE (2026-10-04; Kong: "I would want to leverage steam playtest"):
   - BUILD: `node tools/build.mjs` (from godot/game; `--channel game` for the store app). It
     fetches Godot's export templates once if missing (about 1 GB), runs tools/setup.mjs (the art

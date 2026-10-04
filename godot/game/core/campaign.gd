@@ -616,7 +616,7 @@ static func pick_class(db: CaptainStore, uid: String, nid: String, class_id: Str
 		return { "error": "That class is not available to you" }
 	picks[ch] = class_id
 	db.update_profile(uid, { "ship_classes": picks, "raid_node_progress": _with_clear(_prog(p), nid) })
-	if nid == "chapter_2_class":
+	if nid == "chapter_2_class" and Rules.web_only:
 		db.mail_to(uid, "The Locker Opens: Davy Jones Gauntlet Unlocked", "You closed out Chapter 2. Word travels fast down in the dark, and something has taken notice.\n\nThe Davy Jones Gauntlet is open to you now. Descend as deep as you dare, fighting ship after ship while one pot swells with every kill. Cash out and it's all yours. Sink before you do and it goes to the deep with you.\n\nGo as deep as you can and you'll tear loose rewards that follow you topside. Find it under Expeditions.\n\n— Davy Jones", "Davy Jones")
 	return { "ok": true }
 

@@ -227,7 +227,9 @@ static func reel_in(db: CaptainStore, uid: String, fish_id: float, result: Strin
 		db.update_profile(uid, land["updates"])
 		var ancient_doubloons: Variant = db.grant(uid, "doubloons", land["sigilBonus"]) if float(land["sigilBonus"]) > 0 else null
 		var first_ancient: bool = false
-		if db.claim_contest("first_ancient_catch", uid):
+		# The web's race and its prize mail; the port has neither (no Captain,
+		# no mail, no contests: everyone owns the whole game).
+		if Rules.web_only and db.claim_contest("first_ancient_catch", uid):
 			first_ancient = true
 			db.mail_to(uid, "🏆 First Ancient Deep Catch: Custom Boat Prize",
 				"You did it. You're the first captain ever to land a fish in the Ancient Deep.\n\nAs promised, you've won a custom boat designed for you. Reply to this email to claim it:\n\nhello@shiblinggames.com\n\nInclude your prize code: ANCIENT-FIRST\n\nWe'll work with you on the design. Welcome to the deep.\n\n— Cap'n Shibling",
