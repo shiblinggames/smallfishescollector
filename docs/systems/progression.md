@@ -4,7 +4,8 @@ The XP spines everything gates on: Fishing level, Navigation level, Renown past 
 fishing Prestige, and the daily challenge cadence.
 
 
-**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong; see steam-port.md "Working it
+**DECIDED 2026-09-30; BUILT IN THE GODOT PORT 2026-10-04** (core/orders.gd; the web is frozen
+and keeps the dated board) (Steam prep, with Kong; see steam-port.md "Working it
 through"):
 - DAILY CHALLENGES RESET ON COMPLETION: sweep the three and a new board comes up. Each pays
   proper doubloons (today 60 to 90), and a swept board opens a FISHING CRATE in place of the

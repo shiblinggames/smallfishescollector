@@ -1589,6 +1589,29 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  THE DAY'S ORDERS AND TRAWLS (2026-10-04, the audit's fourth item):
+  - ORDERS (core/orders.gd), the progression.md decision of 2026-09-30 built: three orders that
+    RESET ON COMPLETION. Each is claimed for its doubloons (the web's tiers, 60 to 375); with all
+    three claimed the board is swept for a FISHING CRATE (into the stash, rolled as a crate from
+    the deepest water the captain can fish) in place of the 10 gems, and a new board is dealt
+    at once. The picks are Daily's own hash, keyed "board-N" where the web keyed the date; each
+    board is pinned to the Fishing level it was dealt at. The MASTER order (Fishing 75) runs on
+    its own track ("master-N") so a sweep never takes an unfinished one away; it pays a crate on
+    the web's weights, stashed. Kept on the profile as "orders"; the web's per-date rows stay for
+    the parity run only. In the Locker's Orders tab; an Orders button on the fishing row ("N to
+    claim" in gold, else "N of 3 done"); a catch that finishes one says so; mooring at the Tally
+    House opens it. Still per captain in a Charter (the shared board is its own pass).
+  - TRAWLS (core/trawls.gd, game/trawl_harbor.gd): getTrawlState, deployTrawl and collectTrawl
+    ported as they were (pay is fishing XP and doubloons, no gems): five waters, the slot ladder
+    (Fishing 25 / 45+Nav 20 / 70+Nav 45 / 90+Nav 50), one per water and per hand, a hand sent
+    leaves their seat, voyages and bunk stints hold a hand, the Ancient Deep behind the
+    Quartermaster, the haul's luck band and flavour line, the Borrowed Jaw charged. The Trawl
+    Harbor (mooring at trawl_fleet) lists every water, sends a hand from a picker that shows
+    each one's expected haul, and brings a finished trawl in. The cycles keep the web's real
+    minutes (68 to 180); whether to shorten them or tie them to play time is still open.
+  - No gems anywhere in the port (Kong, 2026-10-04). Activities that paid gems on the web
+    (voyages first, bounties, the World Chart) need new end rewards, e.g. skin or recruit-roll
+    vouchers: TABLED, to settle as each is ported.
   THE SHIP'S PURCHASES (2026-10-04, the audit's third item: the Mega was unreachable without
   them): core/hulls.gd ports buyShip (the Sloop to the Man-o-War a rung at a time, each behind
   its Navigation rung, prices in port_rules.json "hulls" since the export carries only the sea

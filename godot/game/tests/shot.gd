@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -1389,6 +1389,50 @@ func _init() -> void:
 				await process_frame
 			sea._locker._show_tab("boat")
 			for f: int in 40:
+				await process_frame
+		"trawls":
+			var tdb: CaptainStore = sea.session.store
+			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[59])
+			p["expedition_xp"] = 1.0e9
+			var tc: Array = Crew.cards()
+			var tids: Array = []
+			for k: int in 5:
+				var tid: float = tdb.next_id()
+				tids.append(tid)
+				(tdb.save["crew"] as Array).append({ "id": tid, "card_id": tc[k * 7]["id"], "rarity": 2.0, "power": 10.0, "dodge": 12.0 + k * 6.0, "fortune": 30.0 - k * 4.0, "effects": [], "pending_trait": null, "voyage_slot": null, "raid_slot": null, "xp": 4000.0 * k, "nickname": null, "recruited_at": "2026-10-01T00:00:00.000Z", "died_at": null })
+			Trawls.deploy(tdb, sea.session.uid, "shallows", tids[0])
+			Trawls.deploy(tdb, sea.session.uid, "deep", tids[1])
+			(tdb.save["trawls"] as Array)[0]["ends_ms"] = Clock.now_ms() - 1000.0
+			hud._set_phase("idle")
+			hud._dial.visible = false
+			sea._dock("trawl_fleet")
+			for f: int in 10:
+				await process_frame
+			if OS.get_environment("TRAWL_PICK") != "":
+				for n: Node in sea._room_layer.get_children():
+					if n is TrawlHarbor:
+						n._picking = "open_waters"
+						n._paint()
+			if OS.get_environment("TRAWL_HAUL") != "":
+				for n: Node in sea._room_layer.get_children():
+					if n is TrawlHarbor:
+						n._collect("shallows")
+			for f: int in 20:
+				await process_frame
+		"orders":
+			var st0: Dictionary = Orders.state(sea.session.store, sea.session.uid)
+			var o0: Dictionary = Js.obj(p["orders"])
+			o0["p"] = [float(st0["orders"][0]["target"]), float(st0["orders"][1]["target"]) * 0.4, 0.0]
+			o0["claimed"] = [false, false, false]
+			p["orders"] = o0
+			hud._set_phase("idle")
+			hud._dial.visible = false
+			hud.refresh()
+			hud._open_loadout()
+			for f: int in 30:
+				await process_frame
+			sea._locker._show_tab("orders")
+			for f: int in 30:
 				await process_frame
 		"crates", "crateopen":
 			p["crate_stash"] = { "gold": 2.0, "wooden": 3.0, "ancient": 1.0 }

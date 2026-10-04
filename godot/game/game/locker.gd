@@ -24,9 +24,9 @@ const ALL_SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["skin", "Look"], ["
 const HOW_TO_GET: Dictionary = {
 	"rod": "New rods are sold at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.",
 	"bait": "Bait is sold at the Tackle Shop, by the traders out on the water, and found in crates.",
-	"skin": "Looks are bought with doubloons or gems, earned by levels and achievements, or found in crates.",
+	"skin": "Looks are bought with doubloons, earned by levels and achievements, or found in crates.",
 	"hat": "Hats are bought with doubloons. A few only come out of crates.",
-	"boat": "Boats are bought with doubloons or gems, earned by levels and achievements, or found in crates.",
+	"boat": "Boats are bought with doubloons, earned by levels and achievements, or found in crates.",
 	"pet": "Pets come out of supply crates.",
 }
 const PANEL_W: float = 620.0
@@ -151,7 +151,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_TAB:
 		get_viewport().set_input_as_handled()
-		var order: Array = ["loadout", "boat", "hold", "crates", "log"]
+		var order: Array = ["loadout", "boat", "hold", "crates", "orders", "log"]
 		_show_tab(order[(order.find(tab) + 1) % order.size()])
 
 
@@ -173,7 +173,7 @@ func _show_tab(t: String) -> void:
 	_stage(t)
 	for c: Node in _tabs.get_children():
 		c.queue_free()
-	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["log", "Log"]]:
+	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["orders", "Orders"], ["log", "Log"]]:
 		var b: Pane.PaneButton = Paper.button(o[1], o[0] == t)
 		b.custom_minimum_size = Vector2(76, 34)
 		b.tooltip_text = "Tab to switch"
@@ -201,6 +201,8 @@ func _show_tab(t: String) -> void:
 		_build_hold()
 	elif t == "crates":
 		_build_crates()
+	elif t == "orders":
+		_build_orders()
 	else:
 		_build_log()
 
@@ -216,6 +218,76 @@ func _widen(wide: bool) -> void:
 		return
 	var tw: Tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_panel, "offset_left", goal, 0.32)
+
+
+# ── Orders ─────────────────────────────────────────────────────────────────────
+
+## THE DAY'S ORDERS (core/orders.gd): three orders, each claimed for its
+## doubloons; all three claimed, the board is swept for a fishing crate and a
+## new board comes up at once. The Master order (Fishing 75) runs beside it.
+func _build_orders() -> void:
+	var st: Dictionary = RulesApi.run(session.store, session.uid, "ordersState", [])
+	Paper.text(_body, "BOARD %d" % int(st["board"]), "eyebrow", Paper.INK_SOFT)
+	Paper.text(_body, "Claim each order for its doubloons. Claim all three and sweep the board for a fishing crate; a new board comes up at once. Nothing expires.", "note", Paper.INK_SOFT, true)
+	for i: int in 3:
+		_order_row(st["orders"][i], float(st["progress"][i]), st["claimed"][i] == true, i, "Claim  ·  %s ⟡" % Js.thousands(float(st["orders"][i]["reward"])))
+	var sw: Pane.PaneButton = Paper.button("Sweep the board  ·  a fishing crate", st["sweepable"])
+	sw.disabled = not st["sweepable"]
+	sw.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	sw.pressed.connect(func() -> void: _order_act("sweepOrders", []))
+	_body.add_child(sw)
+	var m: Dictionary = st["master"]
+	Paper.rule(_body)
+	Paper.text(_body, "THE MASTER ORDER", "eyebrow", Paper.INK_SOFT)
+	if m.is_empty():
+		Paper.text(_body, "Opens at Fishing %d: a harder order of its own, paid with a crate of any tier." % int(Rules.data()["daily"]["masterMinLevel"]), "note", Paper.INK_SOFT, true)
+		return
+	_order_row(m, float(st["masterProgress"]), false, 3, "Claim  ·  a crate")
+
+
+func _order_row(c: Dictionary, got: float, claimed: bool, i: int, claim_label: String) -> void:
+	var target: float = float(c["target"])
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	_body.add_child(row)
+	var v: VBoxContainer = VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 3)
+	row.add_child(v)
+	Paper.text(v, str(c["label"]), "body_strong", Paper.INK if not claimed else Paper.INK_FAINT)
+	var bar: Control = Control.new()
+	bar.custom_minimum_size = Vector2(0, 6)
+	var frac: float = clampf(got / maxf(1.0, target), 0.0, 1.0)
+	bar.draw.connect(func() -> void:
+		bar.draw_rect(Rect2(Vector2.ZERO, bar.size), Color(Paper.INK, 0.12))
+		bar.draw_rect(Rect2(Vector2.ZERO, Vector2(bar.size.x * frac, bar.size.y)), Color(0.36, 0.6, 0.42) if frac >= 1.0 else Color(Paper.INK, 0.45)))
+	v.add_child(bar)
+	Paper.text(v, "%s of %s" % [Js.thousands(minf(got, target)), Js.thousands(target)], "small", Paper.INK_SOFT)
+	if claimed:
+		Paper.text(row, "Claimed", "small", Paper.INK_FAINT)
+	elif got >= target:
+		var b: Pane.PaneButton = Paper.button(claim_label, true)
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.pressed.connect(func() -> void: _order_act("claimOrder", [i]))
+		row.add_child(b)
+	else:
+		var rw: Label = Paper.text(row, claim_label.trim_prefix("Claim  ·  "), "small", Paper.INK_FAINT)
+		rw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+
+func _order_act(op: String, args: Array) -> void:
+	var r: Variant = await session.act(op, args)
+	session.persist()
+	if r is Dictionary and (r as Dictionary).has("error"):
+		Sound.slack()
+		hud.toast(str(r["error"]))
+	elif r is Dictionary and (r as Dictionary).has("crate"):
+		Sound.chest(true)
+		hud.toast("%s stowed with your crates." % CrateMoment.TIERS.get(str(r["crate"]), CrateMoment.TIERS["wooden"])[0])
+	else:
+		Sound.chest(false)
+	hud.refresh()
+	_show_tab("orders")
 
 
 # ── Boat ───────────────────────────────────────────────────────────────────────

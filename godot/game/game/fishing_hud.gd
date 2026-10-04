@@ -55,6 +55,7 @@ var _story: StoryLine
 var _story_st: Dictionary = {}
 var _finn_arrow: FinnArrow
 var _bottom_fish: HBoxContainer
+var _orders_val: Label
 var _bottom_exp: HBoxContainer
 var _crew_val: Label
 var _recruit_val: Label
@@ -238,7 +239,7 @@ func _ready() -> void:
 	# ONE ROW (Kong, 2026-10-01): the bait on the line (a press puts on the
 	# next one; Q for the wheel), the Locker (gear, hold, crates, log: I), and
 	# the hold (a press opens it in the Locker).
-	_place(bottom, Vector2(0.5, 1.0), Vector2(-380, -72), Vector2(760, 54))
+	_place(bottom, Vector2(0.5, 1.0), Vector2(-460, -72), Vector2(920, 54))
 	add_child(bottom)
 	var bv: Array = _menu(bottom, "Bait", _toggle_bait_picker)
 	_m_bait = bv[0]
@@ -281,6 +282,8 @@ func _ready() -> void:
 	var hv: Array = _menu(bottom, "Hold", _open_hold)
 	_m_hold = hv[0]
 	_hold = hv[1]
+	var ov: Array = _menu(bottom, "Orders", func() -> void: locker_wanted.emit("orders", ""))
+	_orders_val = ov[1]
 	_bottom_fish = bottom
 	_build_expedition_row()
 	_blocked = Kit.lift(Kit.text(self, "", "small", Color("#f8a2a2")))
@@ -617,6 +620,7 @@ func refresh() -> void:
 	_drain_badges()
 	_paint_clues()
 	_paint_expedition_row()
+	_paint_orders()
 	var p: Dictionary = session.profile()
 	var lvl: int = session.level()
 	var table: Array = Rules.data()["xpTable"]
@@ -981,6 +985,24 @@ func _open_sheet(s: Sheet) -> void:
 
 func _open_bait() -> void:
 	locker_wanted.emit("loadout", "bait")
+
+
+## The Orders button: how many are ready to claim, else the board's count.
+func _paint_orders() -> void:
+	if _orders_val == null:
+		return
+	var ready: int = Orders.ready_count(session.store, session.uid)
+	if ready > 0:
+		_orders_val.text = "%d to claim" % ready
+		_orders_val.add_theme_color_override("font_color", Color("#9a6a12"))
+		return
+	var st: Dictionary = RulesApi.run(session.store, session.uid, "ordersState", [])
+	var done: int = 0
+	for i: int in 3:
+		if st["claimed"][i] == true or float(st["progress"][i]) >= float(st["orders"][i]["target"]):
+			done += 1
+	_orders_val.text = "%d of 3 done" % done
+	_orders_val.add_theme_color_override("font_color", Kit.PAPER_INK)
 
 
 func _open_hold() -> void:
@@ -1723,6 +1745,9 @@ func _fish_card(r: Dictionary, perfect: bool) -> void:
 		var sd: Dictionary = st
 		if sd.get("ok", false) and sd.has("next"):
 			_badge_q.append(["%s  ·  STEP %d OF %d" % [str(Clues.TIER_NAME[sd["tier"]]).to_upper(), int(sd["stepNo"]), int(sd["of"])], "That is the fish", str(sd["next"]["text"]), Skipper.tex("sea/sea-bottle.png")])
+	# An order this catch finished.
+	for lbl: Variant in Js.list(r.get("ordersDone")):
+		toast("Order done: %s. Claim it under Orders." % str(lbl))
 	# The Log has something new to show.
 	if r.get("isNewSpecies") == true or r.get("isPB") == true or str(r.get("sizeTier", "")) == "trophy" or r.get("isShiny") == true:
 		_log_dot = true

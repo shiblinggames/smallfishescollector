@@ -333,6 +333,10 @@ static func reel_in(db: CaptainStore, uid: String, fish_id: float, result: Strin
 		var c: Dictionary = challenges[n]
 		new_p.append(minf(float(prior[n]) + Daily.increment(c, fish["habitat"], float(fish["bite_rarity"]), Js.num(fish.get("sell_value")), catch_qty, is_perfect), float(c["target"])))
 	db.save_daily_progress(uid, daily_date, new_p, snap_level)
+	# THE DAY'S ORDERS (the port): the board that resets on completion.
+	var orders_done: Array = []
+	if not Rules.web_only:
+		orders_done = Orders.count(db, uid, fish["habitat"], float(fish["bite_rarity"]), Js.num(fish.get("sell_value")), catch_qty, is_perfect)
 
 	var waiting_on: Array = _folk_waiting_on(db, uid, fish_id)
 
@@ -344,6 +348,8 @@ static func reel_in(db: CaptainStore, uid: String, fish_id: float, result: Strin
 		"isPB": is_pb, "previousBest": previous_best, "isShiny": is_shiny, "alreadyMounted": already_mounted,
 		"sigilBonus": land_f["sigilBonus"], "wormhole": wormhole, "catchQty": catch_qty,
 	}
+	if orders_done.size() > 0:
+		out["ordersDone"] = orders_done
 	if waiting_on.size() > 0:
 		out["waitingOn"] = waiting_on
 	if unlocked_skin != null:
