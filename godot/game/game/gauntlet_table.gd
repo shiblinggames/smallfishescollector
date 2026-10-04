@@ -520,6 +520,7 @@ func _resolve() -> void:
 		plans.append(p)
 	if b["state"] == "plan":
 		ev += Battle.resolve(b, plans)
+	_reactions_found(ev)
 	_tally(ev, plans)
 	match str(b["state"]):
 		"won":
@@ -1111,6 +1112,27 @@ func _banish(key: String, i: int) -> Dictionary:
 
 
 ## The codex: a synergy taken for the first time.
+## Reactions set off this round: each captain in the fight who had never
+## seen one has it written into their Codex (gauntlet_reactions_seen), and
+## the event names them so their screen can say it was discovered.
+func _reactions_found(ev: Array) -> void:
+	for x: Variant in ev:
+		if not (x is Dictionary) or str(x.get("t", "")) != "reaction":
+			continue
+		var fresh: Array = []
+		for st: Dictionary in _r["b"]["seats"]:
+			var key: String = str(st.get("key", ""))
+			var s: Session = _session(key)
+			if s == null:
+				continue
+			_lend(s)
+			if not Js.list(s.profile().get("gauntlet_reactions_seen")).has(x["id"]):
+				s.store.add_to_list(s.uid, "gauntlet_reactions_seen", x["id"])
+				fresh.append(key)
+			_take(s)
+		x["new"] = fresh
+
+
 func _mark_seen(key: String, id: String) -> void:
 	var s: Session = _session(key)
 	if s == null:

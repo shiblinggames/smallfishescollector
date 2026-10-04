@@ -838,6 +838,7 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 			flags = ["brace", "shield"]
 		"requiem":
 			apply_status(e["statuses"], "marked", float(ms["markMag"]), float(ms["markTurns"]))
+			_el(b, e, "marked", si)
 			if ms.get("pierceShield", false):
 				e["markPierce"] = float(ms["markTurns"])
 			flags = ["snare", "burst"]
@@ -1394,8 +1395,10 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 				_on_hit(b, si, dmg, crit_shot, ev, Js.list(mega.get("hits")).size())
 				# The Nuke's fallout: the wreck burns.
 				if mega.get("fallout") is Dictionary:
-					e["burn"] = { "turns": float(mega["fallout"]["turns"]), "dmg": maxf(1.0, float(Js.round(dmg * float(mega["fallout"]["pct"])))) }
+					e["burn"] = { "turns": float(mega["fallout"]["turns"]), "dmg": maxf(1.0, float(Js.round(dmg * float(mega["fallout"]["pct"])))), "by": float(si) }
+					_el(b, e, "fire", si)
 					ev.append({ "t": "eAblaze", "seat": si, "dmg": e["burn"]["dmg"], "fallout": true })
+				_reactions(b, si, e, act, dmg, ev)
 			if not out.get("dodged", false):
 				_streak(s, ta2, crit_shot, ev, si)
 			# Reflective: a slice of the blow comes back.
@@ -1604,6 +1607,14 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 	if crit:
 		dmg = floor(dmg * 1.5)
 	var out: Dictionary = { "t": "eShot", "action": act, "target": ti, "crit": crit, "extra": not main, "all": all, "frenzy": frenzy }
+	# Fog Bank: its next shot goes into the steam.
+	if Js.num(e.get("fogged")) > 0.0:
+		var miss: float = float(e["fogged"])
+		e.erase("fogged")
+		if Dice.next() < miss:
+			dmg = 0.0
+			out["dodged"] = true
+			out["fog"] = true
 	# The target's dodge stance (a frozen ship cannot; the Frenzied shot
 	# comes in under it).
 	if str(Js.obj(plans[ti]).get("action", "")) == "dodge" and not t.get("frozenNow", false) and not frenzy:
@@ -2548,16 +2559,19 @@ static func _on_hit(b: Dictionary, si: int, dmg: float, crit: bool, ev: Array, h
 		var turns: float = 2.0 + float(ta["burnTurns"])
 		var tick: float = maxf(1.0, float(Js.round(dmg * minf(0.20, 0.10 * float(ta["burnTick"])))))
 		e["burn"] = { "turns": turns, "dmg": maxf(tick, float(old_burn.get("dmg", 0.0)) if ta["reignite"] else 0.0), "by": float(si), "backdraft": ta["backdraft"], "feed": ta["burnTickHeal"] }
+		_el(b, e, "fire", si)
 		ev.append({ "t": "eAblaze", "seat": si, "dmg": e["burn"]["dmg"], "turns": turns })
 	# Ice: the next turn (two, in deep ice) frozen.
 	var fc: float = minf(0.20, float(fx.get("freeze", 0.0)) + float(ta["freezeChance"]))
 	if fc > 0.0 and _proc(fc, hits):
 		e["freeze"] = 2.0 if ta["deepFreeze"] else 1.0
+		_el(b, e, "ice", si)
 		ev.append({ "t": "eIced", "seat": si, "deep": ta["deepFreeze"] })
 	# Statuses a run's shot leaves.
 	for so: Dictionary in ta["onHit"]:
 		if _proc(float(so["chance"]), hits):
 			apply_status(e["statuses"], str(so["status"]), float(so["magnitude"]), float(so["turns"]))
+			_el(b, e, str(so["status"]), si)
 			ev.append({ "t": "eStatus", "seat": si, "status": so["status"] })
 	# Kraken's Grip: coils build; when they close the hull is held and crushed.
 	if float(ta["gripHits"]) > 0.0:
@@ -2601,6 +2615,8 @@ static func _on_hit(b: Dictionary, si: int, dmg: float, crit: bool, ev: Array, h
 		if float(fx.get("feeble", 0.0)) > 0.0:
 			apply_status(e["statuses"], "feeble", 0.20, 2.0)
 			landed.append("feeble")
+		for l9: String in landed:
+			_el(b, e, l9, si)
 		ev.append({ "t": "rack", "seat": si, "landed": landed })
 	if crit and float(fx.get("critRamp", 0.0)) > 0.0:
 		s["critRamp"] = float(s.get("critRamp", 0.0)) + float(fx["critRamp"])
@@ -2949,6 +2965,7 @@ static func _bond_landed(b: Dictionary, si: int, e: Dictionary, act: String, cri
 				if str(e.get("role", "")) != "":
 					e["jammed"] = true
 				apply_status(e["statuses"], "marked", best, 2.0)
+				_el(b, e, "marked", si)
 				_bond_note(ev, si, -1, "Boarded!")
 	if xf > 1.0:
 		var ec: Dictionary = bond_of(s, "bondEcho")
@@ -3130,3 +3147,180 @@ static func _bond_round_end(b: Dictionary, ev: Array) -> void:
 						(o2["statuses"] as Dictionary).erase(id)
 						_bond_note(ev, int(h2[0]), i, "Cleared")
 					break
+
+
+
+# ══ Reactions (co-op gauntlets: two captains' elements on one ship; port rules
+#    battle.gauntlet.reactions) ═══════════════════════════════════════════════════
+#
+# Nothing here runs outside a co-op gauntlet, so solo dives and raids are as
+# they were (no die is rolled, nothing is written).
+
+static func _coop_dive(b: Dictionary) -> bool:
+	return str(b.get("gauntlet", "")) != "" and (b["seats"] as Array).size() >= 2
+
+
+static func reaction_def(id: String) -> Dictionary:
+	for r: Dictionary in Js.list(Js.obj(cfg().get("gauntlet")).get("reactions")):
+		if r["id"] == id:
+			return r
+	return {}
+
+
+## An element laid on a ship, and by whom.
+static func _el(b: Dictionary, e: Dictionary, el: String, si: int) -> void:
+	if not _coop_dive(b):
+		return
+	if not e.has("elBy"):
+		e["elBy"] = {}
+	e["elBy"][el] = float(si)
+
+
+## Who holds each element on this ship now: { element: seat } (coils: the
+## captain with the most).
+static func _elements(e: Dictionary) -> Dictionary:
+	var by: Dictionary = Js.obj(e.get("elBy"))
+	var st: Dictionary = e["statuses"]
+	var out: Dictionary = {}
+	if not Js.obj(e.get("burn")).is_empty():
+		out["fire"] = int(Js.nz(e["burn"].get("by"), by.get("fire", -1.0)))
+	if (Js.num(e.get("freeze")) > 0.0 or e.get("frozenNow", false)) and by.has("ice"):
+		out["ice"] = int(by["ice"])
+	for k: String in ["corrode", "weaken", "feeble", "marked"]:
+		if st.has(k) and by.has(k):
+			out[k] = int(by[k])
+	var best: float = 0.0
+	for gk: Variant in Js.obj(e.get("grip")):
+		if float(e["grip"][gk]) > best:
+			best = float(e["grip"][gk])
+			out["coils"] = int(str(gk))
+	if best > 0.0:
+		out["coilsN"] = best
+	return out
+
+
+## A hit by `si` landed: does it set off a reaction? (At most one a ship a
+## round; damage scales off the hit.)
+static func _reactions(b: Dictionary, si: int, e: Dictionary, act: String, dmg: float, ev: Array) -> void:
+	if not _coop_dive(b) or not foe_up(e) or str(e.get("reactRound", "")) == "%d:%d" % [int(b["fight"]), int(b["turn"])]:
+		return
+	var el: Dictionary = _elements(e)
+	var two: Callable = func(x: String, y: String) -> bool:
+		return el.has(x) and el.has(y) and int(el[x]) != int(el[y]) and (int(el[x]) == si or int(el[y]) == si)
+	var by_other: Callable = func(x: String) -> bool:
+		return el.has(x) and int(el[x]) != si
+	var id: String = ""
+	if el.has("fire") and el.has("ice") and el.has("corrode") and [int(el["fire"]), int(el["ice"]), int(el["corrode"])].has(si) \
+			and int(el["fire"]) != int(el["ice"]) and int(el["ice"]) != int(el["corrode"]) and int(el["fire"]) != int(el["corrode"]) \
+			and float(Js.nz(b.get("kissFight"), -1.0)) != float(b["fight"]):
+		id = "davys_kiss"
+	elif act == "mega" and by_other.call("marked"):
+		id = "last_rites"
+	elif act == "volley" and by_other.call("fire"):
+		id = "powder_keg"
+	elif act == "volley" and by_other.call("ice"):
+		id = "brittle_hull"
+	elif two.call("fire", "ice"):
+		id = "fog_bank"
+	elif two.call("fire", "corrode"):
+		id = "greek_fire"
+	elif two.call("ice", "coils"):
+		id = "crushing_deep"
+	elif two.call("fire", "coils") and not e["burn"].get("boiled", false):
+		id = "boiling_sea"
+	elif two.call("corrode", "feeble") and float(e["shield"]) > 0.0:
+		id = "rot"
+	elif two.call("weaken", "ice"):
+		id = "numbed"
+	if id == "":
+		return
+	var r: Dictionary = reaction_def(id)
+	var pct: float = float(Js.nz(r.get("pct"), 0.0))
+	var fs: Array = foes(b)
+	var me_j: int = fs.find(e)
+	var x: Dictionary = { "t": "reaction", "id": id, "name": r.get("name", ""), "seat": si, "foe": me_j, "others": [] }
+	match id:
+		"fog_bank":
+			e["fogged"] = float(Js.nz(r.get("miss"), 0.6))
+			e["freeze"] = 0.0
+			e["frozenNow"] = false
+		"greek_fire":
+			for f: Dictionary in fs:
+				if f != e and foe_up(f) and Js.obj(f.get("burn")).is_empty():
+					f["burn"] = Js.obj(e["burn"]).duplicate()
+					(x["others"] as Array).append({ "foe": fs.find(f), "burn": true })
+			(e["statuses"] as Dictionary).erase("corrode")
+		"powder_keg":
+			_splash_others(b, e, float(Js.round(dmg * pct)), x)
+			e["burn"] = {}
+		"brittle_hull":
+			_react_hit(b, si, e, float(Js.round(dmg * pct)), false, x, ev)
+			e["freeze"] = 0.0
+			e["frozenNow"] = false
+		"crushing_deep":
+			var coils: float = float(el.get("coilsN", 1.0))
+			var crush: float = float(Js.round(dmg * pct * coils))
+			_react_hit(b, si, e, crush, false, x, ev)
+			for f2: Dictionary in fs:
+				if f2 != e and foe_up(f2):
+					_splash_one(f2, float(Js.round(crush * 0.5)), fs.find(f2), x)
+					break
+			e["grip"][str(el["coils"])] = 0.0
+		"boiling_sea":
+			var cn: float = float(el.get("coilsN", 1.0))
+			e["burn"]["dmg"] = float(Js.round(float(e["burn"]["dmg"]) * (1.0 + pct * cn)))
+			e["burn"]["turns"] = float(e["burn"]["turns"]) + 1.0
+			e["burn"]["boiled"] = true
+		"rot":
+			x["shield"] = e["shield"]
+			e["shield"] = 0.0
+			(e["statuses"] as Dictionary).erase("corrode")
+		"numbed":
+			e["freeze"] = maxf(1.0, Js.num(e.get("freeze"))) + 1.0
+			(e["statuses"] as Dictionary).erase("weaken")
+		"last_rites":
+			_react_hit(b, si, e, float(Js.round(dmg * pct)), true, x, ev)
+			(e["statuses"] as Dictionary).erase("marked")
+		"davys_kiss":
+			b["kissFight"] = b["fight"]
+			var kiss: float = float(Js.round(dmg * pct))
+			_splash_others(b, e, kiss, x)
+			_react_hit(b, si, e, kiss, false, x, ev)
+			e["burn"] = {}
+			e["freeze"] = 0.0
+			e["frozenNow"] = false
+			(e["statuses"] as Dictionary).erase("corrode")
+	e["reactRound"] = "%d:%d" % [int(b["fight"]), int(b["turn"])]
+	x["enemyHp"] = e["hp"]
+	ev.append(x)
+
+
+## A reaction's blow on the ship it went off on (past its barrier when
+## `pierce`); it may sink it.
+static func _react_hit(b: Dictionary, si: int, e: Dictionary, amt: float, pierce: bool, x: Dictionary, ev: Array) -> void:
+	if amt <= 0.0 or not foe_up(e):
+		return
+	var to_hull: float = amt
+	if not pierce and float(e["shield"]) > 0.0:
+		var ab: float = minf(float(e["shield"]), amt)
+		e["shield"] = float(e["shield"]) - ab
+		to_hull = amt - ab
+	e["hp"] = _ward_floor(b, float(e["hp"]) - to_hull, ev)
+	x["dmg"] = to_hull
+	finish_check(b, si, false, ev)
+
+
+## A reaction's splash on every other ship afloat (it never sinks one).
+static func _splash_others(b: Dictionary, e: Dictionary, amt: float, x: Dictionary) -> void:
+	var fs: Array = foes(b)
+	for f: Dictionary in fs:
+		if f != e and foe_up(f):
+			_splash_one(f, amt, fs.find(f), x)
+
+
+static func _splash_one(f: Dictionary, amt: float, j: int, x: Dictionary) -> void:
+	var hit: float = minf(amt, float(f["hp"]) - 1.0)
+	if hit <= 0.0:
+		return
+	f["hp"] = float(f["hp"]) - hit
+	(x["others"] as Array).append({ "foe": j, "dmg": hit, "hp": f["hp"] })

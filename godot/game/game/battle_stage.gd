@@ -890,7 +890,9 @@ func _one(x: Dictionary) -> void:
 			await _fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land2, 3 if x["action"] == "volley" else 1, x["action"] != "fire",
 				func(_k: int) -> void: _react(-1 - fj2, "recoil"),
 				func(k: int) -> void: _landed(ti, land2, k))
-			if x.get("dodged", false):
+			if x.get("fog", false):
+				_num(_seat_at(ti), "Lost in the fog", Color(0.85, 0.9, 0.95))
+			elif x.get("dodged", false):
 				_num(_seat_at(ti), "Dodged!", Color(0.6, 0.9, 1.0))
 			else:
 				_num(_seat_at(ti), ("%d!" % int(x["dmg"])) if x["crit"] else str(int(x["dmg"])), Color(1.0, 0.45, 0.35), x["crit"])
@@ -1025,6 +1027,8 @@ func _one(x: Dictionary) -> void:
 			pass
 		"role":
 			await _role_move(x)
+		"reaction":
+			await _reaction(x)
 		"comboNote":
 			# A pack's combo (or a jammed role) at work: its name over the ship.
 			var fj2: int = int(x.get("foe", -1))
@@ -2286,6 +2290,65 @@ func _landed(who: int, land: String, k: int) -> void:
 
 func _role_name(e: Dictionary) -> String:
 	return str(Js.obj(Battle.roles_cfg().get(str(e.get("role", "")))).get("name", ""))
+
+
+## A REACTION (two captains' elements on one ship): its own moment each, the
+## name over the water, and "Reaction discovered" the first time this captain
+## sees it.
+func _reaction(x: Dictionary) -> void:
+	var fj: int = int(x["foe"])
+	var at: Vector2 = _foe_at(fj)
+	var from: Vector2 = _seat_at(int(x["seat"]))
+	var others: Array = Js.list(x.get("others"))
+	match str(x["id"]):
+		"fog_bank":
+			for k: int in 3:
+				_fx.pulse(at + Vector2(randf_range(-40, 40), randf_range(-20, 20)), Color(0.85, 0.88, 0.9))
+			_num(at + Vector2(0, -60), "Lost in the steam", Color(0.85, 0.9, 0.95))
+		"greek_fire":
+			for o: Variant in others:
+				_fx.tether(at, _foe_at(int(Js.obj(o)["foe"])), Color(0.45, 1.0, 0.45))
+			_fx.pulse(at, Color(0.4, 1.0, 0.4))
+		"powder_keg":
+			_fx.blast(at)
+			_fx.burst(at, true)
+		"brittle_hull":
+			_fx.burst(at, true)
+			_fx.pulse(at, Color(0.7, 0.9, 1.0))
+		"crushing_deep":
+			_fx.pulse(at, Color(0.35, 0.75, 0.7))
+			_fx.splash(at)
+		"boiling_sea":
+			_fx.splash(at)
+			_fx.pulse(at, Color(1.0, 0.6, 0.3))
+		"rot":
+			_fx.pulse(at, Color(0.55, 0.6, 0.25))
+			_num(at + Vector2(0, -60), "Barrier rots away", Color(0.7, 0.75, 0.35))
+		"numbed":
+			_fx.pulse(at, Color(0.6, 0.75, 1.0))
+			_num(at + Vector2(0, -60), "Numbed  +1 turn frozen", Color(0.7, 0.85, 1.0))
+		"last_rites":
+			_fx.tether(from, at, Color(0.9, 0.85, 0.6))
+			_fx.burst(at, true)
+		"davys_kiss":
+			for j: int in Battle.foes(b).size():
+				_fx.splash(_foe_at(j))
+				_fx.pulse(_foe_at(j), Color(0.3, 0.75, 0.75))
+	if Js.num(x.get("dmg")) > 0.0:
+		_num(at, "-%d" % int(x["dmg"]), Color(1.0, 0.8, 0.5), true)
+	for o2: Variant in others:
+		var od: Dictionary = Js.obj(o2)
+		if od.has("dmg"):
+			_num(_foe_at(int(od["foe"])), "-%d" % int(od["dmg"]), Color(1.0, 0.75, 0.45))
+			_shown_hp["e%d" % int(od["foe"])] = float(od["hp"])
+	_shown_hp["e%d" % fj] = float(x["enemyHp"])
+	var fresh: bool = Js.list(x.get("new")).has(my_key)
+	_say(("Reaction discovered!  " if fresh else "") + str(x["name"]))
+	_log_line("%s!  %s" % [x["name"], str(Battle.reaction_def(str(x["id"])).get("desc", ""))] if fresh else "%s!" % x["name"])
+	Sound.seal(true)
+	if fresh:
+		Sound.perfect()
+	await _wait(1.1 if fresh else 0.6)
 
 
 ## A role's move on the water: a beam of light from the caster to the ally it

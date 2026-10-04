@@ -190,6 +190,24 @@ func _all_tab() -> void:
 			"levels": Js.list(b["tiers"]).map(func(t: Dictionary) -> Dictionary: return { "desc": t.get("desc", "") }) }
 		var en: Control = _entry(e, false, 0, "%s  ·  %s" % [str(b.get("role", "")).capitalize(), str(Gauntlet.rarity(b)).capitalize()])
 		gb.add_child(en)
+	var rs: Array = Js.list(Js.obj(Battle.cfg().get("gauntlet")).get("reactions"))
+	var found: Array = Js.list(profile.get("gauntlet_reactions_seen"))
+	_heading("Reactions  ·  %d of %d found" % [rs.filter(func(r: Dictionary) -> bool: return found.has(r["id"])).size(), rs.size()],
+		"Co-op dives only. Two captains' elements meeting on one ship. Nobody writes these down for you: set one off to learn it.")
+	var gr: GridContainer = _grid()
+	for r: Dictionary in rs:
+		var en: Entry = Entry.new()
+		var cols: float = 3.0 if _list.custom_minimum_size.x > 900.0 else (2.0 if _list.custom_minimum_size.x > 560.0 else 1.0)
+		en.custom_minimum_size = Vector2((_list.custom_minimum_size.x - 10.0 * (cols - 1.0)) / cols, 200)
+		en.kind = "reaction"
+		en.seen = found.has(r["id"])
+		en.title = str(r["name"])
+		var hv: Array = [[str(r["a"]), null], [str(r["b"]), null]]
+		if r.has("c"):
+			hv[1] = [str(r["b"]) + " + " + str(r["c"]), null]
+		en.halves = hv
+		en.levels = [str(r.get("desc", ""))]
+		gr.add_child(en)
 	if not crew.is_empty():
 		_heading("Crew synergies", "Co-op dives only. A bond power and a power: one captain may hold both, or two captains one each.")
 		var gc: GridContainer = _grid()
@@ -275,6 +293,8 @@ class Entry:
 	var note: String = ""
 	var halves: Array = []
 	var levels: Array = []
+	## "reaction" for a co-op reaction (no levels, its own fog line).
+	var kind: String = ""
 	var _frames: int = 0
 
 	func _process(_d: float) -> void:
@@ -292,12 +312,12 @@ class Entry:
 			draw_arc(c, 32.0, 0.0, TAU, 40, Color(1, 1, 1, 0.12), 1.5, true)
 			BattleLook.say(self, Kit.font("cinzel", 700), c.x, c.y + 9.0, "?", 26, Color(Dossier.FAINT, 0.9))
 			draw_string(Kit.font("cinzel", 700), Vector2(92, 46), "Undiscovered", HORIZONTAL_ALIGNMENT_LEFT, size.x - 104, 16, Dossier.SOFT)
-			draw_string(Kit.font("karla", 600), Vector2(92, 66), "A %s not yet taken." % ("convergence" if conv else "synergy"), HORIZONTAL_ALIGNMENT_LEFT, size.x - 104, 12, Dossier.FAINT)
+			draw_string(Kit.font("karla", 600), Vector2(92, 66), "Two captains, two elements, one ship." if kind == "reaction" else "A %s not yet taken." % ("convergence" if conv else "synergy"), HORIZONTAL_ALIGNMENT_LEFT, size.x - 104, 12, Dossier.FAINT)
 			return
 		draw_circle(c, 34.0, Color(tone, 0.14))
 		if icon != null:
 			draw_texture_rect(icon, Rect2(c - Vector2(30, 30), Vector2(60, 60)), false)
-		var kick: String = ("Convergence" if conv else "Synergy") + (("  ·  Level %s" % Gauntlet.tier_label(level)) if level > 0 else "")
+		var kick: String = "Reaction" if kind == "reaction" else ("Convergence" if conv else "Synergy") + (("  ·  Level %s" % Gauntlet.tier_label(level)) if level > 0 else "")
 		draw_string(Kit.font("karla", 800), Vector2(92, 34), kick.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 104, 10, tone)
 		draw_multiline_string(Kit.font("cinzel", 700), Vector2(92, 54), title, HORIZONTAL_ALIGNMENT_LEFT, size.x - 104, 16, 2, Dossier.INK)
 		# The recipe.
@@ -321,9 +341,9 @@ class Entry:
 		# What it does at each level (the live one lit).
 		for k: int in levels.size():
 			var on: bool = level == k + 1
-			var line: String = "%s  %s" % [Gauntlet.tier_label(k + 1), levels[k]]
+			var line: String = levels[k] if kind == "reaction" else "%s  %s" % [Gauntlet.tier_label(k + 1), levels[k]]
 			y += 4.0
-			draw_multiline_string(Kit.font("karla", 700 if on else 600), Vector2(16, y + 12), line, HORIZONTAL_ALIGNMENT_LEFT, size.x - 32, 12, 2, tone.lightened(0.4) if on else Dossier.SOFT)
+			draw_multiline_string(Kit.font("karla", 700 if on else 600), Vector2(16, y + 12), line, HORIZONTAL_ALIGNMENT_LEFT, size.x - 32, 12, 4 if kind == "reaction" else 2, tone.lightened(0.4) if on else Dossier.SOFT)
 			y += 32.0
 		if note != "":
 			draw_string(Kit.font("karla", 800), Vector2(16, size.y - 14), note, HORIZONTAL_ALIGNMENT_LEFT, size.x - 32, 12, Dossier.WARN)

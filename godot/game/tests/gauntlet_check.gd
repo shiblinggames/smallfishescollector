@@ -60,6 +60,9 @@ func _play(t: GauntletTable, keys: Array, act: Callable, bank_at: int, max_steps
 							seen["fights"] = int(seen["fights"]) + 1
 						if e["t"] == "towed":
 							seen["towed"] = int(seen["towed"]) + 1
+						if e["t"] == "reaction":
+							var rk: String = "r_" + str(e["id"])
+							seen[rk] = int(seen.get(rk, 0)) + 1
 				for k: String in keys:
 					await act.call(k, ["played", st["seq"]])
 			"plan":

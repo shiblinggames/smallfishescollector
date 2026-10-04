@@ -930,6 +930,24 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   half). COUNTERPLAY from the bonds: Boarding Action costs a role ship its next role turn, our
   Spotter's Mark gets a ship past any breakwater, Draw Fire pulls the enemy spotter's mark onto
   the tank, Smelling Salts clears hexes and marks. Solo has no escorts, so it is untouched.
+  REACTIONS (Kong, 2026-10-03: "like Magicka ... discoverable Easter eggs for coop"; port rules
+  battle.gauntlet.reactions, Battle._reactions; co-op gauntlets only, not raids yet). When
+  elements on one enemy ship came from DIFFERENT captains (the ship remembers who laid each:
+  e.elBy), they react on the hit that completes the pair. Fog Bank (fire + ice: its next shot
+  misses 60%, the ice melts), Greek Fire (fire + corrode: the fire leaps to every other ship),
+  Powder Keg (a Volley into another captain's fire: 40% of the volley splashes every other
+  ship), Brittle Hull (a Volley into another captain's ice: +50%), Crushing Deep (ice + Kraken
+  coils: 20% of the hit per coil, half splintering onto another ship), Boiling Sea (fire +
+  coils: the burn grows 25% a coil and lasts a turn longer), Rot (corrode + feeble: the barrier
+  is gone), Numbed (weaken + ice: a turn more frozen), Last Rites (a Mega into another captain's
+  Mark: +30% past any barrier), and the secret DAVY'S KISS (fire, ice and corrode from three
+  different captains: 35% of the hit to every ship, once a fight). At most one reaction per
+  ship per round, the element spent; damage scales off the hit, never the hull; splash never
+  sinks. One captain holding both elements sets off nothing, and a solo dive records nothing.
+  DISCOVERY: hidden in the Codex ("Reactions, N of 10 found", "?" cards) until a crew sets one
+  off; then it is written for every captain in that fight (gauntlet_reactions_seen) and their
+  screen says "Reaction discovered". Each has its own moment on the water. Checked by
+  tests/reaction_check.gd.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the

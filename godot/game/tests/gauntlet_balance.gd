@@ -24,6 +24,7 @@ func _init() -> void:
 		for n: int in (Array(OS.get_environment("NS").split(",")).map(func(x: String) -> int: return int(x)) if OS.get_environment("NS") != "" else [1, 2, 3, 4]):
 			var depths: Array = []
 			var bonds: int = 0
+			var reacts: Dictionary = {}
 			for k: int in runs:
 				Dice.install(Dice.Mulberry32.new(100 + k * 7 + n))
 				seed(100 + k)
@@ -52,10 +53,13 @@ func _init() -> void:
 				var r: Dictionary = await _play(gt, ss.keys(), act, 40, 20000)
 				depths.append(int(r["depth"]))
 				bonds += int(r.get("bonds", 0))
+				for rk: Variant in r:
+					if str(rk).begins_with("r_"):
+						reacts[str(rk).substr(2)] = int(reacts.get(str(rk).substr(2), 0)) + int(r[rk])
 				gt.queue_free()
 			depths.sort()
 			var tot: float = 0.0
 			for d: int in depths:
 				tot += d
-			print("  %s, %d captain%s: mean depth %.1f, median %d  %s" % [variant, n, "" if n == 1 else "s", tot / depths.size(), depths[depths.size() / 2], str(depths)] + ("  bond/crew picks %d" % bonds if n > 1 else ""))
+			print("  %s, %d captain%s: mean depth %.1f, median %d  %s" % [variant, n, "" if n == 1 else "s", tot / depths.size(), depths[depths.size() / 2], str(depths)] + ("  bond/crew picks %d  reactions %s" % [bonds, str(reacts)] if n > 1 else ""))
 	quit(0)
