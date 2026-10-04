@@ -56,6 +56,8 @@ var _deck_box: VBoxContainer
 var _log: Label
 ## The combat log on the right edge (game/combat_log.gd).
 var _clog: CombatLog
+## The deck's paper and panel (faded away while the aim bar floats free).
+var _deck_bg: Array = []
 var _strip: Array = []
 var _strip_lit: int = -99
 var _plan: Dictionary = {}
@@ -492,11 +494,13 @@ func _build_deck() -> void:
 	Paper.night = true
 	Paper.sheet(paper, 6.0)
 	Paper.night = false
+	_deck_bg = [paper]
 	var sheet: BattleLook.DeckPanel = BattleLook.DeckPanel.new()
 	sheet.body = false
 	sheet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_deck.add_child(sheet)
+	_deck_bg.append(sheet)
 	var pad: MarginContainer = MarginContainer.new()
 	pad.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side: Array in [["left", 20], ["right", 20], ["top", 20], ["bottom", 14]]:
@@ -520,6 +524,12 @@ func _build_deck() -> void:
 		_clog.stage = self
 		add_child(_clog)
 	create_tween().tween_property(self, "_drop", 0.0, 0.6).set_delay(0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _deck_paper(on: bool) -> void:
+	for n: Control in _deck_bg:
+		if is_instance_valid(n):
+			create_tween().tween_property(n, "modulate:a", 1.0 if on else 0.0, 0.25 if on else 0.18)
 
 
 func _clear_deck() -> void:
@@ -776,7 +786,11 @@ func _choose(act: String) -> void:
 		bar.decoy_n = int(aim["decoys"])
 		bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		_deck_box.add_child(bar)
+		# The bar floats free over the water, like the fishing dial: the
+		# deck's paper fades away while you aim, and comes back after.
+		_deck_paper(false)
 		var res: String = await bar.locked
+		_deck_paper(true)
 		_plan["aim"] = res
 		_plan["target"] = _target
 		await get_tree().create_timer(0.3).timeout

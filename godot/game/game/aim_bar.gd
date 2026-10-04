@@ -23,6 +23,8 @@ extends Control
 
 signal locked(result: String)
 
+var _shade: Texture2D
+
 var enemy_speed: float = 4.0
 var nav: float = 0.0
 var crit_w: float = Battle.CRIT_W
@@ -183,6 +185,12 @@ func _draw() -> void:
 	var w: float = size.x
 	var h: float = size.y
 	var rail: Rect2 = Rect2(14, h * 0.32, w - 28, h * 0.36)
+	# Its own ground over open water (it floats free of the deck): a soft
+	# shadow pooled under the rail, deepest at its middle.
+	if _shade == null:
+		_shade = Glow.radial(128, Color.BLACK)
+	draw_texture_rect(_shade, Rect2(rail.position.x - 70, rail.position.y - 46, rail.size.x + 140, rail.size.y + 92), false, Color(0, 0, 0, 0.75))
+	draw_texture_rect(_shade, Rect2(rail.position.x - 20, rail.position.y - 18, rail.size.x + 40, rail.size.y + 36), false, Color(0, 0, 0, 0.55))
 	# The rail: a lacquer trough in a brass collar (game/battle_look.gd).
 	BattleLook.draw_box(self, rail.grow(4), BattleLook.box(Color(0, 0, 0, 0.5), Color(0, 0, 0, 0), 0, 10))
 	for k: int in range(1, 12):
