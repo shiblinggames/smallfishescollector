@@ -247,7 +247,7 @@ func _draw_light() -> void:
 				_light.draw_circle(g, float(p["r"]), Color(p["c"], u))
 			"flash":
 				var fr: float = float(p["r"]) * (0.4 + u)
-				_light.draw_texture_rect(_glow, Rect2(p["p"] - Vector2(fr, fr), Vector2(fr, fr) * 2.0), false, Color(p["c"], 1.0 - u))
+				_light.draw_texture_rect(_glow, Rect2(p["p"] - Vector2(fr, fr), Vector2(fr, fr) * 2.0), false, Color(p["c"], (1.0 - u) * (0.35 if GameSettings.calm() else 1.0)))
 			_:
 				var sr: float = float(p["r"]) * (1.0 - u * 0.5)
 				_light.draw_texture_rect(_glow, Rect2(p["p"] - Vector2(sr, sr) * 3.0, Vector2(sr, sr) * 6.0), false, Color(p["c"], 0.45 * (1.0 - u)))

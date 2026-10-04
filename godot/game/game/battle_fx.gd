@@ -86,6 +86,8 @@ func _process(delta: float) -> void:
 		pp["rot"] = float(pp["rot"]) + float(pp["spin"]) * delta
 	_paint = _paint.filter(func(pp: Dictionary) -> bool: return float(pp["t"]) < float(pp["life"]))
 	if _add != null:
+		# Reduce flashes (Settings): the light is held to half.
+		_add.modulate.a = 0.5 if GameSettings.calm() else 1.0
 		_add.queue_redraw()
 	for b: Dictionary in _balls:
 		b["t"] = float(b["t"]) + delta

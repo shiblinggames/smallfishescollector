@@ -31,6 +31,8 @@ func _ready() -> void:
 	_bind("chart", [KEY_M], [JOY_BUTTON_BACK], -1, 0.0)
 	_bind("locker", [KEY_I], [JOY_BUTTON_X], -1, 0.0)
 	_bind("swap", [KEY_Q], [JOY_BUTTON_LEFT_SHOULDER], -1, 0.0)
+	GameSettings.apply()
+	_fps_layer()
 	SteamLayer.start()
 	net = CrewNet.new()
 	net.name = "CrewNet"
@@ -165,3 +167,62 @@ func _sea(s: Session, crewed: bool) -> void:
 			net.leave()
 		title(""))
 	_show(sea)
+
+
+# ── The Esc menu, the window, the frame counter (game/pause_menu.gd,
+#    game/game_settings.gd) ──────────────────────────────────────────────────
+
+var _menu_layer: CanvasLayer
+var _fps: Label
+
+
+## Esc with nothing else to close, out on the sea: the menu.
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_action_pressed("fish_back") or not (_screen is Sea):
+		return
+	get_viewport().set_input_as_handled()
+	if _menu_layer == null:
+		_menu_layer = CanvasLayer.new()
+		_menu_layer.layer = 90
+		add_child(_menu_layer)
+	if _menu_layer.get_child_count() > 0:
+		return
+	var sea: Sea = _screen
+	var pm: PauseMenu = PauseMenu.new()
+	pm.session = sea.session
+	pm.captains_label = "Leave the Charter" if sea.net != null else "Captains"
+	pm.on_captains = func() -> void: sea.left.emit()
+	_menu_layer.add_child(pm)
+
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_WM_CLOSE_REQUEST:
+			# Closing the window saves the captain at sea first.
+			if _screen is Sea and (_screen as Sea).session != null:
+				(_screen as Sea).session.persist()
+		NOTIFICATION_APPLICATION_FOCUS_OUT:
+			if bool(GameSettings.value("quiet_unfocused")):
+				AudioServer.set_bus_mute(0, true)
+		NOTIFICATION_APPLICATION_FOCUS_IN:
+			GameSettings.apply()
+
+
+func _fps_layer() -> void:
+	var l: CanvasLayer = CanvasLayer.new()
+	l.layer = 95
+	add_child(l)
+	_fps = Label.new()
+	_fps.position = Vector2(10, 6)
+	_fps.add_theme_color_override("font_color", Color(1, 1, 1, 0.7))
+	_fps.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	_fps.add_theme_constant_override("outline_size", 4)
+	l.add_child(_fps)
+
+
+func _process(_d: float) -> void:
+	if _fps == null:
+		return
+	_fps.visible = bool(GameSettings.value("show_fps"))
+	if _fps.visible:
+		_fps.text = "%d fps" % Engine.get_frames_per_second()

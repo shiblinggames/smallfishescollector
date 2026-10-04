@@ -48,6 +48,11 @@ func _init() -> void:
 			tt._color = "pink"
 			tt._founding = true
 			tt._build()
+		# SETTINGS_TAB: the settings page open on that tab.
+		if OS.get_environment("SETTINGS_TAB") != "":
+			var ss: SettingsSheet = SettingsSheet.new()
+			ss._tab = OS.get_environment("SETTINGS_TAB")
+			main._screen.add_child(ss)
 		for f: int in 40:
 			await process_frame
 		root.get_texture().get_image().save_png(out)
@@ -55,6 +60,20 @@ func _init() -> void:
 		quit()
 		return
 	var sea: Sea = main.get_child(main.get_child_count() - 1)
+	# PAUSE=1: the Esc menu over the sea.
+	if OS.get_environment("PAUSE") == "1":
+		for f: int in 60:
+			await process_frame
+		var esc: InputEventAction = InputEventAction.new()
+		esc.action = "fish_back"
+		esc.pressed = true
+		main._unhandled_input(esc)
+		for f: int in 20:
+			await process_frame
+		root.get_texture().get_image().save_png(out)
+		print("  saved ", out)
+		quit()
+		return
 	sea._boat.position = Vector2(-120, 2300)
 	var hud: FishingHud = sea._hud
 	var p: Dictionary = sea.session.profile()

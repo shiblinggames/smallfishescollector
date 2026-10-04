@@ -20,6 +20,8 @@ const LEVEL_UP: Array = [0, 22, 50, 30]
 
 
 static func buzz(pattern: Array) -> void:
+	if not bool(GameSettings.value("rumble")):
+		return
 	var on: float = 0.0
 	for i: int in pattern.size():
 		if i % 2 == 0:

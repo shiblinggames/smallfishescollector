@@ -51,6 +51,29 @@ func _ready() -> void:
 	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
+	# Settings and Quit in the corner; the build in the other.
+	var corner: HBoxContainer = HBoxContainer.new()
+	corner.add_theme_constant_override("separation", 8)
+	corner.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	corner.offset_left = -260
+	corner.offset_top = -58
+	corner.offset_right = -20
+	corner.offset_bottom = -18
+	corner.alignment = BoxContainer.ALIGNMENT_END
+	add_child(corner)
+	var sb: Button = Kit.button("Settings", "secondary", "small")
+	sb.pressed.connect(func() -> void:
+		Sound.plip()
+		add_child(SettingsSheet.new()))
+	corner.add_child(sb)
+	var qb: Button = Kit.button("Quit", "secondary", "small")
+	qb.pressed.connect(func() -> void: get_tree().quit())
+	corner.add_child(qb)
+	var stamp: Label = Kit.text(self, GameSettings.build(), "note", Color(1, 1, 1, 0.45))
+	stamp.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	stamp.offset_left = 20
+	stamp.offset_top = -40
+	stamp.offset_bottom = -18
 	var center: CenterContainer = CenterContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(center)

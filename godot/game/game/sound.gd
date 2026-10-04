@@ -26,12 +26,15 @@ var _track: String = ""
 
 func _ready() -> void:
 	_me = self
+	GameSettings.ensure_buses()
 	for i: int in 6:
 		var p: AudioStreamPlayer = AudioStreamPlayer.new()
+		p.bus = "SFX"
 		add_child(p)
 		_sfx.append(p)
 	_dial = AudioStreamPlayer.new()
 	_dial.volume_db = -4.0
+	_dial.bus = "SFX"
 	add_child(_dial)
 	# The music on its own bus, through a low-pass that stays wide open
 	# except under the reef's arch (muffle).
@@ -43,6 +46,8 @@ func _ready() -> void:
 		var lp: AudioEffectLowPassFilter = AudioEffectLowPassFilter.new()
 		lp.cutoff_hz = 20000.0
 		AudioServer.add_bus_effect(bi, lp)
+	# The player's own volumes (GameSettings) sit after these buses.
+	GameSettings.apply()
 	for i: int in 2:
 		var m: AudioStreamPlayer = AudioStreamPlayer.new()
 		m.bus = "Music"

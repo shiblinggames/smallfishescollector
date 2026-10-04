@@ -1589,6 +1589,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  SETTINGS AND THE ESC MENU (2026-10-04; Kong: "a much more robust settings page"):
+  game/game_settings.gd keeps them (Prefs "set_*") and applies them at start and on change;
+  game/settings_sheet.gd (night paper, from the title's corner or the Esc menu): SOUND (master,
+  music, effects, the sea; quiet in the background), DISPLAY (windowed, borderless, fullscreen;
+  window size; VSync; frame limit; the FPS counter), PLAY (this captain's bite timer, controller
+  rumble, reduce flashes, the full combat log open), CONTROLS (every key and pad button, by
+  place; rebinding later), ABOUT (the build stamp, open the saves and logs folders, credits with
+  the Godot, GodotSteam, Steamworks and font notices). Sound runs on buses: SFX, and the game's
+  Music and SeaAmb sending through UserMusic and UserAmb so the player's volume never fights the
+  game's fades. THE ESC MENU (game/pause_menu.gd): Esc or B with nothing else to close, at sea:
+  Resume, Settings, Captains (or Leave the Charter), Quit to Desktop (saved); nothing pauses (a
+  Charter's crew sail on). Closing the window saves the captain at sea. The title screen shows the
+  build and has Settings and Quit.
   AUDIT FIXES (2026-10-04): the Locker's permanent upgrades all work or are off sale
   (Gauntlet.NOT_SOLD): Seasoned Timbers (repair kits +25%), Deep-Sea Plating (+10% max hull in
   every fight), Kingpin's Cut (legendaries twice as often in raid crates, the entry's odds too)

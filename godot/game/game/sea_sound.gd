@@ -38,6 +38,8 @@ static var _made: Dictionary = {}
 
 func _ready() -> void:
 	_bus(AMB, "Master")
+	# Through the player's sea volume (GameSettings).
+	GameSettings.apply()
 	var amb: int = AudioServer.get_bus_index(AMB)
 	if AudioServer.get_bus_effect_count(amb) == 0:
 		_lp = AudioEffectLowPassFilter.new()
