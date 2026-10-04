@@ -952,14 +952,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   effect sprites and Kie object art on the ships: "way too much ... a lot of things can just be
   particle effects ... I don't like the art style"): every effect is PARTICLES (game/fx_sheet.gd
   draws glows, embers, sparks, puffs, slivers, droplets, rings in code; no sprite sheet, no art).
-  A ship WEARS what is on it (game/hull_aura.gd): Marked a ring of red embers over the masthead
-  (our Spotter's Mark gold stars), Weakened grey motes sinking, Feeble splinters, Corroded green
-  droplets, Slowed foam astern, Silenced dark wisps from the gunports, Enraged red embers,
-  Mending green motes, Fortified a crescent of glints, Blinded or Narrowed a swirl at the crow's
-  nest, Kraken coils a spiral of droplets (a turn per coil), Fog Bank low mist, Boarded two
-  lines of amber motes; a pack combo's halves are linked by running motes. Every battle event
-  has motion (BattleFx: flare-ups, freeze snaps, motes for heals, a ball tossed for powder given
-  or stolen, sigils of sparks for statuses, a fizzle, a finishing blow). BATTLE_SHOW=allev in
+  READABLE AT A GLANCE (Kong: "visually it should easily be able to identify what it is"): each
+  status has ONE colour, shared by its chip on the unit frame and everything it draws
+  (FxSheet.STATUS), and a SHAPE that says what it is. A ship WEARS (game/hull_aura.gd): Marked a red
+  crosshair over the masthead (our Spotter's Mark four gold stars), Weakened violet chevrons
+  sinking, Feeble cracks flashing and splinters, Corroded acid bubbles, Slowed a cold ripple
+  spreading on the water, Silenced a crossed-out mark over the guns, Enraged chevrons and embers
+  rising, Mending plus signs rising, Fortified a dome of hex glints, Blinded an ink swirl in the
+  sails, Narrowed a ring closing on them, Kraken coils a spiral of droplets (a turn per coil), Fog
+  Bank low mist, Boarded two lines of amber motes; a pack combo's halves are linked by running motes. Every battle event
+  has motion (BattleFx: a status lands as its own shape gathering onto the hull; heals carry plus
+  signs; flare-ups, freeze snaps, a ball tossed for powder given or stolen, a fizzle, a finishing
+  blow; each reaction its own elements: steam, green fire leaping, a keg's blast, ice slivers,
+  boiling bubbles, rot, a gold beam, whirlpools). BATTLE_SHOW=allev in
   tests/shot.gd plays every one; BATTLE_SHOW=wear stages the statuses.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and

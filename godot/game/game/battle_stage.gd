@@ -1030,7 +1030,8 @@ func _one(x: Dictionary) -> void:
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
 			_shown_hp[int(x["seat"])] = float(x["hp"])
 		"rack":
-			_fx.sigil(_enemy_at, Color(0.75, 0.55, 1.0))
+			for ld: Variant in Js.list(x.get("landed")):
+				_fx.status_burst(_enemy_at, str(ld))
 			_num(_enemy_at + Vector2(0, -60), "The rack fires", Color(0.85, 0.75, 0.55))
 		"eHeal":
 			_fx.rise(_enemy_at, Color(0.5, 0.95, 0.6))
@@ -1234,7 +1235,7 @@ func _one(x: Dictionary) -> void:
 			_fx.fizzle(_seat_at(int(x["seat"])))
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -100), "Cannonade broken", Color(CREAM, 0.7))
 		"eStatus":
-			_fx.sigil(_enemy_at, Color(0.75, 0.55, 1.0))
+			_fx.status_burst(_enemy_at, str(x.get("status", "")))
 			_num(_enemy_at + Vector2(0, -100), str(x["status"]).capitalize(), Color(0.8, 0.6, 1.0))
 		"tided":
 			var r: Dictionary = Js.obj(Js.obj(x.get("picks")).get(my_key))
@@ -1652,7 +1653,8 @@ func _plate(at: Vector2, name: String, hp: float, mx: float, shield: float, ch: 
 		var word: String = id.capitalize()
 		if word.length() > 9:
 			word = word.substr(0, 9)
-		var tone2: Color = BattleLook.ALLY if id in ["fortify", "enrage", "regen", "haste"] else BattleLook.FOE
+		# Its own colour, the same as the effect the ship wears.
+		var tone2: Color = FxSheet.status_color(id) if FxSheet.STATUS.has(id) else (BattleLook.ALLY if id in ["fortify", "enrage", "regen", "haste"] else BattleLook.FOE)
 		sx -= pf.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x + 12.0
 		if sx < x0 + mag * 14.0:
 			break
@@ -2391,38 +2393,54 @@ func _reaction(x: Dictionary) -> void:
 	var others: Array = Js.list(x.get("others"))
 	match str(x["id"]):
 		"fog_bank":
-			for k: int in 3:
-				_fx.pulse(at + Vector2(randf_range(-40, 40), randf_range(-20, 20)), Color(0.85, 0.88, 0.9))
+			# Fire meets ice: a wall of white steam boils up off the hull.
+			_fx.glyph_burst(at, "frost", Color(0.95, 0.97, 1.0, 0.7), 12, 140.0, 90.0)
+			_fx.glyph_burst(at, "ember", Color(1.0, 0.6, 0.3), 6, 200.0, 14.0)
 			_num(at + Vector2(0, -60), "Lost in the steam", Color(0.85, 0.9, 0.95))
 		"greek_fire":
+			# Green fire leaping hull to hull.
+			_fx.flare_up(at, true)
 			for o: Variant in others:
-				_fx.tether(at, _foe_at(int(Js.obj(o)["foe"])), Color(0.45, 1.0, 0.45))
-			_fx.pulse(at, Color(0.4, 1.0, 0.4))
+				_fx.fire_leap(at, _foe_at(int(Js.obj(o)["foe"])), Color(0.45, 1.0, 0.4))
 		"powder_keg":
 			_fx.blast(at)
-			_fx.burst(at, true)
+			_fx.glyph_burst(at, "ember", Color(1.0, 0.7, 0.3), 18, 360.0, 16.0, 400.0)
+			for o2: Variant in others:
+				_fx.fling(at, _foe_at(int(Js.obj(o2)["foe"])), "fireball", Color(1.0, 0.7, 0.4))
 		"brittle_hull":
+			# The ice shatters: slivers flung out, cracks across the hull.
+			_fx.glyph_burst(at, "ice", Color(0.85, 0.95, 1.0), 16, 300.0, 34.0, 500.0)
+			_fx.glyph_burst(at, "crack", Color(0.8, 0.92, 1.0), 4, 60.0, 60.0)
 			_fx.burst(at, true)
-			_fx.pulse(at, Color(0.7, 0.9, 1.0))
 		"crushing_deep":
-			_fx.pulse(at, Color(0.35, 0.75, 0.7))
+			# The coils close: the spiral collapses inward and the sea leaps up.
+			_fx.status_burst(at, "slowed")
 			_fx.splash(at)
+			_fx.glyph_burst(at, "ember", Color(0.35, 0.95, 0.8), 14, 240.0, 16.0)
 		"boiling_sea":
-			_fx.splash(at)
-			_fx.pulse(at, Color(1.0, 0.6, 0.3))
+			# Bubbles boiling up round the hull, steam over them.
+			for k: int in 3:
+				_fx.glyph_burst(at + Vector2(randf_range(-60, 60), 0), "bubble", Color(1.0, 0.7, 0.35), 6, 90.0, 22.0, -120.0)
+			_fx.glyph_burst(at, "frost", Color(1.0, 0.95, 0.9, 0.5), 6, 80.0, 70.0)
 		"rot":
-			_fx.pulse(at, Color(0.55, 0.6, 0.25))
-			_num(at + Vector2(0, -60), "Barrier rots away", Color(0.7, 0.75, 0.35))
+			# The barrier rots: acid bubbles, its shell cracking away.
+			_fx.glyph_burst(at, "bubble", FxSheet.status_color("corrode"), 10, 120.0, 24.0, -60.0)
+			_fx.glyph_burst(at, "crack", Color(0.75, 0.9, 1.0), 6, 140.0, 50.0)
+			_num(at + Vector2(0, -60), "Barrier rots away", Color(0.75, 0.85, 0.35))
 		"numbed":
-			_fx.pulse(at, Color(0.6, 0.75, 1.0))
+			_fx.freeze_snap(at)
+			_fx.status_burst(at, "slowed")
 			_num(at + Vector2(0, -60), "Numbed  +1 turn frozen", Color(0.7, 0.85, 1.0))
 		"last_rites":
-			_fx.tether(from, at, Color(0.9, 0.85, 0.6))
-			_fx.burst(at, true)
+			# A beam of gold down onto the marked hull.
+			_fx.beam(from, at, Color(1.0, 0.85, 0.45), false)
+			_fx.finisher(at)
 		"davys_kiss":
-			for j: int in Battle.foes(b).size():
-				_fx.splash(_foe_at(j))
-				_fx.pulse(_foe_at(j), Color(0.3, 0.75, 0.75))
+			# A whirlpool opening under every ship.
+			for j2: int in Battle.foes(b).size():
+				_fx.status_burst(_foe_at(j2), "slowed")
+				_fx.glyph_burst(_foe_at(j2), "ember", Color(0.3, 0.85, 0.85), 16, 200.0, 14.0)
+				_fx.splash(_foe_at(j2))
 	if Js.num(x.get("dmg")) > 0.0:
 		_num(at, "-%d" % int(x["dmg"]), Color(1.0, 0.8, 0.5), true)
 	for o2: Variant in others:
@@ -2463,21 +2481,23 @@ func _role_move(x: Dictionary) -> void:
 			_log_line("The %s %s %s." % [nm, "throws a barrier over" if x["role"] == "shieldwright" else "patches up", "itself" if tj == _cur else Battle.foes(b)[tj]["name"]])
 		"hexer":
 			var si: int = int(x["seat"])
-			_fx.tether(from, _seat_at(si), Color(0.75, 0.5, 1.0))
+			_fx.tether(from, _seat_at(si), FxSheet.status_color(str(x["status"])))
+			_fx.status_burst(_seat_at(si), str(x["status"]))
 			await _wait(0.4)
 			_react(si, "hit")
 			_num(_seat_at(si) + Vector2(0, -60), "Blinded!" if x["status"] == "blinded" else "Narrowed!", Color(0.8, 0.6, 1.0), true)
 			_log_line("The %s hexes %s: %s." % [nm, "you" if si == me else b["seats"][si]["name"], "sight only near the needle" if x["status"] == "blinded" else "a smaller mark to hit"])
 		"spotter":
 			var sj: int = int(x["seat"])
-			_fx.tether(from, _seat_at(sj), Color(1.0, 0.45, 0.35))
+			_fx.tether(from, _seat_at(sj), FxSheet.status_color("marked"))
+			_fx.status_burst(_seat_at(sj), "marked")
 			await _wait(0.4)
 			_num(_seat_at(sj) + Vector2(0, -60), "Marked!", Color(1.0, 0.5, 0.4), true)
 			_log_line("The %s spots %s: Marked, every hit lands harder for a while." % [nm, "you" if sj == me else b["seats"][sj]["name"]])
 		"rallier":
 			_react(-1 - _cur, "brace")
 			for j: Variant in Js.list(x.get("all")):
-				_fx.pulse(_foe_at(int(j)), Color(1.0, 0.5, 0.35))
+				_fx.status_burst(_foe_at(int(j)), "enrage")
 				_num(_foe_at(int(j)) + Vector2(0, -60), "Enraged!", Color(1.0, 0.55, 0.4))
 			_log_line("The %s rallies the line: they hit harder for a while." % nm)
 	Sound.seal(true)

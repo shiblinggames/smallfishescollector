@@ -16,16 +16,19 @@ extends Node2D
 ##              bursts apart.
 ##   AND WHAT IS ON IT (2026-10-04, Kong: "everything should look and feel
 ##   good"; then "a lot of things can just be particle effects"), all of it
-##   PARTICLES (FxSheet), no art on the ship: MARKED a ring of red embers
-##   circling over the masthead (our Spotter's Mark gold stars); WEAKENED grey
-##   motes sinking off the sails; FEEBLE splinters popping off the hull;
-##   CORRODED green droplets running down it, hissing; SLOWED foam dragging
-##   astern; SILENCED dark wisps out of the gunports; ENRAGED red embers
-##   streaming up; MENDING green motes rising; FORTIFIED a crescent of glints
-##   on the side it faces; BLINDED or NARROWED a dark swirl round the crow's
-##   nest; KRAKEN COILS a spiral of sea-green droplets wound round the hull, a
-##   turn for each coil; FOG BANK mist low on the water; BOARDED two lines of
-##   amber motes across the deck.
+##   PARTICLES (FxSheet), no art on the ship; each status its own colour
+##   (the colour of its chip) and a shape that says what it is: MARKED a red
+##   crosshair over the masthead, its ticks breathing (our Spotter's Mark four
+##   gold stars round a glint); WEAKENED violet chevrons sinking by the mast;
+##   FEEBLE cracks flashing across the hull, splinters flying; CORRODED acid
+##   bubbles rising and popping; SLOWED a cold ripple spreading slowly out on
+##   the water, foam astern; SILENCED a crossed-out mark over the gunports, the
+##   guns sputtering; ENRAGED chevrons and embers streaming up; MENDING plus
+##   signs rising; FORTIFIED a dome of hex glints on the side it faces;
+##   BLINDED an ink swirl round the sails; NARROWED a ring closing on them;
+##   KRAKEN COILS a spiral of sea-green droplets wound round the hull, a turn
+##   per coil; FOG BANK mist low on the water; BOARDED two lines of amber motes
+##   across the deck, a hook's glint at each end.
 ## Fed every frame by the battle stage (set()); it eases in and out.
 
 const GROUND: float = 0.58
@@ -246,47 +249,72 @@ func _a(key: String) -> float:
 	return float(_wa.get(key, 0.0))
 
 
-## A wear particle, born at `p` (standing space) moving `v`.
-func _part(k: String, p: Vector2, v: Vector2, life: float, w: float, w1: float, c: Color, light: bool, g: float = 0.0) -> void:
-	_parts.append({ "k": k, "p": p, "v": v, "t": 0.0, "life": life, "w": w, "w1": w1, "c": c, "light": light, "g": g })
+## A wear particle, born at `p` (standing space) moving `v`, turned `rot`.
+func _part(k: String, p: Vector2, v: Vector2, life: float, w: float, w1: float, c: Color, light: bool, g: float = 0.0, rot: float = 0.0, spin: float = 0.0) -> void:
+	_parts.append({ "k": k, "p": p, "v": v, "t": 0.0, "life": life, "w": w, "w1": w1, "c": c, "light": light, "g": g, "rot": rot, "spin": spin })
 
 
 func _chance(rate: float, delta: float, a: float) -> bool:
 	return a > 0.25 and randf() < rate * delta * a
 
 
-## The wear's particles born this frame.
+func _sc(id: String) -> Color:
+	return FxSheet.status_color(id)
+
+
+## The wear's particles born this frame: each status its own shape and motion.
 func _emit(delta: float) -> void:
 	var top: float = -width * 0.62
 	var bow: float = face if face != 0.0 else -1.0
-	var hw: float = width * 0.32
-	if _chance(6.0, delta, _a("weaken")):
-		_part("smoke", Vector2(randf_range(-hw, hw) * 0.7, top + randf_range(10, 60)), Vector2(randf_range(-6, 6), randf_range(18, 34)), 1.6, 14.0, 22.0, Color(0.62, 0.62, 0.66, 0.55), false)
-	if _chance(3.0, delta, _a("feeble")):
-		_part("ice", Vector2(randf_range(-hw, hw), -30.0), Vector2(randf_range(-110, 110), randf_range(-190, -110)), 0.9, 22.0, 16.0, Color(0.55, 0.38, 0.22, 0.95), false, 560.0)
-	if _chance(7.0, delta, _a("corrode")):
-		_part("ember", Vector2(randf_range(-hw, hw), -48.0), Vector2(randf_range(-4, 4), randf_range(30, 55)), 1.0, 12.0, 8.0, Color(0.5, 1.0, 0.35, 0.95), true)
-	if _chance(2.5, delta, _a("corrode")):
-		_part("smoke", Vector2(randf_range(-hw, hw), -40.0), Vector2(randf_range(-8, 8), -30), 1.2, 18.0, 40.0, Color(0.55, 0.85, 0.35, 0.35), false)
-	if _chance(10.0, delta, _a("slowed")):
-		_part("smoke", Vector2(-bow * width * 0.42 + randf_range(-10, 10), randf_range(-4, 6)), Vector2(-bow * randf_range(30, 60), 0), 1.4, 12.0, 26.0, Color(0.92, 0.97, 1.0, 0.45), false)
-	if _chance(5.0, delta, _a("silence")):
+	var hw: float = width * 0.3
+	# Weakened: violet chevrons sinking in a column by the mast.
+	if _chance(2.2, delta, _a("weaken")):
+		_part("chevron", Vector2(-bow * width * 0.16, top + 14.0), Vector2(0, 34), 1.5, 26.0, 20.0, _sc("weaken"), true)
+	# Feeble: cracks flashing across the hull, splinters popping off.
+	if _chance(2.6, delta, _a("feeble")):
+		_part("crack", Vector2(randf_range(-hw, hw), randf_range(-40, -18)), Vector2.ZERO, 0.7, 46.0, 52.0, _sc("feeble"), true, 0.0, randf_range(-0.5, 0.5))
+	if _chance(2.0, delta, _a("feeble")):
+		_part("ice", Vector2(randf_range(-hw, hw), -30.0), Vector2(randf_range(-110, 110), randf_range(-190, -110)), 0.9, 18.0, 14.0, Color(0.6, 0.42, 0.25, 0.95), false, 560.0, 0.0, randf_range(-8, 8))
+	# Corroded: acid bubbles rising off the hull and popping.
+	if _chance(6.0, delta, _a("corrode")):
+		_part("bubble", Vector2(randf_range(-hw, hw), randf_range(-44, -20)), Vector2(randf_range(-6, 6), randf_range(-34, -18)), 1.0, 8.0, 20.0, _sc("corrode"), true)
+	if _chance(4.0, delta, _a("corrode")):
+		_part("ember", Vector2(randf_range(-hw, hw), -30.0), Vector2(0, randf_range(40, 70)), 0.6, 9.0, 6.0, _sc("corrode"), true)
+	# Slowed: a cold ripple spreading slowly out round the hull, foam astern.
+	if _chance(0.9, delta, _a("slowed")):
+		_part("ring", Vector2(0, 0), Vector2.ZERO, 2.2, width * 0.6, width * 1.3, Color(_sc("slowed"), 0.8), true)
+		_parts[_parts.size() - 1]["flat"] = true
+	if _chance(8.0, delta, _a("slowed")):
+		_part("smoke", Vector2(-bow * width * 0.42 + randf_range(-10, 10), randf_range(-4, 6)), Vector2(-bow * randf_range(30, 60), 0), 1.4, 12.0, 26.0, Color(0.85, 0.92, 1.0, 0.45), false)
+	# Silenced: a crossed-out mark flaring over each gunport, the guns sputtering.
+	if _chance(1.6, delta, _a("silence")):
 		var gx: float = (-1.0 if randf() < 0.5 else 1.0) * width * 0.18
-		_part("smoke", Vector2(gx + randf_range(-6, 6), -30.0), Vector2(randf_range(-6, 6), randf_range(-36, -22)), 1.3, 14.0, 34.0, Color(0.22, 0.18, 0.32, 0.6), false)
-	if _chance(11.0, delta, _a("enrage")):
-		_part("ember", Vector2(randf_range(-hw, hw), -24.0), Vector2(randf_range(-14, 14), randf_range(-150, -90)), 0.9, 16.0, 6.0, Color(1.0, 0.3, 0.2, 0.9), true)
-	if _chance(7.0, delta, _a("regen")):
-		_part("spark", Vector2(randf_range(-hw, hw), -20.0), Vector2(randf_range(-8, 8), randf_range(-70, -40)), 1.3, 20.0, 10.0, Color(0.45, 1.0, 0.55, 0.9), true)
-	var dim: float = maxf(_a("blinded"), _a("narrowed") * 0.6)
-	if _chance(6.0, delta, dim):
+		_part("cross", Vector2(gx, -34.0), Vector2(0, -6), 0.9, 30.0, 24.0, _sc("silence"), true)
+		_part("smoke", Vector2(gx, -30.0), Vector2(randf_range(-6, 6), -26), 1.1, 14.0, 30.0, Color(0.35, 0.3, 0.42, 0.5), false)
+	# Enraged: chevrons streaming up, embers.
+	if _chance(3.0, delta, _a("enrage")):
+		_part("chevron", Vector2(randf_range(-hw, hw) * 0.7, -30.0), Vector2(0, -90), 0.9, 24.0, 18.0, _sc("enrage"), true, 0.0, PI)
+	if _chance(8.0, delta, _a("enrage")):
+		_part("ember", Vector2(randf_range(-hw, hw), -24.0), Vector2(randf_range(-14, 14), randf_range(-150, -90)), 0.8, 14.0, 6.0, _sc("enrage"), true)
+	# Mending: plus signs rising.
+	if _chance(3.5, delta, _a("regen")):
+		_part("plus", Vector2(randf_range(-hw, hw), -30.0), Vector2(randf_range(-6, 6), randf_range(-60, -40)), 1.4, 20.0, 16.0, _sc("regen"), true)
+	# Blinded: an ink swirl round the crow's nest.
+	if _chance(7.0, delta, _a("blinded")):
 		var an: float = randf() * TAU
-		_part("smoke", Vector2(cos(an) * 30.0, top + 10.0 + sin(an) * 10.0), Vector2(-sin(an) * 30.0, cos(an) * 8.0), 1.3, 30.0, 54.0, Color(0.5, 0.45, 0.65, 0.5), false)
+		_part("smoke", Vector2(cos(an) * 40.0, top + 70.0 + sin(an) * 12.0), Vector2(-sin(an) * 34.0, cos(an) * 8.0), 1.3, 30.0, 54.0, Color(_sc("blinded"), 0.6), false)
+	# Narrowed: a ring closing on the crow's nest.
+	if _chance(1.2, delta, _a("narrowed")):
+		_part("ring", Vector2(0, top + 70.0), Vector2.ZERO, 1.0, 130.0, 16.0, _sc("narrowed"), true)
+	# Fog Bank: mist low on the water.
 	if _chance(7.0, delta, _a("fog")):
-		_part("smoke", Vector2(randf_range(-width * 0.5, width * 0.5), randf_range(-14, 2)), Vector2(randf_range(-14, 14), -4), 2.6, 60.0, 110.0, Color(0.9, 0.95, 1.0, 0.3), false)
+		_part("smoke", Vector2(randf_range(-width * 0.5, width * 0.5), randf_range(-14, 2)), Vector2(randf_range(-14, 14), -4), 2.6, 60.0, 110.0, Color(0.92, 0.96, 1.0, 0.34), false)
+	# Kraken coils: water thrown up where the coils grip.
+	if _chance(1.5, delta, _a("coils")):
+		_part("splash", Vector2(randf_range(-hw, hw), 0), Vector2(0, -20), 0.6, 40.0, 56.0, Color(0.6, 0.95, 0.9, 0.8), true)
 
 
-## What a ship wears: its particles, and the standing rings (the marks, the
-## coils, the fortify's crescent, the boarders' lines).
+## What a ship wears: its particles, and the standing marks.
 func _draw_wear(rest: Transform2D) -> void:
 	for q: Dictionary in _parts:
 		if not q["light"]:
@@ -296,8 +324,15 @@ func _draw_wear(rest: Transform2D) -> void:
 func _draw_part(on: CanvasItem, q: Dictionary, rest: Transform2D) -> void:
 	var u: float = float(q["t"]) / float(q["life"])
 	var c: Color = q["c"]
-	FxSheet.draw(on, str(q["k"]), q["p"], lerpf(float(q["w"]), float(q["w1"]), u), atan2((q["v"] as Vector2).x, -(q["v"] as Vector2).y) if q["k"] == "ice" else 0.0,
-		Color(c, c.a * minf(1.0, u * 6.0) * (1.0 - u)), GROUND, rest)
+	var rot: float = float(q.get("rot", 0.0)) + float(q.get("spin", 0.0)) * float(q["t"])
+	if q["k"] == "ice":
+		rot = atan2((q["v"] as Vector2).x, -(q["v"] as Vector2).y)
+	var col: Color = Color(c, c.a * minf(1.0, u * 6.0) * (1.0 - u))
+	if q.get("flat", false):
+		# Lying on the water: drawn in the squashed plane itself.
+		FxSheet.draw(on, str(q["k"]), Vector2((q["p"] as Vector2).x, (q["p"] as Vector2).y * GROUND), lerpf(float(q["w"]), float(q["w1"]), u), rot, col, 1.0, rest)
+		return
+	FxSheet.draw(on, str(q["k"]), q["p"], lerpf(float(q["w"]), float(q["w1"]), u), rot, col, GROUND, rest)
 
 
 ## The light a ship wears: its flames and embers, and the glowing wear.
@@ -318,38 +353,47 @@ func _draw_light() -> void:
 	for q: Dictionary in _parts:
 		if q["light"]:
 			_draw_part(_lightl, q, rest)
-	# Marked: red embers circling over the masthead. Our spot: gold stars.
-	for ring: Array in [["marked", Color(1.0, 0.3, 0.25), 1.0, "ember"], ["spot", Color(1.0, 0.82, 0.4), -1.0, "spark"]]:
-		var a: float = _a(ring[0])
-		if a <= 0.02:
-			continue
-		var cx: float = 0.0
-		if _a("marked") > 0.02 and _a("spot") > 0.02:
-			cx = -26.0 if ring[0] == "marked" else 26.0
-		for k2: int in 8:
-			var an: float = _t * 1.4 * float(ring[2]) + k2 * TAU / 8.0
-			var pp: Vector2 = Vector2(cx + cos(an) * 30.0, top - 34.0 + sin(an) * 9.0)
-			FxSheet.draw(_lightl, ring[3], pp, 15.0 if ring[3] == "ember" else 18.0, 0.0, Color(ring[1], a * (0.55 + 0.45 * (0.5 + 0.5 * sin(an)))), GROUND, rest)
+	var both: bool = _a("marked") > 0.02 and _a("spot") > 0.02
+	# Marked: a red crosshair over the masthead, its ticks breathing in.
+	var am: float = _a("marked")
+	if am > 0.02:
+		var cm: Vector2 = Vector2(-28.0 if both else 0.0, top - 40.0)
+		var br: float = 1.0 + 0.12 * sin(_t * 5.0)
+		var rcol: Color = _sc("marked")
+		FxSheet.draw(_lightl, "ring", cm, 54.0 * br, 0.0, Color(rcol, 0.9 * am), GROUND, rest)
+		for k2: int in 4:
+			var an: float = _t * 0.6 + k2 * TAU / 4.0
+			FxSheet.draw(_lightl, "tick", cm + Vector2.from_angle(an) * 30.0 * br, 14.0, an + PI / 2.0, Color(rcol, am), GROUND, rest)
+		FxSheet.draw(_lightl, "ember", cm, 12.0, 0.0, Color(rcol, am), GROUND, rest)
+	# Our Spotter's Mark: four gold stars round the masthead, a glint at the heart.
+	var asp: float = _a("spot")
+	if asp > 0.02:
+		var cs: Vector2 = Vector2(28.0 if both else 0.0, top - 40.0)
+		for k3: int in 4:
+			var an2: float = -_t * 0.8 + k3 * TAU / 4.0
+			FxSheet.draw(_lightl, "spark", cs + Vector2.from_angle(an2) * 26.0, 20.0, 0.0, Color(1.0, 0.82, 0.4, asp), GROUND, rest)
+		FxSheet.draw(_lightl, "spark", cs, 26.0 * (1.0 + 0.15 * sin(_t * 6.0)), _t, Color(1.0, 0.9, 0.55, asp), GROUND, rest)
 	# Kraken coils: a spiral of sea-green droplets wound round the hull.
 	if _a("coils") > 0.02:
 		var turns: int = clampi(coils, 1, 4)
-		for k3: int in turns * 10:
-			var f: float = float(k3) / (turns * 10.0)
-			var an2: float = f * TAU * turns - _t * 1.8
-			var pc: Vector2 = Vector2(cos(an2) * width * 0.42, -10.0 - f * 60.0 + sin(an2) * 12.0)
-			var front: float = 0.5 + 0.5 * sin(an2)
-			FxSheet.draw(_lightl, "ember", pc, 12.0 + 6.0 * front, 0.0, Color(0.35, 0.95, 0.8, _a("coils") * (0.35 + 0.65 * front)), GROUND, rest)
-	# Fortified: a crescent of glints on the side it faces.
+		for k4: int in turns * 12:
+			var f: float = float(k4) / (turns * 12.0)
+			var an3: float = f * TAU * turns - _t * 1.8
+			var pc: Vector2 = Vector2(cos(an3) * width * 0.42, -8.0 - f * 64.0 + sin(an3) * 12.0)
+			var front: float = 0.5 + 0.5 * sin(an3)
+			FxSheet.draw(_lightl, "ember", pc, 12.0 + 7.0 * front, 0.0, Color(0.35, 0.95, 0.8, _a("coils") * (0.3 + 0.7 * front)), GROUND, rest)
+	# Fortified: a dome of hex glints over the side it faces.
 	if _a("fortify") > 0.02:
-		for k4: int in 7:
-			var an3: float = -0.9 + 1.8 * k4 / 6.0
-			var pf: Vector2 = Vector2(bow * (width * 0.3 + cos(an3) * 40.0), -46.0 + sin(an3) * 50.0)
-			FxSheet.draw(_lightl, "spark", pf, 16.0, 0.0, Color(0.8, 0.92, 1.0, _a("fortify") * (0.5 + 0.5 * sin(_t * 4.0 + k4))), GROUND, rest)
-	# Boarded: two lines of amber motes across the deck.
+		for k5: int in 9:
+			var an4: float = -1.2 + 2.4 * k5 / 8.0
+			var pf: Vector2 = Vector2(bow * (width * 0.22 + cos(an4) * 52.0), -50.0 + sin(an4) * 60.0)
+			FxSheet.draw(_lightl, "hex", pf, 22.0, 0.0, Color(_sc("fortify"), _a("fortify") * (0.45 + 0.55 * (0.5 + 0.5 * sin(_t * 3.0 + k5)))), GROUND, rest)
+	# Boarded: two lines of amber motes across the deck, a hook's glint at each end.
 	if _a("boarded") > 0.02:
 		for side: int in 2:
 			var sgn: float = -1.0 if side == 0 else 1.0
-			for k5: int in 6:
-				var f2: float = fposmod(k5 / 6.0 + _t * 0.5, 1.0)
-				var pb: Vector2 = Vector2(sgn * width * 0.3 * (1.0 - f2 * 2.0), -60.0 + f2 * 40.0)
+			for k6: int in 7:
+				var f2: float = fposmod(k6 / 7.0 + _t * 0.5, 1.0)
+				var pb: Vector2 = Vector2(sgn * width * 0.3 * (1.0 - f2 * 2.0), -62.0 + f2 * 42.0)
 				FxSheet.draw(_lightl, "ember", pb, 10.0, 0.0, Color(1.0, 0.75, 0.4, _a("boarded") * sin(f2 * PI)), GROUND, rest)
+			FxSheet.draw(_lightl, "spark", Vector2(sgn * width * 0.3, -62.0), 18.0, 0.0, Color(1.0, 0.85, 0.55, _a("boarded")), GROUND, rest)

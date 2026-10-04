@@ -507,6 +507,8 @@ func freeze_snap(at: Vector2) -> void:
 ## Motes streaming from one point to another (a heal, a gift of powder, a
 ## mark): sparks drawn along a soft arc.
 func motes(from: Vector2, to: Vector2, col: Color, n: int = 10, kind: String = "spark") -> void:
+	if col.g > 0.85 and col.r < 0.7 and kind == "spark":
+		kind = "plus"
 	var a: Vector2 = up(from) + Vector2(0, -50)
 	var b: Vector2 = up(to) + Vector2(0, -50)
 	for k: int in n:
@@ -585,3 +587,39 @@ func rise(at: Vector2, col: Color, n: int = 8) -> void:
 	var u: Vector2 = up(at) + Vector2(0, -20)
 	for k: int in n:
 		paint("spark", u + Vector2(randf_range(-60, 60), randf_range(-10, 10)), Vector2(randf_range(-10, 10), randf_range(-110, -60)), 0.9, 24.0, 10.0, col, { "delay": k * 0.04, "drag": 0.6, "spin": 3.0 })
+
+
+## A status landing on a ship: its own shape and colour (FxSheet.STATUS)
+## gathering in from a ring and settling on the hull, a flash where they meet.
+func status_burst(at: Vector2, id: String) -> void:
+	var col: Color = FxSheet.status_color(id)
+	var k: String = str(FxSheet.STATUS[id][1]) if FxSheet.STATUS.has(id) else "spark"
+	var u: Vector2 = up(at) + Vector2(0, -60)
+	for j: int in 7:
+		var a: float = TAU * j / 7.0
+		var from: Vector2 = u + Vector2.from_angle(a) * 120.0
+		var p: Dictionary = { "k": k, "p": from, "v": (u - from) * 2.2, "t": -j * 0.02, "life": 0.42, "s0": 30.0, "s1": 20.0,
+			"rot": (PI if id == "enrage" else (a + PI / 2.0 if k == "tick" else 0.0)), "spin": 0.0, "c": col, "a": 1.0, "g": 0.0, "drag": 0.0, "fade": 0.75, "in": 0.1 }
+		_paint.append(p)
+	await _wait(0.4)
+	paint("flash", u, Vector2.ZERO, 0.3, 40.0, 110.0, col, { "fade": 0.1 })
+	paint(k, u, Vector2.ZERO, 0.7, 40.0, 56.0, col, { "spin": 0.0, "rot": PI if id == "enrage" else 0.0, "fade": 0.5 })
+
+
+## A burst of one shape outward from a point (a reaction's element).
+func glyph_burst(at: Vector2, k: String, col: Color, n: int = 10, speed: float = 220.0, size: float = 26.0, g: float = 0.0) -> void:
+	var u: Vector2 = up(at) + Vector2(0, -50)
+	for j: int in n:
+		var a: float = TAU * j / n + randf_range(-0.2, 0.2)
+		paint(k, u, Vector2.from_angle(a) * speed * randf_range(0.7, 1.1), 0.7 + randf() * 0.2, size, size * 0.5, col, { "drag": 2.4, "g": g, "rot": a + PI / 2.0 if k in ["ice", "tick"] else 0.0, "spin": 0.0 })
+
+
+## Fire leaping from one hull to another: a run of flames along the arc.
+func fire_leap(from: Vector2, to: Vector2, col: Color) -> void:
+	var a: Vector2 = up(from) + Vector2(0, -50)
+	var b: Vector2 = up(to) + Vector2(0, -50)
+	var mid: Vector2 = (a + b) / 2.0 + Vector2(0, -110)
+	for k: int in 8:
+		_arc_mote("flame", a, mid, b, 0.5, col, k * 0.04)
+	await _wait(0.6)
+	flare_up(to, true)
