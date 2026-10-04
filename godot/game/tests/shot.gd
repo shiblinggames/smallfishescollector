@@ -665,6 +665,23 @@ func _init() -> void:
 						en["ward"] = 2.0
 						bst.b["seats"][0]["shield"] = 20.0
 						bst.b["seats"][0]["freeze"] = 1.0
+					"wear":
+						# What a ship wears (WEAR_SET a or b): statuses, coils, the co-op marks.
+						var we: Dictionary = bst.b["enemy"]
+						var me0: Dictionary = bst.b["seats"][0]
+						if OS.get_environment("WEAR_SET") == "b":
+							for st0: String in ["feeble", "enrage", "regen", "fortify"]:
+								Battle.apply_status(we["statuses"], st0, 0.2, 9.0)
+							we["fogged"] = 0.6
+							we["burn"] = { "turns": 9.0, "dmg": 3.0 }
+							Battle.apply_status(me0["statuses"], "blinded", 0.2, 9.0)
+						else:
+							for st1: String in ["marked", "corrode", "weaken", "silence", "slowed"]:
+								Battle.apply_status(we["statuses"], st1, 0.2, 9.0)
+							we["grip"] = { "0": 3.0 }
+							we["spot"] = { "by": 1, "pct": 0.2 }
+							we["boarded"] = true
+							me0["freeze"] = 1.0
 					"mega":
 						var ms: Dictionary = bst.b["seats"][0]
 						ms["mega"] = Armory.augment(OS.get_environment("MEGA") if OS.get_environment("MEGA") != "" else "railgun")

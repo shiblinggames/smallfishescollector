@@ -54,6 +54,10 @@ static var sheet: Texture2D
 ## rot, spin, c, a, g, drag }.
 var _paint: Array = []
 var _add: Node2D
+## Standing links between two hulls (a pack's combo), set by the stage each
+## frame: [[World a, World b, colour]]; drawn as a painted rope sagging
+## between them, fading in.
+var links: Array = []
 
 
 func _ready() -> void:
@@ -423,6 +427,17 @@ func _draw() -> void:
 			continue
 		else:
 			draw_circle(q["p"], float(q["r"]) * (1.0 - u5 * 0.5), col)
+	# A combo's rope between its two hulls.
+	for ln: Array in links:
+		var a0: Vector2 = up(ln[0]) + Vector2(0, -70)
+		var b0: Vector2 = up(ln[1]) + Vector2(0, -70)
+		var mid: Vector2 = (a0 + b0) / 2.0 + Vector2(0, 50.0 + 6.0 * sin(_t * 1.5))
+		var steps: int = maxi(2, int(a0.distance_to(b0) / 80.0))
+		for k: int in steps:
+			var f: float = (k + 0.5) / steps
+			var q: Vector2 = a0.lerp(mid, f).lerp(mid.lerp(b0, f), f)
+			var q2: Vector2 = a0.lerp(mid, f + 0.01).lerp(mid.lerp(b0, f + 0.01), f + 0.01)
+			FxSheet.draw(self, "rope", q, 96.0, (q2 - q).angle(), Color(ln[2], 0.55 + 0.1 * sin(_t * 3.0 + k)), 1.0, Transform2D(0.0, Vector2(1.0, 1.0 / GROUND), 0.0, Vector2.ZERO))
 	# The painted particles that are not light.
 	for pp: Dictionary in _paint:
 		if not LIGHT.has(pp["k"]) and float(pp["t"]) >= 0.0:
@@ -486,7 +501,8 @@ func tether(from: Vector2, to: Vector2, col: Color) -> void:
 ## A rally: a pulse of light out from a hull and a ring on the water.
 func pulse(at: Vector2, col: Color) -> void:
 	_puffs.append({ "p": up(at) + Vector2(0, -50), "v": Vector2.ZERO, "t": 0.0, "life": 0.5, "r": 46.0, "c": col, "flash": true, "world": false })
-	paint("ward", up(at) + Vector2(0, -50), Vector2.ZERO, 0.7, 90.0, 220.0, col, { "spin": 2.0, "fade": 0.3 })
+	for k: int in 8:
+		paint("spark", up(at) + Vector2(0, -50), Vector2.from_angle(TAU * k / 8.0) * 220.0, 0.55, 30.0, 12.0, col, { "drag": 3.5, "spin": 3.0 })
 	_rings.append({ "p": at, "t": 0.0, "life": 0.9, "r": 150.0 })
 
 
@@ -540,7 +556,9 @@ func _arc_mote(kind: String, a: Vector2, mid: Vector2, b: Vector2, dur: float, c
 ## closing in on the ship in the status's colour, with glints.
 func sigil(at: Vector2, col: Color) -> void:
 	var u: Vector2 = up(at) + Vector2(0, -60)
-	paint("ward", u, Vector2.ZERO, 0.6, 240.0, 90.0, col, { "spin": -3.0, "fade": 0.5 })
+	# Stars closing in on the ship, then a flash where they meet.
+	for k: int in 6:
+		_arc_mote("spark", u + Vector2.from_angle(TAU * k / 6.0) * 130.0, u + Vector2.from_angle(TAU * k / 6.0 + 0.6) * 70.0, u, 0.4, col, 0.0)
 	for k: int in 6:
 		_sparks.append({ "kind": "glint", "a": u + Vector2.from_angle(TAU * k / 6.0) * 60.0, "t": -0.25, "life": 0.35, "c": col.lightened(0.3) })
 

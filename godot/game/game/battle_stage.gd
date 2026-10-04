@@ -244,6 +244,7 @@ func _process(delta: float) -> void:
 			a0.burn = not Js.obj(s0.get("burn")).is_empty()
 			a0.ice = s0.get("frozenNow", false) or float(s0.get("freeze", 0.0)) > 0.0
 			a0.shield = float(s0["shield"])
+			a0.wear = Js.obj(s0.get("statuses"))
 			if i == me:
 				sea._boat.modulate = Color(0.75, 0.88, 1.0) if a0.ice else Color.WHITE
 		var fs0: Array = Battle.foes(b)
@@ -259,11 +260,30 @@ func _process(delta: float) -> void:
 			ae.ward = float(e0.get("ward", 0.0)) > 0.0
 			ae.foresight = float(e0.get("foresight", 0.0)) > 0.0
 			ae.surge = float(e0.get("wardBuff", 0.0)) > 0.0
+			ae.wear = Js.obj(e0.get("statuses"))
+			var cl: float = 0.0
+			for gk: Variant in Js.obj(e0.get("grip")):
+				cl = maxf(cl, float(e0["grip"][gk]))
+			ae.coils = int(cl)
+			ae.fog = Js.num(e0.get("fogged")) > 0.0
+			ae.spot = not Js.obj(e0.get("spot")).is_empty()
+			ae.boarded = e0.get("boarded", false) == true
 			var ag: Dictionary = Js.obj(e0.get("aegis"))
 			ae.wall_left = float(ag.get("left", 0.0))
 			ae.wall_of = float(ag.get("of", 0.0))
 			if en0 != null and is_instance_valid(en0):
 				en0.modulate = Color(0.75, 0.88, 1.0) if ae.ice else _wash(e0)
+		# A pack's combo: a rope between its two halves while both float.
+		var lk: Array = []
+		for j1: int in fs0.size():
+			var cb: Dictionary = Js.obj(fs0[j1].get("combo"))
+			if cb.is_empty() or str(cb.get("half", "")) != "role":
+				continue
+			var pj: int = int(cb["with"])
+			if pj >= 0 and pj < fs0.size() and Battle.foe_up(fs0[j1]) and Battle.foe_up(fs0[pj]):
+				lk.append([_foe_at(j1), _foe_at(pj), Color(1.0, 0.75, 0.55)])
+		if _fx != null:
+			_fx.links = lk
 	if _deck != null:
 		# As tall as what is on it (an order row, the aim bar, the die).
 		var dh: float = maxf(150.0, _deck_box.get_combined_minimum_size().y + 34.0)
