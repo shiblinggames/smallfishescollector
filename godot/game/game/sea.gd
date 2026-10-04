@@ -1466,6 +1466,14 @@ func _dock(id: String) -> void:
 			ch.closed.connect(func() -> void: _hud.refresh())
 			_hud.hold_for(ch)
 			_room_layer.add_child(ch)
+		"posting_house":
+			Rumble.buzz([18, 40, 24])
+			Sound.bell()
+			var bb: BountyBoard = BountyBoard.new()
+			bb.session = session
+			bb.closed.connect(func() -> void: _hud.refresh())
+			_hud.hold_for(bb)
+			_room_layer.add_child(bb)
 		"charterhouse":
 			Rumble.buzz([18, 40, 24])
 			Sound.bell()

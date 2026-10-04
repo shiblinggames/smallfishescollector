@@ -1610,6 +1610,11 @@ func _record(key: String, s: Session, cd: int, banked: bool) -> bool:
 	if Js.num(c["stats"].get("highestHit")) > Js.num(p.get("gauntlet_max_hit")):
 		patch["gauntlet_max_hit"] = c["stats"]["highestHit"]
 	s.store.update_profile(s.uid, patch)
+	# The bounty board's moments: Davy Jones' depth reached and biggest hit.
+	if v != "don":
+		Bounties.log_event(s.store, s.uid, "gauntlet_depth", float(cd))
+		if Js.num(c["stats"].get("highestHit")) > 0.0:
+			Bounties.log_event(s.store, s.uid, "gauntlet_hit", Js.num(c["stats"].get("highestHit")))
 	return deeper
 
 

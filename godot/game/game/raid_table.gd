@@ -340,7 +340,13 @@ func _resolve() -> void:
 			p = { "action": "reload" }
 		plans.append(p)
 	if b["state"] == "plan":
-		ev += Battle.resolve(b, plans)
+		var rev: Array = Battle.resolve(b, plans)
+		# Each captain's biggest hit counts toward their raid-damage bounties.
+		for i: int in (b["seats"] as Array).size():
+			var ss: Session = _session(str(b["seats"][i].get("key", "")))
+			if ss != null:
+				Bounties.note_raid_hits(ss.store, ss.uid, rev, i)
+		ev += rev
 	match str(b["state"]):
 		"won":
 			ev += _pay_kill()

@@ -1589,6 +1589,23 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  BOUNTIES (2026-10-04, the audit's seventh item; bounties.md's decisions of 2026-09-30):
+  core/bounties.gd ports the board, its meters, the claim, the swap, the milestone ladder and
+  the rung announcement; the catalogue, rungs, milestones and ranks are content/bounties.json
+  (tools/export_bounties.mts off the frozen web; "today" and "nine hours" reworded). THE BOARD
+  RESETS ON COMPLETION: claim every order and a new board is dealt at once (one swap a board);
+  progress is what happened since the board was dealt. DOUBLOONS, NOT GEMS (Kong, 2026-10-04:
+  "port with just doubloons for now"): an order pays its tier's gems x 100 (easy 1,500, medium
+  2,000, hard 4,000, elite 7,500 ⟡) plus its points; the milestone ladder pays doubloons too
+  (5,000 up to 150,000 ⟡ and the Corsair Hull; two rungs lifted so it never dips). The longer
+  cosmetic track decided for Steam is NOT built (part of the tabled end-rewards question). The
+  moments nothing else records go to the save's "bounty_events": a raid's biggest hit (solo in
+  battle_stage, each captain's in raid_table), and at a Davy Jones run's end its depth and
+  biggest hit (gauntlet_table _record); "a finished run" counts banked and sunk runs. No
+  hardcore Gauntlet in the port, so its order is never offered. THE POSTING HOUSE'S BOARD
+  (game/bounty_board.gd, mooring at posting_house): the orders with their bars, pay, points,
+  Claim and Swap; the points, the rank's medallion, the next rank and milestone with Collect; a
+  rung newly earned announced once at the top.
   VOYAGES (2026-10-04, the audit's sixth item; voyages.md's decisions of 2026-09-30):
   core/voyages.gd ports planVoyage, the single event and loot roll, revealVoyageResults and
   voyagePayout; the tables and story pools are content/voyages.json (tools/export_voyages.py,

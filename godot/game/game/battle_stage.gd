@@ -889,7 +889,10 @@ func _choose(act: String) -> void:
 		return
 	# The deck dips out of the way while the round plays on the water.
 	create_tween().tween_property(self, "_drop", 190.0, 0.2).set_ease(Tween.EASE_IN)
-	_play(Battle.resolve(b, [_plan]))
+	var rev: Array = Battle.resolve(b, [_plan])
+	# A big hit counts toward the raid-damage bounties.
+	Bounties.note_raid_hits(sea.session.store, sea.session.uid, rev, 0)
+	_play(rev)
 
 
 # ── Playing a round ──────────────────────────────────────────────────────────

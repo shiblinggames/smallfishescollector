@@ -5,7 +5,8 @@ elite bounty (the Don). This is the game's competitive-flavored ladder — it RE
 ship PvP (removed 2026-08) and inherits its role; don't rebuild PvP alongside it.
 
 
-**DECIDED 2026-09-30, NOT BUILT** (Steam prep, with Kong; see steam-port.md "Working it
+**DECIDED 2026-09-30; RESET-ON-COMPLETION AND DOUBLOONS BUILT IN THE GODOT PORT 2026-10-04**
+(core/bounties.gd; the cosmetic track is not built; the web is frozen) (Steam prep, with Kong; see steam-port.md "Working it
 through"):
 - THE BOARD RESETS ON COMPLETION, not daily: finish it and a new one comes up, so it can be
   farmed and nothing expires.
