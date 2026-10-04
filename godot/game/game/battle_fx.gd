@@ -571,3 +571,41 @@ func fling(from: Vector2, to: Vector2, kind: String = "fireball", col: Color = C
 	_arc_mote(kind, a, (a + b) / 2.0 + Vector2(0, -120), b, 0.45, col, 0.0)
 	await _wait(0.45)
 	burst(to, false)
+
+
+## A cannonball tossed from one hull to another (or over the side): a low
+## arc, a glint where it is caught or a splash where it falls.
+func toss(from: Vector2, to: Vector2, into_sea: bool = false) -> void:
+	_balls.append({ "a": from + Vector2(0, -30), "b": to + Vector2(0, -10), "t": 0.0, "dur": 0.5, "h": 110.0, "big": false, "quiet": true })
+	await _wait(0.5)
+	if into_sea:
+		splash(to)
+	else:
+		_sparks.append({ "kind": "glint", "a": up(to) + Vector2(0, -40), "t": 0.0, "life": 0.35, "c": Color(1.0, 0.9, 0.6) })
+		Sound.clunk()
+
+
+## Something failing: a sputter of grey smoke and a few dying sparks.
+func fizzle(at: Vector2) -> void:
+	var u: Vector2 = up(at) + Vector2(0, -60)
+	for k: int in 3:
+		paint("smoke", u + Vector2(randf_range(-20, 20), 0), Vector2(randf_range(-15, 15), -40), 1.0, 40.0, 80.0, Color(0.55, 0.55, 0.55, 0.7), { "delay": k * 0.06, "drag": 1.5 })
+	for k2: int in 4:
+		paint("ember", u, Vector2.from_angle(randf_range(-PI, 0.0)) * randf_range(60, 120), 0.5, 14.0, 4.0, Color(0.8, 0.8, 0.8), { "g": 300.0 })
+
+
+## A finishing blow: a fireball blooming on the hull, a crit's burst and a
+## gold ring.
+func finisher(at: Vector2) -> void:
+	var u: Vector2 = up(at) + Vector2(0, -50)
+	paint("fireball", u, Vector2(0, -20), 0.8, 90.0, 190.0, Color(1.0, 0.9, 0.75), { "fade": 0.35, "spin": 0.4 })
+	burst(at, true)
+	_waves.append({ "p": at, "t": 0.0, "life": 0.9, "r": 260.0 })
+
+
+## A heal or a gift arriving: green (or the given colour) motes rising off
+## the hull.
+func rise(at: Vector2, col: Color, n: int = 8) -> void:
+	var u: Vector2 = up(at) + Vector2(0, -20)
+	for k: int in n:
+		paint("spark", u + Vector2(randf_range(-60, 60), randf_range(-10, 10)), Vector2(randf_range(-10, 10), randf_range(-110, -60)), 0.9, 24.0, 10.0, col, { "delay": k * 0.04, "drag": 0.6, "spin": 3.0 })

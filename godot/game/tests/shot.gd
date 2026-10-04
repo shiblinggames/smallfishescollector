@@ -665,6 +665,29 @@ func _init() -> void:
 						en["ward"] = 2.0
 						bst.b["seats"][0]["shield"] = 20.0
 						bst.b["seats"][0]["freeze"] = 1.0
+					"allev":
+						# Every motion the stage has, played in turn (a runtime check).
+						while bst._busy:
+							await process_frame
+						var evs: Array = [
+							{ "t": "burn", "seat": 0, "dmg": 3.0, "hp": 70.0 }, { "t": "eBurn", "dmg": 3.0, "hp": 15.0 },
+							{ "t": "frozen", "seat": 0 }, { "t": "eFrozen" }, { "t": "ablaze", "seat": 0 }, { "t": "iced", "seat": 0 },
+							{ "t": "eAblaze", "seat": 0, "dmg": 2.0 }, { "t": "eIced", "seat": 0 }, { "t": "fumble", "seat": 0, "chip": 4.0, "hp": 66.0 },
+							{ "t": "bite", "seat": 0, "charges": 1.0 }, { "t": "loaded", "seat": 0, "charges": 2.0 }, { "t": "strip", "seat": 0, "charges": 0.0 },
+							{ "t": "leech", "seat": 0, "heal": 4.0, "hp": 70.0 }, { "t": "rack", "seat": 0, "landed": ["weaken"] }, { "t": "eHeal", "hp": 18.0, "heal": 2.0, "why": "Resilient" },
+							{ "t": "refund", "seat": 0 }, { "t": "seize", "seat": 0 }, { "t": "steal", "seat": 0, "kept": true, "charges": 2.0, "eCharges": 0.0 },
+							{ "t": "overkill", "seat": 0, "heal": 5.0, "hp": 72.0 }, { "t": "tithe", "seat": 0, "heal": 5.0 }, { "t": "coil", "seat": 0, "coils": 2.0, "of": 4.0 },
+							{ "t": "streak", "seat": 0, "n": 3.0, "pct": 9.0 }, { "t": "streakBroken", "seat": 0 }, { "t": "eStatus", "seat": 0, "status": "corrode" },
+							{ "t": "checkMet", "line": "Countered!" }, { "t": "checkFail", "line": "Too slow." }, { "t": "eSpecial", "name": "Hex", "line": "" },
+							{ "t": "bond", "seat": 0, "to": 0, "text": "Echo  +1 ball" }, { "t": "bond", "seat": 0, "to": -1, "text": "Marked" }, { "t": "bond", "seat": 0, "to": 0, "text": "+6" },
+							{ "t": "eBroadside", "action": "volley" }, { "t": "drum", "seat": 0, "name": "War Drum", "refreshed": "x" },
+							{ "t": "comboNote", "foe": 0, "text": "War Drums  +1 ball" }, { "t": "comboBroken", "foe": 0, "name": "Hammer and Anvil" },
+							{ "t": "execute", "seat": 0, "kind": "deathMark" },
+							{ "t": "reaction", "id": "powder_keg", "name": "Powder Keg", "seat": 0, "foe": 0, "others": [], "enemyHp": 5.0, "dmg": 4.0, "new": [] },
+						]
+						for ev1: Dictionary in evs:
+							await bst._one(ev1)
+						print("  allev played ", evs.size())
 					"wear":
 						# What a ship wears (WEAR_SET a or b): statuses, coils, the co-op marks.
 						var we: Dictionary = bst.b["enemy"]

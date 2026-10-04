@@ -898,6 +898,7 @@ func _one(x: Dictionary) -> void:
 			_num(_enemy_at, "Evades", Color(0.75, 0.85, 1.0))
 			await _wait(0.2)
 		"eSpecial":
+			_fx.sigil(_enemy_at, Color(1.0, 0.6, 0.4))
 			_strip_lit = -1 - _cur
 			_say(str(x.get("name", "")))
 			_log_line(str(x.get("line", "")))
@@ -940,10 +941,12 @@ func _one(x: Dictionary) -> void:
 			_log_line("%s  ·  answer it within %d turns with the right crew order" % [x.get("telegraph", ""), int(x["turns"])])
 			await _wait(1.0)
 		"checkMet":
+			_fx.pulse(_enemy_at, Color(1.0, 0.85, 0.45))
 			_log_line(str(x.get("line", "Countered!")))
 			Sound.perfect()
 			await _wait(0.8)
 		"checkFail":
+			_fx.fizzle(_seat_at(me))
 			_log_line(str(x.get("line", "")))
 			Rumble.buzz([0, 60, 30, 60])
 			await _wait(0.9)
@@ -955,32 +958,41 @@ func _one(x: Dictionary) -> void:
 			_say("Holed below the waterline")
 			await _wait(0.8)
 		"burn":
+			_fx.flare_up(_seat_at(int(x["seat"])))
 			var si: int = int(x["seat"])
 			_num(_seat_at(si), "-%d  burning" % int(x["dmg"]), Color(1.0, 0.55, 0.25))
 			_shown_hp[si] = float(x["hp"])
 			Sound.impact(false)
 			await _wait(0.35)
 		"eBurn":
+			_fx.flare_up(_enemy_at)
 			_num(_enemy_at, "-%d  burning" % int(x["dmg"]), Color(1.0, 0.55, 0.25))
 			_shown_hp[_ek()] = float(x["hp"])
 			await _wait(0.35)
 		"frozen":
+			_fx.freeze_snap(_seat_at(int(x["seat"])))
 			_strip_lit = int(x["seat"])
 			_num(_seat_at(int(x["seat"])), "Frozen solid", Color(0.75, 0.9, 1.0), true)
 			await _wait(0.6)
 		"eFrozen":
+			_fx.freeze_snap(_enemy_at)
 			_strip_lit = -1 - _cur
 			_num(_enemy_at, "Frozen solid", Color(0.75, 0.9, 1.0), true)
 			await _wait(0.6)
 		"ablaze":
+			_fx.flare_up(_seat_at(int(x["seat"])), true)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "Set ablaze!", Color(1.0, 0.5, 0.2))
 		"iced":
+			_fx.freeze_snap(_seat_at(int(x["seat"])))
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "Iced over!", Color(0.75, 0.9, 1.0))
 		"eAblaze":
+			_fx.flare_up(_enemy_at, true)
 			_num(_enemy_at + Vector2(0, -40), "Ablaze!", Color(1.0, 0.5, 0.2))
 		"eIced":
+			_fx.freeze_snap(_enemy_at)
 			_num(_enemy_at + Vector2(0, -40), "Iced over!", Color(0.75, 0.9, 1.0))
 		"fumble":
+			_fx.burst(_seat_at(int(x["seat"])), false)
 			_strip_lit = int(x["seat"])
 			_num(_seat_at(int(x["seat"])), "False colors!  -%d" % int(x["chip"]), Color(1.0, 0.55, 0.35), true)
 			_shown_hp[int(x["seat"])] = float(x["hp"])
@@ -1005,17 +1017,23 @@ func _one(x: Dictionary) -> void:
 			_shown_hp[int(x["seat"])] = float(x["hp"])
 			await _wait(0.5)
 		"bite":
+			_fx.toss(_seat_at(int(x["seat"])), _seat_at(int(x["seat"])) + Vector2(-140, 70), true)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "A ball knocked loose", Color(1.0, 0.7, 0.4))
 		"loaded":
+			_fx.reload(_seat_at(int(x["seat"])), true)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "+1 ball", CREAM)
 		"strip":
+			_fx.toss(_enemy_at, _enemy_at + Vector2(130, 80), true)
 			_num(_enemy_at + Vector2(0, -40), "Its powder spilled", Color(1.0, 0.85, 0.35))
 		"leech":
+			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), Color(0.5, 0.95, 0.6), 8)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
 			_shown_hp[int(x["seat"])] = float(x["hp"])
 		"rack":
+			_fx.sigil(_enemy_at, Color(0.75, 0.55, 1.0))
 			_num(_enemy_at + Vector2(0, -60), "The rack fires", Color(0.85, 0.75, 0.55))
 		"eHeal":
+			_fx.rise(_enemy_at, Color(0.5, 0.95, 0.6))
 			_num(_enemy_at + Vector2(0, -40), "%s  +%d" % [x.get("why", ""), int(x["heal"])], Color(0.6, 0.95, 0.6))
 			_shown_hp[_ek()] = float(x["hp"])
 			await _wait(0.25)
@@ -1042,6 +1060,7 @@ func _one(x: Dictionary) -> void:
 		"bossAbility":
 			await _summon(x)
 		"refund":
+			_fx.rise(_seat_at(int(x["seat"])), Color(1.0, 0.85, 0.45), 6)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "The Maw takes nothing", Color(0.9, 0.65, 0.3))
 		"flares":
 			pass
@@ -1052,13 +1071,27 @@ func _one(x: Dictionary) -> void:
 		"comboNote":
 			# A pack's combo (or a jammed role) at work: its name over the ship.
 			var fj2: int = int(x.get("foe", -1))
+			_fx.pulse(_foe_at(maxi(0, fj2)), Color(1.0, 0.62, 0.45))
 			var at2: Vector2 = _seat_at(int(x["seat"])) + Vector2(0, -110) if x.has("seat") else _foe_at(maxi(0, fj2)) + Vector2(0, -80)
 			_num(at2, str(x.get("text", "")), Color(1.0, 0.62, 0.45))
 			if x.has("hp") and fj2 >= 0:
 				_shown_hp["e%d" % fj2] = float(x["hp"])
 		"comboBroken":
+			_fx.fizzle(_foe_at(int(x["foe"])))
 			_num(_foe_at(int(x["foe"])) + Vector2(0, -80), "%s broken" % str(x.get("name", "")), Color(0.85, 0.85, 0.8))
 			_log_line("%s is broken: the %s fights alone now." % [str(x.get("name", "")), str(Battle.foes(b)[int(x["foe"])]["name"])])
+		"eBroadside":
+			# Every gun down its side at once.
+			_say("Broadside!")
+			for k5: int in 4:
+				_fx.muzzle(_enemy_at + Vector2(-60.0 + k5 * 40.0, 0), false, true)
+			Sound.cannon(true)
+			await _wait(0.3)
+		"drum":
+			_fx.pulse(_seat_at(int(x["seat"])), Color(1.0, 0.8, 0.45))
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -90), str(x.get("name", "The drum")), Color(1.0, 0.85, 0.5))
+			if x.has("refreshed"):
+				_log_line("The drum beats: an order is ready again.")
 		"intercept":
 			_strip_lit = -1 - _cur
 			_react(-1 - _cur, "brace")
@@ -1138,18 +1171,24 @@ func _one(x: Dictionary) -> void:
 			if x["key"] == my_key:
 				_log_line("Your crew catch their breath. Every order is ready again.")
 		"seize":
+			_fx.pulse(_seat_at(int(x["seat"])), Color(1.0, 0.85, 0.45))
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -90), "Weather Gauge", BattleLook.GOLD)
 		"steal":
+			_fx.toss(_enemy_at, _seat_at(int(x["seat"])))
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -80), "Press-Gang  +1 ball" if x.get("kept", false) else "Press-Gang", BattleLook.GOLD)
 			await _wait(0.2)
 		"overkill":
+			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), Color(0.5, 0.95, 0.6), 10)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
 		"leech":
+			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), Color(0.5, 0.95, 0.6), 8)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
 		"bond":
-			# A bond reaching a crewmate (or the ship it marked): a line over them.
+			# A bond reaching a crewmate (or the ship it marked): its motion,
+			# then a line over them.
 			var bt: int = int(x.get("to", -1))
 			var at: Vector2 = _seat_at(bt) if bt >= 0 else _enemy_at
+			_bond_move(x, at)
 			_num(at + Vector2(0, -100), str(x.get("text", "")), Color(0.75, 0.9, 1.0))
 		"rake":
 			var fj: int = int(x["foe"])
@@ -1157,12 +1196,15 @@ func _one(x: Dictionary) -> void:
 			_num(_foe_at(fj), "Raked  -%d" % int(x["dmg"]), Color(1.0, 0.75, 0.45))
 			_shown_hp["e%d" % fj] = float(x["enemyHp"])
 		"execute":
+			_fx.finisher(_enemy_at)
 			_say({ "execute": "Executioner!", "deathMark": "Death Mark!" }.get(str(x.get("kind", "")), "Coup de Grace!"))
 			_shown_hp[_ek()] = 0.0
 			await _wait(0.5)
 		"tithe":
+			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), Color(0.85, 1.0, 0.6), 12)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "Tithe  +%d" % int(x["heal"]), Color(0.5, 0.95, 0.6), true)
 		"coil":
+			_fx.splash(_enemy_at + Vector2(randf_range(-60, 60), 10))
 			_num(_enemy_at + Vector2(0, -90), "Coils %d/%d" % [int(x["coils"]), int(x["of"])], Color(0.55, 0.85, 0.8))
 		"grip":
 			_say("Kraken's Grip!")
@@ -1186,10 +1228,13 @@ func _one(x: Dictionary) -> void:
 				_shown_hp[_ek()] = float(x["enemyHp"])
 			await _wait(0.3)
 		"streak":
+			_fx.rise(_seat_at(int(x["seat"])), Color(1.0, 0.85, 0.45), 5)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -100), "Cannonade x%d" % int(x["n"]), BattleLook.GOLD)
 		"streakBroken":
+			_fx.fizzle(_seat_at(int(x["seat"])))
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -100), "Cannonade broken", Color(CREAM, 0.7))
 		"eStatus":
+			_fx.sigil(_enemy_at, Color(0.75, 0.55, 1.0))
 			_num(_enemy_at + Vector2(0, -100), str(x["status"]).capitalize(), Color(0.8, 0.6, 1.0))
 		"tided":
 			var r: Dictionary = Js.obj(Js.obj(x.get("picks")).get(my_key))
@@ -2310,6 +2355,30 @@ func _landed(who: int, land: String, k: int) -> void:
 
 func _role_name(e: Dictionary) -> String:
 	return str(Js.obj(Battle.roles_cfg().get(str(e.get("role", "")))).get("name", ""))
+
+
+## A bond's motion, read from what it did: a ball handed over, a shield
+## thrown, a heal carried, a mark set, a status lifted.
+func _bond_move(x: Dictionary, at: Vector2) -> void:
+	var from: Vector2 = _seat_at(int(x["seat"]))
+	var tx: String = str(x.get("text", ""))
+	if tx.contains("ball"):
+		if int(x.get("to", -1)) == int(x["seat"]):
+			_fx.reload(from, true)
+		else:
+			_fx.toss(from, at)
+	elif tx.contains("shield") or tx == "Shield Wall":
+		_fx.tether(from, at, Color(0.6, 0.85, 1.0))
+	elif tx.begins_with("+"):
+		_fx.motes(from, at, Color(0.5, 0.95, 0.6), 8)
+	elif tx == "Marked" or tx.begins_with("Spotted"):
+		_fx.sigil(at, Color(1.0, 0.82, 0.4))
+	elif tx == "Boarded!":
+		_fx.tether(from, at, Color(0.85, 0.7, 0.5))
+	elif tx == "Cleared":
+		_fx.rise(at, Color(0.95, 0.95, 1.0), 6)
+	elif tx == "Signal up":
+		_fx.pulse(from, Color(1.0, 0.85, 0.45))
 
 
 ## A REACTION (two captains' elements on one ship): its own moment each, the
