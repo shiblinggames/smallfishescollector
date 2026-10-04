@@ -570,6 +570,7 @@ var autoplay: bool = false
 func _await_plan() -> void:
 	_busy = false
 	_plan = {}
+	_menu = ""
 	_paint_actions()
 	# The deck rises back for your turn.
 	create_tween().tween_property(self, "_drop", 0.0, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -588,27 +589,50 @@ func _await_plan() -> void:
 				(bar as AimBar).lock()
 
 
+## Which chooser is open on the deck: "" the orders, "fire" (Fire, Volley,
+## the Mega) or "special" (the repair kit), as the web's ActionMenu.
+var _menu: String = ""
+
+
 func _paint_actions() -> void:
 	_clear_deck()
 	var s: Dictionary = b["seats"][me]
-	# The actions: words and their keys, the rack after them.
+	var lg: Dictionary = Battle.legal(b, s)
+	var mg: Dictionary = Js.obj(s.get("mega"))
+	var kit: Dictionary = Battle.repair_kit(s)
 	var top: HBoxContainer = HBoxContainer.new()
 	top.add_theme_constant_override("separation", 6)
 	_deck_box.add_child(top)
-	var lg: Dictionary = Battle.legal(b, s)
-	var acts: Array = [["fire", "Fire", "1 ball", "1"], ["volley", "Volley", "3 balls, double damage", "2"], ["reload", "Reload", "+1 ball", "3"], ["dodge", "Dodge", "brace for a shot", "4"]]
-	var mg: Dictionary = Js.obj(s.get("mega"))
-	if not mg.is_empty():
-		acts.insert(2, ["mega", str(mg["name"]), "%d balls" % int(Armory.aug()["megaCost"]), "6"])
-	for a: Array in acts:
-		var on: bool = lg.get(a[0], false)
-		top.add_child(_word_key(a[1], a[3], on, a[0] in ["fire", "mega"], str(mg.get("tagline", "")) if a[0] == "mega" else str(a[2]), Color(str(mg.get("color", "#d8b26b"))) if a[0] == "mega" else BattleLook.GOLD, func() -> void: _choose(a[0])))
-	var drum: Dictionary = Battle.drum_of(s)
-	if not drum.is_empty():
-		var dk: BattleLook.ActionKey = _word_key(str(drum["name"]), "5", not (s.get("drum", false) or (s["used"] as Array).is_empty()), false, str(drum.get("description", "")), BattleLook.GOLD, _beat_drum)
-		top.add_child(dk)
-	if gauntlet == "":
-		top.add_child(_word_key("Flee", "F", true, false, "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me), BattleLook.MUTED, _flee))
+	match _menu:
+		"fire":
+			# Fire's chooser: the single shot, the volley, the Mega.
+			top.add_child(_word_key("Fire", "F", lg["fire"], true, "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire")))
+			top.add_child(_word_key("Volley", "V", lg["volley"], false, "Three balls: a double-damage broadside", BattleLook.GOLD, func() -> void: _pick_fire("volley")))
+			if not mg.is_empty():
+				top.add_child(_word_key(str(mg["name"]), "M", lg.get("mega", false), lg.get("mega", false), "%s  ·  %d balls" % [mg.get("tagline", ""), int(Armory.aug()["megaCost"])], Color(str(mg.get("color", "#d8b26b"))), func() -> void: _pick_fire("mega")))
+			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu()))
+		"special":
+			# The specials: the repair kit (the crew's orders have their row).
+			if not kit.is_empty():
+				var rg: Vector2 = Battle.repair_range(s)
+				var why: String = "Used this fight" if s.get("kitUsed", false) else ("Hull already full" if float(s["hp"]) >= float(s["max"]) else "Heals %d-%d, costs your turn" % [int(rg.x), int(rg.y)])
+				var kk: BattleLook.ActionKey = _word_key(str(kit["name"]), "1", lg.get("repair", false), lg.get("repair", false), str(kit.get("description", "")), Color(0.5, 0.95, 0.6), func() -> void:
+					_menu = ""
+					_choose("repair"))
+				kk.sub = why
+				kk.custom_minimum_size = Vector2(maxf(kk.custom_minimum_size.x, 230.0), 48)
+				top.add_child(kk)
+			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu()))
+		_:
+			top.add_child(_word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire))
+			top.add_child(_word_key("Reload", "R", lg["reload"], false, "+1 ball", BattleLook.GOLD, func() -> void: _choose("reload")))
+			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Brace for a shot (not twice running)", BattleLook.GOLD, func() -> void: _choose("dodge")))
+			top.add_child(_word_key("Special", "S", not kit.is_empty(), false, str(kit.get("name", "No special aboard")), Color(0.75, 0.6, 1.0), func() -> void: _open_menu("special")))
+			var drum: Dictionary = Battle.drum_of(s)
+			if not drum.is_empty():
+				top.add_child(_word_key(str(drum["name"]), "B", not (s.get("drum", false) or (s["used"] as Array).is_empty()), false, str(drum.get("description", "")), BattleLook.GOLD, _beat_drum))
+			if gauntlet == "":
+				top.add_child(_word_key("Flee", "X", true, false, "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me), BattleLook.MUTED, _flee))
 	# The shot in the rack: the balls themselves.
 	var mag: Control = Control.new()
 	var cnt: int = int(s["maxCharges"])
@@ -630,6 +654,38 @@ func _paint_actions() -> void:
 	_target_row()
 
 
+## Fire: with a Volley or the Mega in reach it opens the chooser; else it fires.
+func _tap_fire() -> void:
+	var lg: Dictionary = Battle.legal(b, b["seats"][me])
+	if not lg["fire"]:
+		return
+	if lg["volley"] or lg.get("mega", false):
+		_open_menu("fire")
+	else:
+		_choose("fire")
+
+
+func _pick_fire(act: String) -> void:
+	if not Battle.legal(b, b["seats"][me]).get(act, false):
+		return
+	_menu = ""
+	_choose(act)
+
+
+func _open_menu(m: String) -> void:
+	if m == "special" and Battle.repair_kit(b["seats"][me]).is_empty():
+		return
+	_menu = m
+	Sound.plip()
+	_paint_actions()
+
+
+func _close_menu() -> void:
+	_menu = ""
+	Sound.plip()
+	_paint_actions()
+
+
 ## An action on the deck: its word and its key, nothing else.
 func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, accent: Color, f: Callable) -> BattleLook.ActionKey:
 	var k: BattleLook.ActionKey = BattleLook.ActionKey.new()
@@ -639,7 +695,7 @@ func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, 
 	k.accent = accent
 	k.disabled = not on
 	k.tooltip_text = tip
-	var w: float = Kit.font("karla", 800).get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 52.0
+	var w: float = Kit.font("karla", 800).get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 40.0 + Kit.font("karla", 800).get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 	k.custom_minimum_size = Vector2(maxf(92.0, w), 42)
 	k.pressed.connect(f)
 	return k
@@ -735,8 +791,8 @@ func _unhandled_input(e: InputEvent) -> void:
 		return
 	if _busy or not (e is InputEventKey) or not (e as InputEventKey).pressed or (e as InputEventKey).echo:
 		return
-	var m: Dictionary = { KEY_1: "fire", KEY_2: "volley", KEY_3: "reload", KEY_4: "dodge", KEY_6: "mega" }
-	if (e as InputEventKey).keycode == KEY_TAB and _field():
+	var kc: int = (e as InputEventKey).keycode
+	if kc == KEY_TAB and _field():
 		get_viewport().set_input_as_handled()
 		var fs3: Array = Battle.foes(b)
 		for k3: int in range(1, fs3.size() + 1):
@@ -745,18 +801,43 @@ func _unhandled_input(e: InputEvent) -> void:
 				_set_target(nj)
 				break
 		return
-	if (e as InputEventKey).keycode == KEY_F and gauntlet == "":
+	var lg: Dictionary = Battle.legal(b, b["seats"][me])
+	var hit: bool = true
+	match _menu:
+		"fire":
+			match kc:
+				KEY_F: _pick_fire("fire")
+				KEY_V: _pick_fire("volley")
+				KEY_M: _pick_fire("mega")
+				KEY_ESCAPE: _close_menu()
+				_: hit = false
+		"special":
+			match kc:
+				KEY_1:
+					if lg.get("repair", false):
+						_menu = ""
+						_choose("repair")
+				KEY_S, KEY_ESCAPE: _close_menu()
+				_: hit = false
+		_:
+			match kc:
+				KEY_F: _tap_fire()
+				KEY_R:
+					if lg["reload"]:
+						_choose("reload")
+				KEY_D:
+					if lg["dodge"]:
+						_choose("dodge")
+				KEY_S: _open_menu("special")
+				KEY_B:
+					if not Battle.drum_of(b["seats"][me]).is_empty():
+						_beat_drum()
+				KEY_X:
+					if gauntlet == "":
+						_flee()
+				_: hit = false
+	if hit:
 		get_viewport().set_input_as_handled()
-		_flee()
-		return
-	var kc: int = (e as InputEventKey).keycode
-	if kc == KEY_5 and not Battle.drum_of(b["seats"][me]).is_empty():
-		get_viewport().set_input_as_handled()
-		_beat_drum()
-		return
-	if m.has(kc) and Battle.legal(b, b["seats"][me]).get(m[kc], false):
-		get_viewport().set_input_as_handled()
-		_choose(m[kc])
 
 
 func _choose(act: String) -> void:
@@ -1104,6 +1185,14 @@ func _one_play(x: Dictionary) -> void:
 			await _role_move(x)
 		"reaction":
 			await _reaction(x)
+		"repair":
+			var rsi: int = int(x["seat"])
+			_strip_lit = rsi
+			_fx.heal_rain(_seat_at(rsi), Color(0.5, 0.95, 0.6), 10)
+			await _wait(0.5)
+			_num(_seat_at(rsi), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6), true)
+			_shown_hp[rsi] = float(x["hp"])
+			await _wait(0.3)
 		"comboNote":
 			# A pack's combo (or a jammed role) at work: its name over the ship.
 			var fj2: int = int(x.get("foe", -1))

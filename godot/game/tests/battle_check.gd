@@ -238,6 +238,21 @@ func _init() -> void:
 				var u: String = str(Js.obj(en).get(k, ""))
 				if u != "" and u != "<null>":
 					check(ResourceLoader.exists("res://art/" + u.trim_prefix("/")), "%s's %s is in art/ (%s)" % [Js.obj(en).get("name", "?"), k, u])
+	# The repair kit: a Special, once a fight, the kit's range (Fortune lifts
+	# its ceiling), not at a full hull.
+	var br: Dictionary = Battle.begin("corsairs_reckoning", [_seat("A", 3, 14.0, 6.0, [])])
+	var rs: Dictionary = br["seats"][0]
+	rs["repairKit"] = "basic_repair_kit"
+	rs["fortune"] = 8.0
+	check(not Battle.legal(br, rs)["repair"], "no repair at a full hull")
+	check(Battle.repair_range(rs) == Vector2(1, 12), "the Basic Kit heals 1 to 10 + Fortune 8 x 0.25 = 1 to 12 (%s)" % str(Battle.repair_range(rs)))
+	rs["hp"] = float(rs["max"]) - 30.0
+	check(Battle.legal(br, rs)["repair"], "a hurt hull may repair")
+	br["enemy"]["pattern"] = ["reload"]
+	var rev: Array = Battle.resolve(br, [{ "action": "repair" }])
+	var rx: Array = rev.filter(func(x: Dictionary) -> bool: return x["t"] == "repair")
+	check(rx.size() == 1 and float(rx[0]["heal"]) >= 1.0 and float(rx[0]["heal"]) <= 12.0, "the repair heals within its range (%s)" % str(rx))
+	check(not Battle.legal(br, rs)["repair"] or float(rs["hp"]) >= float(rs["max"]), "once a fight")
 	print("  battle check: %s" % ("ok" if bad == 0 else "%d FAILED" % bad))
 	quit(0 if bad == 0 else 1)
 

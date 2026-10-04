@@ -665,6 +665,20 @@ func _init() -> void:
 						en["ward"] = 2.0
 						bst.b["seats"][0]["shield"] = 20.0
 						bst.b["seats"][0]["freeze"] = 1.0
+					"deckmenu":
+						# The deck with a chooser open (MENU "", "fire" or "special").
+						while bst._busy:
+							await process_frame
+						bst.b["seats"][0]["charges"] = 3.0
+						bst.b["seats"][0]["hp"] = 50.0
+						bst._menu = OS.get_environment("MENU")
+						bst._paint_actions()
+						for f: int in 20:
+							await process_frame
+						root.get_texture().get_image().save_png(out)
+						print("  saved ", out)
+						quit()
+						return
 					"crewsummon":
 						# A crew summon (SUM_CLS, SUM_SKIN a skin's filename), captured FX_S in.
 						while bst._busy:

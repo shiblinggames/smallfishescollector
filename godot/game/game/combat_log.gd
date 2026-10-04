@@ -566,6 +566,8 @@ func _fmt(x: Dictionary) -> Array:
 			return [mine, false, "%s reloads (+%d)" % [_S(si), 1 + int(Js.num(x.get("extra")))]]
 		"brace":
 			return [mine, false, "%s braces" % _S(si)]
+		"repair":
+			return [mine, false, "%s cracks open the %s: %s back" % [_S(si), _esc(str(x.get("name", "Repair Kit"))), _n(x.get("heal"))]]
 		"ability":
 			return [mine, false, "%s orders [b]%s[/b]" % [_S(si), _esc(str(x.get("name", "")))]]
 		"drum":
@@ -793,7 +795,7 @@ func _tally(x: Dictionary) -> void:
 			var s7: Dictionary = _st(si)
 			if not s7.is_empty():
 				s7["taken"] = float(s7["taken"]) + Js.num(x.get("chip"))
-		"leech", "overkill", "tithe":
+		"leech", "overkill", "tithe", "repair":
 			var s8: Dictionary = _st(si)
 			if not s8.is_empty():
 				s8["healed"] = float(s8["healed"]) + Js.num(x.get("heal"))

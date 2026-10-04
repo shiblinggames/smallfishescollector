@@ -999,9 +999,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   creature breaching beside the enemy and slamming into it (the Krakenhunter's sea erupts first),
   Apex a volley per hit (the Tempest's lightning instead), Oracle glyph rings, Vengeance an
   aureole of rays, Requiem a reticle closing (the Huntersbane's blood red). Click or Space hurries
-  it. BATTLE_SHOW=crewsummon (SUM_CLS, SUM_SKIN) in tests/shot.gd stages one. OPEN: Oracle's
-  Foresight still reveals the enemy's next moves (its web design), against the no-prediction
-  rule.
+  it. BATTLE_SHOW=crewsummon (SUM_CLS, SUM_SKIN) in tests/shot.gd stages one. Oracle's Foresight
+  revealing the enemy's next moves is the ONE allowed exception to the no-prediction rule (Kong).
+  THE DECK (Kong, 2026-10-04: "the words are enough ... the action log can also reside at the
+  bottom ... a pop-out option"): one wide deck; on the left the orders as words with their keys,
+  as the web's ActionMenu: FIRE (F; with a Volley or the Mega in reach it opens Fire F, Volley V,
+  the Mega M, Esc back), RELOAD (R), DODGE (D), SPECIAL (S: the repair kit), the drum (B), Flee
+  (X, raids only), the rack's balls inline; the crew's orders in a slim row under them; on the
+  right the log's last lines with Recap and Full log (L pops the whole log out on the right
+  edge). The deck stays up while a round plays (the orders dim). THE REPAIR KITS (web
+  lib/repairKits.ts, never ported until now; port rules battle.repairKits): a Special that heals
+  the kit's baseMin..baseMax + floor(Fortune x 0.25), times repairHealMult (Field Repairs), costs
+  the turn, ONCE A FIGHT (the web's "once per battle"). NOT YET: buying the better kits (the
+  web's Nav-gated shipyard ladder); every captain carries the Basic Kit they start with.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the

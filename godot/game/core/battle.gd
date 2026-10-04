@@ -169,6 +169,7 @@ static func _ready_seat(s: Dictionary) -> void:
 	s["cheated"] = false
 	s["anchorUsed"] = false
 	s["lashUsed"] = false
+	s["kitUsed"] = false
 	# The run effects' per-fight counts: shots locked (duds too), volleys
 	# loosed, the crit streak, the counter-battery's roll.
 	s["locked"] = 0.0
@@ -722,6 +723,26 @@ static func mods(st: Dictionary) -> Dictionary:
 # ══ Planning ══════════════════════════════════════════════════════════════════
 
 ## What a seat may do this round (the web's legality rules).
+## The repair kit a seat carries (its captain's equipped one), or {}.
+static func repair_kit(s: Dictionary) -> Dictionary:
+	var id: String = str(s.get("repairKit", ""))
+	if id == "" or id == "<null>":
+		return {}
+	for k: Dictionary in Js.list(Js.obj(cfg().get("repairKits")).get("list")):
+		if k["id"] == id:
+			return k
+	return {}
+
+
+## Its heal range: the kit's floor, its ceiling lifted by the crew's Fortune.
+static func repair_range(s: Dictionary) -> Vector2:
+	var k: Dictionary = repair_kit(s)
+	if k.is_empty():
+		return Vector2.ZERO
+	var bonus: float = floor(maxf(0.0, Js.num(s.get("fortune"))) * float(Js.nz(Js.obj(cfg().get("repairKits")).get("fortuneHealScale"), 0.25)))
+	return Vector2(float(k["baseMin"]), float(k["baseMax"]) + bonus)
+
+
 static func legal(b: Dictionary, s: Dictionary) -> Dictionary:
 	var c: float = float(s.get("charges", 0.0))
 	var mg: Dictionary = Js.obj(s.get("mega"))
@@ -729,7 +750,7 @@ static func legal(b: Dictionary, s: Dictionary) -> Dictionary:
 		"fire": c >= 1.0, "volley": c >= volley_cost(s), "reload": c < float(s["maxCharges"]),
 		"mega": not mg.is_empty() and c >= mega_cost(s),
 		"dodge": s.get("last", "") != "dodge",
-		"repair": false,
+		"repair": not repair_kit(s).is_empty() and not s.get("kitUsed", false) and float(s.get("hp", 0.0)) < float(s.get("max", 0.0)),
 	}
 
 
@@ -1201,6 +1222,17 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 			_bond_reload(b, si, ev)
 		"dodge":
 			ev.append({ "t": "brace", "seat": si })
+		"repair":
+			# The repair kit: a heal off the kit's range (Fortune lifts its
+			# ceiling), the turn spent, once a fight.
+			var kit: Dictionary = repair_kit(s)
+			if not kit.is_empty() and not s.get("kitUsed", false):
+				s["kitUsed"] = true
+				var rg: Vector2 = repair_range(s)
+				var roll: float = rg.x + floor(Dice.next() * (rg.y - rg.x + 1.0))
+				roll = float(Js.round(roll * float(tide_agg(s)["repairHeal"]) * float(s.get("healMult", 1.0))))
+				var got: float = _heal(s, roll)
+				ev.append({ "t": "repair", "seat": si, "heal": got, "hp": s["hp"], "name": kit.get("name", "Repair Kit") })
 		"fire", "volley", "mega":
 			var mega: Dictionary = Js.obj(s.get("mega")) if act == "mega" else {}
 			var cost: float = 1.0 if act == "fire" else (volley_cost(s) if act == "volley" else mega_cost(s))
@@ -2198,7 +2230,7 @@ static func tide_agg(s: Dictionary, boss: bool = false) -> Dictionary:
 		"startCharges": 0.0, "enemyHpScale": 1.0, "guaranteedDodge": 0.0, "doubloonsAtEnd": 0.0,
 		"critDmg": 1.0, "noncrit": 1.0, "healMult": 1.0, "statusDur": 1.0, "aimSpeed": 1.0, "zoneSpeed": 1.0,
 		"overkillHeal": 0.0, "volleyCut": 0.0, "megaCut": 0.0, "lifesteal": 0.0, "retaliate": 0.0, "retaliateDodge": 0.0, "retaliateBoost": 1.0,
-		"fightShield": 0.0, "inCritCut": 0.0, "execute": 0.0, "lowHp": 0.0, "overheal": 0.0, "firstStrike": 0.0, "doubleStrike": 0.0,
+		"repairHeal": 1.0, "fightShield": 0.0, "inCritCut": 0.0, "execute": 0.0, "lowHp": 0.0, "overheal": 0.0, "firstStrike": 0.0, "doubleStrike": 0.0,
 		"blackout": 0.0, "decoys": 0.0, "fog": 0.0, "clarity": 0.0, "confuse": 0.0,
 		"freezeChance": 0.0, "frozenDmg": 1.0, "brittle": false, "deepFreeze": false,
 		"burnChance": 0.0, "burnTurns": 0.0, "burnTick": 1.0, "reignite": false, "backdraft": false,
@@ -2234,6 +2266,7 @@ static func tide_agg(s: Dictionary, boss: bool = false) -> Dictionary:
 			"incomingDmgMult": a["inDmg"] = float(a["inDmg"]) * float(e["mult"])
 			"depthScaleMitigation": a["inDmg"] = float(a["inDmg"]) * (1.0 - minf(n.call("max"), n.call("perDepth") * depth))
 			"healMult": a["healMult"] = float(a["healMult"]) * float(e["mult"])
+			"repairHealMult": a["repairHeal"] = float(a["repairHeal"]) * float(e["mult"])
 			"playerStatusDuration": a["statusDur"] = float(a["statusDur"]) * float(e["mult"])
 			"aimSpeedMult": a["aimSpeed"] = float(a["aimSpeed"]) * float(e["mult"])
 			"zoneSpeedMult": a["zoneSpeed"] = float(a["zoneSpeed"]) * float(e["mult"])
