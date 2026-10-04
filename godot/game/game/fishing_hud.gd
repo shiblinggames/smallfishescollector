@@ -1299,6 +1299,8 @@ func _drain_badges() -> void:
 	if q.is_empty():
 		return
 	session.save.erase("badges_new")
+	# This machine's captain: the same achievements on Steam.
+	SteamLayer.achieve(q)
 	var pts: Dictionary = Rules.data()["badgePoints"]
 	var defs: Dictionary = {}
 	for d: Dictionary in Achievements.defs():

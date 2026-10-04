@@ -96,3 +96,26 @@ static func suggested_name() -> String:
 		if (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or (ch >= "0" and ch <= "9") or ch == "_":
 			out += ch
 	return out.left(20) if out.length() >= 3 else ""
+
+
+## STEAM ACHIEVEMENTS (2026-10-04): every badge the port awards is a Steam
+## achievement of the same API name (the badge id; godot/steam/achievements.csv
+## is the list to enter in Steamworks, written by tools/steam_achievements.gd).
+## Set for this machine's own captain as they are earned, and all of theirs
+## again when the sea opens (one earned before Steam was up, or granted at a
+## moment rather than by the sweep). Steam ignores one already set; an API name
+## not yet entered in Steamworks is simply refused.
+static func achieve(ids: Array) -> void:
+	if not up or ids.is_empty():
+		return
+	var any: bool = false
+	for id: Variant in ids:
+		var s: String = str(id)
+		if s.begins_with("color:"):
+			continue
+		var got: Dictionary = steam().call("getAchievement", s)
+		if got.get("ret", false) and not got.get("achieved", false):
+			steam().call("setAchievement", s)
+			any = true
+	if any:
+		steam().call("storeStats")

@@ -133,6 +133,8 @@ var _music_started: bool = false
 
 func _ready() -> void:
 	SteamLayer.presence_home()
+	# Every badge this captain holds, on Steam too (Steam skips those set).
+	SteamLayer.achieve(Js.list(session.profile().get("unlocked_badges")))
 	var water_layer: CanvasLayer = CanvasLayer.new()
 	water_layer.layer = -10
 	add_child(water_layer)
