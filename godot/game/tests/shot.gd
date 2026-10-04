@@ -189,11 +189,22 @@ func _init() -> void:
 				room._open("rod")
 			if what == "shelf":
 				room._open("bait")
+			if OS.get_environment("TACKLE") == "rod":
+				var ri: Dictionary = Js.obj(room.session.save.get("rodItems")).duplicate()
+				for r: Dictionary in Rules.data()["rods"]:
+					if Rules.rod_has_unique_effect(r) or float(r["tier"]) == 14.0:
+						ri[str(r["id"])] = 1.0
+				room.session.save["rodItems"] = ri
+				p["completionist_effects"] = []
 			if OS.get_environment("TACKLE") != "":
 				p["unlocked_hats"] = ["brown", "gray"]
 				p["has_auto_caster"] = true
 				p["has_phantom_hook"] = true
 				room._open(OS.get_environment("TACKLE"))
+				if OS.get_environment("TACKLE") == "rod":
+					for f: int in 6:
+						await process_frame
+					room._scroll.scroll_vertical = 999999
 		"buyer":
 			var b: Buyer = sea._buyers[0]
 			sea._boat.position = b.position + Vector2(-60, 200)

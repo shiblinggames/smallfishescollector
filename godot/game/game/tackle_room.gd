@@ -898,6 +898,7 @@ func _completionist_card(owned: Dictionary) -> void:
 			var inuse: Label = Room.text(row, "IN USE", 12, Color("#5fd9bd"))
 			inuse.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			inuse.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_effect_forge(v, c)
 		return
 	if eligible:
 		Room.text(top, "★", 15, c)
@@ -916,6 +917,73 @@ func _completionist_card(owned: Dictionary) -> void:
 		var claim: Button = Room.tinted("Claiming…" if _busy == "claim" else "Claim Your Reward", c, 14, 40)
 		claim.pressed.connect(_claim)
 		v.add_child(claim)
+
+
+## THE EFFECT FORGE (Loadout.set_completionist_effects): up to three owned
+## rods' own effects forged into the Completionist. The first forge is free;
+## changing it after costs the reforge price.
+var _comp_pick: Variant = null
+
+
+func _effect_forge(v: VBoxContainer, c: Color) -> void:
+	var comp: Dictionary = Rules.data()["completionist"]
+	var cap: int = int(comp["maxEffects"])
+	var current: Array = Js.list(_p().get("completionist_effects"))
+	if _comp_pick == null:
+		_comp_pick = current.duplicate()
+	var pick: Array = _comp_pick
+	Room.heading(v, "Forge in up to %d rods' own effects" % cap, c, 12)
+	var held: Array = session.store.held_rod_tiers(session.uid)
+	var any: bool = false
+	for r: Dictionary in Rules.data()["rods"]:
+		var t: float = float(r["tier"])
+		if not Js.includes(held, t) or not Rules.rod_has_unique_effect(r):
+			continue
+		any = true
+		var on: bool = Js.includes(pick, t)
+		var b: Button = Room.tinted(("✓  " if on else "") + str(r["name"]) + "  ·  " + _rod_gift(r), c if on else Color("#8a95a0"), 12, 32)
+		b.disabled = not on and pick.size() >= cap
+		b.pressed.connect(func() -> void:
+			if Js.includes(pick, t):
+				pick.erase(t)
+			elif pick.size() < cap:
+				pick.append(t)
+			rebuild())
+		v.add_child(b)
+	if not any:
+		Room.text(v, "Own rods with an effect of their own (a double catch, a jackpot, a wormhole) to forge them in.", 12, SUB, false, true)
+		return
+	var same: bool = pick.size() == current.size() and pick.all(func(x: Variant) -> bool: return Js.includes(current, x))
+	var seen: bool = Js.truthy(_p().get("has_seen_forge_flourish"))
+	var cost: String = "free" if not seen else "%s ⟡" % Js.thousands(float(comp["reforgeCost"]))
+	var fb: Button = Room.tinted("Forging…" if _busy == "compfx" else ("Pick up to %d above" % cap if pick.is_empty() else ("Forged in" if same else "Forge these in  ·  %s" % cost)), c, 13, 38)
+	fb.disabled = same or pick.is_empty()
+	fb.pressed.connect(func() -> void:
+		_do("compfx", "setCompletionistEffects", [pick.duplicate()])
+		_comp_pick = null)
+	v.add_child(fb)
+
+
+## A rod's own effect, in a few words.
+func _rod_gift(r: Dictionary) -> String:
+	var g: Array = []
+	if Js.num(r.get("doubleCatchChance")) > 0:
+		g.append("%d%% double catch" % int(round(Js.num(r["doubleCatchChance"]) * 100.0)))
+	if Js.num(r.get("retryOnMissChance")) > 0:
+		g.append("%d%% miss retry" % int(round(Js.num(r["retryOnMissChance"]) * 100.0)))
+	if Js.num(r.get("rarityBonus")) > 0:
+		g.append("rare bias")
+	if Js.num(r.get("jackpotChance")) > 0:
+		g.append("jackpot")
+	if float(Js.nz(r.get("crateChanceMult"), 1.0)) > 1.0:
+		g.append("crate odds x%s" % Js.text(r["crateChanceMult"]))
+	if float(Js.nz(r.get("perfectXpMult"), 1.0)) > 1.0:
+		g.append("perfect XP x%s" % Js.text(r["perfectXpMult"]))
+	if Js.truthy(r.get("wormhole")):
+		g.append("wormhole")
+	if Js.num(r.get("instantBiteChance")) > 0:
+		g.append("instant bites")
+	return ", ".join(g)
 
 
 func _claim() -> void:

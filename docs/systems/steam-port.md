@@ -1599,6 +1599,9 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     and Navigation, on the web's curve (50,000 past 100, +15,000 a level, steady at 200,000);
     spend a point a press; a respec token clears one board and costs 200,000 ⟡ (the web's 2,000
     gems x 100). The effects were already read (Rules.fishing_renown, the battle seat).
+  - THE COMPLETIONIST'S EFFECT FORGE (the Tackle Shop's Completionist card, once owned): every
+    owned rod with an effect of its own as a toggle, up to three, "Forge these in" (free the
+    first time, the reforge price after; Loadout.set_completionist_effects, already ported).
   - THE DAMAGE GATE (Campaign.dps_preview) counts the raid items that touch one straight opening
     shot at a ship that is no boss: non-crit, escort and first-shot multipliers from the battle
     seat, tempered grades in (the web counted the non-crit cost alone).
