@@ -16,7 +16,9 @@ extends Node
 ## its disc and the hull is set back on the rim with the helm saying why.
 ##
 ## REACH: a ship from its dock (hull + (-340, 250)) inside 300; a post or a
-## chest from its island's edge inside 240; the nearest wins.
+## chest from its island's edge inside 240; the nearest wins. The gauntlets'
+## maelstroms (Davy's in the junction, the Don's in the Last Fathom, port
+## rules) from their rim.
 
 signal node_pressed(node_id: String)
 
@@ -40,6 +42,7 @@ var _isles: Dictionary = {}
 var _ships: Dictionary = {}
 var _homes: Array = []
 var _spans: Array = []
+var _maelstroms: Array = []
 var _seen: Dictionary = {}
 var _primed: bool = false
 
@@ -76,6 +79,11 @@ func _ready() -> void:
 		var f: FogBank = FogBank.new()
 		f.info = fb
 		sea._world.add_child(f)
+	for ml: Dictionary in Js.list(w.get("maelstroms")):
+		var m: Maelstrom = Maelstrom.new()
+		m.info = ml
+		sea._world.add_child(m)
+		_maelstroms.append(m)
 	refresh()
 
 
@@ -113,6 +121,18 @@ func refresh() -> void:
 		h.open = status.get(h.info["node"]) == "cleared"
 	for c: Span in _spans:
 		c.cleared = status.get(c.info["node"]) == "cleared"
+	for m: Maelstrom in _maelstroms:
+		# A maelstrom in a shut bay is not drawn; one whose descent is still
+		# shut turns quieter, and says why at the rim.
+		var c0: Vector2 = m.position
+		var in_shut: bool = false
+		for b0: Dictionary in Campaign.water()["bays"]:
+			if b0.get("opensBy") != null and status.get(b0["opensBy"]) != "cleared" and c0.distance_to(Vector2(float(b0["centre"]["x"]), float(b0["centre"]["y"]))) <= float(b0["r"]):
+				in_shut = true
+		m.visible = not in_shut
+		m.why = GauntletTable.shut(sea.session, str(m.info["id"]))
+		# The Don's Ghost stands in his door only once the Throne is down.
+		m.show_keeper = str(m.info["id"]) != "don" or sea.session.store.clear_count(sea.session.uid, "the_throne") > 0
 	var sh: Array = []
 	for b: Dictionary in Campaign.water()["bays"]:
 		if b.get("opensBy") != null and status.get(b["opensBy"]) != "cleared":
@@ -228,6 +248,17 @@ func reach(at: Vector2) -> Variant:
 		if h.gather and at.distance_to(h.position) < best:
 			best = at.distance_to(h.position)
 			home = h
+	for m: Maelstrom in _maelstroms:
+		var dm: float = at.distance_to(m.position) - float(m.info["r"])
+		m.gather = m.visible and dm < 420.0
+		if m.gather and dm < best:
+			best = dm
+			home = null
+			pick = ""
+			var variant: String = str(m.info["id"])
+			if m.why != "":
+				return ["%s: %s" % [m.info["name"], m.why], func() -> void: sea._hud.toast(m.why)]
+			return ["Dive into %s" % m.info["name"], func() -> void: sea.open_gauntlet(variant)]
 	if home != null:
 		var to: Dictionary = Campaign.water()["portalHome"]
 		return ["Take the way home", func() -> void: sea._warp(float(to["x"]), float(to["y"]), Color(0.55, 0.85, 0.95))]
@@ -656,3 +687,29 @@ class FogBank:
 			var ph: float = float(p["ph"])
 			s.position = (p["at"] as Vector2) + Vector2(sin(_t * 0.05 + ph) * 160.0, cos(_t * 0.037 + ph * 1.3) * 90.0)
 			s.modulate.a = float(p["a"]) * (0.8 + 0.2 * sin(_t * 0.3 + ph)) * 0.55
+
+
+
+# ── A gauntlet's maelstrom: the water turning down into the deep ─────────────
+
+## The pull of the maelstroms on a hull (Boat._flow): within twice the rim the
+## water carries her round and in, harder the nearer; inside the eye's lip it
+## throws her back out (the dive is a choice, never an accident).
+static func whirl(at: Vector2) -> Vector2:
+	var out: Vector2 = Vector2.ZERO
+	for m: Dictionary in Js.list(Campaign.water().get("maelstroms")):
+		var c: Vector2 = Vector2(float(m["x"]), float(m["y"]))
+		var r: float = float(m["r"])
+		var d: Vector2 = at - c
+		var dist: float = d.length()
+		if dist > r * 2.2 or dist < 1.0:
+			continue
+		var u: Vector2 = d / dist
+		var k: float = 1.0 - smoothstep(r * 0.5, r * 2.2, dist)
+		var spin: float = -1.0 if str(m.get("id", "")) == "don" else 1.0
+		out += u.orthogonal() * spin * 260.0 * k
+		if dist < r * 0.42:
+			out += u * 420.0 * (1.0 - dist / (r * 0.42))
+		else:
+			out -= u * 120.0 * k
+	return out

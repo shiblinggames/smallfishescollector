@@ -59,6 +59,10 @@ const ART = [
   // nodes' pictures and the story scenes' backdrops.
   'sea/bay-*.webp', 'scenes', 'Captainkrust.png', 'quartermasterghost.png', 'raid4_tollmasterspet.png', 'raid5_*.png', 'raid6_*.png', 'raid7_*.png', 'raid8_*.png',
   'finn_final.png', 'raidlog.png', 'bilge_eel.png', 'krust_*.png', 'raid4_*.png',
+  // The gauntlets: the boons', curses' and synergies' icons, the two hosts, the
+  // chests, the shrine and the Fence, the Slipway's places, the descents' water.
+  'gauntlet/boons', 'gauntlet/curses', 'gauntlet/synergies', 'davyjones.png', 'davyjonesbanner.png', 'donsgauntlet.png', 'davychest*.png', 'donschest*.png',
+  'gauntlet-shrine.webp', 'gauntlet-merchant.webp', 'sea/mael-*.webp', 'sea/deb-*.webp', 'slip-*.webp', '*-gauntlet-*.jpg', 'dons-apex-battle.jpg',
   // Achievements: every badge's art (256 px).
   'badges',
   'tackle-shop-page-bg.jpg', 'monofilament.png', 'braidedline.png', 'copolymer.png', 'fluorocarbon.png', 'titaniumwire.png', 'deepsealine.png',

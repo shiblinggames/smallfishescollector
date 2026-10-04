@@ -25,6 +25,13 @@ extends Control
 ## line with their own deck; a round is planned by all, then played on every
 ## screen from the same events; the flares and the tides are each one's own.
 ## A captain sunk or got away leaves the screen; the rest fight on.
+##
+## A GAUNTLET (game/gauntlet_table.gd, alone or together): the screen stays up
+## for the whole dive. Each new depth is called over the water (its number,
+## the band of the deep, the host's voice), the field sails in, and between
+## fights the dive's sheet comes up (game/gauntlet_overlay.gd): the curse, the
+## draft table, the shrine, the Fence, the Don's job, the breather's vote.
+## Sunk in a dive the crew win, a ship is towed along and rejoins.
 
 signal finished(won: bool)
 
@@ -69,8 +76,12 @@ var _began_ms: int = 0
 ## What each hull is wearing (fire, ice, shields, wards, the Last Wall).
 var _auras: Dictionary = {}
 ## Together: the Charter's raid this screen follows, this captain's key and seat.
-var table: RaidTable = null
+var table: Node = null
 var my_key: String = ""
+## A gauntlet dive: its descent ("davy" or "don"), and the sheet between fights.
+var gauntlet: String = ""
+var _ov: GauntletOverlay = null
+
 var me: int = 0
 var _latest: Dictionary = {}
 var _handled: String = ""
@@ -108,7 +119,7 @@ func _ready() -> void:
 	theme = UiTheme.make()
 	_raid = Battle.raid_def(raid_id)
 	if table != null:
-		b = (table.state["b"] as Dictionary).duplicate(true)
+		b = (Js.obj(table.get("state"))["b"] as Dictionary).duplicate(true)
 		for i: int in (b["seats"] as Array).size():
 			if b["seats"][i].get("key") == my_key:
 				me = i
@@ -152,6 +163,20 @@ func _ready() -> void:
 	_banner.offset_bottom = BAR + 110
 	_banner.modulate.a = 0.0
 	_build_deck()
+	if gauntlet != "":
+		sea.water_theme = _water_theme({})
+		_ov = GauntletOverlay.new()
+		_ov.my_key = my_key
+		_ov.face_of = func(k: String) -> Texture2D:
+			for i: int in (b["seats"] as Array).size():
+				if b["seats"][i].get("key") == k:
+					return _face(i)
+			return null
+		_ov.acted.connect(func(a: Array) -> void:
+			var r: Variant = await _act(a)
+			if r is Dictionary and (r as Dictionary).has("error"):
+				_log_line(str(r["error"])))
+		add_child(_ov)
 	var tw: Tween = create_tween()
 	tw.tween_property(self, "_bars", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	Sound.horn()
@@ -169,8 +194,8 @@ func _ready() -> void:
 	sea._boat.add_child(aura)
 	_auras[me] = aura
 	if table != null:
-		table.changed.connect(_pump)
-		_pump(table.state)
+		table.connect("changed", _pump)
+		_pump(Js.obj(table.get("state")))
 		return
 	await _pre_fight_words()
 	await _enemy_enters()
@@ -187,11 +212,15 @@ func _frame() -> void:
 	for i: int in (b["seats"] as Array).size() if not b.is_empty() else 1:
 		lo = lo.min(_at + _offset(i))
 		hi = hi.max(_at + _offset(i))
-	var elo: Vector2 = _foe_at(0)
-	var ehi: Vector2 = _foe_at(0)
+	# Where the enemies END UP (their marks), never where they are sailing in
+	# from: framed mid-entrance, the camera centred on a ship still off the
+	# right of the screen, and every fight sat to the left.
+	var mark_of: Callable = func(j: int) -> Vector2: return _foe_pos[j] if j < _foe_pos.size() else _enemy_at
+	var elo: Vector2 = mark_of.call(0)
+	var ehi: Vector2 = mark_of.call(0)
 	for j: int in maxi(1, _foe_pos.size()):
-		elo = elo.min(_foe_at(j))
-		ehi = ehi.max(_foe_at(j))
+		elo = elo.min(mark_of.call(j))
+		ehi = ehi.max(mark_of.call(j))
 	lo = lo.min(Vector2(lo.x, elo.y))
 	hi = hi.max(Vector2(hi.x, ehi.y))
 	var span: float = absf(ehi.x - lo.x) + 520.0
@@ -233,7 +262,7 @@ func _process(delta: float) -> void:
 			ae.wall_left = float(ag.get("left", 0.0))
 			ae.wall_of = float(ag.get("of", 0.0))
 			if en0 != null and is_instance_valid(en0):
-				en0.modulate = Color(0.75, 0.88, 1.0) if ae.ice else Color.WHITE
+				en0.modulate = Color(0.75, 0.88, 1.0) if ae.ice else _wash(e0)
 	if _deck != null:
 		# As tall as what is on it (an order row, the aim bar, the die).
 		var dh: float = maxf(150.0, _deck_box.get_combined_minimum_size().y + 34.0)
@@ -342,12 +371,12 @@ func _enemy_enters() -> void:
 			sea._field.ring(_enemy_at + Vector2(randf_range(-60, 60), 10), 120.0, 1.3, 0.5)
 	_frame()
 	var e0: Dictionary = fs[0]
-	var f: Dictionary = Battle.fight_at(_raid, int(b["fight"]))
+	var f: Dictionary = Battle.fight_at(_raid, int(b["fight"])) if gauntlet == "" else { "of": 0 }
 	if fs.size() > 1:
 		_say("%s and %d more" % [e0["name"], fs.size() - 1])
 	else:
 		_say("%s%s" % [("Boss: " if e0["boss"] else ("Elite: " if e0.get("elite", false) else "")), e0["name"]])
-	var notes: Array = ["Fight %d of %d" % [int(b["fight"]) + 1, int(f["of"])]]
+	var notes: Array = ["Fight %d of %d" % [int(b["fight"]) + 1, int(f["of"])]] if gauntlet == "" else ["Depth %d" % int(Js.num(b.get("depth")))]
 	if fs.size() > 1:
 		notes.append("%d ships: click one to aim at it, or press Tab" % fs.size())
 	var af: Dictionary = e0["affix"]
@@ -415,7 +444,7 @@ func _set_target(j: int) -> void:
 ## Is this fight the hull riding at anchor (the skirmish's one raider, or a
 ## raid's boss)?
 func _from_mark() -> bool:
-	if mark == null or b.is_empty():
+	if mark == null or b.is_empty() or gauntlet != "":
 		return false
 	return _raid.get("skirmish", false) == true or Battle.fight_at(_raid, int(b["fight"]))["boss"] == true
 
@@ -542,6 +571,7 @@ func _paint_actions() -> void:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
 	var fl: BattleLook.ActionKey = BattleLook.ActionKey.new()
+	fl.visible = gauntlet == ""
 	fl.kind = "flee"
 	fl.label = "Flee"
 	fl.sub = "need %d+" % Battle.flee_need(b, me)
@@ -675,7 +705,7 @@ func _unhandled_input(e: InputEvent) -> void:
 				_set_target(nj)
 				break
 		return
-	if (e as InputEventKey).keycode == KEY_F:
+	if (e as InputEventKey).keycode == KEY_F and gauntlet == "":
 		get_viewport().set_input_as_handled()
 		_flee()
 		return
@@ -1022,7 +1052,12 @@ func _one(x: Dictionary) -> void:
 					_shown_hp[fs] = float(x["hp"])
 				await _wait(0.6)
 		"begin":
+			if gauntlet != "":
+				await _depth_call()
 			await _pre_fight_words()
+			await _enemy_enters()
+		"nextFight" when gauntlet != "":
+			await _depth_call()
 			await _enemy_enters()
 		"nextFight":
 			if x.get("rest", false):
@@ -1049,6 +1084,68 @@ func _one(x: Dictionary) -> void:
 			if x["key"] == my_key:
 				_stamp(str(x.get("tier", "normal")), x.get("first", false) == true)
 				await _wait(1.6)
+		"potUp":
+			_say("%s sunk" % b["enemy"]["name"])
+			_log_line("+%s ⟡ to the pot  ·  %s ⟡ riding on it" % [Js.thousands(Js.num(x.get("add"))), Js.thousands(Js.num(x.get("pot")))])
+			Sound.chest(false)
+			await _wait(1.6)
+		"towed":
+			var tk: int = _seat_index(str(x["key"]))
+			if tk >= 0:
+				_num(_seat_at(tk) + Vector2(0, -80), "Towed along", Color(0.6, 0.85, 1.0), true)
+			_log_line("%s towed along, back in the line at a quarter hull." % ("You are" if x["key"] == my_key else str(b["seats"][maxi(0, tk)]["name"]) + " is"))
+			await _wait(1.0)
+		"drowned":
+			var dk2: int = _seat_index(str(x["key"]))
+			_log_line("%s went down for good, crew and all." % ("You" if x["key"] == my_key else str(b["seats"][maxi(0, dk2)]["name"])))
+			await _wait(1.2)
+		"refresh":
+			if x["key"] == my_key:
+				_log_line("Your crew catch their breath. Every order is ready again.")
+		"seize":
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -90), "Weather Gauge", BattleLook.GOLD)
+		"steal":
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -80), "Press-Gang  +1 ball" if x.get("kept", false) else "Press-Gang", BattleLook.GOLD)
+			await _wait(0.2)
+		"overkill":
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
+		"leech":
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
+		"execute":
+			_say("Executioner!" if x.get("kind", "") == "execute" else "Coup de Grace!")
+			_shown_hp[_ek()] = 0.0
+			await _wait(0.5)
+		"tithe":
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "Tithe  +%d" % int(x["heal"]), Color(0.5, 0.95, 0.6), true)
+		"coil":
+			_num(_enemy_at + Vector2(0, -90), "Coils %d/%d" % [int(x["coils"]), int(x["of"])], Color(0.55, 0.85, 0.8))
+		"grip":
+			_say("Kraken's Grip!")
+			_react(-1 - _cur, "hit")
+			_num(_enemy_at, "-%d" % int(x["crush"]), Color(0.55, 0.85, 0.8), true)
+			_shown_hp[_ek()] = float(x["enemyHp"])
+			await _wait(0.5)
+		"thermal":
+			_say("Thermal Shock!")
+			_fx.splash(_enemy_at)
+			_num(_enemy_at, "-%d" % int(x["dmg"]), Color(1.0, 0.75, 0.5), true)
+			_shown_hp[_ek()] = float(x["enemyHp"])
+			await _wait(0.5)
+		"counter":
+			var cs: int = int(x["seat"])
+			_say("Counter-Battery!")
+			await _fx.shot(_seat_at(cs) + Vector2(40, 0), _enemy_at, "hit", 1, false, func(_k: int) -> void: _react(cs, "recoil"), func(_k: int) -> void: pass)
+			_num(_enemy_at + Vector2(0, -80), "Countered", Color(0.75, 0.85, 1.0), true)
+			if x.has("reflect"):
+				_num(_enemy_at, "-%d" % int(x["reflect"]), CREAM)
+				_shown_hp[_ek()] = float(x["enemyHp"])
+			await _wait(0.3)
+		"streak":
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -100), "Cannonade x%d" % int(x["n"]), BattleLook.GOLD)
+		"streakBroken":
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -100), "Cannonade broken", Color(CREAM, 0.7))
+		"eStatus":
+			_num(_enemy_at + Vector2(0, -100), str(x["status"]).capitalize(), Color(0.8, 0.6, 1.0))
 		"tided":
 			var r: Dictionary = Js.obj(Js.obj(x.get("picks")).get(my_key))
 			if Js.num(r.get("heal")) > 0.0:
@@ -1243,8 +1340,12 @@ func _end(won: bool, fled: bool = false) -> void:
 		var a0: HullAura = _aura(k)
 		if a0 != null and k is int:
 			a0.queue_free()
-	if table != null and table.changed.is_connected(_pump):
-		table.changed.disconnect(_pump)
+	if table != null and table.is_connected("changed", _pump):
+		table.disconnect("changed", _pump)
+	if _ov != null:
+		_ov.queue_free()
+	if gauntlet != "":
+		sea.water_theme = {}
 	sea._boat.modulate = Color.WHITE
 	for k2: Variant in sea._mates:
 		if is_instance_valid(sea._mates[k2]):
@@ -1260,7 +1361,11 @@ func _end(won: bool, fled: bool = false) -> void:
 	sea._hud.visible = true
 	# Home: back to where she lay (sunk, to the Gunwharf's berth).
 	var home: Vector2 = _from
-	if not won and dock != Vector2.INF:
+	if gauntlet != "":
+		var back0: Tween = create_tween()
+		back0.tween_property(sea._boat, "position", home, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		back0.tween_callback(func() -> void: sea._boat.hold_still = false)
+	elif not won and dock != Vector2.INF:
 		# Out on the campaign's water: she wakes at the Gunwharf.
 		sea._boat.hold_still = false
 		sea.warp_to_gunwharf()
@@ -1471,6 +1576,9 @@ func _plate(at: Vector2, name: String, hp: float, mx: float, shield: float, ch: 
 ## The raid's title, and its fights as knots on a cord: sailed, this one lit,
 ## to come hollow; the boss's knot bigger and red.
 func _fight_track(hb: float) -> void:
+	if gauntlet != "":
+		_depth_track(hb)
+		return
 	var f: Font = Kit.font("cinzel", 800)
 	draw_string(f, Vector2(30, hb * 0.5 - 2.0), str(_raid.get("raidTitle", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(BattleLook.CREAM, 0.96))
 	var cur: int = int(b["fight"])
@@ -1628,6 +1736,8 @@ func _tide(tide: Dictionary, eyebrow: String) -> void:
 
 ## The boss's words before its fight (preFightDialogue), over the water.
 func _pre_fight_words() -> void:
+	if gauntlet != "":
+		return
 	var lines: Array = Js.list(_raid.get("preFightDialogue"))
 	var f: Dictionary = Battle.fight_at(_raid, int(b["fight"]))
 	if lines.is_empty() or not f["boss"] or _spoke:
@@ -1765,12 +1875,19 @@ func _aura(k: Variant) -> HullAura:
 # ── Together: following the founder's table ──────────────────────────────────
 
 func _act(args: Array) -> Variant:
+	if gauntlet != "":
+		var gt: GauntletTable = table as GauntletTable
+		if gt != null and gt.solo != null:
+			return gt.handle(my_key, sea.session, args)
+		return await sea.session.act("gauntletTable", args)
 	return await sea.session.act("raidTable", args)
 
 
 ## Every state the table sends: each phase is handled once, in order.
 func _pump(st: Dictionary) -> void:
 	_latest = st
+	if _ov != null and not _gone and str(st.get("phase", "")) != "playing":
+		_ov.show_state(st)
 	if _pumping or _gone:
 		return
 	_pumping = true
@@ -1814,7 +1931,22 @@ func _phase(cur: Dictionary) -> void:
 			_shown_hp.clear()
 			var seq: int = int(Js.num(cur.get("seq")))
 			var mine: Dictionary = b["seats"][me]
-			if mine.get("sunk", false) or mine.get("fled", false):
+			if gauntlet != "" and mine.get("sunk", false):
+				var cp: Dictionary = Js.obj(Js.obj(cur.get("caps")).get(my_key))
+				if str(cp.get("out", "")) == "drowned":
+					# Hardcore: down with the crew; the dive goes on without her.
+					_gone = true
+					await _act(["played", int(Js.num(cur.get("seq")))])
+					_say("Your ship is going down")
+					var dead: Dictionary = cur.duplicate()
+					dead["phase"] = "dead"
+					dead["pays"] = { my_key: cp.get("paid", {}) }
+					dead["seq"] = -1
+					_ov.acted.connect(func(_a: Array) -> void: _end(false), CONNECT_ONE_SHOT)
+					_ov.show_state(dead)
+					return
+				_log_line("Your ship is down. If the crew win this fight, she is towed along.")
+			elif mine.get("sunk", false) or mine.get("fled", false):
 				_gone = true
 				await _act(["played", seq])
 				await _act(["out"])
@@ -1852,9 +1984,16 @@ func _phase(cur: Dictionary) -> void:
 				var rp: Variant = Js.obj(Rules.data().get("tides")).get("reprieve")
 				await _tide(tide, "A REPRIEVE" if tide == rp else "A TIDE TURNS")
 			_waiting()
+		"curse", "draft", "shrine", "fence", "contract", "jobResult", "marks", "breather", "haul", "dead":
+			b = (cur["b"] as Dictionary).duplicate(true)
+			_busy = true
+			_clear_deck()
+			create_tween().tween_property(self, "_drop", 260.0, 0.3).set_ease(Tween.EASE_IN)
+			if _ov != null:
+				_ov.show_state(cur)
 		"done", "idle":
 			_gone = true
-			_end(str(cur.get("result", "")) == "won")
+			_end(str(cur.get("result", "")) in ["won", "banked"])
 
 
 ## The deck while the crew decide: who is still choosing.
@@ -2006,7 +2145,7 @@ func _open_enemy_card(j: int = 0) -> void:
 	# Its painting; an enemy with no portrait shows its ship.
 	(_card as EnemyCard).portrait = tex if tex != null else Skipper.tex(str(e.get("image", "")).trim_prefix("/"))
 	(_card as EnemyCard).ground = tex != null
-	(_card as EnemyCard).where = "%s, fight %d of %d" % [_raid.get("raidTitle", ""), int(b["fight"]) + 1, int(Battle.fight_at(_raid, int(b["fight"]))["of"])]
+	(_card as EnemyCard).where = ("%s, depth %d" % [Gauntlet.NAMES.get(gauntlet, ""), int(Js.num(b.get("depth")))]) if gauntlet != "" else "%s, fight %d of %d" % [_raid.get("raidTitle", ""), int(b["fight"]) + 1, int(Battle.fight_at(_raid, int(b["fight"]))["of"])]
 	add_child(_card)
 
 
@@ -2231,3 +2370,129 @@ class Stamp:
 			var rr: Rect2 = Rect2(Vector2(c.x - rw / 2.0, c.y + 136.0), Vector2(rw, 26))
 			BattleLook.draw_box(self, rr, BattleLook.box(Color(BattleLook.GOLD.darkened(0.5), 0.95 * a), Color(BattleLook.GOLD, a), 1, 13))
 			BattleLook.say(self, Kit.font("karla", 800), c.x, rr.end.y - 8.0, rib, 13, Color(BattleLook.GOLD.lightened(0.3), a))
+
+
+
+# ── A gauntlet's own: the depth called, the track, the wash ──────────────────
+
+func _seat_index(key: String) -> int:
+	for i: int in (b["seats"] as Array).size():
+		if b["seats"][i].get("key") == key:
+			return i
+	return -1
+
+
+## Each new depth, called over the water: its number, the band of the deep,
+## the host's voice; a boss or an elite waiting; the Don rising.
+func _depth_call() -> void:
+	var dn: Dictionary = Js.obj(_latest.get("descent"))
+	if dn.is_empty():
+		return
+	if gauntlet != "":
+		sea.water_theme = _water_theme(dn)
+	var dc: DepthCall = DepthCall.new()
+	dc.depth = int(Js.num(dn.get("depth")))
+	dc.band = Js.obj(dn.get("band"))
+	dc.taunt = str(dn.get("taunt", ""))
+	dc.rise = Js.obj(dn.get("rise"))
+	dc.note = "Something holds this water." if dn.get("boss", false) else ("A hunter waits below." if dn.get("elite", false) else "")
+	if int(Js.num(dn.get("ships"))) > 1:
+		dc.note = ("%s  " % dc.note if dc.note != "" else "") + "%d ships." % int(dn["ships"])
+	dc.don = gauntlet == "don"
+	add_child(dc)
+	if dn.get("apex", false) or dn.get("boss", false):
+		Sound.horn()
+	var hold: float = 4.2 if dn.get("apex", false) else (3.0 if dc.taunt != "" else 1.8)
+	await _wait(hold if not autoplay else 0.4)
+	dc.leave()
+
+
+func _depth_track(hb: float) -> void:
+	var run: Dictionary = Js.obj(_latest.get("run"))
+	var d: int = int(Js.num(b.get("depth")))
+	var band: Dictionary = Gauntlet.band(maxi(1, d), gauntlet)
+	draw_string(Kit.font("cinzel", 800), Vector2(30, hb * 0.5 - 2.0), str(Gauntlet.NAMES.get(gauntlet, "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(BattleLook.CREAM, 0.96))
+	var line: String = "DEPTH %d  ·  %s  ·  %s ⟡ IN THE POT" % [d, str(band.get("name", "")).to_upper(), Js.thousands(Js.num(run.get("pot")))]
+	var nc: int = Js.obj(run.get("curses")).size()
+	if nc > 0:
+		line += "  ·  %d CURSE%s" % [nc, "" if nc == 1 else "S"]
+	if run.get("hardcore", false):
+		line += "  ·  HARDCORE"
+	draw_string(Kit.font("karla", 800), Vector2(32, hb * 0.5 + 19.0), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(str(band.get("accent", "#cccccc"))).lerp(BattleLook.MUTED, 0.3))
+
+
+## The deep's wash on an enemy's hull.
+func _wash(e: Dictionary) -> Color:
+	match str(e.get("wash", "")):
+		"davy": return Color(0.78, 0.84, 0.86)
+		"don": return Color(0.72, 0.92, 0.74)
+	return Color.WHITE
+
+
+## A depth called: big over the water, then gone.
+class DepthCall:
+	extends Control
+	var depth: int = 1
+	var band: Dictionary = {}
+	var taunt: String = ""
+	var note: String = ""
+	var rise: Dictionary = {}
+	var don: bool = false
+	var _a: float = 0.0
+
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		create_tween().tween_property(self, "_a", 1.0, 0.35)
+
+	func leave() -> void:
+		var tw: Tween = create_tween()
+		tw.tween_property(self, "_a", 0.0, 0.4)
+		tw.tween_callback(queue_free)
+
+	func _process(_d: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		var vp: Vector2 = size
+		var c: Vector2 = Vector2(vp.x / 2.0, vp.y * 0.36)
+		var acc: Color = Color(str(band.get("accent", "#cccccc")))
+		for k: int in 6:
+			draw_rect(Rect2(0, c.y - 110 + k * 4, vp.x, 220 - k * 8), Color(0, 0, 0, 0.07 * _a))
+		var eyebrow: String = str(rise.get("eyebrow", "")) if not rise.is_empty() else ("Into the Green" if don else "Into the Locker") if depth <= 1 else ("A milestone" if depth % 10 == 0 else "Deeper still")
+		BattleLook.say(self, Kit.font("karla", 800), c.x, c.y - 62, eyebrow.to_upper(), 13, Color(acc, _a))
+		var title: String = str(rise.get("title", "")) if not rise.is_empty() else "Depth %d" % depth
+		BattleLook.say(self, Kit.font("cinzel", 800), c.x, c.y + 4, title, 58, Color(BattleLook.CREAM, _a), 10)
+		var sub: String = str(rise.get("sublabel", "")) if not rise.is_empty() else str(band.get("name", ""))
+		BattleLook.say(self, Kit.font("cinzel", 700), c.x, c.y + 40, sub, 20, Color(acc.lerp(BattleLook.CREAM, 0.3), _a))
+		var words: String = str(rise.get("line", "")) if not rise.is_empty() else taunt
+		if words != "":
+			BattleLook.say(self, Kit.font("karla", 600), c.x, c.y + 78, "\"%s\"" % words, 16, Color(BattleLook.CREAM, 0.85 * _a))
+		if note != "":
+			BattleLook.say(self, Kit.font("karla", 800), c.x, c.y + (110 if words != "" else 76), note, 14, Color(Dossier.HARM if note.begins_with("Something") else Dossier.WARN, _a))
+
+
+
+## A dive's water, as the web's arena graded it (arenaTheme): the descent's
+## own sea (Davy's cold teal-grey, the Don's kraken green, hardcore's blood),
+## falling toward black the deeper the dive, heavier for a boss, the Don's
+## rise the darkest green of all; the world's light tinted to match.
+func _water_theme(dn: Dictionary) -> Dictionary:
+	var hc: bool = Js.obj(_latest.get("run")).get("hardcore", false) == true
+	var d: int = int(Js.num(dn.get("depth", b.get("depth", 1))))
+	var t: float = minf(1.0, pow(maxf(0.0, (d - 1) / 24.0), 0.85))
+	var heavy: float = minf(1.0, 0.2 + 0.7 * t + 0.24 * (1.0 if dn.get("boss", false) else 0.0))
+	var sea_c: Array
+	var light: Color
+	if hc:
+		sea_c = [Color8(26, 3, 7), Color8(74, 14, 22), Color8(140, 44, 48)]
+		light = Color(0.86, 0.6, 0.6)
+	elif gauntlet == "don":
+		sea_c = [Color8(3, 24, 14), Color8(14, 64, 40), Color8(52, 140, 92)]
+		light = Color(0.64, 0.84, 0.68)
+	else:
+		sea_c = [Color8(4, 18, 26), Color8(16, 60, 70), Color8(52, 128, 134)]
+		light = Color(0.66, 0.78, 0.84)
+	if dn.get("apex", false):
+		heavy = 1.0
+	return { "sea": sea_c, "light": light.lerp(Color(0.4, 0.44, 0.5), heavy * 0.5), "dim": heavy * 0.45 }

@@ -17,6 +17,11 @@ var session: Session
 ## In a Charter, the crew's line (null when sailing alone), and the crewmates'
 ## ships on this sea by their key.
 var net: CrewNet = null
+## A gauntlet's water while its fights run: { sea: [deep, mid, shallow],
+## light: the world's light, dim: how far down toward black }. Empty: the sea's own.
+var water_theme: Dictionary = {}
+var _theme_k: float = 0.0
+var _theme_last: Dictionary = {}
 var _mates: Dictionary = {}
 var _crew_marks: CrewMarks
 ## The isles, the digs' tells, and the bottles drifting near (by key), with
@@ -310,6 +315,13 @@ func _ready() -> void:
 		var muster: RaidMuster = RaidMuster.new()
 		muster.sea = self
 		hud_layer.add_child(muster)
+	# A Charter's dives: the crew line's gauntlet table.
+	if net != null and net.gauntlets != null:
+		var gm: GauntletMuster = GauntletMuster.new()
+		gm.sea = self
+		gm.table = net.gauntlets
+		gm.my_key = net.key
+		hud_layer.add_child(gm)
 	_room_layer = CanvasLayer.new()
 	_room_layer.layer = 20
 	add_child(_room_layer)
@@ -385,6 +397,15 @@ func _process(delta: float) -> void:
 	var clock: Dictionary = SeaClock.at(now)
 	var dark: float = clock["darkness"]
 	var stops: Array[Color] = Chart.sea_at(cam_world, dark)
+	# A gauntlet's water (BattleStage sets it for a dive's fights): the sea in
+	# that descent's own colours, eased in and out.
+	_theme_k = move_toward(_theme_k, 1.0 if not water_theme.is_empty() else 0.0, delta * 0.8)
+	if not water_theme.is_empty():
+		_theme_last = water_theme
+	if _theme_k > 0.0 and not _theme_last.is_empty():
+		var th: Array = _theme_last["sea"]
+		for k: int in 3:
+			stops[k] = stops[k].lerp((th[k] as Color).lerp(Color8(2, 5, 9), float(_theme_last.get("dim", 0.0))), _theme_k)
 	var vp: Vector2 = get_viewport_rect().size
 	_water.set_shader_parameter("u_cam", cam_world)
 	var zt: float = (_zoom_to if stage == null else float(stage["zoom"])) * (1.0 - 0.1 * _pass_k)
@@ -424,6 +445,8 @@ func _process(delta: float) -> void:
 	_night.color = day_col.lerp(Color(0.40, 0.46, 0.64), dark)
 	# Under a squall the light goes grey; a strike lights it all.
 	_night.color = _night.color.lerp(Color(0.6, 0.64, 0.7), _storm * 0.55).lerp(Color(0.84, 0.86, 0.88), _squall.fog * 0.5).lerp(Color(1.0, 1.0, 1.0), _squall.flash * 0.6)
+	if _theme_k > 0.0 and not _theme_last.is_empty():
+		_night.color = _night.color.lerp(_theme_last["light"], _theme_k * 0.75)
 	_sun.rotation = (-toward).angle() - PI / 2.0
 	_sun.height = lerpf(0.15, 0.85, elev)
 	var sun_col: Color = Color(1.0, 0.62, 0.32).lerp(Color(1.0, 0.97, 0.9), smoothstep(0.0, 0.55, elev))
@@ -1488,6 +1511,57 @@ func _launch(raid_id: String, node_id: String) -> void:
 		_open_sea_gate()
 		_hud.refresh()
 		get_tree().create_timer(0.4).timeout.connect(celebrate_chapter))
+	_hud.hold_for(st)
+	_hud_layer.add_child(st)
+
+
+## A gauntlet's maelstrom pressed: in a Charter the call goes to the crew's
+## table (the muster opens the entry screen for the line); alone, this game's
+## own table, with its own muster.
+func open_gauntlet(variant: String) -> void:
+	if net != null and net.gauntlets != null:
+		var r: Variant = await session.act("gauntletTable", ["call", { "variant": variant, "x": _boat.position.x, "y": _boat.position.y }])
+		if r is Dictionary and (r as Dictionary).has("error"):
+			_hud.toast(str(r["error"]))
+		return
+	if _solo_dive != null and is_instance_valid(_solo_dive):
+		_solo_dive.queue_free()
+	var t: GauntletTable = GauntletTable.new()
+	t.solo = session
+	add_child(t)
+	_solo_dive = t
+	var gm: GauntletMuster = GauntletMuster.new()
+	gm.sea = self
+	gm.table = t
+	gm.my_key = "me"
+	_hud_layer.add_child(gm)
+	t.changed.connect(func(st: Dictionary) -> void:
+		if str(st.get("phase", "")) in ["idle", "done"] and is_instance_valid(gm):
+			gm.queue_free())
+	var r2: Dictionary = t.handle("me", session, ["call", { "variant": variant }])
+	if r2.has("error"):
+		_hud.toast(str(r2["error"]))
+		gm.queue_free()
+		t.queue_free()
+
+
+var _solo_dive: GauntletTable = null
+
+
+## Into a dive: the fight screen, held for the whole descent, at the maelstrom.
+func open_gauntlet_battle(t: GauntletTable, my_key: String, variant: String) -> void:
+	var st: BattleStage = BattleStage.new()
+	st.sea = self
+	st.raid_id = ""
+	st.table = t
+	st.my_key = my_key
+	st.gauntlet = variant
+	var at: Vector2 = GauntletTable.maelstrom_of(variant)
+	if at != Vector2.INF:
+		st.dock = at + Vector2(-1250, 820)
+	st.finished.connect(func(_won: bool) -> void:
+		_hud.refresh()
+		_campaign.refresh())
 	_hud.hold_for(st)
 	_hud_layer.add_child(st)
 

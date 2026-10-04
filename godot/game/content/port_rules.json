@@ -2036,6 +2036,11 @@
     "_gauntlet": "A GAUNTLET PARTY'S FIELD (Kong, 2026-10-03: multiple ships for enemies just like in raids). Alone, a dive is the web's one ship a depth. Two to four captains meet the party's size in ships (sometimes one fewer, now and then one more, 1 to 4): the lead at leadHp of the depth's curve, escorts (mobs of the same depth, each with its own elite roll and a co-op role) at escortHp; a boss at bossHp times the party's HP table, with escorts. Damage times dmgMult. Each escort sunk adds half a mob's pot.",
     "gauntlet": { "party": { "leadHp": 1.2, "bossHp": 0.7, "escortHp": 0.5, "dmgMult": 1.0, "fewerChance": 0.5, "extraChance": 0.05, "escortElite": 0.5 } }
   },
+  "_maelstroms": "THE GAUNTLETS' MAELSTROMS (Kong, 2026-10-03: \"move dons maelstrom further out. Also rename Davy jones gauntlet to just Davys gauntlet\"). Davy's keeps the web's place in the junction; Don's turns in the Last Fathom, the Throne's own bay (Don's Gauntlet opens once the Throne has fallen), in the open water at its heart, 2,700 clear of every island and hull.",
+  "campaignWater": { "maelstroms": [
+    { "id": "davy", "x": -2800, "y": -10100, "r": 640, "name": "Davy's Gauntlet" },
+    { "id": "don", "x": 12215, "y": -8121, "r": 640, "name": "Don's Gauntlet" }
+  ] },
   "_parlorPort": "THE PARLOR IN THE PORT (Kong, 2026-10-02/03, SETTLED): one Captain's Board card dealt every 8 real hours (10 sea days), a hand of 3, 4 at Fishing 30 and 5 at 60, never lost; the tier of a dealt card weighted 45/35/20; the Pirate King at Fishing 25 (levelGates.feature.parlor_king); every question drawn unseen first from content/trivia_bank.json. core/parlor.gd.",
   "parlorPort": {
     "dealMs": 28800000,

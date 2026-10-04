@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -923,6 +923,101 @@ func _init() -> void:
 				push.call("playing", ev, {})
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 10:
 				await process_frame
+		"dive":
+			# A gauntlet: the whole map cleared, the boat at a maelstrom.
+			# DIVE_V "davy"/"don"; DIVE_STEP: "water" (the maelstrom, near),
+			# "entry" (the ready check), "fight" (down, the first depth),
+			# "draft" / "party" (the draft table, alone / three at it),
+			# "curse", "breather", "shrine", "haul", "dead". SHOT_F frames.
+			var gdb: CaptainStore = sea.session.store
+			var gu: String = sea.session.uid
+			p["expedition_xp"] = 3000000.0
+			p["ship_tier"] = 6.0
+			p["gauntlet_fathoms"] = 140.0
+			p["gauntlet_deepest"] = 23.0
+			p["dons_gauntlet_deepest"] = 12.0
+			p["gauntlet_upgrades"] = ["second_cast", "salt_ward", "sounding_line", "vigor"]
+			var gst: Dictionary = RulesApi.run(gdb, gu, "getCrewState", [])
+			for c: Dictionary in gst["board"]:
+				RulesApi.run(gdb, gu, "recruitCrew", [c["id"]])
+			var gids: Array = (RulesApi.run(gdb, gu, "getCrewState", [])["roster"] as Array).map(func(m: Dictionary) -> float: return float(m["id"]))
+			for k: int in mini(3, gids.size()):
+				RulesApi.run(gdb, gu, "assignToRaid", [gids[k], float(k)])
+			var gcl: Array = []
+			for n: Dictionary in Campaign.nodes():
+				if n["type"] == "raid":
+					gdb.add_clear(gu, str(n["raidId"]), 200000.0)
+				elif n["type"] == "skirmish":
+					p["has_completed_practice_raid"] = true
+				else:
+					gcl.append(n["id"])
+			p["raid_node_progress"] = { "cleared": gcl, "choices": {} }
+			sea._campaign.refresh()
+			sea._open_sea_gate()
+			var gv: String = OS.get_environment("DIVE_V") if OS.get_environment("DIVE_V") != "" else "davy"
+			var gat: Vector2 = GauntletTable.maelstrom_of(gv)
+			sea._boat.position = gat + Vector2(-1150, 950)
+			if OS.get_environment("CAMP_ZOOM") != "":
+				sea._camera.zoom = Vector2.ONE * float(OS.get_environment("CAMP_ZOOM"))
+			for f: int in 40:
+				await process_frame
+			var gstep: String = OS.get_environment("DIVE_STEP") if OS.get_environment("DIVE_STEP") != "" else "water"
+			if gstep != "water":
+				Dice.install(Dice.Mulberry32.new(11))
+				sea.open_gauntlet(gv)
+				for f: int in 10:
+					await process_frame
+				var gt: GauntletTable = sea._solo_dive
+				if gstep != "entry":
+					gt.handle("me", sea.session, ["go"])
+					for f: int in 150:
+						await process_frame
+					var gr: Dictionary = gt._r
+					if gstep == "party":
+						# Two more captains at the table (copies of this one).
+						var ss: Array = gr["b"]["seats"]
+						for nm: Array in [["ben", "Ben", "blue"], ["cal", "Cal", "pink"]]:
+							var cp: Dictionary = (ss[0] as Dictionary).duplicate(true)
+							cp["key"] = nm[0]
+							cp["name"] = nm[1]
+							cp["face"] = { "characterColor": nm[2], "hat": null }
+							ss.append(cp)
+							gr["caps"][nm[0]] = (gr["caps"]["me"] as Dictionary).duplicate(true)
+						gr["run"]["drafts"] = 1.0
+					match gstep:
+						"draft", "party":
+							gr["caps"]["me"]["boons"] = { "grapeshot": 1.0, "powder_and_shot": 2.0 }
+							gt._open_draft("", 7)
+							if gstep == "party":
+								gt.handle("ben", sea.session, ["pick", { "card": 1.0 }])
+						"curse":
+							gr["_x"] = 0
+							gr["curse"] = { "offer": Gauntlet.draw_curse({}, 7, false, gv), "acks": {}, "rerolls": {} }
+							gt._enter("curse")
+						"breather":
+							gr["run"]["pot"] = 4620.0
+							gr["run"]["roll"] = { "cleared": 14.0, "prevWasBoss": false, "roundsSinceBoss": 2.0 }
+							gr["run"]["curses"] = { "crushing_depth": 1.0, str(Gauntlet.t()["curses"][3]["id"]): 1.0 }
+							gr["caps"]["me"]["boons"] = { "powder_and_shot": 2.0, "broadside_mastery": 1.0, "grapeshot": 1.0 }
+							gt._breather()
+						"shrine":
+							gr["shrine"] = { "picks": {}, "drafts": {} }
+							gt._enter("shrine")
+						"haul":
+							gr["run"]["pot"] = 9240.0
+							gr["run"]["roll"] = { "cleared": 19.0, "prevWasBoss": true, "roundsSinceBoss": 0.0 }
+							gt._bank()
+						"dead":
+							gr["run"]["pot"] = 3100.0
+							gt._dive_lost([])
+							gt._advance()
+			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 60:
+				await process_frame
+			if OS.get_environment("DIVE_PROBE") != "":
+				for n: Node in sea._hud_layer.get_children():
+					if n is BattleStage:
+						var bs: BattleStage = n
+						print("PROBE cam ", sea._camera.get_screen_center_position(), " camzoom ", sea._camera.zoom, " offset ", sea._camera.offset, " anchor ", sea._camera.anchor_mode, " boat ", sea._boat.position, " at ", bs._at, " foe ", bs._foe_pos, " stage ", sea.stage, " vp ", sea.get_viewport_rect().size)
 		"campaign":
 			# The campaign's water. CAMP_UPTO: every stop up to this node cleared
 			# (raids by their clears); CAMP_AT: the node to sit beside (its dock

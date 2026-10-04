@@ -367,6 +367,13 @@ func steer(input: Vector2, delta: float) -> void:
 	var next: Vector2 = position + velocity * delta
 	_flow(delta, top, input.length() > 0.1)
 	next += _flow_push
+	# A gauntlet's maelstrom carries her round and in (and throws her back
+	# off the eye's lip).
+	if not hush and position.y < -4000.0:
+		var wh: Vector2 = CampaignWater.whirl(position)
+		if wh != Vector2.ZERO:
+			next += wh * delta
+			heading += wh.length() * 0.0009 * delta * signf(wh.cross(Vector2.from_angle(heading)))
 	# Every island's shore stops the hull.
 	var off: Dictionary = Chart.off_shore(next)
 	if off["hit"]:

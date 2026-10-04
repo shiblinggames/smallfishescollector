@@ -848,6 +848,48 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   "RAID CLEARED" seal down mid-screen with the tier under it (BattleStage.Stamp: the sea dims, a
   ring of light, a thump); the first clear of that tier adds a FIRST CLEAR ribbon and a burst of
   gold (RaidRun.record_tier_clear returns first; the table sends "tierClear"). Normal pays exactly as the web (parity unchanged, the crate's dice in the web's order).
+  THE GAUNTLETS (2026-10-03; Kong: "Build it like how we have it but with multiplayer in mind
+  ... I want multiplayer coop gauntlet to be amazing. It's the end game coop repeatable game
+  loop"). RENAMED: Davy Jones' Gauntlet is now DAVY'S GAUNTLET.
+  RULES: core/gauntlet.gd ports lib/gauntlet* (fights, curves, boons, curses, confluences,
+  convergences, Terms, Marks, the Fence, the Don's jobs, Davy's Offer, the haul); the tables are
+  exported to rules.json (gauntlet); tests/parity/gauntlet.json replays 80 seeded descents
+  (3,320 depths) to the same rolls. The haul rolls the web's chase in its order (the Don's
+  Palisade is still listed and never rolled, as on the web). PORT RULES: gems retired, so the
+  chest's gem bonus is not paid; Locker damage and armour fold into the ship's multipliers;
+  hardcore dives are 1 per 8 real hours, holding 3, per descent (gauntlet_hc_budget).
+  FIGHTS: core/battle.gd carries every run effect kind the boons, curses, synergies, Marks and
+  Terms use (about 60), stacked as RaidCombat stacks them (tide_agg, line_fx for the enemy side,
+  finish_check for execute, coup and tithe); raid numbers are unchanged. Battle.begin_gauntlet /
+  gauntlet_fight field one ship alone; a party meets its own size in ships (sometimes one fewer,
+  rarely one more; a boss one fewer), escorts with co-op roles (port rules battle.gauntlet.party,
+  tuned with tests/gauntlet_balance.gd so a crew dives about as deep as a lone captain).
+  THE TABLE (game/gauntlet_table.gd): one host-run table for solo and a Charter (op
+  gauntletTable). SHARED: depth, pot (each captain banks all of it; each escort sunk adds half a
+  mob's pot), curses, Terms (the caller signs), jobs, the vote. OWN: hull, crew, boons, synergies,
+  Marks, Locker, Fathoms, haul. THE DRAFT TABLE (Kong): a face-up spread of party size + 2 family
+  cards, picked in turn, the order rotating each draft, each pick stamped with the captain's face;
+  each card is the next tier for whoever takes it; a private synergy card per captain; the one at
+  the table may reroll what is left or banish a card (Blacklist). THE VOTE (Kong): bank or dive
+  at every breather; a majority carries, a tie banks. TOWED HOME (Kong): sunk in a fight the crew
+  win, a ship rejoins at a quarter hull; the whole party sunk loses the pot; hardcore: sunk is
+  drowned (crew dead, Fathoms paid, out of the dive). Shrine and Fence each captain's own; a job's
+  stake is voted (a tie walks away); each captain takes their own Mark. No clocks anywhere.
+  ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
+  whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
+  leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the
+  keeper rising; the wreckage is RigidBody2D physics in a flat space laid onto the bowl (Kong:
+  "utilize godot physics"); the hull is carried round by the whirl (CampaignWater.whirl).
+  MOVED (Kong): Don's maelstrom now turns in the Last Fathom (the Throne's bay), port rules
+  campaignWater.maelstroms. The entry (game/gauntlet_entry.gd): a ready check like the raids',
+  Normal/Hardcore, the line's cards with their deepest, the host and the chest ladder, the Terms
+  board and the Locker. The fight is on the live sea like a raid's, the water recoloured to the
+  descent (Kong: "just the sea just like raid fights but custom to match the aesthetic of each
+  gauntlet"): Davy's teal-grey, the Don's kraken green, hardcore's blood, darker with depth and
+  for a boss. Between fights the dive's sheet (game/gauntlet_overlay.gd); each depth is called
+  over the water with the host's voice. FIXED for raids too: the fight camera framed the enemy
+  while it was still sailing in, so every fight sat to the left; it frames the marks now.
+  NOT YET: pause and resume of a dive across sessions, the Codex screen, the records screen.
   THE ENTRY SCREEN (game/ready_screen.gd; Kong: "like going into a group dungeon in Warcraft"):
   the raid, the three tiers side by side (a shut one says why), four seats (each captain's avatar,
   ship, Navigation, hull, seated hands, pennants, Ready / Not ready; open seats), the boss and

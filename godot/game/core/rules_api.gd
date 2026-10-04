@@ -67,6 +67,8 @@ static func _run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant
 			Loadout.set_show_wait_timer(db, uid, a[0])
 			return null
 		"buySpecialItem": return Loadout.buy_special_item(db, uid, a[0])
+		"buyGauntletUpgrade": return Gauntlet.buy_upgrade(db, uid, str(a[0]))
+		"toggleGauntletUpgrade": return Gauntlet.toggle_upgrade(db, uid, str(a[0]))
 		"equipSpecialItem": return Loadout.equip_special_item(db, uid, a[0])
 		"buyHat": return Loadout.buy_hat(db, uid, a[0])
 		"equipHat": return Loadout.equip_hat(db, uid, a[0])

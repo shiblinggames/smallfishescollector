@@ -1354,3 +1354,45 @@ static func blood_oath(ups: Array) -> bool:
 
 static func blood_gem_mult(ups: Array) -> float:
 	return 1.15 if _has(ups, "dg_crimson_tithe") else 1.0
+
+
+## claimGauntletUpgrade: a perk from this descent's Locker, bought with the
+## shared Fathoms purse (not owned yet, its prerequisite owned in either
+## Locker, the descent's deepest past its depth).
+static func buy_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary:
+	var u: Dictionary = upgrade_def(id)
+	if u.is_empty():
+		return { "error": "There is no such upgrade." }
+	var v: String = str(Js.nz(u.get("gauntlet"), "davy"))
+	var col: String = "dons_gauntlet_upgrades" if v == "don" else "gauntlet_upgrades"
+	var p: Dictionary = db.me(uid)
+	var own: Array = Js.list(p.get(col))
+	if own.has(id):
+		return { "error": "Already yours." }
+	var req: Variant = u.get("requires")
+	if req != null and not (Js.list(p.get("gauntlet_upgrades")) + Js.list(p.get("dons_gauntlet_upgrades"))).has(req):
+		return { "error": "Needs %s first." % upgrade_def(str(req)).get("name", req) }
+	if Js.num(p.get("dons_gauntlet_deepest" if v == "don" else "gauntlet_deepest")) < Js.num(u.get("depthRequired")):
+		return { "error": "Reach depth %d first." % int(Js.num(u.get("depthRequired"))) }
+	var cost: float = Js.num(u.get("cost"))
+	if Js.num(p.get("gauntlet_fathoms")) < cost:
+		return { "error": "Not enough Fathoms." }
+	db.bump_stat(uid, "gauntlet_fathoms", -cost)
+	db.add_to_list(uid, col, id)
+	return { "ok": true }
+
+
+## A Run Upgrade switched off (or on) for the next dives.
+static func toggle_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary:
+	var u: Dictionary = upgrade_def(id)
+	if str(u.get("scope", "")) != "gauntlet":
+		return { "error": "Only Run Upgrades switch off." }
+	var v: String = str(Js.nz(u.get("gauntlet"), "davy"))
+	var col: String = ("dons_gauntlet_upgrades" if v == "don" else "gauntlet_upgrades") + "_off"
+	var off: Array = Js.list(db.me(uid).get(col)).duplicate()
+	if off.has(id):
+		off.erase(id)
+	else:
+		off.append(id)
+	db.update_profile(uid, { col: off })
+	return { "ok": true, "off": off.has(id) }
