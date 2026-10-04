@@ -11,17 +11,25 @@ extends Control
 ##   Names in their own colours (you gold, each crewmate theirs, enemies red),
 ##   damage bold, crits lit, statuses in their chip's colour; hovering a
 ##   status, a reaction or a combo says what it does.
-##   Filters: All, Me, Crew, Enemies, Damage. L shows or hides it (kept).
+##   No box: the lines sit on a soft fade into the edge, the panel as tall as
+##   its lines; each line a mark in the actor's colour and the number in its
+##   own column (gold for a crit, red on a captain, green for a heal); thin
+##   turn rules; older lines settle back. One chip cycles the filter (All,
+##   Mine, Crew, Enemies, Damage). L shows or hides it (kept).
 ##   RECAP (a button): per captain per fight, or the whole run: damage dealt,
 ##   taken, healing and shields given, crits, the best hit, dodges, assists.
 ## Only what happened: never an enemy's next move.
 
-const W: float = 350.0
-const H: float = 440.0
+const W: float = 330.0
+const H: float = 460.0
 const ME: Color = Color("#f2d27a")
 const MATES: Array = [Color("#7fc8ff"), Color("#c3a6ff"), Color("#8fe3a8"), Color("#ffb36b")]
 const FOE: Color = Color("#ff8a78")
 const SYS: Color = Color(0.72, 0.66, 0.57)
+const INK: Color = Color(0.9, 0.86, 0.78)
+const FILTERS: Array = [["all", "All"], ["me", "Mine"], ["crew", "Crew"], ["enemy", "Enemies"], ["dmg", "Damage"]]
+## Lines this far back from the newest are dimmed.
+const FRESH: int = 14
 
 var stage: BattleStage
 var entries: Array = []
@@ -38,97 +46,99 @@ var _filter: String = "all"
 ## is not written again (a boss's words and a check's lines still are).
 var covering: bool = false
 var _open: bool = true
-var _panel: PanelContainer
-var _text: RichTextLabel
-var _tabs: HBoxContainer
+var _panel: Control
+var _scroll: ScrollContainer
+var _rows: VBoxContainer
+var _chip: Button
 var _tip: PanelContainer
 var _tip_label: RichTextLabel
 var _handle: Button
+var _lines: Array = []
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_open = bool(Prefs.get_value("combat_log_open", true))
-	_panel = PanelContainer.new()
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = Color(0.075, 0.062, 0.055, 0.9)
-	sb.border_color = Color(1, 1, 1, 0.08)
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(12)
-	sb.content_margin_left = 14
-	sb.content_margin_right = 10
-	sb.content_margin_top = 10
-	sb.content_margin_bottom = 10
-	_panel.add_theme_stylebox_override("panel", sb)
+	# No box: the lines sit on a soft dark fade that deepens toward the edge.
+	_panel = Control.new()
 	_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_panel.offset_left = -W - 14.0
-	_panel.offset_right = -14.0
-	_panel.offset_top = 88.0
-	_panel.offset_bottom = 88.0 + H
+	_panel.offset_left = -W - 10.0
+	_panel.offset_right = 0.0
+	_panel.offset_top = 86.0
+	_panel.offset_bottom = 86.0 + 60.0
 	add_child(_panel)
+	var fade: TextureRect = TextureRect.new()
+	var gt: GradientTexture2D = GradientTexture2D.new()
+	var g: Gradient = Gradient.new()
+	g.set_color(0, Color(0.03, 0.025, 0.02, 0.0))
+	g.set_color(1, Color(0.03, 0.025, 0.02, 0.78))
+	g.add_point(0.35, Color(0.03, 0.025, 0.02, 0.55))
+	gt.gradient = g
+	gt.width = 64
+	gt.height = 4
+	fade.texture = gt
+	fade.stretch_mode = TextureRect.STRETCH_SCALE
+	fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fade.offset_left = -60.0
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.add_child(fade)
 	var col: VBoxContainer = VBoxContainer.new()
+	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	col.offset_left = 16.0
+	col.offset_right = -16.0
+	col.offset_top = 6.0
 	col.add_theme_constant_override("separation", 6)
 	_panel.add_child(col)
 	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 2)
 	col.add_child(head)
-	var title: Label = Kit.text(head, "COMBAT LOG", "small", SYS)
+	var title: Label = Kit.text(head, "LOG", "small", SYS)
 	title.add_theme_font_override("font", Kit.font("karla", 800))
 	title.add_theme_font_size_override("font_size", 11)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var recap: Button = _small_button("Recap", func() -> void: _show_recap())
-	head.add_child(recap)
-	var hide_b: Button = _small_button("Hide  L", func() -> void: toggle())
-	head.add_child(hide_b)
-	_tabs = HBoxContainer.new()
-	_tabs.add_theme_constant_override("separation", 4)
-	col.add_child(_tabs)
-	for f: Array in [["all", "All"], ["me", "Me"], ["crew", "Crew"], ["enemy", "Enemies"], ["dmg", "Damage"]]:
-		var key: String = f[0]
-		var tb: Button = _small_button(f[1], func() -> void:
-			_filter = key
-			Sound.plip()
-			_paint_tabs()
-			_rebuild())
-		tb.set_meta("key", key)
-		_tabs.add_child(tb)
-	_text = RichTextLabel.new()
-	_text.bbcode_enabled = true
-	_text.scroll_active = true
-	_text.selection_enabled = false
-	_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_text.add_theme_font_override("normal_font", Kit.font("karla", 500))
-	_text.add_theme_font_override("bold_font", Kit.font("karla", 800))
-	_text.add_theme_font_override("italics_font", Kit.font("karla", 500))
-	_text.add_theme_font_size_override("normal_font_size", 13)
-	_text.add_theme_font_size_override("bold_font_size", 13)
-	_text.add_theme_font_size_override("italics_font_size", 13)
-	_text.add_theme_color_override("default_color", Color(0.9, 0.85, 0.76))
-	_text.add_theme_constant_override("line_separation", 3)
-	_text.meta_underlined = false
-	_text.meta_hover_started.connect(_on_hover)
-	_text.meta_hover_ended.connect(func(_m: Variant) -> void: _tip.visible = false)
-	col.add_child(_text)
-	# The handle when hidden: a slim tab on the edge.
-	_handle = _small_button("LOG  L", func() -> void: toggle())
+	_chip = _link_button("All", func() -> void: _next_filter())
+	_chip.tooltip_text = "Which lines to show (click to change)"
+	head.add_child(_chip)
+	head.add_child(_link_button("Recap", func() -> void: _show_recap()))
+	head.add_child(_link_button("Hide", func() -> void: toggle()))
+	var rule: ColorRect = ColorRect.new()
+	rule.color = Color(1, 1, 1, 0.07)
+	rule.custom_minimum_size = Vector2(0, 1)
+	col.add_child(rule)
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(_scroll)
+	_rows = VBoxContainer.new()
+	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rows.add_theme_constant_override("separation", 3)
+	_scroll.add_child(_rows)
+	_rows.resized.connect(_fit)
+	# Hidden: a slim tab on the edge.
+	_handle = _link_button("LOG  ·  L", func() -> void: toggle())
 	_handle.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_handle.offset_left = -78.0
-	_handle.offset_right = -14.0
+	_handle.offset_left = -84.0
+	_handle.offset_right = -12.0
 	_handle.offset_top = 88.0
-	_handle.offset_bottom = 116.0
+	_handle.offset_bottom = 112.0
 	add_child(_handle)
 	# A hover's explanation.
 	_tip = PanelContainer.new()
-	var tsb: StyleBoxFlat = sb.duplicate()
+	var tsb: StyleBoxFlat = StyleBoxFlat.new()
 	tsb.bg_color = Color(0.05, 0.04, 0.035, 0.97)
-	tsb.border_color = Color(1, 1, 1, 0.14)
+	tsb.border_color = Color(1, 1, 1, 0.12)
+	tsb.set_border_width_all(1)
+	tsb.set_corner_radius_all(10)
+	tsb.set_content_margin_all(10)
 	_tip.add_theme_stylebox_override("panel", tsb)
 	_tip.visible = false
 	_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tip_label = RichTextLabel.new()
 	_tip_label.bbcode_enabled = true
 	_tip_label.fit_content = true
-	_tip_label.custom_minimum_size = Vector2(260, 0)
+	_tip_label.custom_minimum_size = Vector2(250, 0)
 	_tip_label.add_theme_font_override("normal_font", Kit.font("karla", 500))
 	_tip_label.add_theme_font_override("bold_font", Kit.font("karla", 800))
 	_tip_label.add_theme_font_size_override("normal_font_size", 12)
@@ -136,11 +146,11 @@ func _ready() -> void:
 	_tip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tip.add_child(_tip_label)
 	add_child(_tip)
-	_paint_tabs()
 	_apply_open()
 
 
-func _small_button(t: String, f: Callable) -> Button:
+## A word that acts as a button (no box until hovered).
+func _link_button(t: String, f: Callable) -> Button:
 	var b: Button = Button.new()
 	b.text = t
 	b.flat = true
@@ -148,17 +158,18 @@ func _small_button(t: String, f: Callable) -> Button:
 	b.add_theme_font_override("font", Kit.font("karla", 800))
 	b.add_theme_font_size_override("font_size", 11)
 	b.add_theme_color_override("font_color", SYS)
-	b.add_theme_color_override("font_hover_color", Color(0.98, 0.93, 0.82))
+	b.add_theme_color_override("font_hover_color", INK)
+	b.add_theme_color_override("font_pressed_color", INK)
 	var s: StyleBoxFlat = StyleBoxFlat.new()
-	s.bg_color = Color(1, 1, 1, 0.05)
-	s.set_corner_radius_all(7)
-	s.content_margin_left = 8
-	s.content_margin_right = 8
-	s.content_margin_top = 3
-	s.content_margin_bottom = 3
+	s.bg_color = Color(1, 1, 1, 0.0)
+	s.set_corner_radius_all(6)
+	s.content_margin_left = 7
+	s.content_margin_right = 7
+	s.content_margin_top = 2
+	s.content_margin_bottom = 2
 	b.add_theme_stylebox_override("normal", s)
 	var sh: StyleBoxFlat = s.duplicate()
-	sh.bg_color = Color(1, 1, 1, 0.11)
+	sh.bg_color = Color(1, 1, 1, 0.08)
 	b.add_theme_stylebox_override("hover", sh)
 	b.add_theme_stylebox_override("pressed", sh)
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -166,13 +177,24 @@ func _small_button(t: String, f: Callable) -> Button:
 	return b
 
 
-func _paint_tabs() -> void:
-	for tb: Node in _tabs.get_children():
-		var on: bool = (tb as Button).get_meta("key") == _filter
-		(tb as Button).add_theme_color_override("font_color", Color(0.98, 0.93, 0.82) if on else SYS)
-		var s: StyleBoxFlat = ((tb as Button).get_theme_stylebox("normal") as StyleBoxFlat).duplicate()
-		s.bg_color = Color(1, 1, 1, 0.14 if on else 0.05)
-		(tb as Button).add_theme_stylebox_override("normal", s)
+## The recap's buttons (boxed: it is a card of its own).
+func _small_button(t: String, f: Callable) -> Button:
+	var b: Button = _link_button(t, f)
+	var s: StyleBoxFlat = (b.get_theme_stylebox("normal") as StyleBoxFlat).duplicate()
+	s.bg_color = Color(1, 1, 1, 0.05)
+	b.add_theme_stylebox_override("normal", s)
+	return b
+
+
+func _next_filter() -> void:
+	var k: int = 0
+	for i: int in FILTERS.size():
+		if FILTERS[i][0] == _filter:
+			k = i
+	_filter = FILTERS[(k + 1) % FILTERS.size()][0]
+	_chip.text = FILTERS[(k + 1) % FILTERS.size()][1]
+	Sound.plip()
+	_rebuild()
 
 
 func toggle() -> void:
@@ -200,6 +222,12 @@ func _process(_d: float) -> void:
 		_tip.position = Vector2(clampf(m.x - _tip.size.x - 16.0, 8.0, size.x - _tip.size.x - 8.0), clampf(m.y + 14.0, 8.0, size.y - _tip.size.y - 8.0))
 
 
+## As tall as its lines, up to H.
+func _fit() -> void:
+	var want: float = minf(H, 40.0 + _rows.size.y + 8.0)
+	_panel.offset_bottom = _panel.offset_top + want
+
+
 # ── Writing ──────────────────────────────────────────────────────────────────
 
 ## A new fight: its header, and a fresh tally.
@@ -212,7 +240,7 @@ func fight_begins(title: String) -> void:
 
 ## A line the stage said aloud (rewards, a boss's words): logged as told.
 func note(text: String) -> void:
-	if text.strip_edges() == "" or covering:
+	if text.strip_edges() == "" or covering or text.begins_with("Fight ") or text.begins_with("Depth "):
 		return
 	_push("sys", false, "[color=#%s][i]%s[/i][/color]" % [SYS.to_html(false), _esc(text)])
 
@@ -235,7 +263,8 @@ func add(x: Dictionary) -> void:
 	covering = not r.is_empty() and t not in ["phase", "checkArm", "eSpecial", "bossAbility"]
 	if r.is_empty():
 		return
-	_push(r[0], r[1], _you(str(r[2])))
+	var who_col: Color = FOE if r[0] == "enemy" else (_seat_color(int(x.get("seat", -1))) if int(x.get("seat", -1)) >= 0 and r[0] != "sys" else SYS)
+	_push(r[0], r[1], _you(str(r[2])), who_col)
 
 
 ## Lines about this captain read in the second person: "You fire", "your
@@ -278,18 +307,20 @@ func _title() -> String:
 	return "Fight %d  ·  %s" % [int(b.get("fight", 0)) + 1, _foe_name(0, false)]
 
 
-func _push(who: String, dmg: bool, bb: String) -> void:
-	var e: Dictionary = { "fight": _fight, "turn": _turn, "who": who, "dmg": dmg, "bb": bb }
+func _push(who: String, dmg: bool, bb: String, col: Color = SYS) -> void:
+	var e: Dictionary = { "fight": _fight, "turn": _turn, "who": who, "dmg": dmg, "bb": bb, "col": col }
 	entries.append(e)
 	if _passes(e):
-		var at_end: bool = _text.get_v_scroll_bar().value >= _text.get_v_scroll_bar().max_value - _text.get_v_scroll_bar().page - 8.0
+		var bar: VScrollBar = _scroll.get_v_scroll_bar()
+		var at_end: bool = bar.value >= bar.max_value - bar.page - 12.0
 		_write(e)
 		if at_end:
 			_stick.call_deferred()
 
 
 func _stick() -> void:
-	_text.scroll_to_line(_text.get_line_count() - 1)
+	await get_tree().process_frame
+	_scroll.scroll_vertical = int(_scroll.get_v_scroll_bar().max_value)
 
 
 func _passes(e: Dictionary) -> bool:
@@ -306,20 +337,100 @@ func _write(e: Dictionary) -> void:
 		_shown_fight = int(e["fight"])
 		_shown_turn = -1
 		var ft: String = str(fights[_shown_fight]["title"]) if _shown_fight >= 0 and _shown_fight < fights.size() else ""
-		_text.append_text("%s[b][color=#e8d5a8]%s[/color][/b]\n" % ["\n" if _text.get_parsed_text() != "" else "", _esc(ft.to_upper())])
+		var hl: Label = Kit.text(_rows, ft.to_upper(), "small", Color(0.93, 0.84, 0.64))
+		hl.add_theme_font_override("font", Kit.font("cinzel", 700))
+		hl.add_theme_font_size_override("font_size", 12)
+		if _rows.get_child_count() > 1:
+			hl.custom_minimum_size = Vector2(0, 30)
+			hl.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	if int(e["turn"]) != _shown_turn:
 		_shown_turn = int(e["turn"])
-		_text.append_text("[color=#%s][font_size=10]TURN %d[/font_size][/color]\n" % [Color(0.55, 0.5, 0.44).to_html(false), _shown_turn])
-	_text.append_text(str(e["bb"]) + "\n")
+		var tr: HBoxContainer = HBoxContainer.new()
+		tr.add_theme_constant_override("separation", 8)
+		tr.custom_minimum_size = Vector2(0, 16)
+		_rows.add_child(tr)
+		var tl: Label = Kit.text(tr, str(_shown_turn), "small", Color(0.6, 0.55, 0.48))
+		tl.add_theme_font_override("font", Kit.font("karla", 800))
+		tl.add_theme_font_size_override("font_size", 10)
+		var hair: ColorRect = ColorRect.new()
+		hair.color = Color(1, 1, 1, 0.06)
+		hair.custom_minimum_size = Vector2(0, 1)
+		hair.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hair.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		tr.add_child(hair)
+	_rows.add_child(_row(e))
+	_lines.append(_rows.get_child(_rows.get_child_count() - 1))
+	# The older lines settle back.
+	if _lines.size() > FRESH:
+		var old: Control = _lines[_lines.size() - FRESH - 1]
+		if is_instance_valid(old):
+			old.modulate.a = 0.55
+
+
+## One line: who acted (a mark in their colour), what happened, and the number
+## in a column of its own (gold for a crit, red for a hit on a captain, green
+## for a heal).
+func _row(e: Dictionary) -> Control:
+	var bb: String = str(e["bb"])
+	var num: String = ""
+	var ncol: Color = INK
+	var m: RegExMatch = RegEx.create_from_string(":\\s\\[b\\](\\d+)\\[/b\\]((?:\\s\\s\\[color=#ffd36b\\]\\[b\\]CRIT\\[/b\\]\\[/color\\])?)").search(bb)
+	if m != null and e["dmg"]:
+		num = m.get_string(1)
+		var crit: bool = m.get_string(2) != ""
+		bb = bb.substr(0, m.get_start()) + bb.substr(m.get_end())
+		ncol = Color("#ffd36b") if crit else (FOE if e["who"] == "enemy" else INK)
+		if crit:
+			num += "!"
+	elif str(e["bb"]).contains(" back") or str(e["bb"]).contains("Tithe"):
+		ncol = Color(0.5, 0.95, 0.6)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var pip: ColorRect = ColorRect.new()
+	pip.color = Color(e["col"], 0.9 if e["who"] != "sys" else 0.3)
+	pip.custom_minimum_size = Vector2(3, 0)
+	row.add_child(pip)
+	var rt: RichTextLabel = RichTextLabel.new()
+	rt.bbcode_enabled = true
+	rt.fit_content = true
+	rt.scroll_active = false
+	rt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rt.add_theme_font_override("normal_font", Kit.font("karla", 500))
+	rt.add_theme_font_override("bold_font", Kit.font("karla", 800))
+	rt.add_theme_font_override("italics_font", Kit.font("karla", 500))
+	for k: String in ["normal_font_size", "bold_font_size", "italics_font_size"]:
+		rt.add_theme_font_size_override(k, 13)
+	rt.add_theme_color_override("default_color", INK)
+	rt.meta_underlined = false
+	rt.meta_hover_started.connect(_on_hover)
+	rt.meta_hover_ended.connect(func(_m: Variant) -> void: _tip.visible = false)
+	rt.text = bb
+	row.add_child(rt)
+	if num != "":
+		var nl: Label = Kit.text(row, num, "body_strong", ncol)
+		nl.add_theme_font_override("font", Kit.font("karla", 800))
+		nl.add_theme_font_size_override("font_size", 15)
+		nl.custom_minimum_size = Vector2(38, 0)
+		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.modulate.a = 0.0
+	row.create_tween().tween_property(row, "modulate:a", 1.0, 0.2)
+	return row
 
 
 func _rebuild() -> void:
-	_text.clear()
+	for c: Node in _rows.get_children():
+		c.queue_free()
+	_lines.clear()
 	_shown_fight = -2
 	_shown_turn = -1
 	for e: Dictionary in entries:
 		if _passes(e):
 			_write(e)
+	for l: Control in _lines:
+		l.modulate.a = 1.0
+	for k: int in maxi(0, _lines.size() - FRESH):
+		_lines[k].modulate.a = 0.55
 	_stick.call_deferred()
 
 
