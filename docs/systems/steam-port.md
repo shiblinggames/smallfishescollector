@@ -966,6 +966,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   blow; each reaction its own elements: steam, green fire leaping, a keg's blast, ice slivers,
   boiling bubbles, rot, a gold beam, whirlpools). BATTLE_SHOW=allev in
   tests/shot.gd plays every one; BATTLE_SHOW=wear stages the statuses.
+  THE COMBAT LOG (game/combat_log.gd; Kong: "an action log ... more robust since it's a desktop
+  only game"; docked on the RIGHT EDGE, the recap ON DEMAND): every event the stage plays is
+  written from the one place it plays them (BattleStage._one), so nothing goes unlogged (the
+  web's LogBox kept one turn; the port's caption kept one line). Grouped by fight (a dive's
+  depth) and turn, scrollable through the whole raid or dive, sticking to the newest line unless
+  scrolled up. Names in their own colours (you gold, crewmates theirs, enemies red), lines about
+  you in the second person, damage bold, crits lit, statuses in their chip's colour; hovering a
+  status, reaction or combo explains it. Filters All / Me / Crew / Enemies / Damage; L hides or
+  shows it (Prefs combat_log_open). The stage's spoken captions are logged too, except where the
+  log already wrote that event. RECAP (a button): per captain, per fight or the whole run: damage,
+  taken, healed, given (bond heals and shields on crewmates), crits, best hit, assists (bonds and
+  reactions). Only what happened, never an enemy's next move. RECAP=1 in tests/shot.gd opens it.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the

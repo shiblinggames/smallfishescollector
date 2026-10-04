@@ -54,6 +54,8 @@ var _bars: float = 0.0
 var _deck: Control
 var _deck_box: VBoxContainer
 var _log: Label
+## The combat log on the right edge (game/combat_log.gd).
+var _clog: CombatLog
 var _strip: Array = []
 var _strip_lit: int = -99
 var _plan: Dictionary = {}
@@ -513,6 +515,10 @@ func _build_deck() -> void:
 	_log.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_log.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	_log.add_theme_constant_override("shadow_outline_size", 8)
+	if _clog == null:
+		_clog = CombatLog.new()
+		_clog.stage = self
+		add_child(_clog)
 	create_tween().tween_property(self, "_drop", 0.0, 0.6).set_delay(0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
@@ -814,6 +820,10 @@ func _play_events(ev: Array) -> void:
 			while i < ev.size() and ev[i]["t"] == "eShot" and ev[i].get("all", false):
 				group.append(ev[i])
 				i += 1
+			if _clog != null:
+				_clog.add(x)
+				for g0: Dictionary in group:
+					_clog.add(g0)
 			await _broadside(x, group)
 			continue
 		await _one(x)
@@ -822,6 +832,14 @@ func _play_events(ev: Array) -> void:
 
 func _one(x: Dictionary) -> void:
 	_ctx(int(x.get("foe", 0)))
+	if _clog != null:
+		_clog.add(x)
+	await _one_play(x)
+	if _clog != null:
+		_clog.covering = false
+
+
+func _one_play(x: Dictionary) -> void:
 	var e: Dictionary = Battle.foes(b)[mini(_cur, Battle.foes(b).size() - 1)]
 	match x["t"]:
 		"ability":
@@ -1365,6 +1383,8 @@ func _say(text: String) -> void:
 
 
 func _log_line(text: String) -> void:
+	if _clog != null:
+		_clog.note(text)
 	_log.text = text
 	_log.modulate.a = 0.0
 	create_tween().tween_property(_log, "modulate:a", 1.0, 0.2)
@@ -1792,6 +1812,8 @@ func _play_list(ev: Array) -> void:
 	for x: Dictionary in ev:
 		match x["t"]:
 			"flareHit":
+				if _clog != null:
+					_clog.add(x)
 				if float(x["dmg"]) > 0.0:
 					_fx.burst(_seat_at(int(x["seat"])), float(x["missed"]) >= 2.0)
 					_num(_seat_at(int(x["seat"])), "-%d" % int(x["dmg"]), Color(1.0, 0.5, 0.3), true)

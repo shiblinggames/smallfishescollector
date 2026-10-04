@@ -807,6 +807,11 @@ func _init() -> void:
 						(bar as AimBar).lock()
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 10:
 				await process_frame
+			# RECAP=1: the combat log's recap opened over it.
+			if OS.get_environment("RECAP") == "1":
+				bst._clog._show_recap()
+				for f: int in 12:
+					await process_frame
 		"ready":
 			# The raid's entry screen. READY_MODE "solo" (alone at Pete) or
 			# "line" (a Charter's line of three on Co-op, one not yet ready).

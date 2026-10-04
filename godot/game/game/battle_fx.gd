@@ -366,7 +366,9 @@ func _draw() -> void:
 		var pos: Vector2 = (p["p"] as Vector2) if p.get("world", true) == false else up(p["p"])
 		if p.get("flash", false):
 			continue
-		draw_circle(pos, float(p["r"]) * (0.7 + 0.9 * u), Color(p["c"], float(p.get("a", 0.45)) * (1.0 - u)))
+		# A soft puff: denser at its heart, falling off at the edge.
+		var rr2: float = float(p["r"]) * (0.7 + 0.9 * u) * 1.9
+		draw_texture_rect(_glow, Rect2(pos - Vector2(rr2, rr2), Vector2(rr2, rr2) * 2.0), false, Color(p["c"], minf(1.0, float(p.get("a", 0.45)) * 1.6) * (1.0 - u)))
 	for sp: Dictionary in _sparks:
 		if float(sp["t"]) < 0.0:
 			continue
