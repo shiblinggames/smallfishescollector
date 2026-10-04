@@ -189,6 +189,11 @@ func _init() -> void:
 				room._open("rod")
 			if what == "shelf":
 				room._open("bait")
+			if OS.get_environment("TACKLE") != "":
+				p["unlocked_hats"] = ["brown", "gray"]
+				p["has_auto_caster"] = true
+				p["has_phantom_hook"] = true
+				room._open(OS.get_environment("TACKLE"))
 		"buyer":
 			var b: Buyer = sea._buyers[0]
 			sea._boat.position = b.position + Vector2(-60, 200)

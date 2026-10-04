@@ -37,7 +37,7 @@ const CONTENT = ['fish_species.json', 'profile_defaults.json', 'cards.json']
 const ART = [
   'fishing_rest.png', 'fishing_cast.png', 'fishing_wait.png', 'fishing_*.png', 'fish', 'sea/port-mainland.webp',
   // The look on the boat: every hat, boat, rod, reel and hook sprite, and the loadout's backdrop.
-  'hat*_rest.png', 'hat*_cast.png', 'boat_*_cast.png', 'rod_*.png', 'reel_*.png', 'hook_*.png', 'autocaster.png', 'welcome-harbour-open.webp',
+  'hat*_rest.png', 'hat*_cast.png', 'boat_*_cast.png', 'rod_*.png', 'reel_*.png', 'hook_*.png', 'autocaster.png', 'tideturner.png', 'phantomhook.png', 'perfectedsigil.png', 'primevileye.png', 'welcome-harbour-open.webp',
   // The Almanac.
   'almanac-paper.jpg', 'ancient.jpg',
   // The Ancient Deep's scenes.

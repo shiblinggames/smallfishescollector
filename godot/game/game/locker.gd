@@ -18,7 +18,7 @@ extends Control
 
 signal closed
 
-const SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["skin", "Look"], ["hat", "Hat"], ["pet", "Pet"]]
+const SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["special", "Special"], ["skin", "Look"], ["hat", "Hat"], ["pet", "Pet"]]
 ## Every slot a tag can point at (the Boat has its own tab).
 const ALL_SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["skin", "Look"], ["hat", "Hat"], ["pet", "Pet"], ["boat", "Boat"]]
 const HOW_TO_GET: Dictionary = {
@@ -28,6 +28,7 @@ const HOW_TO_GET: Dictionary = {
 	"hat": "Hats are bought with doubloons. A few only come out of crates.",
 	"boat": "Boats are bought with doubloons, earned by levels and achievements, or found in crates.",
 	"pet": "Pets come out of supply crates.",
+	"special": "One special rides with you. The Auto Caster is sold at the Tackle Shop; the others come back from voyages.",
 }
 const PANEL_W: float = 620.0
 
@@ -707,6 +708,9 @@ func _name_for(s: String) -> String:
 			return String(Skipper._find("boats", p.get("equipped_boat")).get("name", "Default"))
 		"pet":
 			return String(Skipper._find("pets", p.get("equipped_pet")).get("name", "None"))
+		"special":
+			var sid: Variant = p.get("equipped_special")
+			return "None" if sid == null else str(Locker.special_def(str(sid), p).get("name", sid))
 		"skin":
 			for c: Dictionary in Rules.data()["characterColors"]:
 				if c["id"] == str(Js.nz(p.get("character_color"), "default")):
@@ -747,12 +751,34 @@ func _options(s: String) -> Array:
 				var b: Dictionary = Skipper._find("boats", id)
 				if not b.is_empty():
 					out.append([id, b["name"], b["restImageUrl"], sea_blue, ""])
+		"special":
+			out.append([null, "No special", "", Paper.INK_FAINT, ""])
+			for d: Dictionary in Rules.data()["specialItems"]:
+				if d["finaleSlotOnly"] or d["id"] == "auto_catcher":
+					continue
+				if p.get((Rules.data()["specialOwnedColumn"] as Dictionary)[d["id"]]) != true:
+					continue
+				var e: Dictionary = Locker.special_def(str(d["id"]), p)
+				out.append([d["id"], e["name"], str(e.get("image", "")), Color(str(e.get("color", "#9aa3ad"))).darkened(0.2), ""])
 		"pet":
 			out.append([null, "No pet", "", Paper.INK_FAINT, ""])
 			for id: Variant in Js.list(p.get("unlocked_pets")):
 				var pt: Dictionary = Skipper._find("pets", id)
 				if not pt.is_empty():
 					out.append([id, pt["name"], pt["restImageUrl"], Color(0.4, 0.58, 0.4), ""])
+	return out
+
+
+## A special as shown (content/port_rules.json specialInfo over the rules):
+## the Auto Caster wears the Auto Catcher's name once it is upgraded.
+static func special_def(id: String, p: Dictionary) -> Dictionary:
+	if id == "auto_caster" and p.get("has_auto_catcher") == true:
+		id = "auto_catcher"
+	var out: Dictionary = {}
+	for d: Dictionary in Rules.data()["specialItems"]:
+		if d["id"] == id:
+			out = d.duplicate()
+	out.merge(Js.obj(Js.obj(Rules.data().get("specialInfo")).get(id)), true)
 	return out
 
 
@@ -771,6 +797,9 @@ func _worn(s: String) -> Variant:
 			return p.get("equipped_boat")
 		"pet":
 			return p.get("equipped_pet")
+		"special":
+			var sid: Variant = p.get("equipped_special")
+			return "auto_caster" if sid == "auto_catcher" else sid
 	return null
 
 
@@ -824,6 +853,12 @@ func _blurb(s: String, o: Array) -> String:
 			var id: String = str(o[0]) if not o.is_empty() else hud._bait
 			var bonus: float = Js.num(Rules.bait(id).get("catchZoneBonus"))
 			return ("Widens the catch zone by %d°. A wider catch zone is an easier reel; nothing else changes." % int(bonus)) if bonus > 0 else "Plain bait. No change to the catch zone."
+	if s == "special":
+		var sid: Variant = (o[0] if not o.is_empty() else session.profile().get("equipped_special"))
+		if sid == null:
+			return "No special in the slot."
+		var e: Dictionary = Locker.special_def(str(sid), session.profile())
+		return "%s. %s" % [e.get("effect", ""), e.get("description", "")]
 	if s == "boat":
 		return "A look, not a stat: her fittings are what make her faster. Boats come only from fishing crates."
 	return "A look, not a stat. It changes how you appear on the water and nothing about the catch."
@@ -849,6 +884,8 @@ func _choose(id: Variant) -> void:
 			r = await session.act("equipBoat", [id])
 		"pet":
 			r = await session.act("equipPet", [id, "stern"])
+		"special":
+			r = await session.act("equipSpecialItem", [id])
 	session.persist()
 	if r.get("error") != null:
 		hud.toast(str(r["error"]))
@@ -868,6 +905,11 @@ func _fill_compare(o: Array) -> void:
 	for c: Node in _compare.get_children():
 		c.queue_free()
 	_gauge = null
+	if slot == "special":
+		Paper.text(_compare, "What it does", "eyebrow", Paper.INK_SOFT)
+		Paper.text(_compare, "A special works beside your rod and bait; it never changes the dial itself.", "note", Paper.INK_SOFT, true)
+		_streak_line()
+		return
 	if slot != "rod" and slot != "bait":
 		Paper.text(_compare, "On the dial", "eyebrow", Paper.INK_SOFT)
 		Paper.text(_compare, "Looks never touch the catch. Rods and bait do: pick one of those to see how.", "note", Paper.INK_SOFT, true)

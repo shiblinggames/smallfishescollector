@@ -2079,5 +2079,49 @@
     { "tier": 4, "name": "Brigantine", "cost": 22000, "navLevelReq": 18 },
     { "tier": 5, "name": "Galleon", "cost": 80000, "navLevelReq": 30 },
     { "tier": 6, "name": "Man-o-War", "cost": 200000, "navLevelReq": 45 }
-  ]
+  ],
+  "_specialInfo": "The specials as the shop and Locker show them (lib/specialItems.ts; the export carries only the rules).",
+  "specialInfo": {
+    "anglers_patience": {
+      "color": "#c4a96a",
+      "image": "primevileye.png",
+      "effect": "Six stacking tiers, one new effect each",
+      "obtainedFrom": "The Sunken Hand",
+      "description": "Cut out of him still open, and still looking. It gains a TIER for every stretch of Navigation XP you earn while it is seated, and each tier keeps everything the tiers below it unlocked. Six in all."
+    },
+    "tide_turner": {
+      "color": "#a78bfa",
+      "image": "tideturner.png",
+      "effect": "3 skips a day",
+      "obtainedFrom": "The Howling Deep voyage",
+      "description": "Skip a hooked fish during the catch phase without breaking your perfect streak. Your bait is consumed."
+    },
+    "phantom_hook": {
+      "color": "#2dd4bf",
+      "image": "phantomhook.png",
+      "effect": "25% bait save",
+      "obtainedFrom": "The Bertuna Triangle voyage",
+      "description": "25% chance to save your bait on every cast. Stacks with perfect-catch saves."
+    },
+    "auto_caster": {
+      "color": "#f0c040",
+      "image": "autocaster.png",
+      "effect": "Auto cast",
+      "description": "Casts again on its own after each catch, and brings any crate aboard. Stops when your hold is full or you run out of bait. Upgrades into the Auto Catcher once you have been 5 deep in Davy Jones' Gauntlet."
+    },
+    "auto_catcher": {
+      "color": "#46e0c0",
+      "image": "autocaster.png",
+      "effect": "Auto cast, and reels in commons and uncommons",
+      "upgradeOf": "auto_caster",
+      "description": "Your Auto Caster, upgraded for good: it now reels in common and uncommon fish on its own too. Rarer fish still need your hand. Stops when your hold or bait runs out."
+    },
+    "perfected_sigil": {
+      "color": "#94a3b8",
+      "image": "perfectedsigil.png",
+      "effect": "+10 / +20 / +30 ⟡ by streak",
+      "obtainedFrom": "The Shrouded Reach voyage",
+      "description": "Each Perfect catch pays a bonus 10 ⟡ times your current streak (capped at +30 from streak 3 onward), paid the moment you reel it in."
+    }
+  }
 }

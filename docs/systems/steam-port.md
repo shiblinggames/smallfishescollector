@@ -1589,6 +1589,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  SPECIALS AND HATS (2026-10-04, the audit's fifth item): the rules were ported already
+  (Loadout.buy_special_item / equip_special_item / buy_hat); the shops were missing. The
+  TACKLE SHOP gains HATS (every bandana: for sale with its price, a press buys and wears it;
+  crate-only ones say so) and SPECIALS (the Auto Caster for 5,000 ⟡, its Auto Catcher upgrade
+  for 30 Fathoms at gauntlet depth 5, the voyage specials shown with where they come from),
+  both on the landing's tiles and Ready to Buy shelf. The LOCKER gains a SPECIAL slot (owned
+  specials, the Auto Caster wearing the Catcher's name once upgraded; the Primeval Eye stays in
+  the finale's slot). The specials' words and art are port_rules.json "specialInfo"
+  (lib/specialItems.ts); setup.mjs now copies their four pictures. No gems: none of these was
+  ever priced in them.
   THE DAY'S ORDERS AND TRAWLS (2026-10-04, the audit's fourth item):
   - ORDERS (core/orders.gd), the progression.md decision of 2026-09-30 built: three orders that
     RESET ON COMPLETION. Each is claimed for its doubloons (the web's tiers, 60 to 375); with all

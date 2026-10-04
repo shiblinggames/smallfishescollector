@@ -18,6 +18,8 @@ const CATS: Array = [
 	["rod", "Rods", "#b8956a", "rod_driftwood_thumb.png"],
 	["reel", "Reels", "#60a5fa", "reel_basic_thumb.png"],
 	["line", "Line", "#4ade80", "monofilament.png"],
+	["hat", "Hats", "#c8a870", "hat_brown_rest.png"],
+	["special", "Specials", "#c9a7ff", "autocaster.png"],
 ]
 const PIP: Dictionary = {
 	"ready": ["Ready to buy", "#f0c040"], "saving": ["Saving up", "#9a958c"], "locked": ["Level locked", "#60a5fa"],
@@ -237,7 +239,45 @@ func _summaries() -> Dictionary:
 			kinds += 1
 	var bait: Dictionary = { "key": "bait", "owned": kinds, "total": (Rules.data()["baits"] as Array).size(), "next": {},
 		"state": "ready", "detail": ("%d in your tin" % int(tin)) if tin > 0 else "Stock your tin" }
-	return { "rod": rod, "reel": _ladder("reel", "reels", "reel_tier"), "hook": _ladder("hook", "hooks", "hook_tier"), "line": line, "bait": bait }
+	# Hats: the ones for sale, the cheapest not yet owned next.
+	var hats_owned: Array = Js.list(_p().get("unlocked_hats"))
+	var sale: Array = (Rules.data()["hats"] as Array).filter(func(h: Dictionary) -> bool: return not h["crateOnly"])
+	sale.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["cost"]) < float(b["cost"]))
+	var hat_next: Dictionary = {}
+	for h: Dictionary in sale:
+		if not Js.includes(hats_owned, h["id"]):
+			hat_next = h
+			break
+	var hat: Dictionary = { "key": "hat", "owned": hats_owned.size(), "total": (Rules.data()["hats"] as Array).size(), "next": hat_next }
+	if hat_next.is_empty():
+		hat["state"] = "maxed"
+		hat["detail"] = "Every hat for sale owned"
+	else:
+		var hs: Array = _state_for(hat_next, 0)
+		hat["state"] = hs[0]
+		hat["detail"] = hs[1]
+	# Specials: the Auto Caster for sale, the rest from voyages.
+	var cols: Dictionary = Rules.data()["specialOwnedColumn"]
+	var sp_have: int = 0
+	var sp_total: int = 0
+	for d: Dictionary in Rules.data()["specialItems"]:
+		if d["finaleSlotOnly"]:
+			continue
+		sp_total += 1
+		if _p().get(cols[d["id"]]) == true:
+			sp_have += 1
+	var special: Dictionary = { "key": "special", "owned": sp_have, "total": sp_total, "next": {} }
+	var caster: Dictionary = Loadout._special("auto_caster")
+	if _p().get("has_auto_caster") != true:
+		var nx: Dictionary = { "name": caster["name"], "cost": float(caster["shopCost"]) }
+		var cs: Array = _state_for(nx, 0)
+		special["next"] = nx
+		special["state"] = cs[0]
+		special["detail"] = cs[1]
+	else:
+		special["state"] = "earned"
+		special["detail"] = "%d of %d held" % [sp_have, sp_total]
+	return { "hat": hat, "special": special, "rod": rod, "reel": _ladder("reel", "reels", "reel_tier"), "hook": _ladder("hook", "hooks", "hook_tier"), "line": line, "bait": bait }
 
 
 # ── The page ───────────────────────────────────────────────────────────────────
@@ -297,6 +337,8 @@ func _build() -> void:
 		"reel": _ladder_list("reel")
 		"line": _lines()
 		"rod": _rods()
+		"hat": _hats()
+		"special": _specials()
 
 
 func _landing() -> void:
@@ -373,6 +415,130 @@ func _landing() -> void:
 			(l as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if first != null and get_viewport().gui_get_focus_owner() == null:
 		first.grab_focus.call_deferred()
+
+
+# ── Hats ───────────────────────────────────────────────────────────────────────
+
+## Every bandana: the ones for sale with their price (a press buys it and puts
+## it on), the crate-only ones marked as found in crates.
+func _hats() -> void:
+	var owned: Array = Js.list(_p().get("unlocked_hats"))
+	var hats: Array = (Rules.data()["hats"] as Array).duplicate()
+	hats.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a["crateOnly"] != b["crateOnly"]:
+			return not a["crateOnly"]
+		return float(a["cost"]) < float(b["cost"]))
+	var grid: GridContainer = Room.grid(col, 3, 10)
+	for h: Dictionary in hats:
+		var id: String = h["id"]
+		var have: bool = Js.includes(owned, id)
+		var crate: bool = h["crateOnly"]
+		var cost: float = float(h["cost"])
+		var can: bool = not have and not crate and _dbl() >= cost
+		var b: Button = _tile(Color("#c8a870"), "owned" if have else ("ready" if can else "locked"), 168)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(b)
+		if can:
+			b.pressed.connect(func() -> void: _do("hat-" + id, "buyHat", [id]))
+		else:
+			b.focus_mode = Control.FOCUS_NONE
+		var v: VBoxContainer = VBoxContainer.new()
+		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		v.offset_top = 10
+		v.offset_bottom = -10
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_theme_constant_override("separation", 4)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(v)
+		Room.picture(v, h["restImageUrl"], Vector2(0, 84), not have and crate)
+		var n: Label = Room.text(v, h["name"], 15, INK if have or not crate else Color("#9a958c"), true)
+		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var line: String
+		var tone: Color
+		if have:
+			line = "Owned  ·  wear it in the Locker"
+			tone = Color("#4ade80")
+		elif crate:
+			line = "Found in fishing crates"
+			tone = Color("#9a958c")
+		elif _busy == "hat-" + id:
+			line = "Buying…"
+			tone = GOLD
+		else:
+			line = ("%s ⟡" % Js.thousands(cost)) if can else ("%s ⟡  ·  %s short" % [Js.thousands(cost), Js.thousands(cost - _dbl())])
+			tone = GOLD if can else Color("#9a958c")
+		var l: Label = Room.text(v, line, 12, tone)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		for c: Node in v.get_children():
+			(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+# ── Specials ───────────────────────────────────────────────────────────────────
+
+## The specials: the Auto Caster for doubloons, its upgrade to the Auto
+## Catcher for Fathoms (5 deep in Davy Jones' Gauntlet), and the ones that
+## only come back from voyages, shown with where. One rides in the Locker's
+## Special slot at a time.
+func _specials() -> void:
+	var p: Dictionary = _p()
+	var cols: Dictionary = Rules.data()["specialOwnedColumn"]
+	for d: Dictionary in Rules.data()["specialItems"]:
+		if d["finaleSlotOnly"]:
+			continue
+		var id: String = d["id"]
+		var info: Dictionary = Js.obj(Js.obj(Rules.data().get("specialInfo")).get(id))
+		var accent: Color = Color(str(info.get("color", "#9aa3ad")))
+		var have: bool = p.get(cols[id]) == true
+		var fathoms: bool = d.get("costFathoms") != null
+		var for_sale: bool = Js.truthy(d.get("shopCost")) or fathoms
+		var why: String = ""
+		if for_sale and not have:
+			if Js.truthy(d.get("requiresItem")) and p.get(cols[d["requiresItem"]]) != true:
+				why = "Buy the Auto Caster first"
+			elif Js.truthy(d.get("requiresGauntletDepth")) and Js.num(p.get("gauntlet_deepest")) < float(d["requiresGauntletDepth"]):
+				why = "Reach depth %d in Davy Jones' Gauntlet" % int(d["requiresGauntletDepth"])
+		var cost: float = float(d["costFathoms"]) if fathoms else Js.num(d.get("shopCost"))
+		var purse: float = Js.num(p.get("gauntlet_fathoms")) if fathoms else _dbl()
+		var can: bool = for_sale and not have and why == "" and purse >= cost
+		var b: Button = _tile(accent, "owned" if have else ("ready" if can else "locked"), 112)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_child(b)
+		if can:
+			b.pressed.connect(func() -> void: _do("sp-" + id, "buySpecialItem", [id], ["equipSpecialItem", ["auto_caster" if id == "auto_catcher" else id]]))
+		else:
+			b.focus_mode = Control.FOCUS_NONE
+		var h: HBoxContainer = _fill_row(b, 14)
+		Room.picture(h, str(info.get("image", "")), Vector2(72, 72), not have)
+		var v: VBoxContainer = VBoxContainer.new()
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_theme_constant_override("separation", 2)
+		h.add_child(v)
+		var top: HBoxContainer = HBoxContainer.new()
+		top.add_theme_constant_override("separation", 8)
+		v.add_child(top)
+		Room.text(top, d["name"], 16, INK if have else Color("#cfcabf"), true)
+		if have:
+			_status_pill(top, "Owned", Color("#4ade80"))
+		Room.text(v, str(info.get("description", "")), 13, Color("#9a958c"), false, true).custom_minimum_size = Vector2(0, 0)
+		var chips: HBoxContainer = HBoxContainer.new()
+		chips.add_theme_constant_override("separation", 6)
+		v.add_child(chips)
+		Room.chip(chips, str(info.get("effect", "")), Color(accent, 0.85), Color(accent, 0.09), Color(accent, 0.22))
+		if not have:
+			if not for_sale:
+				Room.chip(chips, ("Comes back from %s" % info["obtainedFrom"]) if info.has("obtainedFrom") else "Not sold", Color("#9a958c"), Color(0.06, 0.07, 0.09, 0.9), Color(1, 1, 1, 0.1))
+			elif why != "":
+				Room.chip(chips, why, Color("#e8c98a"), Color(1, 1, 1, 0.07), Color(1, 1, 1, 0.2))
+			elif _busy == "sp-" + id:
+				Room.chip(chips, "Buying…", GOLD, Color(0.94, 0.75, 0.25, 0.1), Color(0.94, 0.75, 0.25, 0.3))
+			elif not can:
+				Room.chip(chips, "%s %s short" % [Js.thousands(cost - purse), "Fathoms" if fathoms else "⟡"], Color("#9a958c"), Color(0.06, 0.07, 0.09, 0.9), Color(1, 1, 1, 0.1))
+			if for_sale:
+				Room.text(h, ("%s Fathoms" % Js.thousands(cost)) if fathoms else ("%s ⟡" % Js.thousands(cost)), 15, GOLD if can else Color("#6a6764"), true)
+		for c: Node in h.get_children():
+			(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	Room.text(col, "One special rides with you at a time: choose it in the Locker's Special slot.", 13, Color("#9a958c"), false, true)
 
 
 # ── Bait ───────────────────────────────────────────────────────────────────────
