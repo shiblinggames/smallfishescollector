@@ -167,6 +167,7 @@ func _ready() -> void:
 		sea.water_theme = _water_theme({})
 		_ov = GauntletOverlay.new()
 		_ov.my_key = my_key
+		_ov.profile = sea.session.profile()
 		_ov.face_of = func(k: String) -> Texture2D:
 			for i: int in (b["seats"] as Array).size():
 				if b["seats"][i].get("key") == k:
@@ -1984,7 +1985,7 @@ func _phase(cur: Dictionary) -> void:
 				var rp: Variant = Js.obj(Rules.data().get("tides")).get("reprieve")
 				await _tide(tide, "A REPRIEVE" if tide == rp else "A TIDE TURNS")
 			_waiting()
-		"curse", "draft", "shrine", "fence", "contract", "jobResult", "marks", "breather", "haul", "dead":
+		"curse", "draft", "shrine", "fence", "contract", "jobResult", "marks", "breather", "haul", "dead", "held":
 			b = (cur["b"] as Dictionary).duplicate(true)
 			_busy = true
 			_clear_deck()
@@ -2416,8 +2417,8 @@ func _depth_track(hb: float) -> void:
 	var nc: int = Js.obj(run.get("curses")).size()
 	if nc > 0:
 		line += "  ·  %d CURSE%s" % [nc, "" if nc == 1 else "S"]
-	if run.get("hardcore", false):
-		line += "  ·  HARDCORE"
+	if str(run.get("mode", "solo")) == "coop":
+		line += "  ·  CO-OP"
 	draw_string(Kit.font("karla", 800), Vector2(32, hb * 0.5 + 19.0), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(str(band.get("accent", "#cccccc"))).lerp(BattleLook.MUTED, 0.3))
 
 
@@ -2474,20 +2475,16 @@ class DepthCall:
 
 
 ## A dive's water, as the web's arena graded it (arenaTheme): the descent's
-## own sea (Davy's cold teal-grey, the Don's kraken green, hardcore's blood),
+## own sea (Davy's cold teal-grey, the Don's kraken green),
 ## falling toward black the deeper the dive, heavier for a boss, the Don's
 ## rise the darkest green of all; the world's light tinted to match.
 func _water_theme(dn: Dictionary) -> Dictionary:
-	var hc: bool = Js.obj(_latest.get("run")).get("hardcore", false) == true
 	var d: int = int(Js.num(dn.get("depth", b.get("depth", 1))))
 	var t: float = minf(1.0, pow(maxf(0.0, (d - 1) / 24.0), 0.85))
 	var heavy: float = minf(1.0, 0.2 + 0.7 * t + 0.24 * (1.0 if dn.get("boss", false) else 0.0))
 	var sea_c: Array
 	var light: Color
-	if hc:
-		sea_c = [Color8(26, 3, 7), Color8(74, 14, 22), Color8(140, 44, 48)]
-		light = Color(0.86, 0.6, 0.6)
-	elif gauntlet == "don":
+	if gauntlet == "don":
 		sea_c = [Color8(3, 24, 14), Color8(14, 64, 40), Color8(52, 140, 92)]
 		light = Color(0.64, 0.84, 0.68)
 	else:

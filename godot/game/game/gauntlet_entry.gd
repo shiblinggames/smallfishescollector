@@ -5,18 +5,26 @@ extends Control
 ## crew who have sailed to it (game/gauntlet_table.gd).
 ##
 ##   THE DESCENT  its name, the host's voice, the line's deepest.
-##   THE MODE     Normal or Hardcore (each captain's crew at risk; hardcore
-##                dives in hand; the caller signs Terms for the crew).
+##   THE MODE     Solo (one ship, one enemy at a time) or Co-op (two to four
+##                ships against fields), and a dive the crew HELD, when there
+##                is one: resume it where it was left, or end it.
 ##   THE LINE     four seats, each captain's card: their face, ship, hull,
 ##                hands, their deepest here, Ready or not.
-##   THE HOST     Davy or the Don, the chest ladder by depth and the chase.
-##   THE FOOT     who is still to say ready; the Locker; Dive / Leave.
+##   THE SIDE     (Kong, 2026-10-03: "all of it will be in that screen";
+##                party building and readiness stay in view while you look)
+##                tabs in place, your Fathoms beside them: THE DESCENT (the
+##                host, the chest ladder by depth, the chase), the LOCKER
+##                (buy and switch perks), the CODEX (the synergies), the
+##                RECORDS (yours, Solo and Co-op).
+##   THE FOOT     who is still to say ready; Dive / Leave.
 ## Flat and clean on the night side's browns, as the raid's entry screen is.
 
 signal closed
 
-const W: float = 1180.0
-const H: float = 690.0
+const W: float = 1440.0
+const H: float = 780.0
+## The share of the screen the ready check takes; the side has the rest.
+const LEFT: float = 0.53
 
 var sea: Sea
 var table: GauntletTable
@@ -26,7 +34,11 @@ var _st: Dictionary = {}
 var _card: Panel
 var _body: Control
 var _faces: Dictionary = {}
-var _sub: Control = null
+var _side: Control
+var _side_body: Control
+var _side_tab: String = "descent"
+var _side_bar: HBoxContainer
+var _fathoms: Label
 
 
 func _ready() -> void:
@@ -44,6 +56,7 @@ func _ready() -> void:
 	_card.position = (vp - _card.size) / 2.0
 	_card.clip_contents = true
 	add_child(_card)
+	_build_side()
 	table.changed.connect(_on_table)
 	_on_table(table.state)
 	_card.modulate.a = 0.0
@@ -58,6 +71,8 @@ func _on_table(st: Dictionary) -> void:
 		return
 	_st = st
 	_paint()
+	if _side_tab == "descent":
+		_side_paint()
 
 
 func _close() -> void:
@@ -92,46 +107,50 @@ func _paint() -> void:
 	var w: float = _card.size.x
 	var h: float = _card.size.y
 	var pad: float = 34.0
-	var right_w: float = 340.0
+	var right_w: float = w * (1.0 - LEFT)
 	var members: Array = Js.list(_st.get("members"))
 	var caller: bool = _st.get("by") == my_key
-	var hc: bool = _st.get("hardcore", false) == true
+	var mode: String = str(_st.get("mode", "solo"))
+	var resume: bool = _st.get("resume", false) == true
+	var held: Dictionary = Js.obj(_st.get("held"))
+	var mine_held: bool = not held.is_empty() and Js.list(held.get("keys")).has(my_key)
 	var deepest: float = 0.0
 	for m0: Dictionary in members:
 		deepest = maxf(deepest, Js.num(Js.obj(m0.get("card")).get("deepest")))
 	_label(Vector2(pad, 30), "The descent  ·  a fight a depth, bank or dive at every breather", "karla", 600, 14, Dossier.SOFT)
 	_label(Vector2(pad, 50), str(Gauntlet.NAMES[v]), "cinzel", 700, 34, Dossier.INK)
-	# THE MODE.
+	# THE MODE (and a held dive of this crew, to take up again).
 	var tabs: HBoxContainer = HBoxContainer.new()
 	tabs.position = Vector2(pad, 112)
 	tabs.size = Vector2(w - right_w - pad * 2.0 - 24.0, 74)
 	tabs.add_theme_constant_override("separation", 10)
 	_body.add_child(tabs)
-	var my_card: Dictionary = {}
-	for m1: Dictionary in members:
-		if m1["key"] == my_key:
-			my_card = Js.obj(m1.get("card"))
-	var hc_shut: String = ""
-	for m2: Dictionary in members:
-		var why: String = str(Js.obj(m2.get("card")).get("hcShut", ""))
-		if why != "":
-			hc_shut = why if m2["key"] == my_key or members.size() == 1 else "%s: %s" % [m2["name"], why]
-	for t: Array in [["normal", "Normal", "Sink and lose the pot. Fathoms are always paid."], ["hardcore", "Hardcore", "Crew at risk: sunk is drowned."]]:
+	var opts: Array = [["solo", "Solo", "One enemy at a time."], ["coop", "Co-op", "Two to four ships."]]
+	if mine_held:
+		var who: Array = []
+		for k: String in Js.obj(held.get("names")):
+			if k != my_key:
+				who.append(str(held["names"][k]))
+		opts.append(["held", "Held dive", "Depth %d, %s ⟡%s" % [int(Js.num(held.get("depth"))), Js.thousands(Js.num(held.get("pot"))), (", with %s" % ", ".join(PackedStringArray(who))) if not who.is_empty() else ""]])
+	for t: Array in opts:
 		var tab: ReadyScreen.TierTab = ReadyScreen.TierTab.new()
 		tab.id = t[0]
 		tab.title = t[1]
-		tab.note = t[2] if t[0] == "normal" else "%s %d in hand." % [t[2], int(Js.num(my_card.get("hcLeft")))]
-		tab.shut = hc_shut if t[0] == "hardcore" else ""
-		tab.chosen = (t[0] == "hardcore") == hc
+		tab.note = t[2]
+		tab.shut = "Needs a Charter's crew." if t[0] == "coop" and table.solo != null else ""
+		tab.chosen = (t[0] == "held" and resume) or (not resume and t[0] == mode)
 		tab.can = caller
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.custom_minimum_size = Vector2(0, 74)
-		var want: bool = t[0] == "hardcore"
+		var id: String = t[0]
 		tab.pressed.connect(func() -> void:
-			if tab.shut != "" or not caller or want == hc:
+			if tab.shut != "" or not caller or tab.chosen:
 				return
 			Sound.plip()
-			_act(["mode", want]))
+			if id == "held":
+				_act(["resume", true])
+			else:
+				_act(["mode", id]))
 		tabs.add_child(tab)
 	# THE LINE.
 	var seats: HBoxContainer = HBoxContainer.new()
@@ -155,50 +174,45 @@ func _paint() -> void:
 				sc.crew_tex.append(Skipper.tex("card_thumbs/%s.png" % str(Js.obj(cm0).get("filename", "")).get_basename()))
 			sc.me = m["key"] == my_key
 			sc.leader = m["key"] == _st.get("by")
-			sc.hardcore = hc
 		seats.add_child(sc)
-	# THE HOST.
-	var hp: HostPane = HostPane.new()
-	hp.position = Vector2(w - right_w, 0)
-	hp.size = Vector2(right_w, h - 88)
-	hp.variant = v
-	hp.hardcore = hc
-	hp.portrait = Skipper.tex("donsgauntlet.png" if v == "don" else "davyjones.png")
-	hp.deepest = deepest
-	_body.add_child(hp)
 	# THE FOOT.
 	var foot_y: float = h - 88.0
 	var rule: ColorRect = ColorRect.new()
 	rule.color = Dossier.HAIR
 	rule.position = Vector2(0, foot_y)
-	rule.size = Vector2(w, 1)
+	rule.size = Vector2(w - right_w, 1)
 	_body.add_child(rule)
 	var waiting: Array = []
 	for m3: Dictionary in members:
 		if m3["key"] != _st.get("by") and not m3.get("ready", false):
 			waiting.append("you" if m3["key"] == my_key else str(m3["name"]))
 	var status: String = "Everyone is ready." if waiting.is_empty() else "Waiting on %s." % ", ".join(PackedStringArray(waiting))
-	if members.size() == 1:
-		status = "Diving alone." if table.solo != null else "Diving alone, unless a crewmate at the maelstrom joins."
+	if members.size() == 1 and mode == "solo":
+		status = "Diving alone."
+	elif members.size() == 1:
+		status = "Co-op: waiting for a crewmate to sail to the maelstrom and join."
 	_label(Vector2(pad, foot_y + 18), status, "karla", 800, 15, Dossier.INK)
-	var signed: Dictionary = Js.obj(_st.get("signed"))
-	var foot2: String = "Normal: the pot is lost if every ship sinks. Each captain banks all of it." if not hc else "Hardcore: %s.  Pressure %d: Blood Gems x%s from depth 30." % [("%d Term%s signed" % [signed.size(), "" if signed.size() == 1 else "s"]) if not signed.is_empty() else "no Terms signed", int(Gauntlet.pressure(signed)), str(snappedf(Gauntlet.pressure_gem_mult(Gauntlet.pressure(signed), 30), 0.01))]
-	_label(Vector2(pad, foot_y + 42), foot2, "karla", 500, 13, Dossier.SOFT, w - 640.0)
+	var foot2: String = "Solo: sink and the pot is lost; your Fathoms are always paid." if mode == "solo" else "Co-op: the crew dive together. Each captain banks the whole pot; a ship sunk in a fight the crew win is towed along."
+	if resume:
+		foot2 = "Resuming at depth %d with %s ⟡ in the pot. The whole crew of that dive must be here." % [int(Js.num(held.get("depth"))), Js.thousands(Js.num(held.get("pot")))]
+	_label(Vector2(pad, foot_y + 42), foot2, "karla", 500, 13, Dossier.SOFT, w - right_w - 420.0)
 	var btns: HBoxContainer = HBoxContainer.new()
 	btns.add_theme_constant_override("separation", 10)
 	btns.alignment = BoxContainer.ALIGNMENT_END
-	btns.position = Vector2(w - 620 - pad, foot_y + 20)
-	btns.size = Vector2(620, 48)
+	btns.position = Vector2(w - right_w - 400 - 24, foot_y + 20)
+	btns.size = Vector2(400, 48)
 	_body.add_child(btns)
-	_button(btns, "Locker", "secondary", func() -> void: _open_locker(), 120.0)
-	if hc and caller:
-		_button(btns, "%s" % Gauntlet.terms_title(v), "secondary", func() -> void: _open_terms(), 150.0)
+	if resume and caller:
+		_button(btns, "End it", "secondary", func() -> void:
+			var r: Variant = await _act(["endHeld"])
+			if r is Dictionary and not (r as Dictionary).has("error") and sea != null:
+				sea._hud.toast("The held dive is ended. Fathoms paid; the pot is lost."), 100.0)
 	var my_ready: bool = members.any(func(m: Dictionary) -> bool: return m["key"] == my_key and m.get("ready", false))
 	if caller:
 		_button(btns, "Leave" if table.solo != null else "Disband", "secondary", func() -> void: _act(["leave"]), 120.0)
-		var go: Button = _button(btns, "Dive", "primary", func() -> void:
+		var go: Button = _button(btns, "Resume" if resume else "Dive", "primary", func() -> void:
 			Sound.horn()
-			_act(["go"]), 150.0)
+			_act(["go"]), 130.0)
 		go.disabled = not waiting.is_empty()
 	else:
 		_button(btns, "Leave", "secondary", func() -> void: _act(["leave"]), 120.0)
@@ -249,32 +263,100 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if ev is InputEventKey and (ev as InputEventKey).pressed:
 		get_viewport().set_input_as_handled()
 		if (ev as InputEventKey).keycode == KEY_ESCAPE:
-			if _sub != null and is_instance_valid(_sub):
-				_sub.queue_free()
-				_sub = null
-			else:
-				_act(["leave"])
+			_act(["leave"])
 
 
-# ── The Terms board (the caller signs for the crew) ──────────────────────────
+# ── The side: the descent, the Locker, the Codex, the Records, in place ──────
 
-func _open_terms() -> void:
-	var tb: TermsBoard = TermsBoard.new()
-	tb.variant = _variant()
-	tb.signed = Js.obj(_st.get("signed")).duplicate()
-	tb.done.connect(func(sg: Dictionary) -> void: _act(["terms", sg]))
-	_sub = tb
-	add_child(tb)
+func _build_side() -> void:
+	var w: float = _card.size.x
+	var h: float = _card.size.y
+	_side = Control.new()
+	_side.position = Vector2(w * LEFT, 0)
+	_side.size = Vector2(w * (1.0 - LEFT), h)
+	_card.add_child(_side)
+	var bg: Panel = Panel.new()
+	var sb: StyleBoxFlat = StyleBoxFlat.new()
+	sb.bg_color = Dossier.ART_FILL
+	sb.corner_radius_top_right = 18
+	sb.corner_radius_bottom_right = 18
+	bg.add_theme_stylebox_override("panel", sb)
+	bg.size = _side.size
+	_side.add_child(bg)
+	var line: ColorRect = ColorRect.new()
+	line.color = Dossier.HAIR
+	line.size = Vector2(1, h)
+	_side.add_child(line)
+	_side_bar = HBoxContainer.new()
+	_side_bar.position = Vector2(22, 22)
+	_side_bar.size = Vector2(_side.size.x - 44, 40)
+	_side_bar.add_theme_constant_override("separation", 6)
+	_side.add_child(_side_bar)
+	_side_paint()
 
 
-# ── The Locker ───────────────────────────────────────────────────────────────
-
-func _open_locker() -> void:
-	var lk: DiveLocker = DiveLocker.new()
-	lk.sea = sea
-	lk.variant = _variant()
-	_sub = lk
-	add_child(lk)
+func _side_paint() -> void:
+	for c: Node in _side_bar.get_children():
+		c.queue_free()
+	for t: Array in [["descent", "The Descent"], ["locker", "Locker"], ["codex", "Codex"], ["records", "Records"]]:
+		var b: Button = Kit.button(t[1], "primary" if _side_tab == t[0] else "secondary", "small")
+		b.custom_minimum_size = Vector2(0, 38)
+		var id: String = t[0]
+		b.pressed.connect(func() -> void:
+			if _side_tab == id:
+				return
+			Sound.plip()
+			_side_tab = id
+			_side_paint())
+		_side_bar.add_child(b)
+	var sp: Control = Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_side_bar.add_child(sp)
+	_fathoms = Kit.text(_side_bar, "%s Fathoms" % Js.thousands(Js.num(sea.session.profile().get("gauntlet_fathoms"))), "body_strong", Color("#7fd6c8"))
+	_fathoms.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if _side_body != null:
+		_side_body.queue_free()
+	var area: Vector2 = Vector2(_side.size.x - 44, _side.size.y - 96)
+	var at: Vector2 = Vector2(22, 78)
+	match _side_tab:
+		"descent":
+			var hp: HostPane = HostPane.new()
+			hp.variant = _variant()
+			hp.portrait = Skipper.tex("donsgauntlet.png" if _variant() == "don" else "davyjones.png")
+			var deepest: float = 0.0
+			for m0: Dictionary in Js.list(_st.get("members")):
+				deepest = maxf(deepest, Js.num(Js.obj(m0.get("card")).get("deepest")))
+			hp.deepest = deepest
+			hp.position = Vector2(0, 62)
+			hp.size = Vector2(_side.size.x, _side.size.y - 62)
+			_side_body = hp
+		"locker":
+			var lk: DiveLocker = DiveLocker.new()
+			lk.sea = sea
+			lk.variant = _variant()
+			lk.embedded = true
+			lk.position = at
+			lk.size = area
+			lk.bought.connect(func() -> void: _fathoms.text = "%s Fathoms" % Js.thousands(Js.num(sea.session.profile().get("gauntlet_fathoms"))))
+			_side_body = lk
+		"codex":
+			var cx: GauntletCodex = GauntletCodex.new()
+			cx.variant = _variant()
+			cx.profile = sea.session.profile()
+			cx.embedded = true
+			cx.position = at
+			cx.size = area
+			_side_body = cx
+		"records":
+			var rc: GauntletRecords = GauntletRecords.new()
+			rc.variant = _variant()
+			rc.profile = sea.session.profile()
+			rc.embedded = true
+			rc.position = at
+			rc.size = area
+			_side_body = rc
+	_side.add_child(_side_body)
+	Pane.set_night(_side_bar, true)
 
 
 # ══ Its pieces ════════════════════════════════════════════════════════════════
@@ -282,7 +364,6 @@ func _open_locker() -> void:
 ## A seat in the line: as the raid's, with the captain's deepest here.
 class DiveSeat:
 	extends ReadyScreen.SeatCard
-	var hardcore: bool = false
 
 	func _draw() -> void:
 		super._draw()
@@ -292,8 +373,8 @@ class DiveSeat:
 		var cx: float = size.x / 2.0
 		# Over the raid seals: this descent's record instead.
 		draw_rect(Rect2(8, 286, size.x - 16, 30), BattleLook.LACQUER_HI)
-		var t: String = "Deepest  %d" % int(Js.num(c.get("hcDeepest" if hardcore else "deepest")))
-		BattleLook.say(self, Kit.font("cinzel", 700), cx, 306, t, 15, Dossier.WARN if hardcore else Dossier.INK)
+		var t: String = "Solo %d  ·  Co-op %d" % [int(Js.num(c.get("soloDeepest"))), int(Js.num(c.get("coopDeepest")))]
+		BattleLook.say(self, Kit.font("cinzel", 700), cx, 306, t, 15, Dossier.INK)
 		BattleLook.say(self, Kit.font("karla", 600), cx, 326, "%d Fathoms  ·  %d perks on" % [int(Js.num(c.get("fathoms"))), int(Js.num(c.get("perks")))], 11, Dossier.SOFT)
 
 
@@ -301,7 +382,6 @@ class DiveSeat:
 class HostPane:
 	extends Control
 	var variant: String = "davy"
-	var hardcore: bool = false
 	var portrait: Texture2D
 	var deepest: float = 0.0
 	var _frames: int = 0
@@ -313,15 +393,7 @@ class HostPane:
 
 	func _draw() -> void:
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
-		var sb: StyleBoxFlat = StyleBoxFlat.new()
-		sb.bg_color = Dossier.ART_FILL
-		sb.corner_radius_top_right = 18
-		sb.anti_aliasing = true
-		sb.draw(get_canvas_item(), r)
-		draw_line(Vector2(0.5, 0), Vector2(0.5, r.size.y), Dossier.HAIR, 1.0)
 		var tone: Color = Color("#4fc98a") if variant == "don" else Color("#5eead4")
-		if hardcore:
-			tone = Dossier.HARM
 		var c: Vector2 = Vector2(r.size.x / 2.0, 118)
 		draw_circle(c, 96.0, Color(tone, 0.13))
 		draw_circle(c, 66.0, Color(tone, 0.1))
@@ -347,147 +419,63 @@ class HostPane:
 		draw_string(Kit.font("cinzel", 700), Vector2(28, y), "The chase", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Dossier.INK)
 		y += 22.0
 		var chase: Array = ["Vanguard Battery", "Dampener Plate", "Carrion Sight", "Galaxy Hull", "Don's Ghost Hull"] if variant == "don" else ["Davy's Heavy Cannon", "Davy's Hand Cannon", "Golden Gauntlet Hull"]
-		if hardcore:
-			chase += (["Don's Palisade"] if variant == "don" else ["Davy's Blood Cannon", "Bad Blood Hull", "Pitch Black Hull"])
 		draw_multiline_string(Kit.font("karla", 600), Vector2(28, y), ", ".join(PackedStringArray(chase)) + ".", HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 56, 12, 3, Dossier.SOFT)
 		draw_string(Kit.font("karla", 600), Vector2(28, y + 58), "Odds climb with depth, to 10% at 50.", HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 56, 12, Dossier.FAINT)
-
-
-## The Terms board: every Term by group, its tiers as chips; the pressure and
-## what it does to Blood Gems.
-class TermsBoard:
-	extends Control
-	signal done(signed: Dictionary)
-	var variant: String = "davy"
-	var signed: Dictionary = {}
-	var _box: Panel
-	var _list: VBoxContainer
-	var _head: Label
-
-	func _ready() -> void:
-		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		mouse_filter = Control.MOUSE_FILTER_STOP
-		var scrim: ColorRect = ColorRect.new()
-		scrim.color = Color(0, 0, 0, 0.6)
-		scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		add_child(scrim)
-		var vp: Vector2 = get_viewport_rect().size
-		_box = Panel.new()
-		_box.add_theme_stylebox_override("panel", BattleLook.box(Dossier.FILL, Dossier.HAIR, 1, 18, 40.0, Color(0, 0, 0, 0.6)))
-		_box.size = Vector2(minf(980.0, vp.x - 60.0), minf(720.0, vp.y - 60.0))
-		_box.position = (vp - _box.size) / 2.0
-		add_child(_box)
-		var t: Label = Kit.text(_box, Gauntlet.terms_title(variant), "title", Dossier.INK)
-		t.position = Vector2(30, 22)
-		_head = Kit.text(_box, "", "body", Dossier.SOFT)
-		_head.position = Vector2(30, 64)
-		var sc: ScrollContainer = ScrollContainer.new()
-		sc.position = Vector2(30, 100)
-		sc.size = _box.size - Vector2(60, 180)
-		_box.add_child(sc)
-		_list = VBoxContainer.new()
-		_list.custom_minimum_size = Vector2(sc.size.x - 20.0, 0)
-		_list.add_theme_constant_override("separation", 8)
-		sc.add_child(_list)
-		var row: HBoxContainer = HBoxContainer.new()
-		row.alignment = BoxContainer.ALIGNMENT_END
-		row.add_theme_constant_override("separation", 10)
-		row.position = Vector2(30, _box.size.y - 66)
-		row.size = Vector2(_box.size.x - 60, 48)
-		_box.add_child(row)
-		for b: Array in [["Sign nothing", "secondary", func() -> void:
-				signed = {}
-				done.emit(signed)
-				queue_free()], ["Take these Terms", "primary", func() -> void:
-				done.emit(signed)
-				queue_free()]]:
-			var bt: Button = Kit.button(b[0], b[1])
-			bt.custom_minimum_size = Vector2(190, 48)
-			bt.pressed.connect(b[2])
-			row.add_child(bt)
-		_fill()
-		Pane.set_night(_box, true)
-
-	func _fill() -> void:
-		for c: Node in _list.get_children():
-			c.queue_free()
-		var p: float = Gauntlet.pressure(signed)
-		_head.text = "Pressure %d of %d.  Blood Gems x%s at depth 30 and deeper. Terms change nothing else you are paid." % [int(p), int(Gauntlet.max_pressure(variant)), str(snappedf(Gauntlet.pressure_gem_mult(p, 30), 0.01))]
-		var groups: Dictionary = Js.obj(Js.obj(Js.obj(Gauntlet.t().get("termGroups")).get(variant)))
-		for g: String in ["opposition", "gunnery", "crew", "build", "safety"]:
-			var gm: Dictionary = Js.obj(groups.get(g))
-			var gl: Label = Kit.text(_list, str(gm.get("label", g)), "heading", Color(str(gm.get("accent", "#cccccc"))))
-			gl.add_theme_font_size_override("font_size", 16)
-			for x: Dictionary in Gauntlet.terms_for(variant):
-				if str(x.get("group", "")) != g:
-					continue
-				var line: HBoxContainer = HBoxContainer.new()
-				line.add_theme_constant_override("separation", 8)
-				_list.add_child(line)
-				var nm: Label = Kit.text(line, str(x["name"]), "body_strong", Dossier.INK)
-				nm.custom_minimum_size = Vector2(180, 0)
-				var cur: int = int(Js.num(signed.get(x["id"])))
-				var tiers: Array = Js.list(x["tiers"])
-				for i: int in tiers.size():
-					var tr: Dictionary = tiers[i]
-					var on: bool = cur == i + 1
-					var bt: Button = Kit.button("%s  +%d" % ["I" if i == 0 else "II", int(Js.num(tr.get("pressure")))], "primary" if on else "secondary", "small")
-					bt.tooltip_text = "%s\n%s" % [tr.get("desc", ""), tr.get("detail", "")]
-					var id: String = str(x["id"])
-					var tier: int = i + 1
-					bt.pressed.connect(func() -> void:
-						if int(Js.num(signed.get(id))) == tier:
-							signed.erase(id)
-						else:
-							signed[id] = float(tier)
-						Sound.plip()
-						_fill())
-					line.add_child(bt)
-				var ds: Label = Kit.text(line, str(Js.obj(tiers[maxi(0, cur - 1)]).get("desc", "")) if cur > 0 else str(x.get("flavor", "")), "small", Dossier.SOFT if cur == 0 else Dossier.WARN, true)
-				ds.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		Pane.set_night(_list, true)
 
 
 ## The Locker: this descent's perks, bought with Fathoms (one purse for both),
 ## the Run Upgrades switchable for the next dives.
 class DiveLocker:
 	extends Control
+	signal bought
 	var sea: Sea
 	var variant: String = "davy"
+	## In the entry screen's side pane (its size set before it is added).
+	var embedded: bool = false
 	var _box: Panel
 	var _list: VBoxContainer
 	var _head: Label
 
 	func _ready() -> void:
-		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		mouse_filter = Control.MOUSE_FILTER_STOP
-		var scrim: ColorRect = ColorRect.new()
-		scrim.color = Color(0, 0, 0, 0.6)
-		scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		add_child(scrim)
-		var vp: Vector2 = get_viewport_rect().size
 		_box = Panel.new()
-		_box.add_theme_stylebox_override("panel", BattleLook.box(Dossier.FILL, Dossier.HAIR, 1, 18, 40.0, Color(0, 0, 0, 0.6)))
-		_box.size = Vector2(minf(980.0, vp.x - 60.0), minf(720.0, vp.y - 60.0))
-		_box.position = (vp - _box.size) / 2.0
+		if embedded:
+			mouse_filter = Control.MOUSE_FILTER_PASS
+			_box.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+			_box.size = size
+		else:
+			set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			mouse_filter = Control.MOUSE_FILTER_STOP
+			var scrim: ColorRect = ColorRect.new()
+			scrim.color = Color(0, 0, 0, 0.6)
+			scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			add_child(scrim)
+			var vp: Vector2 = get_viewport_rect().size
+			_box.add_theme_stylebox_override("panel", BattleLook.box(Dossier.FILL, Dossier.HAIR, 1, 18, 40.0, Color(0, 0, 0, 0.6)))
+			_box.size = Vector2(minf(980.0, vp.x - 60.0), minf(720.0, vp.y - 60.0))
+			_box.position = (vp - _box.size) / 2.0
 		add_child(_box)
-		var t: Label = Kit.text(_box, "%s's Locker" % ("The Don" if variant == "don" else "Davy"), "title", Dossier.INK)
-		t.position = Vector2(30, 22)
+		var top: float = 0.0
+		if not embedded:
+			var t: Label = Kit.text(_box, "%s's Locker" % ("The Don" if variant == "don" else "Davy"), "title", Dossier.INK)
+			t.position = Vector2(30, 22)
+			top = 42.0
 		_head = Kit.text(_box, "", "body", Dossier.SOFT)
-		_head.position = Vector2(30, 64)
+		_head.position = Vector2(8 if embedded else 30, top + (6.0 if embedded else 22.0))
 		var sc: ScrollContainer = ScrollContainer.new()
-		sc.position = Vector2(30, 100)
-		sc.size = _box.size - Vector2(60, 180)
+		sc.position = Vector2(0, 40) if embedded else Vector2(30, 100)
+		sc.size = _box.size - (Vector2(0, 40) if embedded else Vector2(60, 180))
+		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		_box.add_child(sc)
 		_list = VBoxContainer.new()
 		_list.custom_minimum_size = Vector2(sc.size.x - 20.0, 0)
 		_list.add_theme_constant_override("separation", 6)
 		sc.add_child(_list)
-		var close: Button = Kit.button("Done", "primary")
-		close.custom_minimum_size = Vector2(160, 48)
-		close.position = Vector2(_box.size.x - 190, _box.size.y - 66)
-		close.pressed.connect(queue_free)
-		_box.add_child(close)
+		if not embedded:
+			var close: Button = Kit.button("Done", "primary")
+			close.custom_minimum_size = Vector2(160, 48)
+			close.position = Vector2(_box.size.x - 190, _box.size.y - 66)
+			close.pressed.connect(queue_free)
+			_box.add_child(close)
 		_fill()
 		Pane.set_night(_box, true)
 
@@ -499,7 +487,7 @@ class DiveLocker:
 		var own: Array = Js.list(p.get("dons_gauntlet_upgrades" if variant == "don" else "gauntlet_upgrades"))
 		var off: Array = Js.list(p.get(("dons_gauntlet_upgrades" if variant == "don" else "gauntlet_upgrades") + "_off"))
 		var deep: float = Js.num(p.get("dons_gauntlet_deepest" if variant == "don" else "gauntlet_deepest"))
-		_head.text = "%s Fathoms in the purse  ·  your deepest here: %d" % [Js.thousands(fathoms), int(deep)]
+		_head.text = ("Your deepest here: %d.  Perks gated by depth open as you go deeper." % int(deep)) if embedded else "%s Fathoms in the purse  ·  your deepest here: %d" % [Js.thousands(fathoms), int(deep)]
 		var ups: Array = Gauntlet.upgrades_for(variant).duplicate()
 		ups.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 			var ka: int = 0 if str(a.get("scope", "")) == "gauntlet" else 1
@@ -508,7 +496,7 @@ class DiveLocker:
 		var last_scope: String = ""
 		for u: Dictionary in ups:
 			var run_up: bool = str(u.get("scope", "")) == "gauntlet"
-			var scope_name: String = "Run Upgrades: only in a dive, switch them off to dive plain" if run_up else "Permanent Upgrades: always on, everywhere"
+			var scope_name: String = "Run Upgrades  ·  in a dive; switch one off to dive without it" if run_up else "Permanent Upgrades  ·  always on, everywhere"
 			if scope_name != last_scope:
 				last_scope = scope_name
 				Kit.text(_list, scope_name, "heading", Dossier.WARN)
@@ -542,7 +530,9 @@ class DiveLocker:
 						sea._hud.toast(str(r["error"]))
 					else:
 						Sound.chest(true)
+						bought.emit()
 					_fill())
 			bt.custom_minimum_size = Vector2(130, 40)
+			bt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			line.add_child(bt)
 		Pane.set_night(_list, true)

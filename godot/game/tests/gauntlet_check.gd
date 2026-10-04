@@ -4,7 +4,7 @@ extends SceneTree
 ## depth, then banked (the pot, the Fathoms, the XP and the record land in the
 ## save). Together: three captains in Don's Gauntlet, the draft table taken in
 ## turn (the order rotating), the votes, the jobs, the Marks, a sunk ship
-## towed home, and a hardcore dive where a sunk ship's crew drowns. Checks
+## towed home, and a co-op dive HELD by vote and resumed by the same crew. Checks
 ## that every phase moves on, that nothing is paid twice, that a lost dive
 ## pays only Fathoms.
 ##
@@ -43,7 +43,7 @@ func _strong(s: Session, deep: bool) -> void:
 
 ## Play a dive with bots until it ends or `bank_at` is reached. Returns the
 ## counts of what happened. act: Callable(key, args) -> Dictionary.
-func _play(t: GauntletTable, keys: Array, act: Callable, bank_at: int, max_steps: int = 6000) -> Dictionary:
+func _play(t: GauntletTable, keys: Array, act: Callable, bank_at: int, max_steps: int = 6000, hold_at: int = -1) -> Dictionary:
 	var seen: Dictionary = { "fights": 0, "drafts": 0, "curses": 0, "shrines": 0, "fences": 0, "jobs": 0, "marks": 0, "votes": 0, "towed": 0, "orders": [], "steps": 0 }
 	var steps: int = 0
 	var last_seq: int = -1
@@ -126,8 +126,8 @@ func _play(t: GauntletTable, keys: Array, act: Callable, bank_at: int, max_steps
 				seen["votes"] = int(seen["votes"]) + 1
 				var deep: int = int(t._r["run"]["roll"]["cleared"])
 				for k10: String in keys:
-					await act.call(k10, ["vote", "bank" if deep >= bank_at else "dive"])
-			"haul", "dead":
+					await act.call(k10, ["vote", "hold" if hold_at >= 0 and deep >= hold_at else ("bank" if deep >= bank_at else "dive")])
+			"haul", "dead", "held":
 				for k11: String in keys:
 					await act.call(k11, ["home"])
 	seen["steps"] = steps
@@ -190,6 +190,8 @@ func _init() -> void:
 	var here: Dictionary = { "variant": "don", "x": at.x, "y": at.y }
 	check((await party_act.call("anna-key", ["call", { "variant": "don", "x": at.x + 9000.0, "y": at.y }])).has("error"), "a dive is called at the maelstrom")
 	check(not (await party_act.call("anna-key", ["call", here])).has("error"), "Anna calls Don's Gauntlet")
+	check((await party_act.call("ben-key", ["join", here])).has("error"), "a solo dive takes nobody else")
+	check(not (await party_act.call("anna-key", ["mode", "coop"])).has("error"), "Anna makes it a co-op dive")
 	check(not (await party_act.call("ben-key", ["join", here])).has("error"), "Ben joins")
 	check(not (await party_act.call("cal-key", ["join", here])).has("error"), "Cal joins")
 	check((await party_act.call("anna-key", ["go"])).has("error"), "not until the crew are ready")
@@ -208,19 +210,34 @@ func _init() -> void:
 	check(firsts.size() >= 2 or int(r2["drafts"]) < 3, "the draft order rotates")
 	gt._r = { "phase": "idle", "seq": 0 }
 
-	# ── Hardcore: a dive that goes all the way down (the crew drown) ──
-	var crew_before: int = Crew.live(a.store).size()
+	# ── Held: a co-op dive voted to hold, then resumed by the same crew ──
 	await party_act.call("anna-key", ["call", here])
-	await party_act.call("anna-key", ["mode", true])
-	await party_act.call("anna-key", ["terms", { "davys_court": 2, "press_ganged": 2, "deep_draft": 2 }])
+	await party_act.call("anna-key", ["mode", "coop"])
 	await party_act.call("ben-key", ["join", here])
 	await party_act.call("ben-key", ["ready", true])
-	var hc_go: Dictionary = await party_act.call("anna-key", ["go"])
-	check(not hc_go.has("error"), "a hardcore dive goes down (%s)" % str(hc_go))
-	check(GauntletTable.hc_left(a.profile(), "don") == GauntletTable.HC_HOLD - 1, "it spends a hardcore dive")
-	var r3: Dictionary = await _play(gt, ["anna-key", "ben-key"], party_act, 999)
-	print("  hardcore, Don's: %s at depth %d, %d fights" % [r3["result"], r3["depth"], r3["fights"]])
-	if r3["result"] == "lost":
-		check(Crew.live(a.store).size() < crew_before or crew_before == 0, "a lost hardcore dive drowns the crew")
+	await party_act.call("anna-key", ["go"])
+	var r3: Dictionary = await _play(gt, ["anna-key", "ben-key"], party_act, 999, 6000, 3)
+	var held: Dictionary = Js.obj(Js.obj(c.data.get("gauntletHeld")).get("don"))
+	print("  held, Don's: %s at depth %d" % [r3["result"], r3["depth"]])
+	if r3["result"] == "held":
+		check(not held.is_empty() and str(held["status"]) == "held", "the held dive is written into the Charter")
+		var pot_then: float = Js.num(held.get("pot"))
+		gt._r = { "phase": "idle", "seq": 0 }
+		await party_act.call("anna-key", ["call", here])
+		check(not Js.obj(gt.state.get("held")).is_empty(), "the muster offers the held dive")
+		check(not (await party_act.call("anna-key", ["resume", true])).has("error"), "Anna picks the held dive")
+		check((await party_act.call("anna-key", ["go"])).has("error"), "not without the whole crew of it")
+		await party_act.call("ben-key", ["join", here])
+		await party_act.call("ben-key", ["ready", true])
+		var rg: Dictionary = await party_act.call("anna-key", ["go"])
+		check(not rg.has("error"), "resumed (%s)" % str(rg))
+		check(Js.num(gt._r["run"]["pot"]) == pot_then, "the pot comes back as it was")
+		var r4: Dictionary = await _play(gt, ["anna-key", "ben-key"], party_act, int(r3["depth"]) + 2)
+		print("  resumed, Don's: %s at depth %d" % [r4["result"], r4["depth"]])
+		check(r4["result"] in ["banked", "lost"], "the resumed dive ends")
+		check(Js.obj(Js.obj(c.data.get("gauntletHeld")).get("don")).is_empty(), "and its hold is cleared")
+		check(Js.num(a.profile().get("dons_gauntlet_coop_runs_completed")) + Js.num(a.profile().get("dons_gauntlet_coop_runs_sunk")) >= 1.0, "co-op records kept")
+	else:
+		check(r3["result"] == "lost", "sank before the hold (allowed)")
 	print("  gauntlet check: %s" % ("ok" if bad == 0 else "%d FAILED" % bad))
 	quit(1 if bad > 0 else 0)

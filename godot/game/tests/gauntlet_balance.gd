@@ -37,6 +37,8 @@ func _init() -> void:
 					var r: Variant = await c.run(ss[key], "gauntletTable", args)
 					return r if r is Dictionary else {}
 				await act.call("k0", ["call", here])
+				if n > 1:
+					await act.call("k0", ["mode", "coop"])
 				for i2: int in range(1, n):
 					await act.call("k%d" % i2, ["join", here])
 					await act.call("k%d" % i2, ["ready", true])

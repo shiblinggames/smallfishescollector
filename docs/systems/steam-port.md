@@ -856,8 +856,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   exported to rules.json (gauntlet); tests/parity/gauntlet.json replays 80 seeded descents
   (3,320 depths) to the same rolls. The haul rolls the web's chase in its order (the Don's
   Palisade is still listed and never rolled, as on the web). PORT RULES: gems retired, so the
-  chest's gem bonus is not paid; Locker damage and armour fold into the ship's multipliers;
-  hardcore dives are 1 per 8 real hours, holding 3, per descent (gauntlet_hc_budget).
+  chest's gem bonus is not paid; Locker damage and armour fold into the ship's multipliers.
+  NO HARDCORE GAUNTLETS (Kong, 2026-10-03: "I don't think that's needed because we have hardcore
+  mode"): the two ways in are SOLO and CO-OP for each descent. With hardcore gone go the Terms
+  (they were its board) and Blood Gems from a dive; a hardcore Charter's lives will cover a ship
+  sunk in a dive when they are built.
   FIGHTS: core/battle.gd carries every run effect kind the boons, curses, synergies, Marks and
   Terms use (about 60), stacked as RaidCombat stacks them (tide_agg, line_fx for the enemy side,
   finish_check for execute, coup and tithe); raid numbers are unchanged. Battle.begin_gauntlet /
@@ -872,24 +875,37 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   each card is the next tier for whoever takes it; a private synergy card per captain; the one at
   the table may reroll what is left or banish a card (Blacklist). THE VOTE (Kong): bank or dive
   at every breather; a majority carries, a tie banks. TOWED HOME (Kong): sunk in a fight the crew
-  win, a ship rejoins at a quarter hull; the whole party sunk loses the pot; hardcore: sunk is
-  drowned (crew dead, Fathoms paid, out of the dive). Shrine and Fence each captain's own; a job's
-  stake is voted (a tie walks away); each captain takes their own Mark. No clocks anywhere.
+  win, a ship rejoins at a quarter hull; the whole party sunk loses the pot. Shrine and Fence
+  each captain's own; a job's stake is voted (a tie walks away); each captain takes their own
+  Mark. No clocks anywhere. A Charter's table runs one dive at a time (solo or co-op).
+  HELD DIVES: every breather writes the dive down (alone in the captain's save,
+  gauntlet_held; in a Charter in the Charter's file, gauntletHeld), so a crash picks up there.
+  The breather's HOLD: alone it holds at once; together it takes every vote (a vote to hold
+  otherwise counts as banking). The entry offers the held dive to resume (its whole crew, and
+  only them) or to end (Fathoms paid, pot lost). One held dive per descent.
+  RECORDS (GauntletTable._record): across both modes (gauntlet_* / dons_gauntlet_*, which the
+  Locker's depth gates read) and per mode (gauntlet_solo_*, gauntlet_coop_*): deepest banked and
+  the time to it, deepest sunk, dives banked and sunk, the deepest dive's and the last dive's
+  recap (depth, crew, pot, powers, synergies, Marks, curses, the guns); the biggest hit.
   ON THE WATER: the maelstroms (game/maelstrom.gd, a port of seaMaelstrom.ts): the painted
   whirlpool turned on a projective keystone, the throat's terraces dropping below the plane and
   leaning to the camera, the lip and its spray (GPU particles under gravity), foam, spirits, the
   keeper rising; the wreckage is RigidBody2D physics in a flat space laid onto the bowl (Kong:
   "utilize godot physics"); the hull is carried round by the whirl (CampaignWater.whirl).
   MOVED (Kong): Don's maelstrom now turns in the Last Fathom (the Throne's bay), port rules
-  campaignWater.maelstroms. The entry (game/gauntlet_entry.gd): a ready check like the raids',
-  Normal/Hardcore, the line's cards with their deepest, the host and the chest ladder, the Terms
-  board and the Locker. The fight is on the live sea like a raid's, the water recoloured to the
+  campaignWater.maelstroms. THE ENTRY (game/gauntlet_entry.gd; Kong: "all of it will be in that
+  screen ... we have to account for party building and readiness"): ONE screen, the raids'
+  ready check on the left (Solo / Co-op / the held dive, the line's cards with their solo and
+  co-op deepest, who is ready, Dive / Leave) and on the right, in place, tabs with the
+  captain's Fathoms beside them: THE DESCENT (the host, the chest ladder, the chase), the
+  LOCKER, the CODEX (game/gauntlet_codex.gd: discovered N of M, fogged until taken; inside a
+  dive, from the breather, also "this dive": online, ready, one away) and the RECORDS
+  (game/gauntlet_records.gd). The fight is on the live sea like a raid's, the water recoloured to the
   descent (Kong: "just the sea just like raid fights but custom to match the aesthetic of each
   gauntlet"): Davy's teal-grey, the Don's kraken green, hardcore's blood, darker with depth and
   for a boss. Between fights the dive's sheet (game/gauntlet_overlay.gd); each depth is called
   over the water with the host's voice. FIXED for raids too: the fight camera framed the enemy
   while it was still sailing in, so every fight sat to the left; it frames the marks now.
-  NOT YET: pause and resume of a dive across sessions, the Codex screen, the records screen.
   THE ENTRY SCREEN (game/ready_screen.gd; Kong: "like going into a group dungeon in Warcraft"):
   the raid, the three tiers side by side (a shut one says why), four seats (each captain's avatar,
   ship, Navigation, hull, seated hands, pennants, Ready / Not ready; open seats), the boss and

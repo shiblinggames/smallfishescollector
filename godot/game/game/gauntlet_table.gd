@@ -11,15 +11,18 @@ extends Node
 ## core/battle.gd. What the party SHARES and what stays each captain's own
 ## (Kong's answers, 2026-10-03):
 ##   SHARED   the depth, the pot (each captain banks all of it), the curses
-##            (the Locker curses the party), the Terms (the caller signs), the
-##            fights (a field of one to four ships, like a co-op raid's), the
-##            jobs, the vote at every breather.
+##            (the Locker curses the party), the fights (a field of one to
+##            four ships, like a co-op raid's), the jobs, the vote at every
+##            breather.
 ##   OWN      the hull, the crew and their orders, the boons, synergies and
 ##            Marks, the Locker's perks, the Fathoms, the haul.
 ##
 ##   THE MUSTER   a captain calls a dive from the maelstrom (within NEAR of
-##                it), picks Normal or Hardcore (Hardcore: Terms, the crew at
-##                risk), the rest join from the same water and say Ready.
+##                it) and picks SOLO (one ship, one enemy at a time) or CO-OP
+##                (two to four ships against fields); the rest join from the
+##                same water and say Ready. (Kong, 2026-10-03: no hardcore
+##                gauntlets, a hardcore Charter is the hardcore; so no Terms
+##                and no Blood Gems from a dive either.)
 ##   THE DRAFT TABLE (Kong: "a live draft table"): a face-up spread of power
 ##                cards, party size plus two, picked in turn; the order
 ##                rotates each draft; every pick is stamped with its captain
@@ -33,8 +36,12 @@ extends Node
 ##   TOWED HOME   (Kong): a captain sunk in a fight the crew wins is towed
 ##                along and rejoins at a quarter hull, the pot still theirs.
 ##                The whole party sunk: the dive is lost, pots and all.
-##                HARDCORE stays strict: a ship sunk is out of the dive, its
-##                crew drowned.
+##   HELD DIVES   every breather writes the dive down (a crash picks it up
+##                there); the crew may also vote to HOLD it (everyone must),
+##                and come back to the maelstrom to resume it, the same crew,
+##                any day. A held dive may be ended instead: Fathoms paid, the
+##                pot lost. One held dive per descent (alone: in the
+##                captain's save; in a Charter: in the Charter's).
 ## Nothing runs on a clock: every step waits for the crew.
 
 signal changed(state: Dictionary)
@@ -47,9 +54,6 @@ const NEAR: float = 1500.0
 const ESCORT_POT: float = 0.5
 ## A towed ship rejoins at this share of its hull.
 const TOW_HP: float = 0.25
-## Hardcore: one dive per this long, holding up to HC_HOLD.
-const HC_EVERY_MS: float = 8.0 * 3600000.0
-const HC_HOLD: int = 3
 
 static var live: GauntletTable = null
 
@@ -92,8 +96,9 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 		"join": return _join(key, s, Js.obj(p))
 		"leave": return _leave(key)
 		"ready": return _ready_up(key, p == true)
-		"mode": return _mode(key, p == true)
-		"terms": return _terms(key, Js.obj(p))
+		"mode": return _mode(key, str(p))
+		"resume": return _resume_pick(key, p == true)
+		"endHeld": return _end_held(key)
 		"go": return _go(key)
 		"plan": return _plan(key, Js.obj(p))
 		"played": return _played(key, int(Js.num(p)))
@@ -138,47 +143,14 @@ static func near(variant: String, p: Dictionary) -> bool:
 
 
 ## Why this captain may not dive this descent ("" when they may).
-static func shut(s: Session, variant: String, hardcore: bool = false) -> String:
+static func shut(s: Session, variant: String) -> String:
 	var p: Dictionary = s.profile()
 	var cleared: Array = Js.list(Js.obj(p.get("raid_node_progress")).get("cleared"))
 	if variant == "davy" and not cleared.has(Gauntlet.UNLOCK_NODE):
 		return "Davy's Gauntlet opens once the second chapter's Captain's Choice is made."
 	if variant == "don" and s.store.clear_count(s.uid, "the_throne") <= 0:
 		return "Don's Gauntlet opens once the Throne has fallen."
-	if hardcore:
-		var deep: float = Js.num(p.get("dons_gauntlet_deepest" if variant == "don" else "gauntlet_deepest"))
-		if deep < float(Gauntlet.HC_UNLOCK_DEPTH):
-			return "Hardcore opens once you have reached depth %d here." % Gauntlet.HC_UNLOCK_DEPTH
-		if hc_left(p, variant) <= 0:
-			return "No hardcore dive in hand. One comes every eight hours."
-		if Crew.live(s.store).filter(func(c: Dictionary) -> bool: return c.get("raid_slot") != null).is_empty():
-			return "Hardcore needs a crew at risk: seat one for raids."
 	return ""
-
-
-## Hardcore dives in hand (port rule, decided 2026-09-30: one per ten sea
-## days, eight real hours, holding up to three).
-static func hc_left(p: Dictionary, variant: String) -> int:
-	var bud: Dictionary = Js.obj(Js.obj(p.get("gauntlet_hc_budget")).get(variant))
-	if bud.is_empty():
-		return HC_HOLD
-	var gained: int = int(floor((Clock.now_ms() - Js.num(bud.get("at"))) / HC_EVERY_MS))
-	return mini(HC_HOLD, int(Js.num(bud.get("n"))) + gained)
-
-
-static func _spend_hc(s: Session, variant: String) -> void:
-	var p: Dictionary = s.profile()
-	var all: Dictionary = Js.obj(p.get("gauntlet_hc_budget")).duplicate(true)
-	var bud: Dictionary = Js.obj(all.get(variant))
-	var now: float = Clock.now_ms()
-	var n: int = hc_left(p, variant)
-	# The clock keeps its remainder, so a dive in progress loses no time.
-	var at: float = now
-	if not bud.is_empty() and n < HC_HOLD:
-		var gained: int = int(floor((now - Js.num(bud.get("at"))) / HC_EVERY_MS))
-		at = Js.num(bud.get("at")) + gained * HC_EVERY_MS
-	all[variant] = { "n": float(n - 1), "at": at }
-	s.store.update_profile(s.uid, { "gauntlet_hc_budget": all })
 
 
 func _call(key: String, s: Session, p: Dictionary) -> Dictionary:
@@ -192,8 +164,9 @@ func _call(key: String, s: Session, p: Dictionary) -> Dictionary:
 		return { "error": why }
 	if solo == null and not near(variant, p):
 		return { "error": "Sail to the maelstrom to call the crew to it." }
-	_r = { "phase": "muster", "seq": int(_r["seq"]) + 1, "variant": variant, "by": key, "hardcore": false, "signed": {},
+	_r = { "phase": "muster", "seq": int(_r["seq"]) + 1, "variant": variant, "by": key, "mode": "solo", "resume": false,
 		"members": [_member(key, s, variant, true)], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "gone": {}, "result": "" }
+	_r["held"] = _held_note(variant)
 	_push()
 	return { "ok": true }
 
@@ -202,10 +175,10 @@ func _member(key: String, s: Session, variant: String, ready: bool) -> Dictionar
 	var card: Dictionary = RaidTable.card_of(s, "")
 	var p: Dictionary = s.profile()
 	card["deepest"] = Js.num(p.get("dons_gauntlet_deepest" if variant == "don" else "gauntlet_deepest"))
-	card["hcDeepest"] = Js.num(p.get("dons_gauntlet_hc_deepest" if variant == "don" else "gauntlet_hc_deepest"))
+	var pre: String = "dons_gauntlet_" if variant == "don" else "gauntlet_"
+	card["soloDeepest"] = Js.num(p.get(pre + "solo_deepest"))
+	card["coopDeepest"] = Js.num(p.get(pre + "coop_deepest"))
 	card["fathoms"] = Js.num(p.get("gauntlet_fathoms"))
-	card["hcLeft"] = float(hc_left(p, variant))
-	card["hcShut"] = shut(s, variant, true)
 	card["perks"] = _perks(p, variant).size()
 	return { "key": key, "name": s.captain_name(), "ready": ready, "card": card }
 
@@ -230,6 +203,8 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 		return { "ok": true }
 	if mem.size() >= MAX_SEATS:
 		return { "error": "The line is full." }
+	if str(_r.get("mode", "solo")) == "solo":
+		return { "error": "That is a solo dive. The caller can switch it to Co-op." }
 	var why: String = shut(s, str(_r["variant"]))
 	if why != "":
 		return { "error": why }
@@ -262,27 +237,16 @@ func _ready_up(key: String, yes: bool) -> Dictionary:
 	return { "ok": true }
 
 
-func _mode(key: String, hardcore: bool) -> Dictionary:
+## Solo or Co-op, the caller's pick. Solo sends anyone else in the line back.
+func _mode(key: String, mode: String) -> Dictionary:
 	if _r["phase"] != "muster" or _r.get("by") != key:
 		return { "error": "Only the captain who called it picks the mode." }
-	_r["hardcore"] = hardcore
-	if not hardcore:
-		_r["signed"] = {}
-	for m: Dictionary in _r["members"]:
-		m["ready"] = m["key"] == key
-	_push()
-	return { "ok": true }
-
-
-func _terms(key: String, signed: Dictionary) -> Dictionary:
-	if _r["phase"] != "muster" or _r.get("by") != key or not _r["hardcore"]:
-		return { "error": "Only the caller signs Terms, and only for a hardcore dive." }
-	var clean: Dictionary = {}
-	for x: Dictionary in Gauntlet.terms_for(str(_r["variant"])):
-		var t: int = int(Js.num(signed.get(x["id"])))
-		if t > 0:
-			clean[x["id"]] = float(mini(t, Js.list(x["tiers"]).size()))
-	_r["signed"] = clean
+	if not ["solo", "coop"].has(mode):
+		return { "error": "There is no such mode." }
+	_r["mode"] = mode
+	if mode == "solo":
+		_r["members"] = (_r["members"] as Array).filter(func(m: Dictionary) -> bool: return m["key"] == key)
+	_r["resume"] = false
 	for m: Dictionary in _r["members"]:
 		m["ready"] = m["key"] == key
 	_push()
@@ -295,12 +259,11 @@ func _go(key: String) -> Dictionary:
 	for m: Dictionary in _r["members"]:
 		if m["key"] != key and not m.get("ready", false):
 			return { "error": "Not everyone is ready." }
-	if _r["hardcore"]:
-		for m2: Dictionary in _r["members"]:
-			var s2: Session = _session(m2["key"])
-			var why: String = shut(s2, str(_r["variant"]), true) if s2 != null else "Not aboard."
-			if why != "":
-				return { "error": "%s: %s" % [m2["name"], why] }
+	if _r.get("resume", false):
+		return _resume()
+	var n: int = (_r["members"] as Array).size()
+	if _r["mode"] == "coop" and n < 2:
+		return { "error": "Co-op needs two or more captains. Wait for a crewmate, or dive solo." }
 	_start()
 	return { "ok": true }
 
@@ -309,8 +272,7 @@ func _go(key: String) -> Dictionary:
 
 func _start() -> void:
 	var variant: String = str(_r["variant"])
-	var hc: bool = _r["hardcore"] == true
-	var tm: Dictionary = Gauntlet.resolve_terms(Js.obj(_r["signed"])) if hc else Gauntlet.no_terms()
+	var tm: Dictionary = Gauntlet.no_terms()
 	var seats: Array = []
 	var caps: Dictionary = {}
 	var skip: int = 99
@@ -320,8 +282,6 @@ func _start() -> void:
 		if s == null:
 			continue
 		_lend(s)
-		if hc:
-			_spend_hc(s, variant)
 		var p: Dictionary = s.profile()
 		var ups: Array = _perks(p, variant)
 		var seat: Dictionary = Battle.seat_for(s.store, s.uid, str(m["name"]))
@@ -346,7 +306,6 @@ func _start() -> void:
 		caps[m["key"]] = {
 			"boons": own, "taken": [], "takenCv": [], "offered": [], "offeredCv": [], "marks": [], "hullMult": 1.0,
 			"ups": ups, "filters": float(Gauntlet.boon_filters(ups)), "silenced": [], "fenceSpent": 0.0,
-			"squad": (seat["crew"] as Array).map(func(c: Dictionary) -> Variant: return c["id"]) if hc else [],
 			"stats": { "shots": 0.0, "crits": 0.0, "dmgDealt": 0.0, "highestHit": 0.0, "dmgTaken": 0.0, "volleys": 0.0, "megas": 0.0 },
 			"out": "",
 		}
@@ -359,7 +318,7 @@ func _start() -> void:
 		return
 	_r["caps"] = caps
 	_r["run"] = {
-		"variant": variant, "hardcore": hc, "signed": _r["signed"], "tm": tm, "roll": Gauntlet.new_roll(),
+		"variant": variant, "mode": str(_r["mode"]), "tm": tm, "roll": Gauntlet.new_roll(), "names": _names(),
 		# Veteran's Start for the party only when every captain has it.
 		"skip": float(skip if skip < 99 else 0), "pot": 0.0, "bosses": 0.0, "curses": {}, "banned": [],
 		"nextShrine": float(Gauntlet.SHRINE_FIRST), "nextMerchant": float(Gauntlet.MERCHANT_FIRST), "calm": calm,
@@ -399,7 +358,7 @@ func _descent_note(f: Dictionary) -> Dictionary:
 ## hull ceiling the HP boons and contracts raise, the momentum counts.
 func _effects_onto(seats: Array) -> void:
 	var run: Dictionary = _r["run"]
-	var party: Array = Gauntlet.curse_effects(run["curses"]) + (Gauntlet.term_effects(run["signed"]) if run["hardcore"] else [])
+	var party: Array = Gauntlet.curse_effects(run["curses"])
 	var depth: int = int(run["roll"]["cleared"]) + 1 + int(run["skip"])
 	var kills: int = int(run["roll"]["cleared"])
 	for s: Dictionary in seats:
@@ -468,7 +427,7 @@ func _everyone_played() -> bool:
 	return true
 
 
-## The captains still in the dive (not drowned out of a hardcore run, not
+## The captains still in the dive (not out of it, not
 ## gone from the Charter).
 func _keys_in() -> Array:
 	var out: Array = []
@@ -499,6 +458,8 @@ func _advance() -> void:
 			_enter("dead")
 		"haul":
 			_enter("haul")
+		"breather":
+			_breather()
 		"chain":
 			_chain()
 		_:
@@ -644,11 +605,6 @@ func _after_fight() -> void:
 		if c.is_empty() or str(c.get("out", "")) != "":
 			continue
 		if s.get("sunk", false):
-			if run["hardcore"]:
-				# Hardcore: sunk is sunk. The crew went down with her.
-				_drown(str(s["key"]), won_depth)
-				ev.append({ "t": "drowned", "key": s["key"] })
-				continue
 			# Towed home: the crew won, she rejoins at a quarter hull.
 			s["sunk"] = false
 			s["hp"] = maxf(1.0, float(Js.round(float(s["max"]) * TOW_HP)))
@@ -687,25 +643,6 @@ func _after_fight() -> void:
 	_r["events"] = ev
 	_r["after"] = "chain"
 	_step("chain", ev)
-
-
-## A hardcore ship gone down: its crew drowned for good, its Fathoms paid.
-func _drown(key: String, depth: int) -> void:
-	var c: Dictionary = _r["caps"][key]
-	c["out"] = "drowned"
-	var s: Session = _session(key)
-	if s == null:
-		return
-	_lend(s)
-	var now: String = Js.iso(Clock.now_ms())
-	for cr: Dictionary in Js.list(s.save.get("crew")):
-		if Js.list(c["squad"]).has(cr["id"]) and cr.get("died_at") == null:
-			cr["died_at"] = now
-			cr["died_hardcore_depth"] = float(depth)
-			cr["raid_slot"] = null
-			cr["voyage_slot"] = null
-	c["paid"] = _death_pay(key, s, depth)
-	_take(s)
 
 
 ## The chain after a kill, in the web's order (proceedAfterFight): a job's
@@ -1320,6 +1257,8 @@ func _breather() -> void:
 	for k: String in _keys_in():
 		view[k] = _bank_view(k)
 	_r["bank"] = view
+	# Written down at every breather: a crash comes back to here.
+	_checkpoint("open")
 	_enter("breather")
 
 
@@ -1332,10 +1271,10 @@ func _bank_view(key: String) -> Dictionary:
 	var cleared: int = int(run["roll"]["cleared"])
 	var c: Dictionary = _r["caps"][key]
 	var chest: Dictionary = Gauntlet.chest_for_depth(mini(cleared, Gauntlet.REWARD_DEPTH_CAP))
-	var odds: Array = Gauntlet.chest_odds(cleared, str(run["variant"]), run["hardcore"], Gauntlet.pressure(run["signed"]) if run["hardcore"] else 0.0,
+	var odds: Array = Gauntlet.chest_odds(cleared, str(run["variant"]), false, 0.0,
 		Js.list(p.get("raid_items")), Js.list(p.get("owned_ship_skins")), 1.0, _fortune(key))
 	return {
-		"chest": chest, "chestLabel": Gauntlet.chest_label(chest, str(run["variant"]), run["hardcore"]),
+		"chest": chest, "chestLabel": Gauntlet.chest_label(chest, str(run["variant"]), false),
 		"doubloons": float(Js.round(floor(float(run["pot"])) * float(chest["potMult"]) * Gauntlet.haul_mult(c["ups"]))),
 		"navXp": float(Js.round(Gauntlet.xp_for_depth(mini(cleared, Gauntlet.REWARD_DEPTH_CAP), str(run["variant"])) * Gauntlet.xp_mult(c["ups"]))),
 		"fathoms": Gauntlet.run_fathoms(cleared, str(run["variant"]), Gauntlet.fathoms_mult(c["ups"]), {}, float(c["fenceSpent"])),
@@ -1351,7 +1290,7 @@ func _fortune(key: String) -> float:
 
 
 func _vote(key: String, v: String) -> Dictionary:
-	if _r["phase"] != "breather" or not ["bank", "dive"].has(v):
+	if _r["phase"] != "breather" or not ["bank", "dive", "hold"].has(v):
 		return { "error": "Not now." }
 	if v == "bank" and str(_r.get("bankShut", "")) != "":
 		return { "error": str(_r["bankShut"]) }
@@ -1361,9 +1300,14 @@ func _vote(key: String, v: String) -> Dictionary:
 		if not _r["votes"].has(k):
 			_push()
 			return { "ok": true }
-	var banks: int = _r["votes"].values().filter(func(x: Variant) -> bool: return x == "bank").size()
+	# Everyone to hold it: held. Otherwise a vote to hold counts as banking.
+	var holds: int = _r["votes"].values().filter(func(x: Variant) -> bool: return x == "hold").size()
+	if holds == ks.size():
+		_hold()
+		return { "ok": true }
+	var banks: int = _r["votes"].values().filter(func(x: Variant) -> bool: return x == "bank" or x == "hold").size()
 	# A majority carries; a tie banks.
-	if banks * 2 >= ks.size():
+	if banks * 2 >= ks.size() and str(_r.get("bankShut", "")) == "":
 		_bank()
 	else:
 		_dive()
@@ -1425,6 +1369,7 @@ func _bank() -> void:
 		_take(s)
 	_r["pays"] = pays
 	_r["result"] = "banked"
+	_held_clear()
 	_settle()
 	_enter("haul")
 
@@ -1436,16 +1381,15 @@ func _pay(key: String, s: Session, cleared: int, offer: Dictionary) -> Dictionar
 	var c: Dictionary = _r["caps"][key]
 	var p: Dictionary = s.profile()
 	var cd: int = cleared + int(run["skip"])
-	var hc: bool = run["hardcore"]
 	var ren: Dictionary = Js.obj(p.get("nav_renown_alloc"))
 	var mults: Dictionary = {
 		"shipClass": float(Campaign.class_effects(p.get("ship_classes"))["doubloonMult"]),
 		"renown": 1.0 + maxf(0.0, floor(Js.num(ren.get("plunder")))) * 0.015,
 		"haul": Gauntlet.haul_mult(c["ups"]), "xp": Gauntlet.xp_mult(c["ups"]), "fathoms": Gauntlet.fathoms_mult(c["ups"]),
-		"crewXp": 1.0 + maxf(0.0, floor(Js.num(ren.get("command")))) * 0.02, "bloodGem": Gauntlet.blood_gem_mult(c["ups"]),
+		"crewXp": 1.0 + maxf(0.0, floor(Js.num(ren.get("command")))) * 0.02,
 		"fortune": _fortune(key),
 	}
-	var h: Dictionary = Gauntlet.haul(cleared, cd, v, float(run["pot"]), hc, Gauntlet.pressure(run["signed"]) if hc else 0.0, Js.list(p.get("owned_ship_skins")), mults, offer, float(c["fenceSpent"]))
+	var h: Dictionary = Gauntlet.haul(cleared, cd, v, float(run["pot"]), false, 0.0, Js.list(p.get("owned_ship_skins")), mults, offer, float(c["fenceSpent"]))
 	var db: CaptainStore = s.store
 	if float(h["doubloons"]) > 0.0:
 		db.bump_stat(s.uid, "doubloons", float(h["doubloons"]))
@@ -1455,9 +1399,6 @@ func _pay(key: String, s: Session, cleared: int, offer: Dictionary) -> Dictionar
 	db.bump_stat(s.uid, "expedition_xp", float(h["navXp"]))
 	db.bump_stat(s.uid, "gauntlet_fathoms", float(h["fathoms"]))
 	db.bump_stat(s.uid, "gauntlet_fathoms_earned", float(h["fathoms"]))
-	if float(h["bloodGems"]) > 0.0:
-		db.bump_stat(s.uid, "blood_gems", float(h["bloodGems"]))
-		db.bump_stat(s.uid, "blood_gems_earned", float(h["bloodGems"]))
 	if not h["items"].is_empty():
 		var held: Array = Js.list(p.get("raid_items")).duplicate()
 		held += h["items"]
@@ -1473,62 +1414,68 @@ func _pay(key: String, s: Session, cleared: int, offer: Dictionary) -> Dictionar
 			crew_up.append({ "name": cr.get("nickname") if cr.get("nickname") != null else Crew.display_name(str(Crew.card(float(cr["card_id"])).get("slug", "")), str(Crew.card(float(cr["card_id"])).get("name", ""))), "from": float(Crew.level(old)), "to": float(Crew.level(old + float(h["crewXp"]))) })
 	h["crewUp"] = crew_up
 	h["record"] = _record(key, s, cd, true)
-	db.bump_stat(s.uid, "dons_gauntlet_runs_completed" if v == "don" else "gauntlet_runs_completed", 1.0)
 	return h
 
 
 ## A record for this captain: the deepest, the last run, the deepest run's
-## recap. Returns whether it went deeper than ever.
+## recap, kept twice: across both modes (the Locker reads it) and for this
+## mode (gauntlet_solo_* / gauntlet_coop_*, dons_gauntlet_* for the Don's);
+## the dives banked and sunk, the biggest hit. Returns whether it went deeper
+## than ever in this mode.
 func _record(key: String, s: Session, cd: int, banked: bool) -> bool:
 	var run: Dictionary = _r["run"]
 	var v: String = str(run["variant"])
-	var hc: bool = run["hardcore"]
-	var pre: String = ("dons_gauntlet_" if v == "don" else "gauntlet_") + ("hc_" if hc else "")
+	var base: String = "dons_gauntlet_" if v == "don" else "gauntlet_"
 	var p: Dictionary = s.profile()
 	var c: Dictionary = _r["caps"][key]
+	var names: Array = []
+	for k: String in Js.obj(run.get("names")):
+		if k != key:
+			names.append(run["names"][k])
 	var snap: Dictionary = {
-		"depth": float(cd), "boons": c["boons"], "curses": run["curses"], "stats": c["stats"], "party": _keys_in().size(),
-		"banked": banked, "at": Js.iso(Clock.now_ms()),
+		"depth": float(cd), "boons": c["boons"], "taken": c["taken"], "takenCv": c["takenCv"], "marks": c["marks"],
+		"curses": run["curses"], "stats": c["stats"], "crew": names, "mode": run.get("mode", "solo"),
+		"banked": banked, "pot": run["pot"], "at": Js.iso(Clock.now_ms()), "ms": float(Time.get_ticks_msec() - _began_ms),
 	}
-	var patch: Dictionary = { pre + "last_run": snap }
+	var patch: Dictionary = {}
 	var deeper: bool = false
-	if banked:
-		if float(cd) > Js.num(p.get(pre + "deepest")):
-			deeper = true
-			patch[pre + "deepest"] = float(cd)
-			patch[pre + "deepest_run"] = snap
-			patch[pre + "best_depth"] = float(cd)
-			patch[pre + "best_depth_ms"] = float(Time.get_ticks_msec() - _began_ms)
-			patch[pre + "best_depth_at"] = Js.iso(Clock.now_ms())
-	elif float(cd) > Js.num(p.get(pre + "deepest_died")):
-		patch[pre + "deepest_died"] = float(cd)
+	for pre: String in [base, base + str(run.get("mode", "solo")) + "_"]:
+		patch[pre + "last_run"] = snap
+		patch[pre + ("runs_completed" if banked else "runs_sunk")] = Js.num(p.get(pre + ("runs_completed" if banked else "runs_sunk"))) + 1.0
+		if banked:
+			if float(cd) > Js.num(p.get(pre + "deepest")) or (float(cd) == Js.num(p.get(pre + "deepest")) and float(snap["ms"]) < Js.num(p.get(pre + "best_depth_ms", 1e18))):
+				deeper = deeper or float(cd) > Js.num(p.get(pre + "deepest"))
+				patch[pre + "deepest"] = float(cd)
+				patch[pre + "deepest_run"] = snap
+				patch[pre + "best_depth"] = float(cd)
+				patch[pre + "best_depth_ms"] = snap["ms"]
+				patch[pre + "best_depth_at"] = snap["at"]
+		elif float(cd) > Js.num(p.get(pre + "deepest_died")):
+			patch[pre + "deepest_died"] = float(cd)
+	if Js.num(c["stats"].get("highestHit")) > Js.num(p.get("gauntlet_max_hit")):
+		patch["gauntlet_max_hit"] = c["stats"]["highestHit"]
 	s.store.update_profile(s.uid, patch)
 	return deeper
 
 
-## The whole party sunk: the pot goes to the deep; Fathoms are paid; a
-## hardcore crew drowns.
+## The whole party sunk: the pot goes to the deep; Fathoms are paid.
 func _dive_lost(ev: Array) -> void:
 	var run: Dictionary = _r["run"]
 	var cd: int = int(run["roll"]["cleared"]) + int(run["skip"])
 	var pays: Dictionary = Js.obj(_r.get("pays"))
 	for k: String in _keys_in():
 		var c: Dictionary = _r["caps"][k]
-		if run["hardcore"]:
-			_drown(k, cd + 1)
-			pays[k] = c.get("paid", {})
-			c["out"] = "drowned"
-		else:
-			var s: Session = _session(k)
-			if s == null:
-				continue
-			_lend(s)
-			pays[k] = _death_pay(k, s, cd)
-			_take(s)
-			c["out"] = "sunk"
+		var s: Session = _session(k)
+		if s == null:
+			continue
+		_lend(s)
+		pays[k] = _death_pay(k, s, cd)
+		_take(s)
+		c["out"] = "sunk"
 	_r["pays"] = pays
 	_r["result"] = "lost"
 	_r["lostPot"] = run["pot"]
+	_held_clear()
 	_settle()
 	_step("dead", ev)
 
@@ -1541,11 +1488,11 @@ func _death_pay(key: String, s: Session, cd: int) -> Dictionary:
 	s.store.bump_stat(s.uid, "gauntlet_fathoms", f)
 	s.store.bump_stat(s.uid, "gauntlet_fathoms_earned", f)
 	_record(key, s, cd, false)
-	return { "fathoms": f, "depth": float(cd), "drowned": run["hardcore"] }
+	return { "fathoms": f, "depth": float(cd) }
 
 
 func _home(key: String) -> Dictionary:
-	if not ["haul", "dead", "jobResult"].has(str(_r["phase"])):
+	if not ["haul", "dead", "jobResult", "held"].has(str(_r["phase"])):
 		return { "ok": true }
 	if _r["phase"] == "jobResult":
 		# Onward from a job's verdict: a curse or a draft it brought, then on.
@@ -1692,3 +1639,158 @@ func drop(key: String) -> void:
 				_vote(str(ks[0]), str(_r["votes"].get(ks[0], "dive")))
 		"contract":
 			_contract_vote(key, 0)
+
+
+
+# ══ Held dives: written down at every breather, held by vote, resumed ═════════
+
+func _names() -> Dictionary:
+	var out: Dictionary = {}
+	for m: Dictionary in _r.get("members", []):
+		out[m["key"]] = m["name"]
+	return out
+
+
+## Where held dives are kept: alone, in the captain's save; in a Charter, in
+## the Charter's own file (the crew's).
+func _held_all() -> Dictionary:
+	if charter != null:
+		if not (charter.data.get("gauntletHeld") is Dictionary):
+			charter.data["gauntletHeld"] = {}
+		return charter.data["gauntletHeld"]
+	if solo != null:
+		var p: Dictionary = solo.profile()
+		if not (p.get("gauntlet_held") is Dictionary):
+			p["gauntlet_held"] = {}
+		return p["gauntlet_held"]
+	return {}
+
+
+func _held_write() -> void:
+	if charter != null:
+		charter.write()
+	elif solo != null:
+		solo.persist()
+
+
+## What the entry screen shows of a held dive of this descent.
+func _held_note(variant: String) -> Dictionary:
+	var h: Dictionary = Js.obj(_held_all().get(variant))
+	if h.is_empty():
+		return {}
+	return { "depth": h["depth"], "mode": h["mode"], "names": h["names"], "keys": h["keys"], "status": h["status"], "at": h["at"], "pot": h["pot"] }
+
+
+## The dive written down as it stands at a breather.
+func _checkpoint(status: String) -> void:
+	var run: Dictionary = _r["run"].duplicate(true)
+	run["peek"] = {}
+	var seats: Array = []
+	for st: Dictionary in _r["b"]["seats"]:
+		if _keys_in().has(st.get("key")):
+			var c: Dictionary = st.duplicate(true)
+			c.erase("statuses")
+			seats.append(c)
+	var names: Dictionary = {}
+	for k: String in _keys_in():
+		names[k] = Js.obj(run.get("names")).get(k, "A captain")
+	_held_all()[str(run["variant"])] = {
+		"status": status, "at": Js.iso(Clock.now_ms()), "variant": run["variant"], "mode": run.get("mode", "solo"),
+		"depth": float(int(run["roll"]["cleared"]) + int(run["skip"])), "pot": run["pot"], "keys": _keys_in(), "names": names,
+		"run": run, "caps": _r["caps"].duplicate(true), "seats": seats,
+	}
+	_held_write()
+
+
+func _held_clear() -> void:
+	if not _r.has("run"):
+		return
+	_held_all().erase(str(_r["run"]["variant"]))
+	_held_write()
+
+
+## Everyone voted to hold it: written down, and the crew go back up.
+func _hold() -> void:
+	_checkpoint("held")
+	_r["result"] = "held"
+	_r["heldAt"] = float(int(_r["run"]["roll"]["cleared"]) + int(_r["run"]["skip"]))
+	_settle()
+	_enter("held")
+
+
+## The caller picks the held dive (or a fresh one) at the muster.
+func _resume_pick(key: String, yes: bool) -> Dictionary:
+	if _r["phase"] != "muster" or _r.get("by") != key:
+		return { "error": "Only the captain who called it decides." }
+	var h: Dictionary = Js.obj(_r.get("held"))
+	if yes and h.is_empty():
+		return { "error": "There is no held dive here." }
+	_r["resume"] = yes
+	if yes:
+		_r["mode"] = h["mode"]
+	for m: Dictionary in _r["members"]:
+		m["ready"] = m["key"] == key
+	_push()
+	return { "ok": true }
+
+
+## The held dive, back where it was left: its breather, its crew, its pot.
+func _resume() -> Dictionary:
+	var v: String = str(_r["variant"])
+	var h: Dictionary = Js.obj(_held_all().get(v))
+	if h.is_empty():
+		return { "error": "There is no held dive here." }
+	var here: Array = (_r["members"] as Array).map(func(m: Dictionary) -> String: return str(m["key"]))
+	var missing: Array = []
+	for k: String in h["keys"]:
+		if not here.has(k):
+			missing.append(str(Js.obj(h["names"]).get(k, "a captain")))
+	if not missing.is_empty():
+		return { "error": "The held dive needs its whole crew: waiting on %s." % ", ".join(PackedStringArray(missing)) }
+	for k2: String in here:
+		if not (h["keys"] as Array).has(k2):
+			return { "error": "%s was not in the held dive." % _names().get(k2, "A captain") }
+	_r["run"] = (h["run"] as Dictionary).duplicate(true)
+	_r["caps"] = (h["caps"] as Dictionary).duplicate(true)
+	var seats: Array = (h["seats"] as Array).duplicate(true)
+	for st: Dictionary in seats:
+		st["statuses"] = {}
+	_r["b"] = { "raidId": "", "gauntlet": v, "round": 0.0, "fight": 0.0, "seats": seats, "turn": 1.0, "state": "won", "events": [],
+		"tier": "normal", "elites": {}, "bonusAffix": {}, "tides": [], "tideFired": [], "foes": [], "enemy": {}, "depth": h["depth"] }
+	_r["gone"] = {}
+	_r["fight"] = {}
+	_r["descent"] = {}
+	_began_ms = Time.get_ticks_msec()
+	_step("breather", [{ "t": "resume", "depth": h["depth"] }])
+	return { "ok": true }
+
+
+## A held dive given up: each of its captains is paid their Fathoms, the pot
+## is lost, it is gone.
+func _end_held(key: String) -> Dictionary:
+	if _r["phase"] != "muster" or _r.get("by") != key:
+		return { "error": "Only the captain who called it decides." }
+	var v: String = str(_r["variant"])
+	var h: Dictionary = Js.obj(_held_all().get(v))
+	if h.is_empty():
+		return { "error": "There is no held dive here." }
+	if not (h["keys"] as Array).has(key):
+		return { "error": "Only a captain of that dive can end it." }
+	var keep_r: Dictionary = _r
+	_r = { "run": h["run"], "caps": h["caps"], "phase": "muster" }
+	var cd: int = int(h["depth"])
+	for k: String in h["keys"]:
+		var s: Session = _session(k)
+		if s == null:
+			continue
+		_lend(s)
+		_death_pay(k, s, cd)
+		_take(s)
+	_r = keep_r
+	_held_all().erase(v)
+	_held_write()
+	_settle()
+	_r["held"] = {}
+	_r["resume"] = false
+	_push()
+	return { "ok": true }

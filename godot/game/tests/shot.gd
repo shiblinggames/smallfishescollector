@@ -962,7 +962,51 @@ func _init() -> void:
 			for f: int in 40:
 				await process_frame
 			var gstep: String = OS.get_environment("DIVE_STEP") if OS.get_environment("DIVE_STEP") != "" else "water"
-			if gstep != "water":
+			# The screens off the entry: the Codex, the Records, a held dive.
+			var conf_ids: Array = Js.list(Gauntlet.t()["confluences"]).map(func(c: Dictionary) -> String: return str(c["id"]))
+			p["gauntlet_confluences_seen"] = conf_ids.slice(0, 7)
+			if gstep in ["records", "heldentry"]:
+				var snap: Dictionary = { "depth": 23.0, "boons": { "powder_and_shot": 3.0, "broadside_mastery": 2.0, "grapeshot": 1.0, "bilge_pump": 2.0 }, "taken": [conf_ids[0]], "takenCv": [],
+					"marks": [], "curses": { "crushing_depth": 1.0 }, "stats": { "shots": 140.0, "crits": 41.0, "dmgDealt": 48210.0, "dmgTaken": 9120.0, "highestHit": 1420.0 },
+					"crew": [], "mode": "solo", "banked": true, "pot": 9240.0, "at": "2026-10-03T21:00:00.000Z", "ms": 1694000.0 }
+				p["gauntlet_solo_deepest"] = 23.0
+				p["gauntlet_solo_best_depth_ms"] = 1694000.0
+				p["gauntlet_solo_deepest_died"] = 27.0
+				p["gauntlet_solo_runs_completed"] = 6.0
+				p["gauntlet_solo_runs_sunk"] = 9.0
+				p["gauntlet_solo_deepest_run"] = snap
+				var snap2: Dictionary = snap.duplicate(true)
+				snap2["depth"] = 17.0
+				snap2["crew"] = ["Ben", "Cal"]
+				snap2["banked"] = false
+				snap2["mode"] = "coop"
+				p["gauntlet_coop_deepest"] = 14.0
+				p["gauntlet_coop_best_depth_ms"] = 1210000.0
+				p["gauntlet_coop_runs_completed"] = 2.0
+				p["gauntlet_coop_runs_sunk"] = 1.0
+				p["gauntlet_coop_deepest_run"] = snap
+				p["gauntlet_last_run"] = snap2
+				p["gauntlet_fathoms_earned"] = 412.0
+				p["gauntlet_max_hit"] = 1420.0
+			if gstep == "heldentry":
+				p["gauntlet_held"] = { gv: { "status": "held", "depth": 12.0, "pot": 4410.0, "mode": "solo", "keys": ["me"], "names": { "me": "You" }, "at": "2026-10-03T21:00:00.000Z" } }
+			if gstep == "codex" or gstep == "records":
+				var cx0: Control = GauntletCodex.new() if gstep == "codex" else GauntletRecords.new()
+				cx0.set("variant", gv)
+				cx0.set("profile", p)
+				if gstep == "codex" and OS.get_environment("CODEX_RUN") != "":
+					cx0.set("run_cap", { "boons": { "powder_and_shot": 2.0, "broadside_mastery": 2.0, "grapeshot": 1.0, "bilge_pump": 1.0, "iron_hull": 1.0 }, "taken": [conf_ids[0]], "takenCv": [] })
+				sea._hud_layer.add_child(cx0)
+			elif gstep == "heldentry":
+				sea.open_gauntlet(gv)
+				for f: int in 6:
+					await process_frame
+				if OS.get_environment("ENTRY_TAB") != "":
+					for n: Node in sea._hud_layer.get_children():
+						if n is GauntletEntry:
+							(n as GauntletEntry)._side_tab = OS.get_environment("ENTRY_TAB")
+							(n as GauntletEntry)._side_paint()
+			elif gstep != "water":
 				Dice.install(Dice.Mulberry32.new(11))
 				sea.open_gauntlet(gv)
 				for f: int in 10:

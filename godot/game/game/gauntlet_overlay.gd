@@ -20,6 +20,8 @@ extends Control
 ##   THE BREATHER    the depth, the pot, what banking pays YOU, the chase odds,
 ##                   the crew's hulls, the vote: bank or dive.
 ##   THE HAUL / THE DEEP   what came home, or what the Locker took.
+##   HELD            the dive written down to come back to (Hold at a breather:
+##                   alone at once, together when everyone votes it).
 ## Rules: core/gauntlet.gd; the table: game/gauntlet_table.gd.
 
 signal acted(args: Array)
@@ -27,6 +29,8 @@ signal acted(args: Array)
 const W: float = 1120.0
 
 var my_key: String = ""
+## This captain's profile (the Codex reads what they have discovered).
+var profile: Dictionary = {}
 ## (key) -> Texture2D: a captain's avatar.
 var face_of: Callable
 var _st: Dictionary = {}
@@ -56,7 +60,7 @@ func show_state(st: Dictionary) -> void:
 	_paint(fresh)
 
 
-const PHASES: Array = ["curse", "draft", "shrine", "fence", "contract", "jobResult", "marks", "breather", "haul", "dead"]
+const PHASES: Array = ["curse", "draft", "shrine", "fence", "contract", "jobResult", "marks", "breather", "haul", "dead", "held"]
 
 
 func _hide() -> void:
@@ -100,11 +104,13 @@ func _paint(fresh: bool) -> void:
 		"breather": _breather()
 		"haul": _haul()
 		"dead": _dead()
+		"held": _held()
 	Pane.set_night(_body, true)
 
 
 func _height() -> float:
 	match str(_st.get("phase", "")):
+		"held": return 420.0
 		"draft": return 640.0
 		"breather": return 660.0
 		"haul", "dead": return 600.0
@@ -625,7 +631,6 @@ func _breather() -> void:
 	pot.view = bv
 	pot.pot = Js.num(run.get("pot"))
 	pot.variant = _variant()
-	pot.hardcore = run.get("hardcore", false) == true
 	pot.chest_tex = _tx("donschestclosed.png" if _don() else "davychestclosed.png")
 	_body.add_child(pot)
 	# Davy's offer, when he leans over the rail.
@@ -672,9 +677,13 @@ func _breather() -> void:
 	var dv: Button = _btn(row, "Dive deeper  ·  Depth %d" % (depth + 1), "primary", func() -> void: _send(["vote", "dive"]), 260.0)
 	dv.disabled = votes.has(my_key)
 	var keys: Array = _keys()
-	var line: String = "Alone: bank or dive." if keys.size() == 1 else "The crew votes. A majority carries; a tie banks."
+	var hb: Button = _btn(row, "Hold the dive" if keys.size() == 1 else "Vote to hold", "secondary", func() -> void: _send(["vote", "hold"]), 180.0)
+	hb.disabled = votes.has(my_key)
+	hb.tooltip_text = "Leave the dive where it is and come back to the maelstrom to resume it, depth, pot and powers all kept."
+	_btn(row, "Codex", "secondary", func() -> void: _codex(), 120.0)
+	var line: String = "Alone: bank, dive, or hold the dive for later." if keys.size() == 1 else "The crew votes. A majority carries; a tie banks. Holding takes everyone (a vote to hold counts as banking)."
 	if votes.has(my_key):
-		line = "You voted to %s.  %s" % ["bank" if votes[my_key] == "bank" else "dive", _waiting_on(votes)]
+		line = "You voted to %s.  %s" % [{ "bank": "bank", "dive": "dive", "hold": "hold the dive" }.get(str(votes[my_key]), "bank"), _waiting_on(votes)]
 	if shut != "":
 		line = shut
 	_label(Vector2(0, _sheet.size.y - 36.0), line, "karla", 600, 13, Dossier.FAINT, w, true)
@@ -685,8 +694,7 @@ func _breather() -> void:
 func _haul() -> void:
 	var p: Dictionary = Js.obj(Js.obj(_st.get("pays")).get(my_key))
 	var w: float = _sheet.size.x
-	var hc: bool = _run().get("hardcore", false) == true
-	_head("Banked at depth %d" % int(Js.num(p.get("depth"))), "Your crew sailed home" if hc else "You climbed back into the light")
+	_head("Banked at depth %d" % int(Js.num(p.get("depth"))), "You climbed back into the light")
 	var art: ChestArt = ChestArt.new()
 	art.tex = _tx("donschestopen.png" if _don() else "davychestopen.png")
 	art.position = Vector2(40, 110)
@@ -730,15 +738,34 @@ func _dead() -> void:
 	if p.is_empty():
 		p = Js.obj(_cap().get("paid"))
 	var w: float = _sheet.size.x
-	var drowned: bool = p.get("drowned", false) == true
-	_head("Depth %d" % int(Js.num(p.get("depth"))), "The Green Takes It" if _don() else "The Locker Takes It", "You sank." if not drowned else "You sank, and your crew went down with her. They are gone for good.")
+	_head("Depth %d" % int(Js.num(p.get("depth"))), "The Green Takes It" if _don() else "The Locker Takes It", "Every ship sank." if _keys().size() > 1 or Js.obj(_st.get("caps")).size() > 1 else "You sank.")
 	var lost: float = Js.num(_st.get("lostPot", _run().get("pot", 0.0)))
 	_label(Vector2(0, 170), "Gone to the deep", "karla", 700, 14, Dossier.SOFT, w, true)
 	_label(Vector2(0, 190), "%s ⟡" % Js.thousands(lost), "cinzel", 700, 40, Color(Dossier.HARM, 0.85), w, true)
 	_label(Vector2(0, 262), "Salvaged  +%s Fathoms" % Js.thousands(Js.num(p.get("fathoms"))), "karla", 800, 16, Color("#7fd6c8"), w, true)
-	if drowned:
-		_label(Vector2(0, 300), "Their names are written in the Crew Hall's graveyard.", "karla", 600, 13, Dossier.FAINT, w, true)
 	_home_foot()
+
+
+## The dive held: where it waits, and how to come back to it.
+func _held() -> void:
+	var w: float = _sheet.size.x
+	var d: int = int(Js.num(_st.get("heldAt")))
+	_head("The dive is held", "Depth %d, waiting" % d, "The pot, the powers, the curses and every hull stay as they are.")
+	_label(Vector2(0, 160), "%s ⟡ riding on it" % Js.thousands(Js.num(_run().get("pot"))), "cinzel", 700, 30, Dossier.WARN, w, true)
+	var who: String = "Sail back to the %s maelstrom to resume it." % ("Don's" if _don() else "Davy's")
+	if Js.obj(_st.get("caps")).size() > 1:
+		who = "Sail back to the maelstrom together to resume it: the whole crew of this dive must be there."
+	_label(Vector2(60, 214), who, "karla", 600, 15, Dossier.INK, w - 120.0, true)
+	_label(Vector2(60, 244), "Or end it there: your Fathoms are paid and the pot is lost.", "karla", 500, 13, Dossier.SOFT, w - 120.0, true)
+	_home_foot()
+
+
+func _codex() -> void:
+	var cx: GauntletCodex = GauntletCodex.new()
+	cx.variant = _variant()
+	cx.profile = profile
+	cx.run_cap = _cap()
+	add_child(cx)
 
 
 func _home_foot() -> void:

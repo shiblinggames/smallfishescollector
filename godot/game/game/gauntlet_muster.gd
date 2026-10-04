@@ -46,7 +46,7 @@ func _on_table(st: Dictionary) -> void:
 				_paint(st)
 		"playing":
 			_close()
-			if _member(st) and int(Js.num(st.get("seq"))) != _opened_seq and Js.list(st.get("ev")).any(func(e: Dictionary) -> bool: return e["t"] == "begin"):
+			if _member(st) and int(Js.num(st.get("seq"))) != _opened_seq and Js.list(st.get("ev")).any(func(e: Dictionary) -> bool: return e["t"] in ["begin", "resume"]):
 				_opened_seq = int(Js.num(st.get("seq")))
 				sea.open_gauntlet_battle(table, my_key, str(Js.obj(st.get("run")).get("variant", "davy")))
 		"idle", "done":
@@ -84,7 +84,7 @@ func _paint(st: Dictionary) -> void:
 		names.append(str(m["name"]))
 		if m["key"] == st.get("by"):
 			by = str(m["name"])
-	Kit.text(body, "%s is gathering a dive%s" % [by, " (hardcore)" if st.get("hardcore", false) else ""], "small", Dossier.SOFT)
+	Kit.text(body, "%s is gathering a %s dive" % [by, "co-op" if str(st.get("mode", "solo")) == "coop" else "solo"], "small", Dossier.SOFT)
 	Kit.text(body, str(Gauntlet.NAMES.get(str(st.get("variant", "davy")), "")), "title")
 	Kit.text(body, "In the line: %s  ·  %d of %d" % [", ".join(PackedStringArray(names)), names.size(), GauntletTable.MAX_SEATS], "small", Dossier.SOFT, true)
 	if names.size() < GauntletTable.MAX_SEATS:
