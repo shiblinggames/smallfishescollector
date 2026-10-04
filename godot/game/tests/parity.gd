@@ -34,6 +34,7 @@ func _init() -> void:
 	_fishing(species, "res://tests/parity/crew.json", "the crew hall")
 	_fishing(species, "res://tests/parity/chart.json", "the chart room")
 	_fishing(species, "res://tests/parity/campaign.json", "the campaign map")
+	_gauntlet()
 	print("")
 	if failed > 0:
 		print("  %d FAILED" % failed)
@@ -260,3 +261,104 @@ func _call(db: CaptainStore, uid: String, save: Dictionary, op: String, a: Array
 				save[k] = patch[k]
 			return null
 	return RulesApi.run(db, uid, op, a)
+
+
+## The gauntlets: whole seeded descents (core/gauntlet.gd against lib/gauntlet).
+func _gauntlet() -> void:
+	var cases: Dictionary = _json("res://tests/parity/gauntlet.json")
+	var n: int = 0
+	var steps: int = 0
+	for r: Dictionary in cases["runs"]:
+		var variant: String = r["variant"]
+		var signed: Dictionary = r["signed"]
+		var skip: int = int(r["skip"])
+		var luck: float = float(r["luck"])
+		var seed: int = int(r["seed"])
+		Dice.install(Dice.Mulberry32.new(Dice.seed_of("gauntlet:%d:%s" % [seed, variant])))
+		var terms: Dictionary = Gauntlet.resolve_terms(signed)
+		var roll: Dictionary = Gauntlet.new_roll()
+		var owned: Dictionary = {}
+		var oath: String = Gauntlet.blood_oath_boon(variant)
+		if oath != "" and seed % 5 == 0:
+			owned[oath] = 1.0
+		var curses: Dictionary = {}
+		var taken: Array = []
+		var taken_cv: Array = []
+		var offered: Array = []
+		var offered_cv: Array = []
+		var offer: Dictionary = {}
+		var pot: float = 0.0
+		var bad: String = ""
+		var i: int = 0
+		for want: Dictionary in r["steps"]:
+			var f: Dictionary = Gauntlet.generate_fight(roll, skip, terms, variant)
+			var e: Dictionary = f["enemy"]
+			var step: Dictionary = { "fight": {
+				"name": e["name"], "hp": e["hpBase"], "min": e["minDmg"], "max": e["maxDmg"], "acc": e["accuracy"],
+				"boss": f["isBoss"], "elite": f["isElite"], "apex": f["isApex"], "affix": Js.obj(f["affix"]).get("name"), "pot": f["pot"], "depth": f["depth"],
+				"phases": Js.list(e.get("phases")).size(), "phase2": e.get("phase2") != null, "open": e.get("openingCheck") != null,
+				"aimFog": Js.nz(e.get("aimFogDensity"), 0.0), "aimSpeed": Js.nz(e.get("aimSpeedMult"), 1.0), "zoneSpeed": Js.nz(e.get("zoneSpeedMult"), 1.0),
+			} }
+			pot += float(f["pot"])
+			roll = Gauntlet.advance_roll(roll, f)
+			var nd: int = int(roll["cleared"]) + 1 + skip
+			if Gauntlet.is_curse_depth(nd, float(terms["curseFrequencyMult"])):
+				var c: Dictionary = Gauntlet.draw_curse(curses, nd, terms["curseStartsAtWorst"], variant)
+				step["curse"] = [c["id"], c["tier"]] if not c.is_empty() else null
+				if not c.is_empty():
+					curses[c["id"]] = c["tier"]
+			if Gauntlet.is_boon_depth(nd, float(terms["boonFrequencyMult"])):
+				var syn: Dictionary = Gauntlet.draw_convergence(owned, taken, taken_cv, offered_cv, float(terms["confluenceOfferMult"]), variant) if variant == "don" else {}
+				if syn.is_empty():
+					syn = Gauntlet.draw_confluence(owned, taken, offered, float(terms["confluenceOfferMult"]), variant)
+				var k: int = maxi(1, int(terms["boonPicks"]) - 1) if not syn.is_empty() else int(terms["boonPicks"])
+				var boons: Array = Gauntlet.draw_boons(k, owned, luck, float(terms["commonSkew"]), variant)
+				step["draft"] = { "boons": boons.map(func(b: Dictionary) -> Array: return [b["id"], b["tier"]]), "syn": [syn["id"], syn["level"], syn.get("isConvergence", false)] if not syn.is_empty() else null }
+				step["hints"] = boons.map(func(b: Dictionary) -> Array: return Gauntlet.confluence_hints(str(b["id"]), int(b["tier"]), owned, taken).map(func(h: Dictionary) -> Array: return [h["id"], h["kind"], h["level"]]))
+				if not syn.is_empty():
+					(offered_cv if syn.get("isConvergence", false) else offered).append(syn["id"])
+				if not syn.is_empty() and i % 2 == 0:
+					(taken_cv if syn.get("isConvergence", false) else taken).append(syn["id"])
+				elif not boons.is_empty():
+					var b: Dictionary = boons[i % boons.size()]
+					owned[b["id"]] = b["tier"]
+				if syn.is_empty() and nd >= 6 and i % 3 == 0:
+					step["reprieve"] = Gauntlet.draw_reprieve(curses.size())["id"]
+			offer = Gauntlet.roll_offer(offer, int(roll["cleared"]), (i % 4) / 3.0, i % 2 == 0)
+			step["offer"] = [offer["live"]["kind"], offer["live"]["tier"], offer["live"]["depth"]] if offer.get("live") != null else null
+			if f["isApex"]:
+				step["marks"] = Gauntlet.roll_marks()
+			if variant == "don":
+				var kk: String = Gauntlet.roll_contract(nd)
+				if kk != "":
+					step["contract"] = Gauntlet.build_contract(kk, (i % 3) + 1, nd)
+				if i % 9 == 4:
+					step["fence"] = Gauntlet.fence_stock(i % 2 == 0)
+			var d: String = JsJson.diff(JsJson.parse(JsJson.stringify(step)), want)
+			if d != "":
+				bad = "gauntlet %s seed %d depth %d differs at %s" % [variant, seed, i + 1, d]
+				break
+			steps += 1
+			i += 1
+		if bad != "":
+			_fail(bad)
+			return
+		var effects: Array = Gauntlet.boon_effects(owned) + Gauntlet.confluence_effects(owned, taken) + Gauntlet.convergence_effects(owned, taken, taken_cv) + Gauntlet.curse_effects(curses) + Gauntlet.term_effects(signed) + Gauntlet.mark_effects([{ "type": "shark", "buffs": [{ "cat": "wildfire", "pct": 7.0 }, { "cat": "keen_eye", "pct": 5.0 }] }])
+		var hc: bool = seed % 2 == 1
+		var live: Dictionary = Js.obj(offer.get("live"))
+		var take: Dictionary = live if not live.is_empty() and int(live["depth"]) == int(roll["cleared"]) else {}
+		var h: Dictionary = Gauntlet.haul(int(roll["cleared"]), int(roll["cleared"]) + skip, variant, pot, hc, Gauntlet.pressure(signed) if hc else 0.0,
+			["golden_gauntlet_hull"] if seed % 7 == 0 else [], { "fortune": 1.0 + minf(1.0, seed * 4.0 / 150.0) }, take)
+		var got: Dictionary = {
+			"owned": owned, "curses": curses, "taken": taken, "takenCv": taken_cv, "pot": pot, "effects": effects,
+			"hpMult": Gauntlet.hp_boon_mult(effects, int(roll["cleared"]) + skip, int(roll["cleared"])),
+			"drain": Gauntlet.curse_hp_drain(curses), "silence": float(Gauntlet.curse_silence(curses)), "pressure": Gauntlet.pressure(signed),
+			"haul": { "items": h["items"], "skins": h["skins"], "doubloons": h["doubloons"], "xp": h["navXp"], "gems": h["gems"], "fathoms": h["fathoms"], "crewXp": h["crewXp"], "blood": h["bloodGems"], "chest": h["chest"]["tier"] },
+			"next": Dice.next(),
+		}
+		var d2: String = JsJson.diff(JsJson.parse(JsJson.stringify(got)), r["end"])
+		if d2 != "":
+			_fail("gauntlet %s seed %d: the end differs at %s" % [variant, seed, d2])
+			return
+		n += 1
+	print("  gauntlets: %d descents (%d depths) roll the same" % [n, steps])

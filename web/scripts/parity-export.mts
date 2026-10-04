@@ -38,7 +38,7 @@ import { localFishingData, type LocalSave } from '../lib/data/local/fishingLocal
 import { serializeSave } from '../lib/data/local/saveFile'
 import { starterSave } from '../lib/data/local/starter'
 import type { SpeciesRow } from '../lib/data/fishingData'
-import { installRng, mulberry32, seedOf, type Rng } from '../lib/rng'
+import { installRng, mulberry32, seedOf, withRng, rngNext, type Rng } from '../lib/rng'
 import { installClock, clockNow } from '../lib/clock'
 import { hotspotsAt } from '../lib/seaHotspots'
 import { squallsAt, squallPos } from '../lib/seaWeather'
@@ -66,6 +66,13 @@ import { RAID_MAP } from '../lib/raidMap'
 import { offeredShipClassIds } from '../lib/shipClasses'
 import { makeRng as matchRng, initialBoard as matchBoard, resolveSwap as matchSwap, hasValidMove as matchHasMove, reshuffle as matchReshuffle, findMatches as matchFind, swap as matchSwapped } from '../app/(app)/charting/treasureMatch'
 import { matchWeekStr } from '../app/(app)/charting/constants'
+import { generateFight, advanceRollState, isBoonDepth, isCurseDepth, drawBoons, drawCurse, drawConfluenceOffer, drawConvergenceOffer, drawReprieve, boonEffects, confluenceEffects, convergenceEffects, curseEffects, hpBoonMult, curseHpDrain, curseSilenceCount, pickBloodOathBoon, confluenceHintsFor } from '../lib/gauntlet'
+import { resolveTerms, termPressure, termTideEffects } from '../lib/gauntletTerms'
+import { rollMarkOffer, markEffects } from '../lib/gauntletMarks'
+import { rollMerchantStock } from '../lib/gauntletMerchant'
+import { rollContractOffer, buildContractOffer } from '../lib/gauntletContracts'
+import { rollOffer, EMPTY_OFFER_STATE } from '../lib/gauntletOffer'
+import { cashOutHaul } from '../lib/gauntletRules'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'tests', 'parity')
 fs.mkdirSync(OUT, { recursive: true })
@@ -1441,6 +1448,96 @@ console.log(`  ${crewSessions.length} crew sessions, ${crewSessions.reduce((n, s
   console.log('  2000 hotspot moments')
 }
 console.log(`  ${shop.length} shop sessions, ${shop.reduce((n, s) => n + s.ops.length, 0)} calls`)
+
+// ── The gauntlets (core/gauntlet.gd) ──
+// Whole descents on seeded dice: each depth's fight, then the draft or curse
+// or synergy it brings, the Davy's Offer roll, now and then a Mark, a job, the
+// Fence; a cash-out at the end. Every roll in the web's order.
+{
+  const runs = []
+  const TERMS: Record<string, number>[] = [
+    {},
+    { press_ganged: 2, marked_hulls: 2, ironbacked: 1, davys_court: 2, crowned: 2, loose_tongue: 2, scarce_powder: 2, barren_tides: 1, no_communion: 1 },
+  ]
+  const summary = (f: any) => ({
+    name: f.enemy.name, hp: f.enemy.hpBase, min: f.enemy.minDmg, max: f.enemy.maxDmg, acc: f.enemy.accuracy,
+    boss: f.isBoss, elite: f.isElite, apex: !!f.isApex, affix: f.affix?.name ?? null, pot: f.potContribution, depth: f.depth,
+    phases: (f.enemy.phases ?? []).length, phase2: !!f.enemy.phase2, open: !!f.enemy.openingCheck,
+    aimFog: f.enemy.aimFogDensity ?? 0, aimSpeed: f.enemy.aimSpeedMult ?? 1, zoneSpeed: f.enemy.zoneSpeedMult ?? 1,
+  })
+  for (let seed = 1; seed <= 40; seed++) {
+    for (const variant of ['davy', 'don'] as const) {
+      const signed = TERMS[seed % 2]
+      const skip = seed % 3 === 0 ? 4 : 0
+      const luck = seed % 4 === 0 ? 1.7 : 1
+      const steps: unknown[] = []
+      const end = withRng(mulberry32(seedOf(`gauntlet:${seed}:${variant}`)), () => {
+        const terms = resolveTerms(signed)
+        let roll = { cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 }
+        const owned: Record<string, number> = {}
+        const oath = pickBloodOathBoon(variant)
+        if (oath && seed % 5 === 0) owned[oath] = 1
+        const curses: Record<string, number> = {}
+        const taken: string[] = []
+        const takenCv: string[] = []
+        const offered = new Set<string>()
+        const offeredCv = new Set<string>()
+        let offer = EMPTY_OFFER_STATE
+        let pot = 0
+        const depths = 12 + (seed * 7) % 60
+        for (let i = 0; i < depths; i++) {
+          const f = generateFight(roll, skip, terms, variant)
+          const step: any = { fight: summary(f) }
+          pot += f.potContribution
+          roll = advanceRollState(roll, f)
+          const nd = roll.cleared + 1 + skip
+          if (isCurseDepth(nd, terms.curseFrequencyMult)) {
+            const c = drawCurse(curses, nd, terms.curseStartsAtWorst, variant)
+            step.curse = c ? [c.id, c.tier] : null
+            if (c) curses[c.id] = c.tier
+          }
+          if (isBoonDepth(nd, terms.boonFrequencyMult)) {
+            let syn = variant === 'don' ? drawConvergenceOffer(owned, taken, takenCv, offeredCv, terms.confluenceOfferMult, variant) : null
+            if (!syn) syn = drawConfluenceOffer(owned, taken, offered, terms.confluenceOfferMult, variant)
+            const n = syn ? Math.max(1, terms.boonPicks - 1) : terms.boonPicks
+            const boons = drawBoons(n, owned, luck, terms.commonSkew, variant)
+            step.draft = { boons: boons.map(b => [b.id, b.tier]), syn: syn ? [syn.id, syn.level, !!syn.isConvergence] : null }
+            step.hints = boons.map(b => confluenceHintsFor({ id: b.id, tier: b.tier }, owned, taken).map(h => [h.c.id, h.kind, h.level]))
+            if (syn) (syn.isConvergence ? offeredCv : offered).add(syn.id)
+            if (syn && i % 2 === 0) { (syn.isConvergence ? takenCv : taken).push(syn.id) }
+            else if (boons.length) { const b = boons[i % boons.length]; owned[b.id] = b.tier }
+            if (!syn && nd >= 6 && i % 3 === 0) step.reprieve = drawReprieve({ curseCount: Object.keys(curses).length }).id
+          }
+          offer = rollOffer({ prev: offer, depth: roll.cleared, hpPct: (i % 4) / 3, hardcore: false, chestWorthOffering: i % 2 === 0 })
+          step.offer = offer.live ? [offer.live.kind, offer.live.tier, offer.live.depth] : null
+          if (f.isApex) step.marks = rollMarkOffer()
+          if (variant === 'don') {
+            const k = rollContractOffer(nd)
+            if (k) step.contract = buildContractOffer(k, ((i % 3) + 1) as 1 | 2 | 3, nd)
+            if (i % 9 === 4) step.fence = rollMerchantStock(i % 2 === 0)
+          }
+          steps.push(step)
+        }
+        const effects = [...boonEffects(owned), ...confluenceEffects(owned, taken), ...convergenceEffects(owned, taken, takenCv), ...curseEffects(curses), ...termTideEffects(signed), ...markEffects([{ type: 'shark', buffs: [{ cat: 'wildfire', pct: 7 }, { cat: 'keen_eye', pct: 5 }] }])]
+        const hc = seed % 2 === 1
+        const haul = cashOutHaul({
+          variant, hc, rd: roll.cleared, cd: roll.cleared + skip, pot, owned: [], off: [], accountUpgrades: [], offerState: offer, takeOffer: true,
+          totalFortune: seed * 4, ownedSkins: seed % 7 === 0 ? ['golden_gauntlet_hull'] : [], terms: hc ? signed : {}, prevHcDeepest: 0, prevDeepest: 0,
+          navRenownAlloc: {}, shipClasses: {}, fenceSpent: 0,
+        } as any)
+        return {
+          owned, curses, taken, takenCv, pot, effects, hpMult: hpBoonMult(effects, roll.cleared + skip, roll.cleared),
+          drain: curseHpDrain(curses), silence: curseSilenceCount(curses), pressure: termPressure(signed),
+          haul: { items: haul.droppedItems, skins: haul.grantSkins, doubloons: haul.bankedDoubloons, xp: haul.bankedXp, gems: haul.gems, fathoms: haul.earnedFathoms, crewXp: haul.crewXp, blood: haul.earnedBloodGems, chest: haul.chest.tier },
+          next: rngNext(),
+        }
+      })
+      runs.push({ seed, variant, signed, skip, luck, steps, end })
+    }
+  }
+  write('gauntlet.json', { runs })
+  console.log(`  ${runs.length} gauntlet descents`)
+}
 
 // ── Save files ──
 write('save.json', {

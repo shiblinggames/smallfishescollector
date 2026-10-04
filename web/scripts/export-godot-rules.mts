@@ -100,6 +100,17 @@ import { ALWAYS_UNLOCKED_LEGENDARIES, LEGENDARY_GATE } from '../lib/legendaryUnl
 import { traitLabel } from '../lib/crewEffects'
 import { SHIP_SKINS } from '../lib/shipSkins'
 import { ZONE_REWARD_BASE, PRESTIGE_MAX } from '../lib/zoneRewards'
+import {
+  CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER,
+  THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_BLOCKADE, THE_THRONE,
+} from '../lib/bossRaids'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE } from '../lib/raidChallenge'
+import { GAUNTLET_BOONS, GAUNTLET_CURSES, CONFLUENCES, CONVERGENCES, REPRIEVES, CHEST_TIERS, DEPTH_BANDS, DON_DEPTH_BANDS, BOON_RARITY_META, donRiseCopy, donFallCopy, gauntletTaunt, DON_RISE_DEPTHS } from '../lib/gauntlet'
+import { GAUNTLET_TERMS, TERM_GROUP_META, termGroupMeta } from '../lib/gauntletTerms'
+import { GAUNTLET_UPGRADES } from '../lib/gauntletUpgrades'
+import { MERCHANT_ITEMS } from '../lib/gauntletMerchant'
+import { CONTRACTS, STAKE_LABEL } from '../lib/gauntletContracts'
+import { MARK_CATEGORIES, MARK_META, SHARK_CATS, WHALE_CATS } from '../lib/gauntletMarks'
 
 const OUT = path.join(process.cwd(), '..', 'godot', 'game', 'content', 'rules.json')
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep']
@@ -357,6 +368,46 @@ const rules = {
   },
   marketMoods: Object.fromEntries(Object.entries(MOOD_CONFIG).map(([k, v]) => [k, { label: v.label, color: v.color, desc: v.desc }])),
   completionistNeeds: { level: COMPLETIONIST_LEVEL, folk: FOLK.map(f => f.id), maxRapport: TIER_AT[4], isles: ISLES.map(i => i.id) },
+  // THE GAUNTLETS (lib/gauntlet*, 2026-10-03): the tables the descent draws
+  // from. The enemy pools are [raidId, key] in the web's order (the port reads
+  // each hand from its raid, so the port's own enemy changes ride along); the
+  // logic (curves, rolls, cadences, the haul) is ported by hand in
+  // core/gauntlet.gd and checked against seeded cases.
+  gauntlet: (() => {
+    const pool = (cs: any[], skip: (c: any, k: string) => boolean) => cs.flatMap(c => Object.keys(c.enemies).filter(k => !skip(c, k)).map(k => [c.raidId, k]))
+    const copy = (x: unknown) => JSON.parse(JSON.stringify(x))
+    return {
+      pools: {
+        davyMobs: pool([CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER], (c, k) => k === c.bossId),
+        davyBosses: [CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE].map(c => [c.raidId, c.bossId]),
+        donMobs: pool([THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_BLOCKADE, THE_THRONE], (c, k) => k === c.bossId || k === 'the_consigliere'),
+        donBosses: [THE_COFFERS_FLEET, THE_QUARTERMASTER, THE_BLOCKADE].map(c => [c.raidId, c.bossId]),
+        apex: [THE_THRONE.raidId, 'don_finleone'],
+        closer: [THE_THRONE.raidId, 'the_consigliere'],
+      },
+      boons: copy(GAUNTLET_BOONS),
+      rarity: BOON_RARITY_META,
+      curses: copy(GAUNTLET_CURSES),
+      confluences: copy(CONFLUENCES),
+      convergences: copy(CONVERGENCES),
+      reprieves: REPRIEVES,
+      chests: CHEST_TIERS,
+      bands: { davy: DEPTH_BANDS, don: DON_DEPTH_BANDS },
+      // The voices, evaluated at every depth they speak at.
+      taunts: {
+        davy: Object.fromEntries(Array.from({ length: 100 }, (_, i) => [i + 1, gauntletTaunt(i + 1, 'davy')]).filter(([, t]) => t)),
+        don: Object.fromEntries(Array.from({ length: 100 }, (_, i) => [i + 1, gauntletTaunt(i + 1, 'don')]).filter(([, t]) => t)),
+      },
+      donRise: DON_RISE_DEPTHS.map(d => ({ depth: d, rise: donRiseCopy(d), fall: donFallCopy(d) })),
+      terms: copy(GAUNTLET_TERMS),
+      termGroups: { davy: TERM_GROUP_META, don: termGroupMeta('don') },
+      upgrades: copy(GAUNTLET_UPGRADES),
+      merchant: MERCHANT_ITEMS,
+      contracts: Object.fromEntries(Object.values(CONTRACTS).map(c => [c.kind, { name: c.name, job: c.job, goal: c.goal(0), goalN: c.goal(9999) }])),
+      stakes: STAKE_LABEL,
+      marks: { meta: MARK_META, shark: SHARK_CATS, whale: WHALE_CATS, cats: Object.fromEntries(Object.entries(MARK_CATEGORIES).map(([k, v]) => [k, { type: v.type, label: v.label }])) },
+    }
+  })(),
   starter: (() => { const { species: _s, ...rest } = starterSave('__uid__', [], 0); return rest })(),
 }
 
