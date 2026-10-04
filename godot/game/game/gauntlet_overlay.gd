@@ -63,7 +63,17 @@ func show_state(st: Dictionary) -> void:
 const PHASES: Array = ["curse", "draft", "shrine", "fence", "contract", "jobResult", "marks", "breather", "haul", "dead", "held"]
 
 
+## The fight receding behind a sheet: a soft dark scrim over the water.
+var _scrim: ColorRect
+
+
 func _hide() -> void:
+	if _scrim != null:
+		var sc: ColorRect = _scrim
+		_scrim = null
+		var tw0: Tween = create_tween()
+		tw0.tween_property(sc, "modulate:a", 0.0, 0.2)
+		tw0.tween_callback(sc.queue_free)
 	if _sheet != null:
 		var s: Panel = _sheet
 		_sheet = null
@@ -77,6 +87,15 @@ func _paint(fresh: bool) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	# Over everything on the screen (a depth's call, a banner).
 	get_parent().move_child(self, -1)
+	if _scrim == null:
+		_scrim = ColorRect.new()
+		_scrim.color = Color(0.01, 0.015, 0.03, 0.62)
+		_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_scrim.modulate.a = 0.0
+		add_child(_scrim)
+		move_child(_scrim, 0)
+		create_tween().tween_property(_scrim, "modulate:a", 1.0, 0.25)
 	var vp: Vector2 = get_viewport_rect().size
 	if _sheet == null:
 		_sheet = Panel.new()
@@ -428,8 +447,8 @@ func _shrine() -> void:
 	_head("A shrine rises from the water", "The Drowned Shrine", "Each captain makes their own offering.")
 	var art: ArtStrip = ArtStrip.new()
 	art.tex = _tx("gauntlet-shrine.webp")
-	art.position = Vector2(30, 128)
-	art.size = Vector2(w - 60, 120)
+	art.position = Vector2(30, 124)
+	art.size = Vector2(w - 60, 196)
 	_body.add_child(art)
 	var s: Dictionary = _seat(my_key)
 	var half: int = int(maxf(1.0, round(Js.num(s.get("hp")) * 0.5)))
@@ -441,7 +460,7 @@ func _shrine() -> void:
 	var cw: float = (w - 60.0 - 28.0) / 3.0
 	for i: int in 3:
 		var o: Array = opts[i]
-		var c: GCard = _card(Vector2(30 + i * (cw + 14.0), 266), Vector2(cw, 170))
+		var c: GCard = _card(Vector2(30 + i * (cw + 14.0), 334), Vector2(cw, 112))
 		c.title = o[1]
 		c.body = o[2]
 		c.tone = o[3]
@@ -754,9 +773,29 @@ func _dead() -> void:
 	var w: float = _sheet.size.x
 	_head("Depth %d" % int(Js.num(p.get("depth"))), "The Green Takes It" if _don() else "The Locker Takes It", "Every ship sank." if _keys().size() > 1 or Js.obj(_st.get("caps")).size() > 1 else "You sank.")
 	var lost: float = Js.num(_st.get("lostPot", _run().get("pot", 0.0)))
-	_label(Vector2(0, 170), "Gone to the deep", "karla", 700, 14, Dossier.SOFT, w, true)
-	_label(Vector2(0, 190), "%s ⟡" % Js.thousands(lost), "cinzel", 700, 40, Color(Dossier.HARM, 0.85), w, true)
-	_label(Vector2(0, 262), "Salvaged  +%s Fathoms" % Js.thousands(Js.num(p.get("fathoms"))), "karla", 800, 16, Color("#7fd6c8"), w, true)
+	# The chest, shut and sinking into the dark.
+	var art: ChestArt = ChestArt.new()
+	art.tex = _tx("donschestclosed.png" if _don() else "davychestclosed.png")
+	art.position = Vector2(40, 110)
+	art.size = Vector2(300, 300)
+	art.label = "Lost to the deep"
+	art.sunk = true
+	_body.add_child(art)
+	var c: Dictionary = _cap()
+	var rows: Array = [
+		["The pot, gone", "%s ⟡" % Js.thousands(lost), Color(Dossier.HARM, 0.9)],
+		["Fathoms salvaged", "+%s" % Js.thousands(Js.num(p.get("fathoms"))), Color("#7fd6c8")],
+		["Depth reached", str(int(Js.num(p.get("depth")))), Dossier.INK],
+		["Powers held", str(Js.obj(c.get("boons")).size()), Dossier.INK],
+		["Curses borne", str(Js.obj(_run().get("curses")).size()), Dossier.INK],
+	]
+	var y: float = 126.0
+	for r: Array in rows:
+		_label(Vector2(380, y), r[0], "karla", 700, 15, Dossier.SOFT)
+		var v: Label = _label(Vector2(380, y - 4), r[1], "cinzel", 700, 22, r[2], w - 420.0)
+		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		y += 42.0
+	_label(Vector2(380, y + 10), "Your Fathoms are always paid. Spend them in the Locker." , "karla", 600, 13, Dossier.SOFT, w - 420.0)
 	_home_foot()
 
 
@@ -887,7 +926,7 @@ class GCard:
 			draw_string(Kit.font("karla", 800), Vector2(x0, rr.end.y - 14.0), "Voted:  " + ", ".join(PackedStringArray(voters)), HORIZONTAL_ALIGNMENT_LEFT, size.x - 36.0, 12, Dossier.WARN)
 		# Taken: the captain's face, stamped.
 		if stamp != null or stamp_name != "":
-			draw_rect(rr.grow(-2), Color(0, 0, 0, 0.42))
+			draw_rect(rr.grow(-2), Color(0.03, 0.025, 0.02, 0.78))
 			var sc: Vector2 = Vector2(rr.get_center().x, rr.position.y + rr.size.y * 0.42)
 			BattleLook.medallion(self, sc, 34.0, stamp, BattleLook.GOLD, stamp_name.substr(0, 1), 1.0, Vector2(0.5, 0.5), 0.5)
 			BattleLook.say(self, Kit.font("cinzel", 700), sc.x, sc.y + 56.0, "Taken by %s" % stamp_name if stamp_name != "You" else "Yours", 15, BattleLook.GOLD)
@@ -914,15 +953,51 @@ class GCard:
 				draw_line(c + Vector2(4, 0), c + Vector2(11, 0), col, 2.0)
 
 	func _words(at: Vector2, w: float, a: float) -> float:
+		# Fitted to the card: the words step down a size, then the flavour
+		# line goes, before anything runs off the bottom.
+		var room: float = size.y - at.y - 18.0
+		var sizes: Array = [[17, 13, 12, true], [16, 12, 11, true], [15, 12, 11, false], [14, 11, 10, false]]
+		var pick: Array = sizes[sizes.size() - 1]
+		for sz: Array in sizes:
+			if _fit_h(w, sz) <= room:
+				pick = sz
+				break
 		var y: float = at.y
 		if kicker != "":
-			draw_string(Kit.font("karla", 800), Vector2(at.x, y), kicker.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, w, 11, Color(tone, 0.95 * a))
-			y += 24.0
-		y = _para(Kit.font("cinzel", 700), at.x, y, title, w, 17 if not wide else 20, Color(Dossier.INK, a)) + 6.0
-		y = _para(Kit.font("karla", 600), at.x, y, body, w, 13, Color(Dossier.SOFT, a)) + 8.0
-		if foot != "":
-			y = _para(Kit.font("karla", 700), at.x, y, foot, w, 12, Color(foot_tone, a))
+			y = _para(Kit.font("karla", 800), at.x, y - 13.0, kicker.to_upper(), w, 10, Color(tone, 0.95 * a)) + 10.0
+		y = _para(Kit.font("cinzel", 700), at.x, y, title, w, int(pick[0]) if not wide else 20, Color(Dossier.INK, a)) + 6.0
+		y = _para(Kit.font("karla", 600), at.x, y, body, w, int(pick[1]), Color(Dossier.SOFT, a)) + 8.0
+		if foot != "" and (pick[3] or foot_tone != Dossier.FAINT):
+			y = _para(Kit.font("karla", 700), at.x, y, foot, w, int(pick[2]), Color(foot_tone, a))
 		return y
+
+	## How tall the words would stand at these sizes.
+	func _fit_h(w: float, sz: Array) -> float:
+		var h: float = 0.0
+		if kicker != "":
+			h += _lines(Kit.font("karla", 800), kicker.to_upper(), w, 10) * 14.0 + 10.0
+		h += _lines(Kit.font("cinzel", 700), title, w, int(sz[0])) * (int(sz[0]) + 4.0) + 6.0
+		h += _lines(Kit.font("karla", 600), body, w, int(sz[1])) * (int(sz[1]) + 4.0) + 8.0
+		if foot != "" and (sz[3] or foot_tone != Dossier.FAINT):
+			h += _lines(Kit.font("karla", 700), foot, w, int(sz[2])) * (int(sz[2]) + 4.0)
+		return h
+
+	func _lines(f: Font, s: String, w: float, fs: int) -> int:
+		if s == "":
+			return 0
+		var n: int = 0
+		for part: String in s.split("
+"):
+			var cur: String = ""
+			n += 1
+			for word: String in part.split(" "):
+				var tr: String = word if cur == "" else cur + " " + word
+				if f.get_string_size(tr, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w and cur != "":
+					n += 1
+					cur = word
+				else:
+					cur = tr
+		return n
 
 	func _para(f: Font, x: float, y: float, s: String, w: float, fs: int, c: Color) -> float:
 		if s == "":
@@ -1006,19 +1081,31 @@ class ChestArt:
 	extends Control
 	var tex: Texture2D
 	var label: String = ""
+	## Sunk: dimmed and cold, settling slowly in the dark.
+	var sunk: bool = false
+	var _t: float = 0.0
 	var _frames: int = 0
 
-	func _process(_d: float) -> void:
-		if _frames < 12:
+	func _process(d: float) -> void:
+		_t += d
+		if _frames < 12 or sunk:
 			_frames += 1
 			queue_redraw()
 
 	func _draw() -> void:
-		draw_circle(size / 2.0, size.x * 0.42, Color(BattleLook.GOLD, 0.08))
+		draw_circle(size / 2.0, size.x * 0.42, Color(Color(0.3, 0.55, 0.6) if sunk else BattleLook.GOLD, 0.08))
 		if tex != null:
 			var sc: float = minf(size.x / float(tex.get_width()), (size.y - 40.0) / float(tex.get_height()))
 			var ts: Vector2 = tex.get_size() * sc
-			draw_texture_rect(tex, Rect2(Vector2((size.x - ts.x) / 2.0, 0), ts), false)
+			var dy: float = 6.0 * sin(_t * 0.8) if sunk else 0.0
+			draw_texture_rect(tex, Rect2(Vector2((size.x - ts.x) / 2.0, dy), ts), false, Color(0.45, 0.6, 0.65, 0.85) if sunk else Color.WHITE)
+			if sunk:
+				# Bubbles rising off it.
+				for k: int in 7:
+					var f: float = fposmod(_t * 0.25 + k * 0.143, 1.0)
+					var bx: float = size.x * (0.35 + 0.3 * fposmod(k * 0.37, 1.0)) + sin(_t * 2.0 + k) * 6.0
+					var by: float = ts.y * (0.8 - f * 0.9)
+					draw_arc(Vector2(bx, by), 3.0 + k % 3, 0.0, TAU, 12, Color(0.8, 0.95, 1.0, 0.5 * (1.0 - f)), 1.2, true)
 		BattleLook.say(self, Kit.font("cinzel", 700), size.x / 2.0, size.y - 8.0, label, 17, Dossier.INK)
 
 

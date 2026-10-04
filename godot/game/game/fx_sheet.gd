@@ -72,7 +72,7 @@ static func draw(on: CanvasItem, k: String, at: Vector2, w: float, rot: float, c
 			on.draw_line(Vector2(0, -l), Vector2(0, l), c, maxf(1.0, w * 0.05), true)
 		"flash", "fireball":
 			on.draw_texture_rect(g, Rect2(-h, -h, w, w), false, c)
-			on.draw_texture_rect(g, Rect2(-h * 0.4, -h * 0.4, w * 0.4, w * 0.4), false, Color(1, 1, 1, c.a))
+			on.draw_texture_rect(g, Rect2(-h * 0.28, -h * 0.28, w * 0.28, w * 0.28), false, Color(1, 1, 1, c.a * 0.85))
 		"ward":
 			on.draw_arc(Vector2.ZERO, h * 0.9, 0.0, TAU, 48, c, maxf(1.5, w * 0.02), true)
 		"ice":

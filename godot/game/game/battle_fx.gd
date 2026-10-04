@@ -92,9 +92,9 @@ func _process(delta: float) -> void:
 		# Smoke left along the flight.
 		if float(b["t"]) > 0.0 and float(b["t"]) < float(b["dur"]):
 			b["smoke"] = float(b.get("smoke", 0.0)) + delta
-			if float(b["smoke"]) > 0.035:
+			if float(b["smoke"]) > 0.016:
 				b["smoke"] = 0.0
-				_puffs.append({ "p": _ball_at(b), "v": Vector2(randf_range(-6, 6), randf_range(-14, -4)), "t": 0.0, "life": 0.55 + randf() * 0.3, "r": (5.0 if not b["big"] else 7.0) + randf() * 3.0, "c": Color(0.82, 0.8, 0.76), "world": false, "a": 0.32 })
+				_puffs.append({ "p": _ball_at(b), "v": Vector2(randf_range(-4, 4), randf_range(-10, -3)), "t": 0.0, "life": 0.45 + randf() * 0.25, "r": (3.0 if not b["big"] else 4.5) + randf() * 1.5, "c": Color(0.82, 0.8, 0.76), "world": false, "a": 0.22 })
 	_balls = _balls.filter(func(b: Dictionary) -> bool: return float(b["t"]) < float(b["dur"]) + 0.05)
 	for p: Dictionary in _bits:
 		p["t"] = float(p["t"]) + delta
@@ -386,8 +386,9 @@ func _draw() -> void:
 		if p.get("flash", false):
 			continue
 		# A soft puff: denser at its heart, falling off at the edge.
-		var rr2: float = float(p["r"]) * (0.7 + 0.9 * u) * 1.9
-		draw_texture_rect(_glow, Rect2(pos - Vector2(rr2, rr2), Vector2(rr2, rr2) * 2.0), false, Color(p["c"], minf(1.0, float(p.get("a", 0.45)) * 1.6) * (1.0 - u)))
+		var rr2: float = float(p["r"]) * (0.6 + 0.9 * u) * 1.3
+		var sc: Color = (p["c"] as Color).darkened(0.28)
+		draw_texture_rect(_glow, Rect2(pos - Vector2(rr2, rr2), Vector2(rr2, rr2) * 2.0), false, Color(sc, float(p.get("a", 0.45)) * 1.15 * pow(1.0 - u, 1.4) * minf(1.0, u * 10.0 + 0.3)))
 	for sp: Dictionary in _sparks:
 		if float(sp["t"]) < 0.0:
 			continue
@@ -460,7 +461,7 @@ func _draw_light() -> void:
 		var fa: float = 1.0 - u * u
 		if not p.has("rot"):
 			p["rot"] = randf() * TAU
-		_sprite(_add, "flash", pos, rr * 3.4, float(p["rot"]), Color(Color.WHITE.lerp(p["c"], 0.35), fa))
+		_sprite(_add, "flash", pos, rr * 2.2, float(p["rot"]), Color(Color.WHITE.lerp(p["c"], 0.6), fa * 0.85))
 	for q: Dictionary in _bits:
 		if q.get("ember", false):
 			var u5: float = float(q["t"]) / float(q["life"])

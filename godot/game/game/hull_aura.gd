@@ -218,24 +218,46 @@ func _draw() -> void:
 		var n: int = 7
 		var rise: float = _wall_a
 		var lost: int = int(round(_cracked * n))
+		# Back to front, so each plate overlaps the one behind it.
 		for k: int in n:
 			if k < lost:
 				continue
 			var a: float = (float(k) / (n - 1) - 0.5) * 1.6
 			var cx: float = face * width * 0.62 + sin(a) * width * 0.25
 			var h: float = (150.0 + 30.0 * cos(a * 2.0)) * rise
-			var w: float = 44.0
-			var r: Rect2 = Rect2(Vector2(cx - w / 2.0, -h + 10.0), Vector2(w, h))
-			draw_rect(r, Color(0.22, 0.24, 0.27, 0.92))
-			draw_rect(Rect2(r.position, Vector2(w, 10)), Color(0.42, 0.44, 0.47, 0.95))
-			draw_rect(r, Color(0.08, 0.08, 0.09, 0.9), false, 2.0)
-			for j: int in 3:
-				draw_circle(r.position + Vector2(w / 2.0, 22 + j * (h - 40) / 2.0), 3.0, Color(0.55, 0.5, 0.42))
+			var w: float = 50.0
+			var x0: float = cx - w / 2.0
+			var x1: float = cx + w / 2.0
+			var ptop: float = -h + 10.0
+			# A tall iron shield, pointed at its head: lit down its left edge,
+			# dark down its right.
+			var shape: PackedVector2Array = PackedVector2Array([Vector2(x0, 8), Vector2(x0, ptop + 16), Vector2(cx, ptop), Vector2(x1, ptop + 16), Vector2(x1, 8)])
+			var lit: Color = Color(0.42, 0.45, 0.5, 0.97)
+			var mid: Color = Color(0.27, 0.29, 0.33, 0.97)
+			var dark: Color = Color(0.13, 0.14, 0.17, 0.97)
+			draw_polygon(shape, PackedColorArray([lit.darkened(0.25), lit, mid.lightened(0.12), dark, dark.darkened(0.2)]))
+			draw_polyline(PackedVector2Array([Vector2(x0, 8), Vector2(x0, ptop + 16), Vector2(cx, ptop), Vector2(x1, ptop + 16), Vector2(x1, 8)]), Color(0.06, 0.06, 0.07, 0.95), 2.0, true)
+			# The rim catching the light along its head.
+			draw_polyline(PackedVector2Array([Vector2(x0 + 3, ptop + 18), Vector2(cx, ptop + 3)]), Color(0.75, 0.8, 0.88, 0.7), 2.0, true)
+			# A boss down its middle, rivets either side.
+			draw_line(Vector2(cx, ptop + 10), Vector2(cx, 4), Color(0.08, 0.08, 0.1, 0.5), 3.0)
+			for j: int in 4:
+				var ry: float = ptop + 30.0 + j * (h - 46.0) / 3.0
+				for sx: float in [-14.0, 14.0]:
+					draw_circle(Vector2(cx + sx, ry), 2.6, Color(0.1, 0.1, 0.11, 0.9))
+					draw_circle(Vector2(cx + sx - 0.8, ry - 0.8), 1.4, Color(0.7, 0.66, 0.58, 0.9))
 			# Cracks creep across what is left as it is beaten.
 			if _cracked > 0.15:
-				draw_line(r.position + Vector2(8, 30), r.position + Vector2(w - 10, h * 0.5), Color(0.05, 0.05, 0.05, _cracked), 2.0, true)
-		var glow: float = 0.15 + 0.1 * sin(_t * 2.0)
-		draw_circle(Vector2(face * width * 0.62, -60.0 * rise), 120.0, Color(0.6, 0.75, 0.9, glow * 0.25 * rise))
+				var ck: PackedVector2Array = PackedVector2Array()
+				for q: int in 6:
+					ck.append(Vector2(x0 + 6 + q * (w - 12) / 5.0, ptop + 30 + q * h * 0.08 + (6.0 if q % 2 else -6.0)))
+				draw_polyline(ck, Color(0.03, 0.03, 0.03, _cracked), 2.0, true)
+				draw_polyline(ck, Color(0.8, 0.85, 0.95, 0.25 * _cracked), 1.0, true)
+		# Foam where the plates meet the water.
+		for k2: int in 9:
+			var fa: float = (float(k2) / 8.0 - 0.5) * 1.8
+			var fx: float = face * width * 0.62 + sin(fa) * width * 0.27
+			draw_circle(Vector2(fx + sin(_t * 2.0 + k2) * 4.0, 8.0), 9.0 + 3.0 * sin(_t * 3.0 + k2 * 1.3), Color(0.9, 0.95, 1.0, 0.18 * rise))
 	# Sparks: iron shards off the wall (the fire's embers are light).
 	for s: Dictionary in _sparks:
 		var u: float = float(s["t"]) / float(s["life"])
