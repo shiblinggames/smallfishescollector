@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -1410,6 +1410,27 @@ func _init() -> void:
 				await process_frame
 			sea._locker._show_tab("boat")
 			for f: int in 40:
+				await process_frame
+		"homestead":
+			sea.session.store.save["homestead"] = { "house": float(OS.get_environment("HTIER")) if OS.get_environment("HTIER") != "" else 3.0, "name": "Salt Hollow",
+				"furniture": { "hearth": "hearth-copper", "floor": "floor-sail", "mount": "mount-catch", "cornerL": "cornerl-rods" },
+				"owned": ["hearth-copper", "floor-sail", "mount-catch", "cornerl-rods"], "pinned": ["unbroken", "saltlung", "beginners_luck"] }
+			p["unlocked_badges"] = ["unbroken", "saltlung", "beginners_luck", "crate_digger", "dead_eye"]
+			p["unlocked_pets"] = ["parrot_red", "seal_brown", "crab_blue"]
+			p["doubloons"] = 500000.0
+			hud._set_phase("idle")
+			hud._dial.visible = false
+			sea._dock("home")
+			for f: int in 10:
+				await process_frame
+			for n: Node in sea._room_layer.get_children():
+				if n is HomesteadRoom:
+					if OS.get_environment("HROOM") != "":
+						n._room = OS.get_environment("HROOM")
+					if OS.get_environment("HSIDE") != "":
+						n._side = OS.get_environment("HSIDE")
+					n._paint()
+			for f: int in 20:
 				await process_frame
 		"forge":
 			p["gauntlet_upgrades"] = ["forge"]

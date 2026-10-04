@@ -1431,7 +1431,11 @@ func _draw_port(port: Dictionary) -> void:
 			plate.z_index = -2
 			_world.add_child(plate)
 			Shore.trace(plate)
-	for bd: Dictionary in port["buildings"]:
+	var bds: Array = port["buildings"]
+	# The Homestead wears the house that stands (core/homestead.gd).
+	if port["id"] == "home":
+		bds = [Homestead.sea_building(session.store)]
+	for bd: Dictionary in bds:
 		var b: Sprite2D = Sprite2D.new()
 		b.texture = Lit.tex(String(bd["art"]))
 		if b.texture == null:
@@ -1441,6 +1445,10 @@ func _draw_port(port: Dictionary) -> void:
 		b.offset = Vector2(0, -b.texture.get_height() / 2.0)
 		b.position = c + Vector2(-r + float(bd["x"]) / 100.0 * d, -r + float(bd["y"]) / 100.0 * d)
 		_world.add_child(b)
+		if port["id"] == "home":
+			if _home_house != null and is_instance_valid(_home_house):
+				_home_house.queue_free()
+			_home_house = b
 	var be: Dictionary = port["berth"]
 	var berth: Berth = Berth.new()
 	berth.r = float(be["r"])
@@ -1451,9 +1459,40 @@ func _draw_port(port: Dictionary) -> void:
 	_berths[port["id"]] = berth
 
 
+var _home_house: Sprite2D
+
+
+## The house redrawn after a build.
+func refresh_home() -> void:
+	if _home_house == null or not is_instance_valid(_home_house):
+		return
+	var bd: Dictionary = Homestead.sea_building(session.store)
+	var port: Dictionary = Chart.port("home")
+	var c: Vector2 = Vector2(float(port["x"]), float(port["y"]))
+	var r: float = float(port["r"])
+	var d: float = r * 2.0
+	_home_house.texture = Lit.tex(String(bd["art"]))
+	if _home_house.texture == null:
+		return
+	var bs: float = d * float(bd["scale"]) / float(_home_house.texture.get_width())
+	_home_house.scale = Vector2(bs, bs / Chart.GROUND)
+	_home_house.offset = Vector2(0, -_home_house.texture.get_height() / 2.0)
+	_home_house.position = c + Vector2(-r + float(bd["x"]) / 100.0 * d, -r + float(bd["y"]) / 100.0 * d)
+
+
 ## Tying up: the bell, then whatever the port opens.
 func _dock(id: String) -> void:
 	match id:
+		"home":
+			Rumble.buzz([18, 40, 24])
+			Sound.bell()
+			var hr: HomesteadRoom = HomesteadRoom.new()
+			hr.session = session
+			hr.closed.connect(func() -> void:
+				refresh_home()
+				_hud.refresh())
+			_hud.hold_for(hr)
+			_room_layer.add_child(hr)
 		"mainland":
 			_go_ashore()
 		"shipyard":

@@ -14,10 +14,12 @@ half_the_sea,"Half the Sea","Catch 50 fish species",1,/badges/half_the_sea.png
 known_face,"Known Face","Become a known face to one of the regulars",1,/badges/known_face.png
 landfall,"Landfall","Chart your first World Chart landmark",1,/badges/landfall.png
 maiden_voyage,"Maiden Voyage","Complete your first voyage",1,/badges/maiden_voyage.png
+name_on_the_chart,"Name on the Chart","Give your homestead a name of your own",1,/badges/name_on_the_chart.png
 opening_salvo,"Opening Salvo","Land a single raid hit for 50 or more",1,/badges/opening_salvo.png
 prestige_i,"Prestige I","Reach Prestige in any fishing zone",1,/badges/prestige_i.png
 push_your_luck,"Push Your Luck","Complete 10 Gauntlet runs",1,/badges/push_your_luck.png
 quartermaster,"Quartermaster","Bank 40 charting points",1,/badges/quartermaster.png
+roof_of_your_own,"A Roof of Your Own","Build the cottage on your island",1,/badges/roof_of_your_own.png
 storm_reader,"Storm Reader","Discover your first confluence",1,/badges/storm_reader.png
 struck_gold,"Struck Gold","Catch your first golden fish",1,/badges/struck_gold.png
 theres_a_grave,"There's a Grave?","Lose a crew member for the first time",1,/badges/theres_a_grave.png
@@ -47,6 +49,8 @@ fresh_coat,"Fresh Coat","Own a boat skin",2,/badges/fresh_coat.png
 full_board,"Board Cleared","Claim every order posted in one day",2,/badges/full_board.png
 full_stringer,"Full Stringer","Keep 3 fishing pets at once",2,/badges/full_stringer.png
 fully_laden,"Fully Laden","Solve a Man-o-War hold (the hardest sudoku)",2,/badges/fully_laden.png
+furnished,"Furnished","Own 10 furnishings",2,/badges/furnished.png
+gallery_hung,"Gallery Hung","Hang six badges in your gallery",2,/badges/gallery_hung.png
 ghost_ship,"Krust's Crutch","Defeat Captain Krust in challenge mode",2,/badges/ghost_ship.png
 good_company,"Good Company","Be good company to five regulars",2,/badges/good_company.png
 greeds_price,"Greed's Price","Die deeper than your best cash-out",2,/badges/greeds_price.png
@@ -72,6 +76,7 @@ stacked_deck,"Stacked Deck","Watch the dealer pull blackjack two hands running",
 steady_nets,"Steady Nets","Collect 25 trawls",2,/badges/steady_nets.png
 sure_shot,"Sure Shot","Land 250 perfect catches all-time",2,/badges/sure_shot.png
 the_long_quiet,"The Long Quiet","See the Sunken Hand through to its end",2,/badges/the_long_quiet.png
+the_longhouse,"The Longhouse","Build the longhouse",2,/badges/the_longhouse.png
 three_for_three,"Three for Three","Clear all three daily challenges, 7 times",2,/badges/three_for_three.png
 throne_in_sight,"Throne in Sight","Reach rung 7 of the Pirate King ladder",2,/badges/throne_in_sight.png
 toll_paid,"Toll Paid","Defeat Tollmaster Spet in challenge mode",2,/badges/toll_paid.png
@@ -130,6 +135,7 @@ something_old,"Something Old","Carry your first Primeval spoil",3,/badges/someth
 standing_watch,"Standing Watch","Clear all three daily challenges, 30 times",3,/badges/standing_watch.png
 swift_reckoning,"Swift Reckoning","Clear Corsair's Reckoning in under 1:30",3,/badges/swift_reckoning.png
 the_chase,"The Chase","Own a chase skin",3,/badges/the_chase.png
+the_great_hall,"The Great Hall","Build the great hall",3,/badges/the_great_hall.png
 the_sixth_mount,"The Sixth Mount","Sail with all six item slots filled",3,/badges/the_sixth_mount.png
 thick_as_thieves,"Thick as Thieves","Reach the top standing with a regular",3,/badges/thick_as_thieves.png
 three_legends,"The Three Legends","Own 3 legendary crew at once",3,/badges/three_legends.png
@@ -159,6 +165,7 @@ deep_remembers,"The Deep Remembers","Reach 20 total Vigil",4,/badges/deep_rememb
 divine_hand,"Divine Hand","Land a Divine trait on a crew",4,/badges/divine_hand.png
 dons_doorstep,"The Don's Doorstep","Descend to depth 50 in Don's Gauntlet",4,/badges/dons_doorstep.png
 dressed_to_the_nines,"Dressed to the Nines","Own 10 crew skins",4,/badges/dressed_to_the_nines.png
+every_comfort,"Every Comfort","Own every furnishing there is",4,/badges/every_comfort.png
 every_last_rock,"Every Last Rock","Land on all 27 isles",4,/badges/every_last_rock.png
 finns_rival,"The Long Sail","Finish three chapters of Finn's jobs",4,/badges/finns_rival.png
 first_convergence,"The Convergence","Forge a convergence in Don's Gauntlet",4,/badges/first_convergence.png
@@ -184,6 +191,7 @@ seven_boards,"Every Morning","Clear the whole board on 7 days",4,/badges/seven_b
 six_abreast,"Six Abreast","Every Ancient at Vigil Rank III or better",4,/badges/six_abreast.png
 six_legends,"The Avengers","Own all 5 base legendary crew",4,/badges/six_legends.png
 struck_in_gold,"Struck in Gold","Take an Ancient to Vigil Rank V",4,/badges/struck_in_gold.png
+the_estate,"The Estate","Build the Estate, the last rung of the house",4,/badges/the_estate.png
 the_fourth_task,"The Fourth Task","Clear 25 Master daily challenges",4,/badges/the_fourth_task.png
 the_long_watch,"The Long Watch","Bank 500 charting points",4,/badges/the_long_watch.png
 the_sunken_hand,"The Sunken Hand","Clear all 8 raids in challenge mode",4,/badges/the_sunken_hand.png

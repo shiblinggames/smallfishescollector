@@ -272,7 +272,7 @@ static func next_color(points_now: float) -> Array:
 # skins, bounties and the campaign's fog. Conditions are the web's
 # (lib/badgeConditions.ts) read off the port's own records. Cut with their
 # systems: the Captain tier, the Hardcore Gauntlet and Davy's Terms, Blood
-# Gems, the Exchange. Not yet: the Homestead's house.
+# Gems, the Exchange.
 
 const EXPEDITION: Array = [
 	"navigator", "master_navigator", "complete_captain",
@@ -297,6 +297,7 @@ const EXPEDITION: Array = [
 	"colors_raised", "dressed_to_the_nines", "the_chase", "fashionista", "full_wardrobe",
 	"first_bounty", "fifty_orders", "full_board", "seven_boards", "elite_order", "bounty_hoard",
 	"into_the_fog", "fog_burned_off",
+	"roof_of_your_own", "the_longhouse", "the_great_hall", "the_estate", "name_on_the_chart", "furnished", "every_comfort", "gallery_hung",
 ]
 ## Granted where they happen (the moment is the badge), on the expedition side
 ## and in the rooms.
@@ -471,6 +472,20 @@ static func _exp(id: String, db: CaptainStore, uid: String) -> bool:
 		"elite_order": return n.call("bounty_elites_claimed") >= 1
 		# The web's 5,000 gems from bounties, in the port's doubloons (x 100).
 		"bounty_hoard": return n.call("bounty_doubloons_earned") >= 500000
+		"roof_of_your_own", "the_longhouse", "the_great_hall", "the_estate", "name_on_the_chart", "furnished", "every_comfort", "gallery_hung":
+			var h: Dictionary = Homestead.of(db)
+			var every: int = 0
+			for f: Dictionary in Homestead.data()["furniture"]:
+				every += (f["options"] as Array).size()
+			match id:
+				"roof_of_your_own": return int(h["house"]) >= 1
+				"the_longhouse": return int(h["house"]) >= 2
+				"the_great_hall": return int(h["house"]) >= 3
+				"the_estate": return int(h["house"]) >= (Homestead.data()["house"] as Array).size() - 1
+				"name_on_the_chart": return str(Js.nz(h.get("name"), "")).strip_edges() != ""
+				"furnished": return (h["owned"] as Array).size() >= 10
+				"every_comfort": return (h["owned"] as Array).size() >= every
+				_: return (h["pinned"] as Array).size() >= int(Homestead.data()["pinnedMax"])
 		"into_the_fog": return Explore.xfog_progress(Explore.xfog_decode(p.get("sea_explored_exp"))) >= 0.5
 		"fog_burned_off": return Explore.xfog_progress(Explore.xfog_decode(p.get("sea_explored_exp"))) >= 0.9
 	return false

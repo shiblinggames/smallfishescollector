@@ -1,0 +1,566 @@
+{
+ "_about": "The Homestead, from the web (tools/export_homestead.mts).",
+ "house": [
+  {
+   "name": "A lean-to",
+   "cost": 0,
+   "art": "/sea/home-isle-1.png",
+   "seaArt": "/sea/home-house-1.webp",
+   "x": 50,
+   "y": 56,
+   "scale": 0.32,
+   "blurb": "Salvage, canvas and stubbornness.",
+   "adds": ""
+  },
+  {
+   "name": "A cottage",
+   "cost": 60000,
+   "art": "/sea/home-isle-2.png",
+   "seaArt": "/sea/home-house-2.webp",
+   "x": 52,
+   "y": 58,
+   "scale": 0.38,
+   "blurb": "One room, one chimney, and a door that shuts.",
+   "adds": "A kitchen garden, and a path worn between the two."
+  },
+  {
+   "name": "A longhouse",
+   "cost": 300000,
+   "art": "/sea/home-isle-3.png",
+   "seaArt": "/sea/home-house-3.webp",
+   "x": 49,
+   "y": 71,
+   "scale": 0.59,
+   "blurb": "Long enough to hang the nets indoors.",
+   "adds": "A walled garden, a drying rack and a woodpile."
+  },
+  {
+   "name": "A great hall",
+   "cost": 900000,
+   "art": "/sea/home-isle-4.png",
+   "seaArt": "/sea/home-house-4.webp",
+   "x": 49,
+   "y": 67,
+   "scale": 0.61,
+   "blurb": "Two storys, and a fire that never quite goes out.",
+   "adds": "A brazier up on the headland, and a boathouse below it."
+  },
+  {
+   "name": "The Estate",
+   "cost": 2400000,
+   "art": "/sea/home-isle-5.png",
+   "seaArt": "/sea/home-house-5.webp",
+   "x": 49,
+   "y": 69,
+   "scale": 0.65,
+   "blurb": "Nobody mistakes it for anywhere else.",
+   "adds": "A working lighthouse. They can see you coming from the Abyss."
+  }
+ ],
+ "slots": [
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "furniture": [
+  {
+   "slot": "hearth",
+   "label": "The fire",
+   "options": [
+    {
+     "id": "hearth-stone",
+     "name": "Stone hearth",
+     "cost": 0,
+     "art": "/sea/hearth-stone.png"
+    },
+    {
+     "id": "hearth-iron",
+     "name": "Iron brazier",
+     "cost": 15000,
+     "art": "/sea/hearth-iron.png"
+    },
+    {
+     "id": "hearth-copper",
+     "name": "Copper hood",
+     "cost": 60000,
+     "art": "/sea/hearth-copper.png"
+    },
+    {
+     "id": "hearth-whale",
+     "name": "Whalebone mantel",
+     "cost": 250000,
+     "art": "/sea/hearth-whale.png"
+    },
+    {
+     "id": "hearth-firestone",
+     "name": "An abyssal firestone",
+     "cost": 0,
+     "art": "/sea/hearth-firestone.png",
+     "found": {
+      "isle": "ancient_deep-0"
+     }
+    }
+   ]
+  },
+  {
+   "slot": "floor",
+   "label": "Underfoot",
+   "options": [
+    {
+     "id": "floor-board",
+     "name": "Bare boards",
+     "cost": 0,
+     "art": null
+    },
+    {
+     "id": "floor-kelp",
+     "name": "Kelp weave",
+     "cost": 12000,
+     "art": "/sea/floor-kelp.png"
+    },
+    {
+     "id": "floor-sail",
+     "name": "Old sailcloth",
+     "cost": 45000,
+     "art": "/sea/floor-sail.png"
+    },
+    {
+     "id": "floor-deep",
+     "name": "Deepwater rug",
+     "cost": 200000,
+     "art": "/sea/floor-deep.png"
+    },
+    {
+     "id": "floor-abyssal",
+     "name": "An abyssal weave",
+     "cost": 0,
+     "art": "/sea/floor-abyssal.png",
+     "found": {
+      "isle": "abyss-2"
+     }
+    }
+   ]
+  },
+  {
+   "slot": "mount",
+   "label": "Over the fire",
+   "options": [
+    {
+     "id": "mount-none",
+     "name": "Nothing yet",
+     "cost": 0,
+     "art": null
+    },
+    {
+     "id": "mount-oar",
+     "name": "Crossed oars",
+     "cost": 10000,
+     "art": "/sea/mount-oar.png"
+    },
+    {
+     "id": "mount-catch",
+     "name": "Your biggest catch",
+     "cost": 70000,
+     "art": "/sea/mount-catch.png"
+    },
+    {
+     "id": "mount-golden",
+     "name": "A golden, cased",
+     "cost": 300000,
+     "art": "/sea/mount-golden.png"
+    },
+    {
+     "id": "mount-giant",
+     "name": "An Ancient Deep giant",
+     "cost": 0,
+     "art": "/sea/mount-giant.png",
+     "found": {
+      "isle": "ancient_deep-2"
+     }
+    }
+   ]
+  },
+  {
+   "slot": "cornerL",
+   "label": "The left corner",
+   "options": [
+    {
+     "id": "cornerl-none",
+     "name": "Empty",
+     "cost": 0,
+     "art": null
+    },
+    {
+     "id": "cornerl-chest",
+     "name": "A sea chest",
+     "cost": 9000,
+     "art": "/sea/cornerl-chest.png"
+    },
+    {
+     "id": "cornerl-rods",
+     "name": "A rod rack",
+     "cost": 70000,
+     "art": "/sea/cornerl-rods.png"
+    },
+    {
+     "id": "cornerl-glass",
+     "name": "A standing glass",
+     "cost": 300000,
+     "art": "/sea/cornerl-glass.png"
+    },
+    {
+     "id": "cornerl-anchor",
+     "name": "An anchor off something older",
+     "cost": 0,
+     "art": "/sea/cornerl-anchor.png",
+     "found": {
+      "isle": "abyss-1"
+     }
+    }
+   ]
+  },
+  {
+   "slot": "cornerR",
+   "label": "The right corner",
+   "options": [
+    {
+     "id": "cornerr-none",
+     "name": "Empty",
+     "cost": 0,
+     "art": null
+    },
+    {
+     "id": "corner-net",
+     "name": "Nets and floats",
+     "cost": 8000,
+     "art": "/sea/corner-net.png"
+    },
+    {
+     "id": "corner-figure",
+     "name": "A ship's figurehead",
+     "cost": 75000,
+     "art": "/sea/corner-figure.png"
+    },
+    {
+     "id": "corner-lamp",
+     "name": "A drowned lamp, still lit",
+     "cost": 320000,
+     "art": "/sea/corner-lamp.png"
+    },
+    {
+     "id": "corner-orrery",
+     "name": "A tide orrery",
+     "cost": 0,
+     "art": "/sea/corner-orrery.png",
+     "found": {
+      "isle": "ancient_deep-4"
+     }
+    }
+   ]
+  }
+ ],
+ "rooms": [
+  {
+   "id": "main",
+   "name": "The house",
+   "blurb": "The room you actually live in.",
+   "needsHouse": 0,
+   "art": [
+    "/sea/room-leanto.jpg",
+    "/sea/room-cottage.jpg",
+    "/sea/room-longhouse.jpg",
+    "/sea/room-hall.jpg",
+    "/sea/room-estate.jpg"
+   ],
+   "spots": [
+    {
+     "floor": {
+      "x": 50,
+      "y": 100,
+      "w": 46
+     },
+     "hearth": {
+      "x": 50,
+      "y": 79,
+      "w": 23
+     },
+     "mount": {
+      "x": 50,
+      "y": 49,
+      "w": 15
+     },
+     "cornerL": {
+      "x": 28,
+      "y": 79,
+      "w": 12
+     },
+     "cornerR": {
+      "x": 73,
+      "y": 79,
+      "w": 14
+     }
+    },
+    {
+     "floor": {
+      "x": 50,
+      "y": 99,
+      "w": 48
+     },
+     "hearth": {
+      "x": 50,
+      "y": 79,
+      "w": 22
+     },
+     "mount": {
+      "x": 50,
+      "y": 47,
+      "w": 14
+     },
+     "cornerL": {
+      "x": 28,
+      "y": 79,
+      "w": 10
+     },
+     "cornerR": {
+      "x": 73,
+      "y": 79,
+      "w": 12
+     }
+    },
+    {
+     "floor": {
+      "x": 50,
+      "y": 95,
+      "w": 50
+     },
+     "hearth": {
+      "x": 50,
+      "y": 70,
+      "w": 17
+     },
+     "mount": {
+      "x": 50,
+      "y": 48,
+      "w": 11
+     },
+     "cornerL": {
+      "x": 32,
+      "y": 70,
+      "w": 8
+     },
+     "cornerR": {
+      "x": 69,
+      "y": 70,
+      "w": 10
+     }
+    },
+    {
+     "floor": {
+      "x": 50,
+      "y": 97,
+      "w": 52
+     },
+     "hearth": {
+      "x": 50,
+      "y": 70,
+      "w": 16
+     },
+     "mount": {
+      "x": 50,
+      "y": 47,
+      "w": 11
+     },
+     "cornerL": {
+      "x": 32,
+      "y": 70,
+      "w": 8
+     },
+     "cornerR": {
+      "x": 70,
+      "y": 70,
+      "w": 10
+     }
+    },
+    {
+     "floor": {
+      "x": 50,
+      "y": 100,
+      "w": 43
+     },
+     "hearth": {
+      "x": 50,
+      "y": 76,
+      "w": 15
+     },
+     "mount": {
+      "x": 50,
+      "y": 53,
+      "w": 10
+     },
+     "cornerL": {
+      "x": 32,
+      "y": 77,
+      "w": 7
+     },
+     "cornerR": {
+      "x": 70,
+      "y": 77,
+      "w": 9
+     }
+    }
+   ]
+  },
+  {
+   "id": "gallery",
+   "name": "The gallery",
+   "blurb": "Your badges, and every fish you have logged.",
+   "needsHouse": 2,
+   "art": "/sea/room-gallery.jpg",
+   "content": {
+    "x": 50,
+    "y": 45,
+    "w": 88
+   }
+  },
+  {
+   "id": "menagerie",
+   "name": "The menagerie",
+   "blurb": "Every pet you have ever taken in.",
+   "needsHouse": 3,
+   "art": "/sea/room-menagerie.jpg",
+   "content": {
+    "x": 46,
+    "y": 79,
+    "w": 80
+   }
+  },
+  {
+   "id": "trophy",
+   "name": "The trophy room",
+   "blurb": "The giants, and what they cost you.",
+   "needsHouse": 4,
+   "art": "/sea/room-trophy.jpg",
+   "content": {
+    "x": 50,
+    "y": 40,
+    "w": 88
+   }
+  }
+ ],
+ "menagerie": {
+  "parrot_red": {
+   "x": 7,
+   "y": 71,
+   "w": 20
+  },
+  "parrot_blue": {
+   "x": 18,
+   "y": 65,
+   "w": 15
+  },
+  "parrot_green": {
+   "x": 27,
+   "y": 60,
+   "w": 10
+  },
+  "parrot_charcoal": {
+   "x": 74,
+   "y": 61,
+   "w": 10,
+   "flip": true
+  },
+  "parrot_sand": {
+   "x": 80,
+   "y": 64,
+   "w": 7
+  },
+  "parrot_gold": {
+   "x": 93,
+   "y": 71,
+   "w": 20,
+   "flip": true
+  },
+  "monkey_brown": {
+   "x": 47,
+   "y": 78,
+   "w": 14
+  },
+  "monkey_golden": {
+   "x": 53,
+   "y": 92,
+   "w": 19,
+   "flip": true
+  },
+  "seal_brown": {
+   "x": 28,
+   "y": 81,
+   "w": 15
+  },
+  "seal_gray": {
+   "x": 37,
+   "y": 76,
+   "w": 13
+  },
+  "seal_gold": {
+   "x": 38,
+   "y": 94,
+   "w": 18,
+   "flip": true
+  },
+  "lizard_green": {
+   "x": 36,
+   "y": 58,
+   "w": 7
+  },
+  "lizard_indigo": {
+   "x": 55,
+   "y": 58,
+   "w": 7,
+   "flip": true
+  },
+  "lizard_white": {
+   "x": 48,
+   "y": 58,
+   "w": 7
+  },
+  "raccoon_beige": {
+   "x": 63,
+   "y": 78,
+   "w": 16
+  },
+  "raccoon_black": {
+   "x": 74,
+   "y": 88,
+   "w": 19,
+   "flip": true
+  },
+  "crab_orange": {
+   "x": 22,
+   "y": 90,
+   "w": 12
+  },
+  "crab_blue": {
+   "x": 55,
+   "y": 72,
+   "w": 10
+  },
+  "crab_gold": {
+   "x": 65,
+   "y": 93,
+   "w": 13
+  },
+  "plesiosaur_baby": {
+   "x": 84,
+   "y": 84,
+   "w": 24
+  }
+ },
+ "menagerieFallback": {
+  "x": 50,
+  "y": 88,
+  "w": 9
+ },
+ "pinnedMax": 6
+}

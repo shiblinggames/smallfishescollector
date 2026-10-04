@@ -1602,6 +1602,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   - THE COMPLETIONIST'S EFFECT FORGE (the Tackle Shop's Completionist card, once owned): every
     owned rod with an effect of its own as a toggle, up to three, "Forge these in" (free the
     first time, the reforge price after; Loadout.set_completionist_effects, already ported).
+  - THE HOMESTEAD (core/homestead.gd, game/homestead_room.gd; tables content/homestead.json via
+    tools/export_homestead.mts): mooring at the island opens it. The house a rung at a time (the
+    web's prices, 60,000 to 2,400,000 ⟡), each rung repainting the island on the chart
+    (Sea.refresh_home) and opening a furniture slot and a room; the main room's five slots
+    furnished (bought once and kept, put back free, the five found pieces only off their isles);
+    the island named (2 to 24 letters, numbers, spaces, apostrophes, hyphens, ampersands); up to
+    six earned badges on the gallery's rail; the menagerie shows every pet, the trophy room the
+    giants landed, the gallery the Almanac's count. Each room painted with what is in it at the
+    web's spots. The crew's one base in a Charter (the save's "homestead"). Its 8 badges are
+    earnable (221 of 243 now).
   - THE DAMAGE GATE (Campaign.dps_preview) counts the raid items that touch one straight opening
     shot at a ship that is no boss: non-crit, escort and first-shot multipliers from the battle
     seat, tempered grades in (the web counted the non-crit cost alone).
