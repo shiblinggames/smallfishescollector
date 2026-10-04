@@ -1,0 +1,214 @@
+api_name,display_name,description,points,image
+baby_steps,"Baby Steps","Hold 100,000 doubloons at once",1,/badges/baby_steps.png
+beginners_luck,"Beginner's Luck","Fish up and open your first supply crate",1,/badges/beginners_luck.png
+colors_raised,"Colors Raised","Own your first crew skin",1,/badges/colors_raised.png
+first_ashore,"First Ashore","Go ashore on your first isle",1,/badges/first_ashore.png
+first_bounty,"Took the Job","Claim your first bounty",1,/badges/first_bounty.png
+first_descent,"First Descent","Cash out a Gauntlet run",1,/badges/first_descent.png
+first_haul,"First Haul","Collect your first trawl",1,/badges/first_haul.png
+first_spade,"First Spade","Finish your first treasure hunt",1,/badges/first_spade.png
+friend_at_sea,"A Friend at Sea","Earn your first fishing pet",1,/badges/friend_at_sea.png
+got_away,"The One That Got Away","Lose 50 fish to snapped lines",1,/badges/got_away.png
+growing_crew,"Growing Crew","Recruit 25 crew",1,/badges/growing_crew.png
+half_the_sea,"Half the Sea","Catch 50 fish species",1,/badges/half_the_sea.png
+known_face,"Known Face","Become a known face to one of the regulars",1,/badges/known_face.png
+landfall,"Landfall","Chart your first World Chart landmark",1,/badges/landfall.png
+maiden_voyage,"Maiden Voyage","Complete your first voyage",1,/badges/maiden_voyage.png
+opening_salvo,"Opening Salvo","Land a single raid hit for 50 or more",1,/badges/opening_salvo.png
+prestige_i,"Prestige I","Reach Prestige in any fishing zone",1,/badges/prestige_i.png
+push_your_luck,"Push Your Luck","Complete 10 Gauntlet runs",1,/badges/push_your_luck.png
+quartermaster,"Quartermaster","Bank 40 charting points",1,/badges/quartermaster.png
+storm_reader,"Storm Reader","Discover your first confluence",1,/badges/storm_reader.png
+struck_gold,"Struck Gold","Catch your first golden fish",1,/badges/struck_gold.png
+theres_a_grave,"There's a Grave?","Lose a crew member for the first time",1,/badges/theres_a_grave.png
+two_for_the_pot,"Two for the Pot","Reel in a double catch",1,/badges/two_for_the_pot.png
+wake_behind_you,"Wake Behind You","Chart a quarter of the fishing sea",1,/badges/wake_behind_you.png
+well_provisioned,"Well-Provisioned","Claim your first Gauntlet upgrade",1,/badges/well_provisioned.png
+wet_behind_ears,"Wet Behind the Ears","Reach Fishing Level 25",1,/badges/wet_behind_ears.png
+a_real_keeper,"A Real Keeper","Land 10 Trophy-size catches",2,/badges/a_real_keeper.png
+abyssward,"Abyssward","Reach depth 20 in the Gauntlet",2,/badges/abyssward.png
+account_settled,"Account Settled","Defeat the Quartermaster in challenge mode",2,/badges/account_settled.png
+again_and_again,"Again and Again","Complete 50 Gauntlet runs",2,/badges/again_and_again.png
+beachcomber,"Beachcomber","Land on 10 isles",2,/badges/beachcomber.png
+bearing_gifts,"Bearing Gifts","Hand over 25 gifts",2,/badges/bearing_gifts.png
+called_it,"Called It","Win a straight-up single-number roulette bet",2,/badges/called_it.png
+cartographers_fall,"The Cartographer's Fall","Defeat the Cartographer in challenge mode",2,/badges/cartographers_fall.png
+catfish_jackpot,"Catfish Jackpot","Win the slots Catfish Jackpot",2,/badges/catfish_jackpot.png
+corsairs_bane,"Corsair's Bane","Defeat Barnacle Pete in challenge mode",2,/badges/corsairs_bane.png
+crate_digger,"Crate Digger","Open 50 supply crates",2,/badges/crate_digger.png
+crate_expectations,"Crate Expectations","Open 250 supply crates",2,/badges/crate_expectations.png
+deep_cut,"Deep Cut","Carry a stat only the Leviathan bunk can roll",2,/badges/deep_cut.png
+den_magnate,"Chartwright","Bank 80 charting points",2,/badges/den_magnate.png
+dons_descent,"The Green Beckons","Cash out a Don's Gauntlet run",2,/badges/dons_descent.png
+expanded_armory,"Expanded Armory","Bolt the Expanded Armory onto your deck",2,/badges/expanded_armory.png
+first_fusion,"First Fusion","Forge your first item",2,/badges/first_fusion.png
+fleet_admiral,"Fleet Admiral","Complete 100 voyages",2,/badges/fleet_admiral.png
+fresh_coat,"Fresh Coat","Own a boat skin",2,/badges/fresh_coat.png
+full_board,"Board Cleared","Claim every order posted in one day",2,/badges/full_board.png
+full_stringer,"Full Stringer","Keep 3 fishing pets at once",2,/badges/full_stringer.png
+fully_laden,"Fully Laden","Solve a Man-o-War hold (the hardest sudoku)",2,/badges/fully_laden.png
+ghost_ship,"Krust's Crutch","Defeat Captain Krust in challenge mode",2,/badges/ghost_ship.png
+good_company,"Good Company","Be good company to five regulars",2,/badges/good_company.png
+greeds_price,"Greed's Price","Die deeper than your best cash-out",2,/badges/greeds_price.png
+hard_hitter,"Hard Hitter","Land a single raid hit for 100 or more",2,/badges/hard_hitter.png
+home_waters,"Home Waters","Chart three fifths of the fishing sea",2,/badges/home_waters.png
+into_the_deep,"Into the Deep","Descend to depth 5 in the Gauntlet",2,/badges/into_the_deep.png
+into_the_fog,"Into the Fog","Chart half the campaign water",2,/badges/into_the_fog.png
+legendary_recruit,"Legendary Recruit","Recruit a legendary crew",2,/badges/legendary_recruit.png
+locker_raider,"Locker Raider","Claim 6 Gauntlet upgrades",2,/badges/locker_raider.png
+navigator,"Wayfinder","Reach Navigation Level 50",2,/badges/navigator.png
+old_hand,"Old Hand","Reach Fishing Level 50",2,/badges/old_hand.png
+old_sea_dog,"Old Sea Dog","Complete 50 voyages",2,/badges/old_sea_dog.png
+one_upped,"The Hand on the Rod","Finish the first chapter of Finn's jobs",2,/badges/one_upped.png
+parlor_cardsharp,"Cardsharp","Reach the Cardsharp rank in the Parlor",2,/badges/parlor_cardsharp.png
+parlor_hot_hand,"Hot Hand","Answer 5 Parlor questions in a row",2,/badges/parlor_hot_hand.png
+reforged,"Reforged","Pay to re-forge the Completionist Rod into a fresh 3-effect loadout",2,/badges/reforged.png
+ruse_undone,"Ruse Undone","Defeat Admiral Ruse in challenge mode",2,/badges/ruse_undone.png
+saltlung,"Saltlung","Cast your line 1,000 times",2,/badges/saltlung.png
+salvors_claim,"Salvor's Claim","Open a berth from the wreck",2,/badges/salvors_claim.png
+six_aboard,"Six Aboard","Add the Sixth Berth to your ship",2,/badges/six_aboard.png
+six_feet_down,"Ten Feet Down","Finish 10 treasure hunts",2,/badges/six_feet_down.png
+stacked_deck,"Stacked Deck","Watch the dealer pull blackjack two hands running",2,/badges/stacked_deck.png
+steady_nets,"Steady Nets","Collect 25 trawls",2,/badges/steady_nets.png
+sure_shot,"Sure Shot","Land 250 perfect catches all-time",2,/badges/sure_shot.png
+the_long_quiet,"The Long Quiet","See the Sunken Hand through to its end",2,/badges/the_long_quiet.png
+three_for_three,"Three for Three","Clear all three daily challenges, 7 times",2,/badges/three_for_three.png
+throne_in_sight,"Throne in Sight","Reach rung 7 of the Pirate King ladder",2,/badges/throne_in_sight.png
+toll_paid,"Toll Paid","Defeat Tollmaster Spet in challenge mode",2,/badges/toll_paid.png
+two_fisted,"Two-Fisted","Land 100 double catches",2,/badges/two_fisted.png
+unbroken,"Unbroken","Land 10 perfect catches in a row",2,/badges/unbroken.png
+uncharted_no_more,"Uncharted No More","Chart seven World Chart landmarks",2,/badges/uncharted_no_more.png
+whole_road,"The Whole Road","Meet all nine regulars out on the water",2,/badges/whole_road.png
+you_remembered,"You Remembered","Bring a regular the one fish they actually want",2,/badges/you_remembered.png
+ancient_tackle,"Ancient Tackle","Earn your first Ancient-rarity item",3,/badges/ancient_tackle.png
+back_to_the_dark,"Back to the Dark","Release an Ancient back into the deep",3,/badges/back_to_the_dark.png
+blockade_broken,"Blockade Broken","Defeat Sal Brackwater in challenge mode",3,/badges/blockade_broken.png
+clean_manifest,"Clean Manifest","Stow all four holds in a single week",3,/badges/clean_manifest.png
+clean_sweep,"Clean Sweep","Answer every card in a full Captain's Board hand without a miss",3,/badges/clean_sweep.png
+crewmaster,"Crewmaster","Reach the top Crew Hall tier",3,/badges/crewmaster.png
+davy_jones,"Davy Jones' Locker","Descend to depth 10 in the Gauntlet",3,/badges/davy_jones.png
+dead_eye,"Dead-Eye","Land 1,000 perfect catches all-time",3,/badges/dead_eye.png
+deep_pockets,"Deep Pockets","Hold 1,000,000 doubloons at once",3,/badges/deep_pockets.png
+deep_trawler,"Deep Trawler","Collect 100 trawls",3,/badges/deep_trawler.png
+don_drowned,"The Don Is Drowned","Defeat Don Finleone in challenge mode",3,/badges/don_drowned.png
+dons_ghost_hull_won,"Ghost of the Court","Earn the Don's Ghost Hull from Don's Gauntlet",3,/badges/dons_ghost_hull_won.png
+elite_order,"The Hard Way","Claim an Elite bounty",3,/badges/elite_order.png
+far_rocks,"The Far Rocks","Land on 20 isles",3,/badges/far_rocks.png
+fashionista,"Fashionista","Have a skin equipped on 5 crew at once",3,/badges/fashionista.png
+fathom_hoarder,"Fathom Hoarder","Earn 1,000 Fathoms all-time",3,/badges/fathom_hoarder.png
+fathomless,"Fathomless","Bank 500 Fathoms all-time",3,/badges/fathomless.png
+fifty_orders,"Known at the Docks","Claim 50 bounties",3,/badges/fifty_orders.png
+finndicates_bane,"Finndicate's Bane","Clear all four raids in challenge mode",3,/badges/finndicates_bane.png
+fishmonger,"Fishmonger","Sell 250,000 doubloons of fish",3,/badges/fishmonger.png
+forge_awakened,"The Forge Awakens","Unlock the Forge from the Gauntlet",3,/badges/forge_awakened.png
+forge_worthy,"Forge-Worthy","Reach depth 35 in the Gauntlet",3,/badges/forge_worthy.png
+full_muster,"Full Muster","Recruit 100 crew",3,/badges/full_muster.png
+fully_outfitted,"Fully Outfitted","Max both Drills and Stores",3,/badges/fully_outfitted.png
+fully_rigged,"Fully Rigged","Forge all 3 effects into the Completionist Rod",3,/badges/fully_rigged.png
+ghost_armory,"The Ghost Armory","Own all three Don's Gauntlet items",3,/badges/ghost_armory.png
+heavy_broadside,"Heavy Broadside","Land a single raid hit for 250 or more",3,/badges/heavy_broadside.png
+hundred_fins,"A Hundred Fins","Catch 100 fish species",3,/badges/hundred_fins.png
+leviathan_hall,"Leviathan Hall","Build the Crew Hall to its final tier",3,/badges/leviathan_hall.png
+mark_of_mastery,"Mark of Mastery","Reach a Mark III ship class",3,/badges/mark_of_mastery.png
+massive_booty,"Massive Booty","Land a Massive Booty on a voyage",3,/badges/massive_booty.png
+menagerie,"The Menagerie","Keep 5 fishing pets at once",3,/badges/menagerie.png
+net_positive,"Net Positive","Collect 500 trawls",3,/badges/net_positive.png
+not_a_shot_fired,"Not a Shot Fired","Sink a boss without a shot or a crew ability",3,/badges/not_a_shot_fired.png
+one_shot,"One Shot","Land a single Gauntlet hit for 2,000 or more",3,/badges/one_shot.png
+one_true_shot,"One True Shot","Land a single Gauntlet hit for 4,000+",3,/badges/one_true_shot.png
+open_hand,"Open Hand","Hand over 100 gifts",3,/badges/open_hand.png
+others_came_before,"Others Came Before","Read all nine notes left on the rocks",3,/badges/others_came_before.png
+overkill,"Overkill","Land a single raid hit for 500 or more",3,/badges/overkill.png
+parlor_kingpin,"Kingpin","Reach the Kingpin rank in the Parlor",3,/badges/parlor_kingpin.png
+parlor_sharpshooter,"Sharpshooter","Answer 10 Parlor questions in a row",3,/badges/parlor_sharpshooter.png
+quick_draw,"Quick Draw","Clear any raid in under 1:00",3,/badges/quick_draw.png
+reel_lucky,"Reel Lucky","Hit a fishing jackpot",3,/badges/reel_lucky.png
+relentless,"Relentless","Land 15 perfect catches in a row",3,/badges/relentless.png
+salted_away,"Salted Away","Finish a treasure hunt of every kind: a Scrawl, a Ship's Letter, a Torn Map and a Last Will",3,/badges/salted_away.png
+ship_of_the_line,"Ship of the Line","Own the Man-o-War",3,/badges/ship_of_the_line.png
+something_old,"Something Old","Carry your first Primeval spoil",3,/badges/something_old.png
+standing_watch,"Standing Watch","Clear all three daily challenges, 30 times",3,/badges/standing_watch.png
+swift_reckoning,"Swift Reckoning","Clear Corsair's Reckoning in under 1:30",3,/badges/swift_reckoning.png
+the_chase,"The Chase","Own a chase skin",3,/badges/the_chase.png
+the_sixth_mount,"The Sixth Mount","Sail with all six item slots filled",3,/badges/the_sixth_mount.png
+thick_as_thieves,"Thick as Thieves","Reach the top standing with a regular",3,/badges/thick_as_thieves.png
+three_legends,"The Three Legends","Own 3 legendary crew at once",3,/badges/three_legends.png
+trophy_catch,"Trophy Catch","Land a Trophy-tier fish",3,/badges/trophy_catch.png
+trusted_three,"Trusted Three","Be trusted by three regulars",3,/badges/trusted_three.png
+twice_landed,"Twice Landed","Raise an Ancient to Vigil Rank II",3,/badges/twice_landed.png
+twice_the_haul,"Twice the Haul","Land 500 double catches",3,/badges/twice_the_haul.png
+unstoppable,"Unstoppable","Win 5 blackjack hands in a row",3,/badges/unstoppable.png
+untouched,"Untouched","Bank a Don's Gauntlet run from depth 5 without taking a hit",3,/badges/untouched.png
+waking_it,"Waking It","Take a Primeval spoil to Tier III",3,/badges/waking_it.png
+weapon_of_legend,"Weapon of Legend","Build your Man-o-War ultimate",3,/badges/weapon_of_legend.png
+zone_legend,"Zone Legend","Reach Prestige in all 4 fishing zones",3,/badges/zone_legend.png
+abyssal_smith,"The Abyssal Forge","Forge your first tier-3 Abyssal item",4,/badges/abyssal_smith.png
+ancient_ones,"Ancient Ones","Catch all 6 Ancient Deep trophies",4,/badges/ancient_ones.png
+bilge_baron,"Bilge Baron","Hold 2,500,000 doubloons at once",4,/badges/bilge_baron.png
+both_hands,"Both Hands","Open both berths from the wreck",4,/badges/both_hands.png
+both_in_hand,"Both in Hand","Own both Primeval spoils",4,/badges/both_in_hand.png
+bounty_hoard,"Harbormaster's Favorite","Earn 500,000 doubloons from bounties",4,/badges/bounty_hoard.png
+colours_of_the_hand,"Colors of the Hand","Own all three hulls off The Sunken Hand",4,/badges/colours_of_the_hand.png
+crack_shot,"Crack Shot","Land 2,500 perfect catches all-time",4,/badges/crack_shot.png
+crowned,"Crowned","Make it all the way up the Pirate King ladder",4,/badges/crowned.png
+cut_off_at_the_wrist,"Cut Off at the Wrist","Clear The Sunken Hand on Challenge",4,/badges/cut_off_at_the_wrist.png
+davys_doorstep,"Davy's Doorstep","Reach depth 60 in the Gauntlet",4,/badges/davys_doorstep.png
+dead_reckoning,"Dead Reckoning","Clear the Cartographer raid missing no critical hits",4,/badges/dead_reckoning.png
+deep_cartographer,"Deep Cartographer","Discover every confluence",4,/badges/deep_cartographer.png
+deep_remembers,"The Deep Remembers","Reach 20 total Vigil",4,/badges/deep_remembers.png
+divine_hand,"Divine Hand","Land a Divine trait on a crew",4,/badges/divine_hand.png
+dons_doorstep,"The Don's Doorstep","Descend to depth 50 in Don's Gauntlet",4,/badges/dons_doorstep.png
+dressed_to_the_nines,"Dressed to the Nines","Own 10 crew skins",4,/badges/dressed_to_the_nines.png
+every_last_rock,"Every Last Rock","Land on all 27 isles",4,/badges/every_last_rock.png
+finns_rival,"The Long Sail","Finish three chapters of Finn's jobs",4,/badges/finns_rival.png
+first_convergence,"The Convergence","Forge a convergence in Don's Gauntlet",4,/badges/first_convergence.png
+fish_baron,"Fish Baron","Sell 1,000,000 doubloons of fish",4,/badges/fish_baron.png
+fog_burned_off,"The Fog Burned Off","Chart nine tenths of the campaign water",4,/badges/fog_burned_off.png
+full_collection,"Full Collection","Catch every fish species in the game",4,/badges/full_collection.png
+full_complement,"Full Complement","Level 10 crew to 100",4,/badges/full_complement.png
+full_tackle_box,"Full Tackle Box","Own every rod money can buy",4,/badges/full_tackle_box.png
+full_wardrobe,"Full Wardrobe","Own all four skins for one legendary crew",4,/badges/full_wardrobe.png
+high_water_mark,"High Water Mark","Reach Max Prestige in any fishing zone",4,/badges/high_water_mark.png
+hoard_of_gold,"Hoard of Gold","Catch 10 golden fish",4,/badges/hoard_of_gold.png
+iron_ruse,"Iron Ruse","Beat the Admiral Ruse raid taking no damage",4,/badges/iron_ruse.png
+master_angler,"Master Angler","Reach Fishing Level 100",4,/badges/master_angler.png
+master_navigator,"Master Navigator","Reach Navigation Level 100",4,/badges/master_navigator.png
+master_of_the_locker,"Master of the Locker","Own every Gauntlet upgrade",4,/badges/master_of_the_locker.png
+no_blank_spaces,"No Blank Spaces","Chart nine tenths of the fishing sea",4,/badges/no_blank_spaces.png
+old_reliable,"Old Reliable","Clear all three daily challenges, 100 times",4,/badges/old_reliable.png
+old_salt,"Old Salt","Level a crew to 100",4,/badges/old_salt.png
+one_last_ride,"One Last Ride","Clear The Sunken Hand",4,/badges/one_last_ride.png
+parlor_flawless,"Flawless","Answer 20 Parlor questions in a row",4,/badges/parlor_flawless.png
+salted_through,"Salted Through","Cast your line 10,000 times",4,/badges/salted_through.png
+seven_boards,"Every Morning","Clear the whole board on 7 days",4,/badges/seven_boards.png
+six_abreast,"Six Abreast","Every Ancient at Vigil Rank III or better",4,/badges/six_abreast.png
+six_legends,"The Avengers","Own all 5 base legendary crew",4,/badges/six_legends.png
+struck_in_gold,"Struck in Gold","Take an Ancient to Vigil Rank V",4,/badges/struck_in_gold.png
+the_fourth_task,"The Fourth Task","Clear 25 Master daily challenges",4,/badges/the_fourth_task.png
+the_long_watch,"The Long Watch","Bank 500 charting points",4,/badges/the_long_watch.png
+the_sunken_hand,"The Sunken Hand","Clear all 8 raids in challenge mode",4,/badges/the_sunken_hand.png
+tight_quarters,"Tight Quarters","Beat the Quartermaster raid using no crew abilities",4,/badges/tight_quarters.png
+trophy_hunter,"Trophy Hunter","Land 25 Trophy-size catches",4,/badges/trophy_hunter.png
+ultimate_only,"The Long Reload","Reach depth 10 in Don's Gauntlet firing only your Mega",4,/badges/ultimate_only.png
+untouchable,"Untouchable","Land 20 perfect catches in a row",4,/badges/untouchable.png
+weight_of_green,"The Weight of the Green","Bank from depth 30 in Don's Gauntlet carrying 5+ curses",4,/badges/weight_of_green.png
+wreck_diver,"Wreck Diver","Open 500 supply crates",4,/badges/wreck_diver.png
+abyssal_master,"Abyssal Master","Forge every Abyssal item",5,/badges/abyssal_master.png
+all_hands_legends,"All Hands, All Legends","Raid in the Man-o-War with 5 Level 100 legendary crew",5,/badges/all_hands_legends.png
+complete_captain,"The Complete Captain","Reach Navigation 100 and Fishing 100",5,/badges/complete_captain.png
+completionist_rod,"The Completionist","Claim the Completionist Rod",5,/badges/completionist_rod.png
+dons_reckoning,"The Don's Reckoning","Descend to depth 75 in Don's Gauntlet",5,/badges/dons_reckoning.png
+eagle_eyed,"Eagle-Eyed","Land 5,000 perfect catches all-time",5,/badges/eagle_eyed.png
+el_dorado,"El Dorado","Catch 25 golden fish",5,/badges/el_dorado.png
+full_drydock,"Full Drydock","Own every boat skin",5,/badges/full_drydock.png
+fully_attuned,"Fully Attuned","Take a Primeval spoil to Tier VI",5,/badges/fully_attuned.png
+grand_forgemaster,"Grand Forgemaster","Learn every forge recipe",5,/badges/grand_forgemaster.png
+in_the_flow,"In the Flow","Land 30 perfect catches in a row",5,/badges/in_the_flow.png
+master_cartographer,"Master Cartographer","Chart the entire World Chart (all 13 landmarks)",5,/badges/master_cartographer.png
+parlor_legend,"Parlor Legend","Reach the top Parlor rank",5,/badges/parlor_legend.png
+prestige_stars,"Prestige Stars","Earn all 20 prestige stars (5 per zone)",5,/badges/prestige_stars.png
+salt_of_the_earth,"Salt of the Earth","Reach the top standing with all nine regulars",5,/badges/salt_of_the_earth.png
+salvage_rights,"Salvage Rights","Open 1,000 supply crates",5,/badges/salvage_rights.png
+six_divine,"Choir of the Deep","Hold six crew with Divine traits at once",5,/badges/six_divine.png
+the_better_angler,"The Better Angler","Finish every job Finn sets you",5,/badges/the_better_angler.png
+the_long_vigil,"The Long Vigil","Master all six Ancients at Rank V",5,/badges/the_long_vigil.png

@@ -84,6 +84,10 @@ static func open_crate(db: CaptainStore, uid: String, raid: Dictionary, fortune:
 	for row: Dictionary in items:
 		if row.get("shipSkinId") != null:
 			db.add_to_list(uid, "owned_ship_skins", row["shipSkinId"])
+		elif not Rules.web_only and (Rules.data()["specialOwnedColumn"] as Dictionary).has(row["id"]):
+			# A special item (the Primeval Eye off the Sunken Hand) is owned by
+			# its flag, as the web's ITEM_GRANTS does, not held as raid gear.
+			db.update_profile(uid, { (Rules.data()["specialOwnedColumn"] as Dictionary)[row["id"]]: true })
 		else:
 			var held: Array = Js.list(prof.get("raid_items")).duplicate()
 			held.append(row["id"])

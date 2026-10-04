@@ -1610,6 +1610,20 @@ func _record(key: String, s: Session, cd: int, banked: bool) -> bool:
 	if Js.num(c["stats"].get("highestHit")) > Js.num(p.get("gauntlet_max_hit")):
 		patch["gauntlet_max_hit"] = c["stats"]["highestHit"]
 	s.store.update_profile(s.uid, patch)
+	# The Don's feats, on a banked run (the web's donFeats).
+	if v == "don" and banked:
+		var feats: Array = []
+		var shots: float = Js.num(c["stats"].get("shots"))
+		if cd >= 10 and shots >= 1.0 and shots == Js.num(c["stats"].get("megas")):
+			feats.append("ultimate_only")
+		if cd >= 30 and Js.obj(run.get("curses")).size() >= 5:
+			feats.append("weight_of_green")
+		if cd >= 5 and Js.num(c["stats"].get("dmgTaken")) == 0.0:
+			feats.append("untouched")
+		for f: String in feats:
+			if not Js.list(s.profile().get("unlocked_badges")).has(f):
+				s.store.grant_badge(s.uid, f)
+				s.store.save["badges_new"] = Js.list(s.store.save.get("badges_new")) + [f]
 	# The bounty board's moments: Davy Jones' depth reached and biggest hit.
 	if v != "don":
 		Bounties.log_event(s.store, s.uid, "gauntlet_depth", float(cd))

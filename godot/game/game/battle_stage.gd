@@ -91,6 +91,8 @@ var gauntlet: String = ""
 var _ov: GauntletOverlay = null
 
 var me: int = 0
+## What this captain has done over the raid, for the feat badges (core/raid_feats.gd).
+var _feats: Dictionary = RaidFeats.fresh()
 var _latest: Dictionary = {}
 var _handled: String = ""
 var _pumping: bool = false
@@ -890,8 +892,10 @@ func _choose(act: String) -> void:
 	# The deck dips out of the way while the round plays on the water.
 	create_tween().tween_property(self, "_drop", 190.0, 0.2).set_ease(Tween.EASE_IN)
 	var rev: Array = Battle.resolve(b, [_plan])
-	# A big hit counts toward the raid-damage bounties.
-	Bounties.note_raid_hits(sea.session.store, sea.session.uid, rev, 0)
+	# A big hit counts toward the raid-damage bounties and badges; the round
+	# toward the feat badges.
+	Bounties.note_raid_hits(sea.session.store, sea.session.uid, rev, me)
+	RaidFeats.feed(_feats, rev, me, int(b["fight"]))
 	_play(rev)
 
 
@@ -1547,6 +1551,7 @@ func _log_line(text: String) -> void:
 
 func _won() -> void:
 	var e: Dictionary = b["enemy"]
+	RaidFeats.fight_won(_feats, Battle.fight_at(_raid, int(b["fight"]))["boss"])
 	var paid: Dictionary = RaidRun.award_kill(sea.session.store, sea.session.uid, _raid, str(e["id"]), Battle.fight_at(_raid, int(b["fight"]))["boss"])
 	sea.session.persist()
 	_say("%s sunk" % e["name"])
@@ -1578,6 +1583,8 @@ func _crate() -> void:
 	var s: Dictionary = b["seats"][me]
 	var r: Dictionary = RaidRun.open_crate(sea.session.store, sea.session.uid, _raid, float(s["fortune"]))
 	var first: bool = RaidRun.record_tier_clear(sea.session.store, sea.session.uid, raid_id, "normal", {}, float(Time.get_ticks_msec() - _began_ms))
+	if not _raid.get("skirmish", false):
+		RaidFeats.grant(sea.session.store, sea.session.uid, raid_id, _feats)
 	sea.session.persist()
 	if not _raid.get("skirmish", false):
 		_stamp("normal", first)
@@ -1958,7 +1965,9 @@ func _flares() -> void:
 	if table != null:
 		_act(["flares", { "missed": float(got[0]), "feints": float(got[1]) }])
 		return
-	await _play_list(Battle.flares_land(b, [{ "missed": got[0], "feints": got[1] }]))
+	var landed_fl: Array = Battle.flares_land(b, [{ "missed": got[0], "feints": got[1] }])
+	RaidFeats.feed(_feats, landed_fl, me, int(b["fight"]))
+	await _play_list(landed_fl)
 
 
 func _play_list(ev: Array) -> void:

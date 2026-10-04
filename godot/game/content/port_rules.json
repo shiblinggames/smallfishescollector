@@ -1453,6 +1453,8 @@
       ]
     ],
     "badgeText": {
+      "bounty_hoard": { "description": "Earn 500,000 doubloons from bounties" },
+      "clean_sweep": { "description": "Answer every card in a full Captain's Board hand without a miss" },
       "first_spade": {
         "description": "Finish your first treasure hunt"
       },

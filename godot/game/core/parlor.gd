@@ -193,6 +193,19 @@ static func board_answer(db: CaptainStore, uid: String, key: String, chosen: flo
 	var q: Dictionary = question(card["qid"])
 	var timed: bool = chosen == -1.0 or timed_out(float(card["revealed_at"]), _now())
 	var right: bool = not timed and int(chosen) == int(q["correct_index"])
+	# CLEAN SWEEP (the port's): a full hand answered card by card, no miss.
+	if not Rules.web_only:
+		var cap: int = hold_for(Rules.level_from_xp(Js.num(db.me(uid).get("fishing_xp"))))
+		var run: int = int(Js.num(p.get("clean_run")))
+		if (p["hand"] as Array).size() >= cap:
+			run = 1 if right else 0
+		elif run > 0:
+			run = run + 1 if right else 0
+		p["clean_run"] = run
+		if run >= cap and not Js.list(db.me(uid).get("unlocked_badges")).has("clean_sweep"):
+			db.grant_badge(uid, "clean_sweep")
+			db.save["badges_new"] = Js.list(db.save.get("badges_new")) + ["clean_sweep"]
+			p["clean_run"] = 0
 	(p["hand"] as Array).erase(card)
 	var value: float = float(c()["tierValues"][int(card["tier"]) - 1])
 	var won: float = value if right else 0.0

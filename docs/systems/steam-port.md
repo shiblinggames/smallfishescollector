@@ -1589,6 +1589,27 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Terraria". NO MAIL (it was for the online game; the port writes none, the two web letters and
   the first-Ancient contest kept behind Rules.web_only for parity). A MUCH MORE ROBUST SETTINGS
   PAGE is to be built.
+  BADGES AND STEAM ACHIEVEMENTS (2026-10-04, the audit's ninth item): 213 of the 243 badges are
+  now listed and earnable (81 before). Achievements.EXPEDITION checks the expedition side and the
+  rooms off state (crew, voyages, trawls, Finn's jobs, raids and challenges, the ship, the Sunken
+  Hand's spoils, the forge, both gauntlets, the Chart Room, the Parlor, crew skins, bounties, the
+  campaign fog), each the web's badgeConditions condition read off the port's records;
+  EXP_MOMENTS are granted where they happen (the Den's, the Chart Room's and the Parlor's, plus
+  new trackers). NEW TRACKING: highest_raid_damage (Bounties.note_raid_hits); the raid feats
+  (core/raid_feats.gd, fed the battle's events in battle_stage and raid_table: iron_ruse,
+  tight_quarters, dead_reckoning, not_a_shot_fired, all_hands_legends); the Don's banked-run feats
+  in gauntlet_table _record (ultimate_only, weight_of_green, untouched). PORT WORDING: bounty_hoard
+  is 500,000 doubloons from bounties (the web's 5,000 gems x 100); clean_sweep is a full Captain's
+  Board hand answered without a miss (the port deals a hand, there is no weekly board). Locker
+  master compares against the Davy Locker's own upgrades (the web's check reads all 54 and looks
+  unearnable). CUT with their systems (22): the Captain tier, the Hardcore Gauntlet and Davy's
+  Terms, Blood Gems, the Exchange. NOT YET (8): the Homestead's house. FIXED: a crate's special
+  item (the Primeval Eye off the Sunken Hand) now sets its owned flag, as the web's ITEM_GRANTS
+  does; it was landing as inert raid gear. STEAM: every listed badge is a Steam achievement of
+  the same API name; SteamLayer.achieve sets this machine's captain's as they are earned and all
+  held ones when the sea opens. godot/steam/achievements.csv (tools/steam_achievements.gd) and
+  godot/steam/achievements/ (64px icons and greyed locked ones, tools/steam_achievement_icons.mjs,
+  from the badge art) are what to enter in Steamworks.
   THE FORGE, REDESIGNED (2026-10-04; Kong: "a lot of room to improve the forge and recipes",
   then chose every proposal): core/forge.gd and the anvil at the forge island
   (game/forge_bench.gd). The 33 recipes are unchanged; how you use them is not.

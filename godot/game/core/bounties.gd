@@ -146,6 +146,9 @@ static func note_raid_hits(db: CaptainStore, uid: String, ev: Array, seat: int) 
 	for x: Dictionary in ev:
 		if str(x.get("t", "")) == "shot" and int(Js.nz(x.get("seat"), -1.0)) == seat:
 			best = maxf(best, Js.num(x.get("dmg")))
+	# The biggest raid hit ever (the raid-damage badges).
+	if best > Js.num(db.me(uid).get("highest_raid_damage")):
+		db.update_profile(uid, { "highest_raid_damage": best })
 	if best >= _smallest("raid_hit"):
 		log_event(db, uid, "raid_hit", best)
 

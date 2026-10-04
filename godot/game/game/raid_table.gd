@@ -222,6 +222,7 @@ func _start() -> void:
 		seats.append(seat)
 	_r["b"] = Battle.begin(str(_r["raidId"]), seats, str(_r.get("tier", "normal")))
 	_began_ms = Time.get_ticks_msec()
+	_feats = {}
 	_step("plan", [{ "t": "begin" }])
 
 
@@ -346,6 +347,7 @@ func _resolve() -> void:
 			var ss: Session = _session(str(b["seats"][i].get("key", "")))
 			if ss != null:
 				Bounties.note_raid_hits(ss.store, ss.uid, rev, i)
+				_feat(str(b["seats"][i].get("key", "")), rev, i, int(b["fight"]))
 		ev += rev
 	match str(b["state"]):
 		"won":
@@ -358,11 +360,23 @@ func _resolve() -> void:
 			_step("plan", ev)
 
 
+## Each captain's feats over the raid (core/raid_feats.gd), by seat key.
+var _feats: Dictionary = {}
+
+
+func _feat(key: String, ev: Array, seat: int, fight: int) -> void:
+	if not _feats.has(key):
+		_feats[key] = RaidFeats.fresh()
+	RaidFeats.feed(_feats[key], ev, seat, fight)
+
+
 ## A kill pays each captain still in the fight.
 func _pay_kill() -> Array:
 	var b: Dictionary = _r["b"]
 	var raid: Dictionary = Battle.raid_def(str(_r["raidId"]))
 	var boss: bool = Battle.fight_at(raid, int(b["fight"]))["boss"]
+	for k: Variant in _feats:
+		RaidFeats.fight_won(_feats[k], boss)
 	var tc: Dictionary = Battle.tier_cfg(b)
 	var out: Array = []
 	for s: Dictionary in Battle.alive(b):
@@ -402,6 +416,7 @@ func _crates() -> Array:
 		var tc2: Dictionary = Battle.tier_cfg(b)
 		var r: Dictionary = RaidRun.open_crate(ss.store, ss.uid, raid, float(s["fortune"]), tc2)
 		var first: bool = RaidRun.record_tier_clear(ss.store, ss.uid, str(_r["raidId"]), str(b.get("tier", "normal")), tc2, ms)
+		RaidFeats.grant(ss.store, ss.uid, str(_r["raidId"]), Js.obj(_feats.get(s["key"])) if _feats.has(s["key"]) else RaidFeats.fresh())
 		charter._take(ss)
 		out.append({ "t": "tierClear", "key": s["key"], "tier": str(b.get("tier", "normal")), "first": first })
 		if Js.num(r.get("coin")) > 0.0:
@@ -434,6 +449,8 @@ func _land_flares() -> void:
 		# A captain who never played their sky let every flare through.
 		res.append(Js.obj(_r["flareRes"].get(s["key"], { "missed": float(Js.obj(b.get("flares")).get("count", 0)), "feints": 0.0 })))
 	var ev: Array = Battle.flares_land(b, res)
+	for i: int in (b["seats"] as Array).size():
+		_feat(str(b["seats"][i].get("key", "")), ev, i, int(b["fight"]))
 	if b["state"] == "lost":
 		_r["result"] = "lost"
 	_step("end" if b["state"] == "lost" else "plan", ev)
