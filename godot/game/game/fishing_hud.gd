@@ -141,6 +141,13 @@ func _ready() -> void:
 	var tl: VBoxContainer = _box(Vector2(20, 14), false, 580)
 	tl.add_theme_constant_override("separation", 6)
 	_name = Kit.lift(Kit.text(tl, "", "title", INK))
+	# Your name opens the Captain's Log (game/captains_log.gd).
+	_name.mouse_filter = Control.MOUSE_FILTER_STOP
+	_name.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_name.tooltip_text = "The Captain's Log"
+	_name.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			open_log())
 	# The level bar: centred at the top, always there (game/xp_bar.gd).
 	_xp = XpBar.new()
 	_place(_xp, Vector2(0.5, 0.0), Vector2(-320, 12), Vector2(640, 40))
@@ -942,6 +949,22 @@ func hold_for(c: Control) -> void:
 ## Whether anything is open over the sea, so the boat holds still.
 func busy() -> bool:
 	return _modal != null
+
+
+## The Captain's Log, over the sea (pressing your name).
+func open_log(view: String = "captain") -> CaptainsLog:
+	if _modal != null:
+		return null
+	var g: CaptainsLog = CaptainsLog.new()
+	g.store = session.store
+	g.uid = session.uid
+	g.view = view
+	_modal = g
+	g.closed.connect(func() -> void:
+		_modal = null
+		refresh())
+	add_child(g)
+	return g
 
 
 ## The Fishing Guide, over the sea (pressing the level bar).

@@ -5,7 +5,7 @@ extends Room
 ##   OVERHEARD     three snatches of the room's talk, turning over on the hour
 ##                 (how the game teaches itself: nobody is talking to you)
 ##   YOUR CREW     the Charter's captains, who is aboard now (alone: a word on
-##                 founding one)
+##                 founding one); a face opens that captain's papers
 ##   THE SALT ROAD where you stand with the nine regulars, read only: rapport
 ##                 moves by pulling alongside them on the water
 ## The web's daily tot and races are gone with the port's cuts.
@@ -97,6 +97,15 @@ func _build() -> void:
 			row2.add_child(v)
 			var look: Dictionary = Js.obj(b.get("look"))
 			_avatar(v, { "characterColor": str(look.get("color", "default")), "hat": look.get("hat"), "bg": "#1d150d", "ring": "#e0a545" if here else "#5a4a36" }, 56.0)
+			# A crewmate's face opens their papers (the Captain's Log, read only).
+			var face: Control = v.get_child(0)
+			face.mouse_filter = Control.MOUSE_FILTER_STOP
+			face.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			face.tooltip_text = "%s's papers" % str(b.get("name", "?"))
+			var key: String = str(b["key"])
+			face.gui_input.connect(func(e: InputEvent) -> void:
+				if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+					_papers(ch, key))
 			Kit.text(v, str(b.get("name", "?")), "small", Kit.PAPER_INK)
 			Kit.text(v, "aboard" if here else "ashore", "small", Color(0.3, 0.55, 0.35) if here else Kit.PAPER_INK_SOFT)
 		Kit.text(cr, "%s  ·  %d of %d aboard now" % [str(ch.data.get("name", "The Charter")), aboard, berths.size()], "small", Kit.PAPER_INK_SOFT)
@@ -124,3 +133,9 @@ func _build() -> void:
 			Kit.text(v2, str(f.get("short", f.get("name", ""))), "body_strong", Kit.PAPER_INK)
 			Kit.text(v2, Folk.TIER_NAME[int(r["tier"])], "small", Kit.ink(Color(str(f.get("accent", "#d8b070")))))
 	Kit.text(sr, "%d of %d know your face  ·  %d trust you" % [known, st.size(), trusted], "small", Kit.PAPER_INK_SOFT)
+
+
+func _papers(ch: Charter, key: String) -> void:
+	var log: CaptainsLog = CaptainsLog.for_berth(ch, key)
+	if log != null:
+		add_child(log)

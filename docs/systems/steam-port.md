@@ -1622,6 +1622,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     Charter's captains with their faces, aboard or ashore (alone: what a Charter is and where it
     is founded). THE SALT ROAD: the three regulars who know you best and their standing, read
     only. The web's daily tot and races are cut with their systems.
+  - THE CAPTAIN'S LOG (game/captains_log.gd, core/journey.gd, content/journey.json from
+    tools/export_journey.py; Kong 2026-10-05: "leave out ai log"). Opened by pressing your name
+    at the top left. CAPTAIN: the profile (face, levels, prestige stars, achievement points,
+    badges, hull and ship name; the record in fourteen numbers; the six rarest catches; the
+    showcase crew, else the six best). STORY: the campaign half of the web's story recap, every
+    stop cleared in map order by kind (story, battle, milestone, port of call) with its bridge
+    line, and the next open stop. Finn's half is NOT repeated: the Journal already keeps every
+    word he has said. JOURNEY: the web's 14 goal groups, cut to the badges the port lists, one
+    group at a time, nearest goal first, with a bar wherever the save keeps the web's count
+    (port-reworded badges show no bar, their targets differ); a met bar reads met. No badge
+    claims (the port's badges pay only points). A crewmate's face in the Tavern opens their
+    Captain page alone, read from their berth without opening a session. The AI voyage log is
+    cut.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,
     judgment and afflictions) for aimStyle "dial", centred over the water: the fishing dial's

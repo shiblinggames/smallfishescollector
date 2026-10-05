@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "tavern", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "tavern", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive", "log"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -1424,6 +1424,26 @@ func _init() -> void:
 			for f: int in 30:
 				await process_frame
 			sea._locker._show_tab("boat")
+			for f: int in 40:
+				await process_frame
+		"log":
+			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[41])
+			p["expedition_xp"] = float((Rules.data()["navXpTable"] as Array)[17])
+			p["highest_perfect_streak"] = 17.0
+			p["total_perfects"] = 642.0
+			p["fishing_casts"] = 3810.0
+			p["fishing_crates_opened"] = 61.0
+			p["fish_sold_doubloons"] = 184200.0
+			p["lifetime_recruits"] = 14.0
+			p["unlocked_badges"] = ["unbroken", "saltlung", "beginners_luck", "crate_digger", "sure_shot", "wet_behind_ears"]
+			var ids: Array = (sea.session.save["species"] as Array).map(func(f: Dictionary) -> float: return float(f["id"]))
+			for id: float in ids.slice(0, 70):
+				sea.session.store.log_catch(sea.session.uid, id, null, "2026-10-01")
+				sea.session.store.bump_lifetime(sea.session.uid, id, "2026-10-01")
+			p["lifetime_species_count"] = 70.0
+			var cl: Array = Campaign.nodes().slice(0, 7).map(func(n: Dictionary) -> String: return n["id"])
+			p["raid_node_progress"] = { "cleared": cl }
+			hud.open_log(OS.get_environment("LOG") if OS.get_environment("LOG") != "" else "captain")
 			for f: int in 40:
 				await process_frame
 		"tavern":

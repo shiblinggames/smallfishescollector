@@ -1,0 +1,1699 @@
+{
+ "groups": [
+  {
+   "title": "Fishing",
+   "flavor": "The dial, the streaks, the crates and the long road to a hundred.",
+   "accent": "#4ade80",
+   "goals": [
+    {
+     "id": "prestige_i",
+     "label": "Prestige I",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "trophy_catch",
+     "label": "Trophy Catch",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "wet_behind_ears",
+     "label": "Wet Behind the Ears",
+     "measure": "fishLevel",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "old_hand",
+     "label": "Old Hand",
+     "measure": "fishLevel",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "master_angler",
+     "label": "Master Angler",
+     "measure": "fishLevel",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "unbroken",
+     "label": "Unbroken",
+     "measure": "streakBest",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "relentless",
+     "label": "Relentless",
+     "measure": "streakBest",
+     "target": 15,
+     "binary": false
+    },
+    {
+     "id": "untouchable",
+     "label": "Untouchable",
+     "measure": "streakBest",
+     "target": 20,
+     "binary": false
+    },
+    {
+     "id": "in_the_flow",
+     "label": "In the Flow",
+     "measure": "streakBest",
+     "target": 30,
+     "binary": false
+    },
+    {
+     "id": "sure_shot",
+     "label": "Sure Shot",
+     "measure": "totalPerfects",
+     "target": 250,
+     "binary": false
+    },
+    {
+     "id": "dead_eye",
+     "label": "Dead-Eye",
+     "measure": "totalPerfects",
+     "target": 1000,
+     "binary": false
+    },
+    {
+     "id": "crack_shot",
+     "label": "Crack Shot",
+     "measure": "totalPerfects",
+     "target": 2500,
+     "binary": false
+    },
+    {
+     "id": "eagle_eyed",
+     "label": "Eagle-Eyed",
+     "measure": "totalPerfects",
+     "target": 5000,
+     "binary": false
+    },
+    {
+     "id": "full_tackle_box",
+     "label": "Full Tackle Box",
+     "measure": "buyableRodsOwned",
+     "binary": false
+    },
+    {
+     "id": "zone_legend",
+     "label": "Zone Legend",
+     "measure": "prestigedZones",
+     "target": 4,
+     "binary": false
+    },
+    {
+     "id": "high_water_mark",
+     "label": "High Water Mark",
+     "measure": "topZonePrestige",
+     "target": 5,
+     "binary": false
+    },
+    {
+     "id": "prestige_stars",
+     "label": "Prestige Stars",
+     "measure": "totalStars",
+     "target": 20,
+     "binary": false
+    },
+    {
+     "id": "completionist_rod",
+     "label": "The Completionist",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "fully_rigged",
+     "label": "Fully Rigged",
+     "measure": "rodEffectsCount",
+     "target": 3,
+     "binary": false
+    },
+    {
+     "id": "reforged",
+     "label": "Reforged",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "struck_gold",
+     "label": "Struck Gold",
+     "measure": "goldenCount",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "hoard_of_gold",
+     "label": "Hoard of Gold",
+     "measure": "goldenCount",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "el_dorado",
+     "label": "El Dorado",
+     "measure": "goldenCount",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "one_upped",
+     "label": "The Hand on the Rod",
+     "measure": "finnJobs",
+     "target": 6,
+     "binary": false
+    },
+    {
+     "id": "finns_rival",
+     "label": "The Long Sail",
+     "measure": "finnJobs",
+     "target": 18,
+     "binary": false
+    },
+    {
+     "id": "the_better_angler",
+     "label": "The Better Angler",
+     "measure": "finnJobs",
+     "target": 32,
+     "binary": false
+    },
+    {
+     "id": "fishmonger",
+     "label": "Fishmonger",
+     "measure": "fishSold",
+     "target": 250000,
+     "binary": false
+    },
+    {
+     "id": "fish_baron",
+     "label": "Fish Baron",
+     "measure": "fishSold",
+     "target": 1000000,
+     "binary": false
+    },
+    {
+     "id": "got_away",
+     "label": "The One That Got Away",
+     "measure": "snags",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "two_for_the_pot",
+     "label": "Two for the Pot",
+     "measure": "doubleCatches",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "two_fisted",
+     "label": "Two-Fisted",
+     "measure": "doubleCatches",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "twice_the_haul",
+     "label": "Twice the Haul",
+     "measure": "doubleCatches",
+     "target": 500,
+     "binary": false
+    },
+    {
+     "id": "saltlung",
+     "label": "Saltlung",
+     "measure": "casts",
+     "target": 1000,
+     "binary": false
+    },
+    {
+     "id": "salted_through",
+     "label": "Salted Through",
+     "measure": "casts",
+     "target": 10000,
+     "binary": false
+    },
+    {
+     "id": "crate_digger",
+     "label": "Crate Digger",
+     "measure": "cratesOpened",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "beginners_luck",
+     "label": "Beginner's Luck",
+     "measure": "cratesOpened",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "crate_expectations",
+     "label": "Crate Expectations",
+     "measure": "cratesOpened",
+     "target": 250,
+     "binary": false
+    },
+    {
+     "id": "wreck_diver",
+     "label": "Wreck Diver",
+     "measure": "cratesOpened",
+     "target": 500,
+     "binary": false
+    },
+    {
+     "id": "salvage_rights",
+     "label": "Salvage Rights",
+     "measure": "cratesOpened",
+     "target": 1000,
+     "binary": false
+    },
+    {
+     "id": "three_for_three",
+     "label": "Three for Three",
+     "measure": "dailySweeps",
+     "target": 7,
+     "binary": false
+    },
+    {
+     "id": "standing_watch",
+     "label": "Standing Watch",
+     "measure": "dailySweeps",
+     "target": 30,
+     "binary": false
+    },
+    {
+     "id": "old_reliable",
+     "label": "Old Reliable",
+     "measure": "dailySweeps",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "the_fourth_task",
+     "label": "The Fourth Task",
+     "measure": "masterCleared",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "reel_lucky",
+     "label": "Reel Lucky",
+     "measure": "jackpots",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "friend_at_sea",
+     "label": "A Friend at Sea",
+     "measure": "petsOwned",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "full_stringer",
+     "label": "Full Stringer",
+     "measure": "petsOwned",
+     "target": 3,
+     "binary": false
+    },
+    {
+     "id": "menagerie",
+     "label": "The Menagerie",
+     "measure": "petsOwned",
+     "target": 5,
+     "binary": false
+    },
+    {
+     "id": "first_haul",
+     "label": "First Haul",
+     "measure": "trawlsCollected",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "steady_nets",
+     "label": "Steady Nets",
+     "measure": "trawlsCollected",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "deep_trawler",
+     "label": "Deep Trawler",
+     "measure": "trawlsCollected",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "net_positive",
+     "label": "Net Positive",
+     "measure": "trawlsCollected",
+     "target": 500,
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "The Collection",
+   "flavor": "Every fin the sea keeps, catalogued in your logbook.",
+   "accent": "#60a5fa",
+   "goals": [
+    {
+     "id": "half_the_sea",
+     "label": "Half the Sea",
+     "measure": "collectionCount",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "hundred_fins",
+     "label": "A Hundred Fins",
+     "measure": "collectionCount",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "ancient_ones",
+     "label": "Ancient Ones",
+     "measure": "ancientsCaught",
+     "target": 6,
+     "binary": false
+    },
+    {
+     "id": "back_to_the_dark",
+     "label": "Back to the Dark",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "twice_landed",
+     "label": "Twice Landed",
+     "measure": "vigilTopRank",
+     "target": 2,
+     "binary": false
+    },
+    {
+     "id": "six_abreast",
+     "label": "Six Abreast",
+     "measure": "vigilAtRankIII",
+     "target": 6,
+     "binary": false
+    },
+    {
+     "id": "struck_in_gold",
+     "label": "Struck in Gold",
+     "measure": "vigilTopRank",
+     "binary": false
+    },
+    {
+     "id": "deep_remembers",
+     "label": "The Deep Remembers",
+     "measure": "vigilPoints",
+     "target": 20,
+     "binary": false
+    },
+    {
+     "id": "the_long_vigil",
+     "label": "The Long Vigil",
+     "measure": "vigilPoints",
+     "binary": false
+    },
+    {
+     "id": "a_real_keeper",
+     "label": "A Real Keeper",
+     "measure": "trophySizeCatches",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "trophy_hunter",
+     "label": "Trophy Hunter",
+     "measure": "trophySizeCatches",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "full_collection",
+     "label": "Full Collection",
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "Crew",
+   "flavor": "Who you sail with, how far you take them, and what it costs.",
+   "accent": "#f0a0c0",
+   "goals": [
+    {
+     "id": "growing_crew",
+     "label": "Growing Crew",
+     "measure": "recruits",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "theres_a_grave",
+     "label": "There's a Grave?",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "legendary_recruit",
+     "label": "Legendary Recruit",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "three_legends",
+     "label": "The Three Legends",
+     "measure": "legendsOwnedAll",
+     "target": 3,
+     "binary": false
+    },
+    {
+     "id": "six_legends",
+     "label": "The Avengers",
+     "measure": "baseLegendsOwned",
+     "binary": false
+    },
+    {
+     "id": "crewmaster",
+     "label": "Crewmaster",
+     "target": 5,
+     "binary": false
+    },
+    {
+     "id": "leviathan_hall",
+     "label": "Leviathan Hall",
+     "measure": "crewHallTier",
+     "binary": false
+    },
+    {
+     "id": "fully_outfitted",
+     "label": "Fully Outfitted",
+     "measure": "ladderSteps",
+     "binary": false
+    },
+    {
+     "id": "full_muster",
+     "label": "Full Muster",
+     "measure": "recruits",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "old_salt",
+     "label": "Old Salt",
+     "measure": "maxCrewLevel",
+     "binary": false
+    },
+    {
+     "id": "full_complement",
+     "label": "Full Complement",
+     "measure": "maxedCrewCount",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "deep_cut",
+     "label": "Deep Cut",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "divine_hand",
+     "label": "Divine Hand",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "six_divine",
+     "label": "Choir of the Deep",
+     "measure": "divineCrew",
+     "target": 6,
+     "binary": false
+    },
+    {
+     "id": "colors_raised",
+     "label": "Colors Raised",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "the_chase",
+     "label": "The Chase",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "fashionista",
+     "label": "Fashionista",
+     "measure": "equippedSkinCount",
+     "target": 5,
+     "binary": false
+    },
+    {
+     "id": "full_wardrobe",
+     "label": "Full Wardrobe",
+     "measure": "maxWardrobe",
+     "target": 4,
+     "binary": false
+    },
+    {
+     "id": "dressed_to_the_nines",
+     "label": "Dressed to the Nines",
+     "measure": "ownedSkins.size",
+     "target": 10,
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "Voyages",
+   "flavor": "Sending a crew out and seeing what the sea sends back.",
+   "accent": "#5ec8e8",
+   "goals": [
+    {
+     "id": "massive_booty",
+     "label": "Massive Booty",
+     "measure": "bootyHauls",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "maiden_voyage",
+     "label": "Maiden Voyage",
+     "measure": "voyagesDone",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "old_sea_dog",
+     "label": "Old Sea Dog",
+     "measure": "voyagesDone",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "fleet_admiral",
+     "label": "Fleet Admiral",
+     "measure": "voyagesDone",
+     "target": 100,
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "Raids",
+   "flavor": "Gunnery, speed and the harder ways to win a fight.",
+   "accent": "#e0555a",
+   "goals": [
+    {
+     "id": "opening_salvo",
+     "label": "Opening Salvo",
+     "measure": "highestRaidDmg",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "hard_hitter",
+     "label": "Hard Hitter",
+     "measure": "highestRaidDmg",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "heavy_broadside",
+     "label": "Heavy Broadside",
+     "measure": "highestRaidDmg",
+     "target": 250,
+     "binary": false
+    },
+    {
+     "id": "overkill",
+     "label": "Overkill",
+     "measure": "highestRaidDmg",
+     "target": 500,
+     "binary": false
+    },
+    {
+     "id": "swift_reckoning",
+     "label": "Swift Reckoning",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "quick_draw",
+     "label": "Quick Draw",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "not_a_shot_fired",
+     "label": "Not a Shot Fired",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "iron_ruse",
+     "label": "Iron Ruse",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "tight_quarters",
+     "label": "Tight Quarters",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "dead_reckoning",
+     "label": "Dead Reckoning",
+     "target": 1,
+     "binary": true
+    }
+   ]
+  },
+  {
+   "title": "The Campaign",
+   "flavor": "The Sunken Hand, boss by boss, and the spoils it gives up.",
+   "accent": "#f0c040",
+   "goals": [
+    {
+     "id": "corsairs_bane",
+     "label": "Corsair's Bane",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "ghost_ship",
+     "label": "Krust's Crutch",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "cartographers_fall",
+     "label": "The Cartographer's Fall",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "toll_paid",
+     "label": "Toll Paid",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "finndicates_bane",
+     "label": "Finndicate's Bane",
+     "measure": "challengeCleared",
+     "target": 4,
+     "binary": false
+    },
+    {
+     "id": "ruse_undone",
+     "label": "Ruse Undone",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "account_settled",
+     "label": "Account Settled",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "blockade_broken",
+     "label": "Blockade Broken",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "don_drowned",
+     "label": "The Don Is Drowned",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "the_sunken_hand",
+     "label": "The Sunken Hand",
+     "measure": "challengeClearedAll",
+     "target": 8,
+     "binary": false
+    },
+    {
+     "id": "one_last_ride",
+     "label": "One Last Ride",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "cut_off_at_the_wrist",
+     "label": "Cut Off at the Wrist",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "the_long_quiet",
+     "label": "The Long Quiet",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "ancient_tackle",
+     "label": "Ancient Tackle",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "salvors_claim",
+     "label": "Salvor's Claim",
+     "measure": "berthsOpen",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "both_hands",
+     "label": "Both Hands",
+     "measure": "berthsOpen",
+     "target": 2,
+     "binary": false
+    },
+    {
+     "id": "something_old",
+     "label": "Something Old",
+     "measure": "spoilsOwned",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "both_in_hand",
+     "label": "Both in Hand",
+     "measure": "spoilsOwned",
+     "target": 2,
+     "binary": false
+    },
+    {
+     "id": "waking_it",
+     "label": "Waking It",
+     "measure": "spoilTier",
+     "target": 3,
+     "binary": false
+    },
+    {
+     "id": "fully_attuned",
+     "label": "Fully Attuned",
+     "measure": "spoilTier",
+     "binary": false
+    },
+    {
+     "id": "the_sixth_mount",
+     "label": "The Sixth Mount",
+     "measure": "mountsFilled",
+     "target": 6,
+     "binary": false
+    },
+    {
+     "id": "colours_of_the_hand",
+     "label": "Colors of the Hand",
+     "measure": "handHullsOwned",
+     "binary": false
+    },
+    {
+     "id": "first_contract",
+     "label": "Paper Captain",
+     "measure": "ex.opened",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "first_settle",
+     "label": "Read the Water",
+     "measure": "ex.won",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "cut_losses",
+     "label": "Out Before the Bell",
+     "measure": "ex.closedEarly",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "worthless",
+     "label": "Not a Doubloon",
+     "measure": "ex.worthless",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "big_score",
+     "label": "The Whole Berth",
+     "measure": "ex.bestProfit",
+     "target": 200000,
+     "binary": false
+    },
+    {
+     "id": "market_maker",
+     "label": "Market Maker",
+     "measure": "ex.won",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "first_bounty",
+     "label": "Took the Job",
+     "measure": "bountiesClaimed",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "full_board",
+     "label": "Board Cleared",
+     "measure": "bountyBoards",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "elite_order",
+     "label": "The Hard Way",
+     "measure": "bountyElites",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "fifty_orders",
+     "label": "Known at the Docks",
+     "measure": "bountiesClaimed",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "seven_boards",
+     "label": "Every Morning",
+     "measure": "bountyBoards",
+     "target": 7,
+     "binary": false
+    },
+    {
+     "id": "bounty_hoard",
+     "label": "Harbormaster's Favorite",
+     "measure": "bountyGems",
+     "target": 5000,
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "Ship & Forge",
+   "flavor": "The hull under you, the refits bolted to it, and the anvil.",
+   "accent": "#b8c4d0",
+   "goals": [
+    {
+     "id": "navigator",
+     "label": "Wayfinder",
+     "measure": "navLevel",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "master_navigator",
+     "label": "Master Navigator",
+     "measure": "navLevel",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "mark_of_mastery",
+     "label": "Mark of Mastery",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "ship_of_the_line",
+     "label": "Ship of the Line",
+     "measure": "shipTier",
+     "target": 6,
+     "binary": true
+    },
+    {
+     "id": "fresh_coat",
+     "label": "Fresh Coat",
+     "measure": "boatSkinsOwned",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "full_drydock",
+     "label": "Full Drydock",
+     "binary": false
+    },
+    {
+     "id": "six_aboard",
+     "label": "Six Aboard",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "expanded_armory",
+     "label": "Expanded Armory",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "weapon_of_legend",
+     "label": "Weapon of Legend",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "first_fusion",
+     "label": "First Fusion",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "grand_forgemaster",
+     "label": "Grand Forgemaster",
+     "measure": "forgeRecipesLearned",
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "The Gauntlet",
+   "flavor": "Davy's, Don's, and the hardcore runs that keep nothing back.",
+   "accent": "#a78bfa",
+   "goals": [
+    {
+     "id": "first_descent",
+     "label": "First Descent",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "into_the_deep",
+     "label": "Into the Deep",
+     "measure": "gauntletDeepest",
+     "target": 5,
+     "binary": false
+    },
+    {
+     "id": "davy_jones",
+     "label": "Davy Jones' Locker",
+     "measure": "gauntletDeepest",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "abyssward",
+     "label": "Abyssward",
+     "measure": "gauntletDeepest",
+     "target": 20,
+     "binary": false
+    },
+    {
+     "id": "forge_worthy",
+     "label": "Forge-Worthy",
+     "measure": "gauntletDeepest",
+     "target": 35,
+     "binary": false
+    },
+    {
+     "id": "davys_doorstep",
+     "label": "Davy's Doorstep",
+     "measure": "gauntletDeepest",
+     "target": 60,
+     "binary": false
+    },
+    {
+     "id": "well_provisioned",
+     "label": "Well-Provisioned",
+     "measure": "gauntletUpgrades.length",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "locker_raider",
+     "label": "Locker Raider",
+     "measure": "gauntletUpgrades.length",
+     "target": 6,
+     "binary": false
+    },
+    {
+     "id": "forge_awakened",
+     "label": "The Forge Awakens",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "master_of_the_locker",
+     "label": "Master of the Locker",
+     "measure": "gauntletUpgrades.length",
+     "binary": false
+    },
+    {
+     "id": "push_your_luck",
+     "label": "Push Your Luck",
+     "measure": "gauntletRuns",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "again_and_again",
+     "label": "Again and Again",
+     "measure": "gauntletRuns",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "fathomless",
+     "label": "Fathomless",
+     "measure": "gauntletFathoms",
+     "target": 500,
+     "binary": false
+    },
+    {
+     "id": "fathom_hoarder",
+     "label": "Fathom Hoarder",
+     "measure": "gauntletFathomsEarned",
+     "target": 1000,
+     "binary": false
+    },
+    {
+     "id": "one_shot",
+     "label": "One Shot",
+     "measure": "gauntletMaxHit",
+     "target": 2000,
+     "binary": false
+    },
+    {
+     "id": "greeds_price",
+     "label": "Greed's Price",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "storm_reader",
+     "label": "Storm Reader",
+     "measure": "confluencesSeen",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "deep_cartographer",
+     "label": "Deep Cartographer",
+     "measure": "confluencesSeen",
+     "binary": false
+    },
+    {
+     "id": "drowned_ledger",
+     "label": "The Drowned Ledger",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "the_unsinkable",
+     "label": "The Unsinkable",
+     "measure": "gauntletHcDeepest",
+     "target": 15,
+     "binary": false
+    },
+    {
+     "id": "locker_bound",
+     "label": "Locker-Bound",
+     "measure": "gauntletHcDeepest",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "the_deep_end",
+     "label": "The Deep End",
+     "measure": "gauntletHcDeepest",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "ferrymans_toll",
+     "label": "The Ferryman's Toll",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "ink_and_salt",
+     "label": "Ink and Salt",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "the_weight",
+     "label": "The Weight",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "crushing_depth",
+     "label": "Crushing Depth",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "not_a_drop",
+     "label": "Not a Drop",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "paid_in_full",
+     "label": "Paid in Full",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "for_glory_alone",
+     "label": "For Glory Alone",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "blood_charged",
+     "label": "Blood-Charged",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "blood_rich",
+     "label": "Blood-Rich",
+     "measure": "bloodGemsEarned",
+     "target": 500,
+     "binary": false
+    },
+    {
+     "id": "bloodhoard",
+     "label": "Bloodhoard",
+     "measure": "bloodGemsEarned",
+     "target": 2000,
+     "binary": false
+    },
+    {
+     "id": "crimson_fortune",
+     "label": "Crimson Fortune",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "dons_descent",
+     "label": "The Green Beckons",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "dons_doorstep",
+     "label": "The Don's Doorstep",
+     "measure": "donsGauntletDeepest",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "dons_reckoning",
+     "label": "The Don's Reckoning",
+     "measure": "donsGauntletDeepest",
+     "target": 75,
+     "binary": false
+    },
+    {
+     "id": "dons_ghost_hull_won",
+     "label": "Ghost of the Court",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "first_convergence",
+     "label": "The Convergence",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "one_true_shot",
+     "label": "One True Shot",
+     "measure": "gauntletMaxHit",
+     "target": 4000,
+     "binary": false
+    },
+    {
+     "id": "abyssal_smith",
+     "label": "The Abyssal Forge",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "abyssal_master",
+     "label": "Abyssal Master",
+     "measure": "abyssalOwned",
+     "binary": false
+    },
+    {
+     "id": "ghost_armory",
+     "label": "The Ghost Armory",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "ultimate_only",
+     "label": "The Long Reload",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "weight_of_green",
+     "label": "The Weight of the Green",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "untouched",
+     "label": "Untouched",
+     "target": 1,
+     "binary": true
+    }
+   ]
+  },
+  {
+   "title": "Tavern & Games",
+   "flavor": "The Chart Room, the Parlor, the Den and the boards.",
+   "accent": "#c4a0ff",
+   "goals": [
+    {
+     "id": "landfall",
+     "label": "Landfall",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "quartermaster",
+     "label": "Quartermaster",
+     "measure": "puzzlePoints",
+     "target": 40,
+     "binary": false
+    },
+    {
+     "id": "den_magnate",
+     "label": "Chartwright",
+     "measure": "puzzlePoints",
+     "target": 80,
+     "binary": false
+    },
+    {
+     "id": "uncharted_no_more",
+     "label": "Uncharted No More",
+     "measure": "chartedLandmarks",
+     "target": 7,
+     "binary": false
+    },
+    {
+     "id": "fully_laden",
+     "label": "Fully Laden",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "the_long_watch",
+     "label": "The Long Watch",
+     "measure": "puzzlePoints",
+     "target": 500,
+     "binary": false
+    },
+    {
+     "id": "clean_manifest",
+     "label": "Clean Manifest",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "master_cartographer",
+     "label": "Master Cartographer",
+     "measure": "chartedLandmarks",
+     "target": 13,
+     "binary": false
+    },
+    {
+     "id": "throne_in_sight",
+     "label": "Throne in Sight",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "crowned",
+     "label": "Crowned",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "clean_sweep",
+     "label": "Clean Sweep",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "parlor_hot_hand",
+     "label": "Hot Hand",
+     "measure": "parlorBestStreak",
+     "target": 5,
+     "binary": false
+    },
+    {
+     "id": "parlor_sharpshooter",
+     "label": "Sharpshooter",
+     "measure": "parlorBestStreak",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "parlor_flawless",
+     "label": "Flawless",
+     "measure": "parlorBestStreak",
+     "target": 20,
+     "binary": false
+    },
+    {
+     "id": "parlor_cardsharp",
+     "label": "Cardsharp",
+     "measure": "parlorPoints",
+     "target": 85,
+     "binary": false
+    },
+    {
+     "id": "parlor_kingpin",
+     "label": "Kingpin",
+     "measure": "parlorPoints",
+     "target": 520,
+     "binary": false
+    },
+    {
+     "id": "parlor_legend",
+     "label": "Parlor Legend",
+     "measure": "parlorPoints",
+     "target": 1000,
+     "binary": false
+    },
+    {
+     "id": "catfish_jackpot",
+     "label": "Catfish Jackpot",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "unstoppable",
+     "label": "Unstoppable",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "stacked_deck",
+     "label": "Stacked Deck",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "called_it",
+     "label": "Called It",
+     "target": 1,
+     "binary": true
+    }
+   ]
+  },
+  {
+   "title": "Captain",
+   "flavor": "What you are worth, and the marks only a full career earns.",
+   "accent": "#f5d98a",
+   "goals": [
+    {
+     "id": "complete_captain",
+     "label": "The Complete Captain",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "all_hands_legends",
+     "label": "All Hands, All Legends",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "baby_steps",
+     "label": "Baby Steps",
+     "measure": "doubloons",
+     "target": 100000,
+     "binary": false
+    },
+    {
+     "id": "deep_pockets",
+     "label": "Deep Pockets",
+     "measure": "doubloons",
+     "target": 1000000,
+     "binary": false
+    },
+    {
+     "id": "bilge_baron",
+     "label": "Bilge Baron",
+     "measure": "doubloons",
+     "target": 2500000,
+     "binary": false
+    },
+    {
+     "id": "captains_colors",
+     "label": "Captain's Colors",
+     "target": 1,
+     "binary": true
+    }
+   ]
+  },
+  {
+   "title": "The Salt Road",
+   "flavor": "The nine regulars who work this water, and how well they know you.",
+   "accent": "#8fd6c4",
+   "goals": [
+    {
+     "id": "known_face",
+     "label": "Known Face",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "whole_road",
+     "label": "The Whole Road",
+     "measure": "sea.rapport.length",
+     "binary": false
+    },
+    {
+     "id": "you_remembered",
+     "label": "You Remembered",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "bearing_gifts",
+     "label": "Bearing Gifts",
+     "measure": "sea.gifts",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "good_company",
+     "label": "Good Company",
+     "target": 5,
+     "binary": false
+    },
+    {
+     "id": "trusted_three",
+     "label": "Trusted Three",
+     "target": 3,
+     "binary": false
+    },
+    {
+     "id": "open_hand",
+     "label": "Open Hand",
+     "measure": "sea.gifts",
+     "target": 100,
+     "binary": false
+    },
+    {
+     "id": "thick_as_thieves",
+     "label": "Thick as Thieves",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "salt_of_the_earth",
+     "label": "Salt of the Earth",
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "The Homestead",
+   "flavor": "The island with your name on it, and everything you put on it.",
+   "accent": "#e0b978",
+   "goals": [
+    {
+     "id": "roof_of_your_own",
+     "label": "A Roof of Your Own",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "name_on_the_chart",
+     "label": "Name on the Chart",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "the_longhouse",
+     "label": "The Longhouse",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "furnished",
+     "label": "Furnished",
+     "measure": "sea.furnishings",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "gallery_hung",
+     "label": "Gallery Hung",
+     "measure": "sea.pinned",
+     "binary": false
+    },
+    {
+     "id": "the_great_hall",
+     "label": "The Great Hall",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "the_estate",
+     "label": "The Estate",
+     "target": 1,
+     "binary": true
+    },
+    {
+     "id": "every_comfort",
+     "label": "Every Comfort",
+     "measure": "sea.furnishings",
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "The Isles",
+   "flavor": "The small rocks ringed round the bands, and what is buried on them.",
+   "accent": "#9fc98a",
+   "goals": [
+    {
+     "id": "first_ashore",
+     "label": "First Ashore",
+     "measure": "sea.isles.length",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "beachcomber",
+     "label": "Beachcomber",
+     "measure": "sea.isles.length",
+     "target": 10,
+     "binary": false
+    },
+    {
+     "id": "others_came_before",
+     "label": "Others Came Before",
+     "measure": "notesRead",
+     "binary": false
+    },
+    {
+     "id": "far_rocks",
+     "label": "The Far Rocks",
+     "measure": "sea.isles.length",
+     "target": 20,
+     "binary": false
+    },
+    {
+     "id": "every_last_rock",
+     "label": "Every Last Rock",
+     "measure": "sea.isles.length",
+     "binary": false
+    },
+    {
+     "id": "first_spade",
+     "label": "First Spade",
+     "measure": "sea.digs",
+     "target": 1,
+     "binary": false
+    },
+    {
+     "id": "six_feet_down",
+     "label": "Six Feet Down",
+     "measure": "sea.digs",
+     "target": 6,
+     "binary": false
+    },
+    {
+     "id": "salted_away",
+     "label": "Salted Away",
+     "measure": "sea.digs",
+     "binary": false
+    }
+   ]
+  },
+  {
+   "title": "Charting the Sea",
+   "flavor": "Fog lifts wherever you sail. Two seas, two charts, and neither counts for the other.",
+   "accent": "#a8c4e0",
+   "goals": [
+    {
+     "id": "wake_behind_you",
+     "label": "Wake Behind You",
+     "measure": "fishFogPct",
+     "target": 25,
+     "binary": false
+    },
+    {
+     "id": "home_waters",
+     "label": "Home Waters",
+     "measure": "fishFogPct",
+     "target": 60,
+     "binary": false
+    },
+    {
+     "id": "into_the_fog",
+     "label": "Into the Fog",
+     "measure": "expFogPct",
+     "target": 50,
+     "binary": false
+    },
+    {
+     "id": "no_blank_spaces",
+     "label": "No Blank Spaces",
+     "measure": "fishFogPct",
+     "target": 90,
+     "binary": false
+    },
+    {
+     "id": "fog_burned_off",
+     "label": "The Fog Burned Off",
+     "measure": "expFogPct",
+     "target": 90,
+     "binary": false
+    }
+   ]
+  }
+ ]
+}
