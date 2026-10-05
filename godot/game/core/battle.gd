@@ -207,6 +207,11 @@ static func fight_at(raid: Dictionary, r: int) -> Dictionary:
 static func begin(raid_id: String, seats: Array, tier: String = "normal") -> Dictionary:
 	var raid: Dictionary = raid_def(raid_id)
 	var b: Dictionary = { "raidId": raid_id, "round": 0.0, "fight": 0.0, "seats": seats, "turn": 1.0, "state": "plan", "events": [], "tier": tier }
+	# A raid's own crit streak (Finn's Perfect Streak, critStreak): every
+	# captain carries it for the fight.
+	if raid.get("critStreak") is Dictionary:
+		for st: Dictionary in seats:
+			st["raidStreak"] = raid["critStreak"]
 	var seq_n: int = Js.list(raid.get("sequence")).size()
 	# A challenge run: two of its fights are elites, each with a rolled affix;
 	# the Quartermaster's merges a second onto every baked one.
@@ -1396,7 +1401,10 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 				out["eParried"] = true
 			# The enemy's shield (a run's piercing shot sends part past it).
 			var to_hull: float = dmg
-			if dmg > 0.0 and float(e["shield"]) > 0.0 and float(e["markPierce"]) <= 0.0 and not mega.get("pierce", false):
+			# The raid's streak, deep enough, goes through plate (Finn's: at 5).
+			var rs2: Dictionary = Js.obj(s.get("raidStreak"))
+			var streak_pierce: bool = Js.num(rs2.get("pierceAt")) > 0.0 and Js.num(s.get("streak")) >= Js.num(rs2.get("pierceAt"))
+			if dmg > 0.0 and float(e["shield"]) > 0.0 and float(e["markPierce"]) <= 0.0 and not mega.get("pierce", false) and not streak_pierce:
 				var bypass: float = float(Js.round(dmg * minf(1.0, float(ta2["shieldPierce"])))) if float(ta2["shieldPierce"]) > 0.0 else 0.0
 				var soakable: float = dmg - bypass
 				var bite: float = float(Js.round(soakable * float(e_mods["shieldTaken"])))
@@ -2248,6 +2256,10 @@ static func tide_agg(s: Dictionary, boss: bool = false) -> Dictionary:
 		"enemyShield": 0.0, "regrow": 0.0, "enemyParry": 0.0, "enemyLeech": 0.0, "enemyBite": 0.0, "enemyStartCharges": 0.0,
 		"enemyUlt": 1.0, "enemyUltCharge": 0.0, "flareFuse": 1.0, "flareDmg": 1.0, "hideHp": 0.0, "hideCharges": 0.0,
 	}
+	var rs: Dictionary = Js.obj(s.get("raidStreak"))
+	if not rs.is_empty():
+		a["streakPer"] = Js.num(rs.get("perStack"))
+		a["streakMax"] = Js.num(rs.get("maxStacks"))
 	var kills: float = maxf(0.0, Js.num(s.get("runKills")))
 	var depth: float = maxf(0.0, Js.num(s.get("runDepth")))
 	var kill_rate: float = 0.0

@@ -1612,6 +1612,21 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     giants landed, the gallery the Almanac's count. Each room painted with what is in it at the
     web's spots. The crew's one base in a Charter (the save's "homestead"). Its 8 badges are
     earnable (221 of 243 now).
+  - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
+    expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,
+    judgment and afflictions) for aimStyle "dial", centred over the water: the fishing dial's
+    shape (a round face, rim ticks, the bands on a ring, a needle from the hub) in the aim
+    bar's flat dress (dark lacquer, a hairline edge, solid amber/green/gold bands, the needle
+    in its band's colour with brackets, a lock that rings and throws embers, FIRE and its key).
+    The needle and band turn at a mark at twelve o'clock (judgment linear). Fishing gear feeds
+    it (lib/dialAim): hook tiers and the rod's catch zone widen the hit band, the reel slows the
+    needle (relief 0.32); hit/graze x0.34, crit x0.9. AimBar now carries hit_w/graze_w (the bar's
+    own unchanged). HIS PERFECT STREAK (critStreak): Battle.begin hands it to every seat
+    ("raidStreak"), tide_agg reads it (+7% a crit to 14), and at 5 a shot goes through his
+    plate; the dial shows it. HIS DEFEAT (defeatSequence): a hit-stop on the blow, the water
+    darkening as he goes UP rather than under, his last words (the closing line the sea's), the
+    dark lifting from him outward, then "Finn Defeated" and the crate. NO WARGATE (Kong,
+    2026-10-05).
   - THE DAMAGE GATE (Campaign.dps_preview) counts the raid items that touch one straight opening
     shot at a ship that is no boss: non-crit, escort and first-shot multipliers from the battle
     seat, tempered grades in (the web counted the non-crit cost alone).

@@ -673,6 +673,8 @@ func _init() -> void:
 			for n: Node in sea._hud_layer.get_children():
 				if n is BattleStage:
 					bst = n
+			if OS.get_environment("NO_WORDS") != "":
+				bst._spoke = true
 			var step: String = OS.get_environment("BATTLE_STEP")
 			if step == "auto":
 				bst.autoplay = true
@@ -682,6 +684,14 @@ func _init() -> void:
 				for f: int in 170:
 					await process_frame
 				match show:
+					"defeat":
+						bst._defeat_sequence(bst._raid["defeatSequence"])
+						for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 200:
+							await process_frame
+						root.get_texture().get_image().save_png(out)
+						print("  saved ", out)
+						quit()
+						return
 					"flares":
 						bst.b["flares"] = { "name": "False Colors", "count": 9, "feint": 0.22, "cluster": 0.34, "fuse": 2.5, "per": 6.0 }
 						bst._flares()
@@ -847,13 +857,18 @@ func _init() -> void:
 					"aim":
 						bst.b["seats"][0]["charges"] = 3.0
 						var ak: String = OS.get_environment("AIM_KIND") if OS.get_environment("AIM_KIND") != "" else "decoys"
-						if ak in ["blinded", "narrowed"]:
+						if OS.get_environment("STREAK") != "":
+							bst.b["seats"][0]["streak"] = float(OS.get_environment("STREAK"))
+						if ak == "none":
+							pass
+						elif ak in ["blinded", "narrowed"]:
 							Battle.apply_status(bst.b["seats"][0]["statuses"], ak, 0.12 if ak == "blinded" else 0.35, 2.0)
 							bst.b["enemy"]["fog"] = 0.0
 						else:
 							bst.b["seats"][0]["afflict"] = { "kind": ak, "passes": 2.0 }
-						bst.b["enemy"]["fog"] = 0.5
-						bst.b["enemy"]["critDrift"] = 0.5
+						if ak != "none":
+							bst.b["enemy"]["fog"] = 0.5
+							bst.b["enemy"]["critDrift"] = 0.5
 						while bst._busy:
 							await process_frame
 						bst._choose("fire")

@@ -853,7 +853,9 @@ func _choose(act: String) -> void:
 		_busy = true
 		_clear_deck()
 		var s: Dictionary = b["seats"][me]
-		var bar: AimBar = AimBar.new()
+		# Finn's fight aims on the dial (aimStyle "dial"), fed by fishing gear.
+		var on_dial: bool = str(Battle.raid_def(str(b.get("raidId", ""))).get("aimStyle", "")) == "dial"
+		var bar: AimBar = AimDial.new() if on_dial else AimBar.new()
 		bar.enemy_speed = float(b["enemy"]["speed"])
 		bar.nav = float(s["nav"])
 		var sh: Dictionary = s["sharp"]
@@ -873,8 +875,28 @@ func _choose(act: String) -> void:
 		bar.fog = float(aim["fog"])
 		bar.afflict = str(aim["afflict"])
 		bar.decoy_n = int(aim["decoys"])
+		if on_dial:
+			var dial: AimDial = bar
+			dial.fit(AimDial.gear(sea.session.profile()))
+			var rs: Dictionary = Js.obj(s.get("raidStreak"))
+			dial.streak = Js.num(s.get("streak"))
+			dial.streak_per = Js.num(rs.get("perStack"))
+			dial.streak_label = str(rs.get("label", "Streak"))
+			dial.pierce_at = Js.num(rs.get("pierceAt"))
 		bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		_deck_box.add_child(bar)
+		if on_dial:
+			# The dial stands over the water, centred, as the fishing dial does.
+			add_child(bar)
+			bar.anchor_left = 0.5
+			bar.anchor_right = 0.5
+			bar.anchor_top = 0.5
+			bar.anchor_bottom = 0.5
+			bar.offset_left = -210.0
+			bar.offset_right = 210.0
+			bar.offset_top = -300.0
+			bar.offset_bottom = 170.0
+		else:
+			_deck_box.add_child(bar)
 		# The bar floats free over the water, like the fishing dial: the
 		# deck's paper fades away while you aim, and comes back after.
 		_deck_paper(false)
@@ -1057,11 +1079,14 @@ func _one_play(x: Dictionary) -> void:
 			Sound.horn()
 			await _wait(1.2)
 		"sunkEnemy":
-			var tw: Tween = _enemy.create_tween()
-			tw.tween_property(_enemy, "sink", 1.0, 1.8).set_ease(Tween.EASE_IN)
-			_fx.burst(_enemy_at, true)
-			Sound.chest(true)
-			await _wait(1.0)
+			if _raid.get("defeatSequence") is Dictionary and Battle.fight_at(_raid, int(b["fight"]))["boss"]:
+				await _defeat_sequence(_raid["defeatSequence"])
+			else:
+				var tw: Tween = _enemy.create_tween()
+				tw.tween_property(_enemy, "sink", 1.0, 1.8).set_ease(Tween.EASE_IN)
+				_fx.burst(_enemy_at, true)
+				Sound.chest(true)
+				await _wait(1.0)
 		"checkArm":
 			_say(str(x.get("name", "")))
 			_log_line("%s  ·  answer it within %d turns with the right crew order" % [x.get("telegraph", ""), int(x["turns"])])
@@ -2041,6 +2066,68 @@ func _pre_fight_words() -> void:
 		await _wait(0.5)
 		sc._end(true)
 	await sc.finished
+
+
+## THE LAST BOSS'S END (defeatSequence; Finn, the web's bespoke one): a
+## hit-stop on the blow, the water going dark as he goes UP rather than under,
+## his last words, then the dark lifting from him outward. The loot follows.
+func _defeat_sequence(ds: Dictionary) -> void:
+	var lines: Array = Js.list(ds.get("lines"))
+	var boss: Dictionary = Js.obj(_raid["enemies"][_raid["bossId"]])
+	# The blow lands and everything holds for a breath.
+	_fx.burst(_enemy_at, true)
+	Sound.impact(true)
+	Rumble.buzz([0, 90, 40, 140])
+	await _wait(0.45 if not GameSettings.calm() else 0.2)
+	# The dark comes in over the water.
+	var dark: ColorRect = ColorRect.new()
+	dark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dark.color = Color(0.01, 0.015, 0.03, 0.0)
+	add_child(dark)
+	move_child(dark, 0)
+	var tw: Tween = create_tween().set_parallel()
+	tw.tween_property(dark, "color:a", 0.72, 1.6)
+	# He goes UP: lifted off the water, thinning as he climbs, light pouring off.
+	var him: Node2D = _enemy if _enemy != null and is_instance_valid(_enemy) else null
+	if him == null:
+		for n0: Variant in _foe_nodes:
+			if n0 != null and is_instance_valid(n0):
+				him = n0
+				break
+	if him != null:
+		tw.tween_property(him, "position:y", him.position.y - 320.0, 2.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		tw.tween_property(him, "modulate:a", 0.0, 2.6).set_ease(Tween.EASE_IN)
+	for k: int in 3:
+		_fx.rise(_enemy_at + Vector2(randf_range(-60, 60), -20.0 * k), Color(0.85, 0.92, 1.0), 10)
+		await _wait(0.5)
+	await _wait(1.2)
+	# His last words; the closing line is the sea's.
+	var scene: Array = []
+	for i: int in lines.size():
+		var o2: Dictionary = { "text": lines[i], "pause": 0 }
+		if i < lines.size() - 1:
+			o2["speaker"] = boss.get("name", "")
+			o2["portrait"] = boss.get("portrait", boss.get("image", ""))
+		scene.append(o2)
+	if not scene.is_empty():
+		var sc: StoryScene = StoryScene.new()
+		sc.node = { "id": "", "scene": scene }
+		sc.over_water = true
+		sc.allow_skip = true
+		sc.cta = "Onward"
+		add_child(sc)
+		if autoplay:
+			await _wait(0.5)
+			sc._end(true)
+		await sc.finished
+	# The dark lifts, from where he was outward.
+	_fx.pulse(_enemy_at, Color(1.0, 0.88, 0.6))
+	Sound.chest(true)
+	var tw2: Tween = create_tween()
+	tw2.tween_property(dark, "color:a", 0.0, 2.2).set_trans(Tween.TRANS_SINE)
+	await tw2.finished
+	dark.queue_free()
 
 
 ## The drum: a free beat, once a raid.

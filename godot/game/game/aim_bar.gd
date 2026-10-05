@@ -45,6 +45,9 @@ var _ring: float = -1.0
 var enemy_speed: float = 4.0
 var nav: float = 0.0
 var crit_w: float = Battle.CRIT_W
+## The hit and graze half-widths (the bar's own; the dial scales them).
+var hit_w: float = Battle.HIT_W
+var graze_w: float = Battle.GRAZE_W
 var volley: bool = false
 ## Battle.aim_for's read for this pass.
 var zone_stack: float = 1.0
@@ -92,7 +95,7 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_ALL
 	_zone = 0.3 + randf() * 0.4
 	_zdir = -1.0 if randf() < 0.5 else 1.0
-	var max_off: float = maxf(0.0, (Battle.HIT_W + Battle.GRAZE_W) * narrow - crit_w)
+	var max_off: float = maxf(0.0, (hit_w + graze_w) * narrow - crit_w)
 	_seam = (randf() * 2.0 - 1.0) * max_off * 0.8
 	_seam_dir = -1.0 if randf() < 0.5 else 1.0
 	_gust_ph = randf() * TAU
@@ -121,7 +124,7 @@ func _process(delta: float) -> void:
 		var zs: float = enemy_speed * 0.0008 / (1.0 + nav * 0.015) * minf(4.0, zone_stack)
 		# The crit seam rolls inside the zone; the false court's bands slide.
 		if crit_drift > 0.0:
-			var max_off2: float = maxf(0.0, (Battle.HIT_W + Battle.GRAZE_W) * narrow - crit_w)
+			var max_off2: float = maxf(0.0, (hit_w + graze_w) * narrow - crit_w)
 			_seam += 0.0022 * crit_drift * _seam_dir * f
 			if absf(_seam) > max_off2:
 				_seam = signf(_seam) * max_off2
@@ -132,7 +135,7 @@ func _process(delta: float) -> void:
 			if float(d["p"]) > 0.902 or float(d["p"]) < 0.098:
 				d["p"] = clampf(float(d["p"]), 0.098, 0.902)
 				d["dir"] = -float(d["dir"])
-		var lo: float = (Battle.HIT_W + Battle.GRAZE_W) * narrow
+		var lo: float = (hit_w + graze_w) * narrow
 		_zone += zs * _zdir * f
 		if _zone >= 1.0 - lo:
 			_zone = 2.0 * (1.0 - lo) - _zone
@@ -168,6 +171,12 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## Where the needle meets the track (the dial overrides it).
+func _needle_point() -> Vector2:
+	var rr: Rect2 = _rail()
+	return Vector2(rr.position.x + rr.size.x * _pos, rr.get_center().y)
+
+
 ## The track, in the bar's own box.
 func _rail() -> Rect2:
 	return Rect2(30, 22, size.x - 60, 40)
@@ -178,9 +187,9 @@ func _lit() -> int:
 	if absf(_pos - (_zone + _seam)) <= crit_w:
 		return 3
 	var dz: float = absf(_pos - _zone)
-	if dz <= Battle.HIT_W * narrow:
+	if dz <= hit_w * narrow:
 		return 2
-	if dz <= (Battle.HIT_W + Battle.GRAZE_W) * narrow:
+	if dz <= (hit_w + graze_w) * narrow:
 		return 1
 	return 0
 
@@ -196,8 +205,8 @@ func _feed() -> void:
 	m.set_shader_parameter("u_size", size)
 	m.set_shader_parameter("u_track", Vector4(r.position.x, r.position.y, r.size.x, r.size.y))
 	m.set_shader_parameter("u_zone", _zone)
-	m.set_shader_parameter("u_hit", Battle.HIT_W * narrow)
-	m.set_shader_parameter("u_graze", Battle.GRAZE_W * narrow)
+	m.set_shader_parameter("u_hit", hit_w * narrow)
+	m.set_shader_parameter("u_graze", graze_w * narrow)
 	m.set_shader_parameter("u_crit_c", _zone + _seam)
 	m.set_shader_parameter("u_crit", crit_w)
 	m.set_shader_parameter("u_lit", _lit() if blind <= 0.0 else 0)
@@ -228,9 +237,8 @@ func lock() -> void:
 	if afflict == "hardened" and not _cracked:
 		_cracked = true
 		var w: float = size.x
-		var rr: Rect2 = _rail()
 		for k: int in 18:
-			_sparks.append({ "p": Vector2(rr.position.x + rr.size.x * _pos, rr.get_center().y), "v": Vector2(randf_range(-220, 220), randf_range(-260, -60)), "t": 0.0 })
+			_sparks.append({ "p": _needle_point(), "v": Vector2(randf_range(-220, 220), randf_range(-260, -60)), "t": 0.0 })
 		Sound.impact(false)
 		Rumble.tap(14)
 		return
@@ -248,7 +256,8 @@ func lock() -> void:
 	if absf(_pos - (_zone + _seam)) <= crit_w:
 		res = "critical"
 	else:
-		res = Battle.judge(_pos, _zone, -1.0, narrow)
+		var dz: float = absf(_pos - _zone)
+		res = "hit" if dz <= hit_w * narrow else ("graze" if dz <= (hit_w + graze_w) * narrow else "miss")
 	_flash = res
 	_lock_burst(res)
 	Rumble.tap(18 if res == "critical" else 10)
