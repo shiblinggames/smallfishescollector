@@ -1689,9 +1689,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     the main action, carries gold and a little light. No class colours on any of it.
     Then (Kong: the brown paper strip "doesn't work for the action bar", nor the button look):
     the paper is gone. The bottom of the screen darkens softly into the black bar and everything
-    stands on the water: the actions are round dark discs with a hairline rim, a cream icon,
-    the word and key under them, in the order Reload, FIRE, Dodge, Special; Fire is the larger
-    disc, gold rimmed and lit when it can fire, the shot in the rack as balls under its word.
+    stands on the water. The actions are WORDS on the water (round discs with icons were tried
+    and turned down): Reload, FIRE, Dodge, Special in Cinzel with a soft shadow, the key small
+    under each; Fire larger and in gold when it can fire, its shot as balls under it; hover
+    lifts and brightens a word, a spent one fades.
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

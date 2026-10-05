@@ -62,7 +62,7 @@ var _deck_bg: Array = []
 ## The deck: orders on the left, the log's last lines on the right.
 const DECK_W: float = 1280.0
 ## How far the crew's cards stand up above the deck's top edge.
-const CREW_LIFT: float = 174.0
+const CREW_LIFT: float = 160.0
 const LOG_W: float = 400.0
 var _deck_log: Control
 var _strip: Array = []
@@ -642,7 +642,7 @@ func _paint_actions() -> void:
 	var mg: Dictionary = Js.obj(s.get("mega"))
 	var kit: Dictionary = Battle.repair_kit(s)
 	var top: HBoxContainer = HBoxContainer.new()
-	top.add_theme_constant_override("separation", 14)
+	top.add_theme_constant_override("separation", 22)
 	_deck_box.add_child(top)
 	match _menu:
 		"fire":
@@ -664,7 +664,7 @@ func _paint_actions() -> void:
 					_menu = ""
 					_choose("repair"), "special")
 				kk.sub = why
-				kk.custom_minimum_size = Vector2(maxf(kk.custom_minimum_size.x, 200.0), 116)
+				kk.custom_minimum_size = Vector2(maxf(kk.custom_minimum_size.x, 220.0), 82)
 				top.add_child(kk)
 			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu(), "back"))
 		_:
@@ -743,7 +743,9 @@ func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, 
 	k.disabled = not on
 	k.tooltip_text = tip
 	var w: float = Kit.font("karla", 800).get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 44.0 + Kit.font("karla", 800).get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + (30.0 if icon != "" else 0.0)
-	k.custom_minimum_size = Vector2(maxf(104.0, w - 40.0), 116 if primary else 108)
+	var big: bool = primary and icon == "fire"
+	var ww: float = Kit.font("cinzel", 700).get_string_size(word.to_upper() if big else word, HORIZONTAL_ALIGNMENT_LEFT, -1, 30 if big else 22).x
+	k.custom_minimum_size = Vector2(maxf(96.0, ww + 34.0), 82)
 	k.pressed.connect(f)
 	return k
 

@@ -272,33 +272,35 @@ class ActionKey:
 			BattleLook.say(self, Kit.font("karla", 800), kr.get_center().x, kr.end.y - 4.0, key_hint, 10, Color(BattleLook.MUTED, a))
 
 
+	## Words on the water (Kong, 2026-10-05: no discs, no icons): the action in
+	## Cinzel with a soft shadow, Fire larger and in gold, the key small under,
+	## Fire's shot as balls under it. Hover lifts and brightens; spent fades.
 	func _draw_disc() -> void:
-		var a: float = 0.36 if disabled else 1.0
-		var rad: float = 34.0 if big else 27.0
-		var c: Vector2 = Vector2(size.x * 0.5, rad + 6.0 - 3.0 * _hover)
+		var a: float = 0.3 if disabled else 1.0
+		var lift: float = 3.0 * _hover
+		var f: Font = Kit.font("cinzel", 700)
+		var fs: int = 30 if big else 22
+		var word: String = label.to_upper() if big else label
 		var gold: bool = big and not disabled
-		if gold:
-			draw_texture_rect(FxSheet.glow(), Rect2(c - Vector2.ONE * rad * 2.0, Vector2.ONE * rad * 4.0), false, Color(BattleLook.GOLD, 0.16 + 0.12 * _hover))
-		# The disc: dark, a little see-through, a hairline rim.
-		draw_circle(c + Vector2(0, 3), rad, Color(0, 0, 0, 0.35 * a))
-		draw_circle(c, rad, Color(0.04, 0.05, 0.07, (0.7 + 0.12 * _hover) * a))
-		var rim: Color = Color(BattleLook.GOLD, (0.75 + 0.25 * _hover) * a) if gold else Color(BattleLook.CREAM, (0.22 + 0.35 * _hover) * a)
+		var col: Color = BattleLook.GOLD.lerp(Color(1.0, 0.9, 0.6), 0.25 * _hover) if gold else BattleLook.CREAM.lerp(Color.WHITE, 0.4 * _hover)
 		if chosen:
-			rim = Color(BattleLook.GOLD, a)
-		draw_arc(c, rad, 0.0, TAU, 48, rim, 2.0 if gold or chosen else 1.4, true)
-		var ink: Color = Color(BattleLook.GOLD.lerp(BattleLook.CREAM, 0.3) if gold else BattleLook.CREAM, a)
-		BattleLook.icon(self, kind, c, rad * 0.46, ink)
-		var f: Font = Kit.font("karla", 800)
-		var y: float = c.y + rad + 18.0 + 3.0 * _hover
-		BattleLook.say(self, f, size.x * 0.5, y, label.to_upper() if big else label, 14 if big else 13, Color(ink, a), 4)
+			col = BattleLook.GOLD
+		var cx: float = size.x * 0.5
+		var y: float = 34.0 - lift
+		# A soft dark breath behind the word so it reads on any water.
+		draw_texture_rect(FxSheet.glow(), Rect2(Vector2(cx - size.x * 0.55, y - 34.0), Vector2(size.x * 1.1, 52.0)), false, Color(0, 0, 0, 0.32 * a))
+		if gold:
+			draw_texture_rect(FxSheet.glow(), Rect2(Vector2(cx - size.x * 0.5, y - 36.0), Vector2(size.x, 56.0)), false, Color(BattleLook.GOLD, 0.1 + 0.1 * _hover))
+		BattleLook.say(self, f, cx, y, word, fs, Color(col, a), 6)
 		var under: String = key_hint if sub == "" else "%s  ·  %s" % [sub, key_hint]
+		var y2: float = y + 18.0
 		if pips >= 0 and pips_full > 0:
-			var step: float = minf(12.0, 84.0 / float(pips_full))
-			var x0: float = size.x * 0.5 - step * (pips_full - 1) * 0.5
+			var step: float = minf(16.0, 100.0 / float(pips_full))
+			var x0: float = cx - step * (pips_full - 1) * 0.5
 			for k: int in pips_full:
-				BattleLook.ball(self, Vector2(x0 + k * step, y + 12.0), 4.5, k < pips, a)
-			y += 14.0
-		BattleLook.say(self, f, size.x * 0.5, y + 15.0, under, 10, Color(BattleLook.MUTED, 0.85 * a), 3)
+				BattleLook.ball(self, Vector2(x0 + k * step, y2 + 3.0), 6.0, k < pips, a)
+			y2 += 16.0
+		BattleLook.say(self, Kit.font("karla", 800), cx, y2 + 6.0, under, 10, Color(BattleLook.MUTED, 0.9 * a), 3)
 
 
 ## A crew hand's order on the deck: their portrait in a ring of their class's

@@ -1218,6 +1218,8 @@ func _init() -> void:
 				for n: Node in sea._hud_layer.get_children():
 					if n is BattleStage:
 						var bs3: BattleStage = n
+						if OS.get_environment("CHARGES") != "":
+							bs3.b["seats"][bs3.me]["charges"] = float(OS.get_environment("CHARGES"))
 						bs3._toggle_order(bs3.b["seats"][bs3.me]["crew"][int(OS.get_environment("ORDER"))])
 			# DIVE_DEPTH: the water as at this depth (the band's look).
 			if OS.get_environment("DIVE_DEPTH") != "":
