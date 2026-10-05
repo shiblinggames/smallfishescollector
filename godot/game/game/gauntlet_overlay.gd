@@ -455,7 +455,7 @@ func _shrine() -> void:
 	var opts: Array = [
 		["coin", "Davy's Coin", "Stake up to %d Fathoms on a coin. Double or nothing." % Gauntlet.SHRINE_WAGER_CAP, Dossier.WARN],
 		["blood", "The Blood Price", "Give half your hull (%d) for a power, now." % half, Dossier.HARM],
-		["walk", "Walk On", "Leave it be. The calm mends 5%% of your hull.", Dossier.HELP],
+		["walk", "Walk On", "Leave it be. The calm mends 5% of your hull.", Dossier.HELP],
 	]
 	var cw: float = (w - 60.0 - 28.0) / 3.0
 	for i: int in 3:

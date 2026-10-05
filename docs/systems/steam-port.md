@@ -1635,6 +1635,30 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     claims (the port's badges pay only points). A crewmate's face in the Tavern opens their
     Captain page alone, read from their berth without opening a session. The AI voyage log is
     cut.
+  - THE GAUNTLET'S MOMENTS ON THE WATER (game/gauntlet_moments.gd; Kong 2026-10-05, "Ok
+    proceed" on the proposal: each moment its OWN move, never one reused). Every between-fights
+    step now happens in the world before its sheet comes up (the sheet steps aside while one
+    plays, BattleStage._stage, once per phase per depth). DESCENT: the water spirals under the
+    party and opens out in the band's colour as the depth card comes up. SHRINE: the chained
+    idol (gauntlet-shrine.webp) breaches beside the party; then your answer: Davy's Coin spins
+    up off the altar onto your deck (won) or into the sea (lost), the Blood Price reddens the
+    water in rings round the stone, Walk On lets it settle. FENCE: the peddler's boat
+    (gauntlet-merchant.webp) rows in lantern lit, ties up, and rows off when the stall closes.
+    CURSE: dark ink spreads under the hulls from one point, bubbles over it. THE DON'S JOB: a
+    launch of his (the sloop hull, green washed, a green lantern) comes alongside and waits
+    until the job is settled. BREATHER: the chop settles and soft light comes down round the
+    party (short; it comes often). HOMEWARD (cash out): the spiral turns back, light comes
+    down, the party lifts toward it. DROWNED: the hulls settle under one by one and the rings
+    close over them. ARRIVALS (the lead of a fight): an elite out of a fog bank with two
+    lanterns in it; Pete swings in from the far water and turns hard into line; Krust comes up
+    stern first shedding water; the Cartographer inks in over chart lines spread on the sea;
+    Spet sails through his own toll gate (two buoys, a chain dropped); the Admiral's line of
+    ghost ships fans out behind him and fades; the Quartermaster comes in along a column of
+    gold laid on the water; Sal Brackwater slides in before a boom of floats; Don Finleone
+    rises level and slow out of a still green sea, the ripples running backward. The
+    Consigliere and the rest sail in as before. Effects are particles and drawn shapes; only
+    the idol, the peddler and the hulls are paintings. Gauntlets only; the campaign's raids
+    keep their own entries. Fixed on the way: the Walk On card read "5%%".
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,
     judgment and afflictions) for aimStyle "dial", centred over the water: the fishing dial's

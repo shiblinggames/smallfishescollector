@@ -1138,7 +1138,7 @@ func _init() -> void:
 				var gt: GauntletTable = sea._solo_dive
 				if gstep != "entry":
 					gt.handle("me", sea.session, ["go"])
-					for f: int in 150:
+					for f: int in int(OS.get_environment("DIVE_WAIT")) if OS.get_environment("DIVE_WAIT") != "" else 150:
 						await process_frame
 					var gr: Dictionary = gt._r
 					if gstep == "party":
@@ -1171,6 +1171,18 @@ func _init() -> void:
 						"shrine":
 							gr["shrine"] = { "picks": {}, "drafts": {} }
 							gt._enter("shrine")
+							# SHRINE_PICK: answer it after SHOT_F0 frames (coin, blood, walk).
+							if OS.get_environment("SHRINE_PICK") != "":
+								for f: int in int(OS.get_environment("SHOT_F0")) if OS.get_environment("SHOT_F0") != "" else 200:
+									await process_frame
+								gt.handle("me", sea.session, ["shrine", { "choice": OS.get_environment("SHRINE_PICK"), "stake": 5.0 }])
+						"contract":
+							var ck: String = str((Gauntlet.t()["contracts"] as Array)[0]["id"]) if Gauntlet.t()["contracts"] is Array else str((Gauntlet.t()["contracts"] as Dictionary).keys()[0])
+							gr["job"] = { "kind": ck, "offers": [Gauntlet.build_contract(ck, 1, 8), Gauntlet.build_contract(ck, 2, 8), Gauntlet.build_contract(ck, 3, 8)], "votes": {} }
+							gt._enter("contract")
+						"fence":
+							gr["fence"] = { "stalls": { "me": { "items": Gauntlet.fence_stock(false), "sold": [] } }, "done": {}, "drafts": {} }
+							gt._enter("fence")
 						"haul":
 							gr["run"]["pot"] = 9240.0
 							gr["run"]["roll"] = { "cleared": 19.0, "prevWasBoss": true, "roundsSinceBoss": 0.0 }
@@ -1181,6 +1193,29 @@ func _init() -> void:
 							gt._advance()
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 60:
 				await process_frame
+			# ENTRY: replay the enemy's arrival as this boss (or "elite").
+			if OS.get_environment("ENTRY") != "":
+				for n: Node in sea._hud_layer.get_children():
+					if n is BattleStage:
+						var bs2: BattleStage = n
+						var want: String = OS.get_environment("ENTRY")
+						var en: Dictionary = Battle.foes(bs2.b)[0]
+						en["boss"] = want != "elite"
+						en["elite"] = want == "elite"
+						for pool: String in ["davyBosses", "donBosses"]:
+							for pr: Array in Gauntlet.t()["pools"][pool]:
+								if str(pr[1]) == want:
+									var hd: Dictionary = Gauntlet.hand(pr)
+									en["image"] = hd.get("image")
+									en["id"] = want
+						if want == "don_finleone":
+							var ap: Dictionary = Gauntlet.hand(Gauntlet.t()["pools"]["apex"])
+							en["image"] = ap.get("image")
+							en["id"] = want
+						bs2._enemy_enters()
+			# SHOT_MS: wait this long in real time instead (a moment mid-play).
+			if OS.get_environment("SHOT_MS") != "":
+				await create_timer(float(OS.get_environment("SHOT_MS")) / 1000.0).timeout
 			if OS.get_environment("DIVE_PROBE") != "":
 				for n: Node in sea._hud_layer.get_children():
 					if n is BattleStage:

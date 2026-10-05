@@ -89,6 +89,11 @@ var my_key: String = ""
 ## A gauntlet dive: its descent ("davy" or "don"), and the sheet between fights.
 var gauntlet: String = ""
 var _ov: GauntletOverlay = null
+## The dive's moments on the water (game/gauntlet_moments.gd), each staged
+## before its sheet comes up; the phase the sheet shows; what has been staged.
+var _moments: GauntletMoments = null
+var _ov_phase: String = ""
+var _staged: Dictionary = {}
 
 var me: int = 0
 ## What this captain has done over the raid, for the feat badges (core/raid_feats.gd).
@@ -191,6 +196,10 @@ func _ready() -> void:
 			if r is Dictionary and (r as Dictionary).has("error"):
 				_log_line(str(r["error"])))
 		add_child(_ov)
+		_moments = GauntletMoments.new()
+		_moments.field = sea._field
+		_moments.fx = _fx
+		sea._world.add_child(_moments)
 	var tw: Tween = create_tween()
 	tw.tween_property(self, "_bars", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	Sound.horn()
@@ -373,6 +382,10 @@ func _enemy_enters() -> void:
 	var at_anchor: bool = _from_mark()
 	var lead_at: Vector2 = mark.position if at_anchor else _at + Vector2(620, 60 if mark != null else -40)
 	var tw: Tween = null
+	# A gauntlet's lead boss or elite comes on its own way (GauntletMoments).
+	var lead_kind: String = ""
+	var lead_node: HullRig = null
+	var lead_spot: Vector2 = Vector2.ZERO
 	for j: int in fs.size():
 		var e: Dictionary = fs[j]
 		var node: HullRig = HullRig.new()
@@ -385,6 +398,12 @@ func _enemy_enters() -> void:
 		node.position = at if anchored else at + Vector2(900, 30)
 		node.z_index = 1
 		sea._world.add_child(node)
+		var kind: String = GauntletMoments.entry_for(e) if gauntlet != "" and j == 0 and _moments != null and not autoplay and not anchored else ""
+		if kind != "":
+			_moments.prep(kind, node, at)
+			lead_kind = kind
+			lead_node = node
+			lead_spot = at
 		var ea: HullAura = HullAura.new()
 		ea.width = node.box
 		ea.face = -1.0
@@ -394,10 +413,12 @@ func _enemy_enters() -> void:
 		_foe_pos.append(at)
 		_foe_tex.append(Skipper.tex(str(e.get("portrait", "")).trim_prefix("/")))
 		_shown_hp["e%d" % j] = float(e["hp"])
-		if not anchored:
+		if not anchored and kind == "":
 			if tw == null:
 				tw = create_tween().set_parallel()
 			tw.tween_property(node, "position", at, 1.6 + 0.2 * j).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT).set_delay(0.15 * j)
+	if lead_kind != "":
+		await _moments.enter(lead_kind, lead_node, lead_spot)
 	_target = maxi(0, Battle.first_foe(b))
 	_ctx(0)
 	if at_anchor:
@@ -1281,10 +1302,12 @@ func _one_play(x: Dictionary) -> void:
 				await _wait(0.6)
 		"begin":
 			if gauntlet != "":
+				await _descend()
 				await _depth_call()
 			await _pre_fight_words()
 			await _enemy_enters()
 		"nextFight" when gauntlet != "":
+			await _descend()
 			await _depth_call()
 			await _enemy_enters()
 		"nextFight":
@@ -1640,9 +1663,18 @@ func _end(won: bool, fled: bool = false) -> void:
 		table.disconnect("changed", _pump)
 	if _ov != null:
 		_ov.queue_free()
+	if _moments != null:
+		_moments.clear()
+		_moments.queue_free()
+		_moments = null
 	if gauntlet != "":
 		sea.water_theme = {}
 	sea._boat.modulate = Color.WHITE
+	sea._boat.rotation = 0.0
+	for k3: Variant in sea._mates:
+		if is_instance_valid(sea._mates[k3]):
+			(sea._mates[k3] as Node2D).modulate = Color.WHITE
+			(sea._mates[k3] as Node2D).rotation = 0.0
 	for k2: Variant in sea._mates:
 		if is_instance_valid(sea._mates[k2]):
 			(sea._mates[k2] as Shipmate).face_lock = 0.0
@@ -2249,7 +2281,9 @@ func _act(args: Array) -> Variant:
 ## Every state the table sends: each phase is handled once, in order.
 func _pump(st: Dictionary) -> void:
 	_latest = st
-	if _ov != null and not _gone and str(st.get("phase", "")) != "playing":
+	var ph0: String = str(st.get("phase", ""))
+	# A sheet's own updates go straight to it; a NEW sheet waits for its moment.
+	if _ov != null and not _gone and ph0 != "playing" and (not GauntletOverlay.PHASES.has(ph0) or ph0 == _ov_phase):
 		_ov.show_state(st)
 	if _pumping or _gone:
 		return
@@ -2306,6 +2340,9 @@ func _phase(cur: Dictionary) -> void:
 					dead["pays"] = { my_key: cp.get("paid", {}) }
 					dead["seq"] = -1
 					_ov.acted.connect(func(_a: Array) -> void: _end(false), CONNECT_ONE_SHOT)
+					if _moments != null:
+						await _moments.drowned([sea._boat])
+					_ov_phase = "dead"
 					_ov.show_state(dead)
 					return
 				_log_line("Your ship is down. If the crew win this fight, she is towed along.")
@@ -2329,6 +2366,7 @@ func _phase(cur: Dictionary) -> void:
 					_:
 						await _lost()
 		"plan":
+			_ov_phase = ""
 			b = (cur["b"] as Dictionary).duplicate(true)
 			_plan_until = _t + float(Js.nz(cur.get("left"), RaidTable.PLAN))
 			if _alive_me() and not Js.obj(cur.get("plans")).has(my_key):
@@ -2352,8 +2390,11 @@ func _phase(cur: Dictionary) -> void:
 			_busy = true
 			_clear_deck()
 			create_tween().tween_property(self, "_drop", 260.0, 0.3).set_ease(Tween.EASE_IN)
-			if _ov != null:
-				_ov.show_state(cur)
+			var ph: String = str(cur.get("phase", ""))
+			await _stage(cur)
+			_ov_phase = ph
+			if _ov != null and not _gone:
+				_ov.show_state(_latest if str(_latest.get("phase", "")) == ph else cur)
 		"done", "idle":
 			_gone = true
 			_end(str(cur.get("result", "")) in ["won", "banked"])
@@ -2854,6 +2895,91 @@ func _seat_index(key: String) -> int:
 
 ## Each new depth, called over the water: its number, the band of the deep,
 ## the host's voice; a boss or an elite waiting; the Don rising.
+## The descent, on the water: the spiral under the party, then the depth.
+func _descend() -> void:
+	var dn: Dictionary = Js.obj(_latest.get("descent"))
+	if _moments != null and _moments._pieces.has("fence"):
+		_moments.fence_leave()
+	if _moments != null and _moments._pieces.has("launch"):
+		_moments.launch_leave()
+	if dn.is_empty() or _moments == null or autoplay:
+		return
+	var d: int = int(Js.num(dn.get("depth")))
+	var band: Dictionary = Gauntlet.band(maxi(1, d), gauntlet)
+	await _moments.descent(_party_center(), d, Color(str(band.get("accent", "#9fc4e0"))))
+
+
+## The sheet steps aside while a moment plays on the water.
+func _sheet_aside() -> void:
+	if _ov != null:
+		_ov_phase = ""
+		_ov.show_state({})
+
+
+## Across the water from the party, where the enemy stood (a set piece's spot).
+func _ahead() -> Vector2:
+	if not _foe_pos.is_empty():
+		return _foe_pos[0]
+	return sea._boat.position + Vector2(620, -40)
+
+
+## Where the party rides, the middle of its hulls.
+func _party_center() -> Vector2:
+	var sum: Vector2 = Vector2.ZERO
+	var n: int = (b["seats"] as Array).size()
+	for i: int in n:
+		sum += _seat_at(i)
+	return sum / float(maxi(1, n))
+
+
+## Every hull of the party on the water (yours first).
+func _party_hulls() -> Array:
+	var out: Array = [sea._boat]
+	for i: int in (b["seats"] as Array).size():
+		if i != me:
+			var m: Shipmate = _mate_of(i)
+			if m != null:
+				out.append(m)
+	return out
+
+
+## A between-fights moment, staged before its sheet: once each, per depth.
+func _stage(cur: Dictionary) -> void:
+	if _moments == null or autoplay:
+		return
+	var ph: String = str(cur.get("phase", ""))
+	var depth: int = int(Js.num(b.get("depth")))
+	if ph != "fence" and _moments._pieces.has("fence"):
+		_moments.fence_leave()
+	if not ph in ["contract", "jobResult"] and _moments._pieces.has("launch"):
+		_moments.launch_leave()
+	if ph != "shrine" and _moments._pieces.has("shrine"):
+		_sheet_aside()
+		var sh: Dictionary = Js.obj(cur.get("shrine")) if cur.has("shrine") else Js.obj(cur.get("lastShrine"))
+		await _moments.shrine_answer(Js.obj(Js.obj(sh.get("picks")).get(my_key)), _seat_at(me))
+	var key: String = "%s:%d" % [ph, depth]
+	if _staged.has(key):
+		return
+	_staged[key] = true
+	if ph in ["shrine", "fence", "haul", "dead", "curse", "contract", "breather"]:
+		_sheet_aside()
+	match ph:
+		"shrine":
+			await _moments.shrine_rise(_ahead() + Vector2(-60, 40))
+		"fence":
+			await _moments.fence_arrive(_ahead() + Vector2(-20, 20))
+		"curse":
+			await _moments.curse(_party_center(), Color(str(Gauntlet.band(maxi(1, depth), gauntlet).get("accent", "#9a6ad0"))))
+		"contract":
+			await _moments.launch_arrive(_ahead() + Vector2(-60, 120))
+		"breather":
+			await _moments.breather(_party_center())
+		"haul":
+			await _moments.homeward(_party_center(), _party_hulls())
+		"dead":
+			await _moments.drowned(_party_hulls())
+
+
 func _depth_call() -> void:
 	var dn: Dictionary = Js.obj(_latest.get("descent"))
 	if dn.is_empty():
