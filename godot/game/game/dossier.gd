@@ -55,6 +55,10 @@ func _ready() -> void:
 	var scrim: ColorRect = ColorRect.new()
 	scrim.color = Color(0, 0, 0, 0.8)
 	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# The room dims in rather than going dark at once (Kong, 2026-10-05: the
+	# card "pops up too quickly").
+	scrim.modulate.a = 0.0
+	create_tween().tween_property(scrim, "modulate:a", 1.0, 0.3).set_trans(Tween.TRANS_SINE)
 	scrim.gui_input.connect(func(ev: InputEvent) -> void:
 		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed:
 			_close())
@@ -125,10 +129,13 @@ func _ready() -> void:
 	page.size.y = h
 	_card.position = (vp - _card.size) / 2.0
 	_card.pivot_offset = _card.size / 2.0
-	_card.scale = Vector2(0.98, 0.98)
+	_card.scale = Vector2(0.96, 0.96)
+	var y0: float = _card.position.y
+	_card.position.y = y0 + 14.0
 	var tw: Tween = create_tween().set_parallel()
-	tw.tween_property(_card, "modulate:a", 1.0, 0.16)
-	tw.tween_property(_card, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_card, "modulate:a", 1.0, 0.32).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_card, "position:y", y0, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 ## Filled by the card: sections on the page.

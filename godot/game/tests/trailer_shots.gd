@@ -343,9 +343,7 @@ func _coop() -> void:
 	bs._choose("volley")
 	for f: int in 70:
 		await tree.process_frame
-	for bar: Node in bs.find_children("", "AimBar", true, false):
-		(bar as AimBar)._pos = (bar as AimBar)._zone
-		(bar as AimBar).lock()
+	await _lock_true(bs)
 	for f: int in 30:
 		await tree.process_frame
 	var ev: Array = Battle.resolve(kb, [{ "action": "volley", "aim": "critical" }, { "action": "volley", "aim": "critical" }])
@@ -436,9 +434,7 @@ func _mega() -> void:
 	bs._choose("mega")
 	for f: int in 55:
 		await tree.process_frame
-	for bar: Node in bs.find_children("", "AimBar", true, false):
-		(bar as AimBar)._pos = (bar as AimBar)._zone
-		(bar as AimBar).lock()
+	await _lock_true(bs)
 	await _hold()
 
 
@@ -915,9 +911,7 @@ func _crewxp() -> void:
 	bs._choose("fire")
 	for f: int in 50:
 		await tree.process_frame
-	for bar: Node in bs.find_children("", "AimBar", true, false):
-		(bar as AimBar)._pos = (bar as AimBar)._zone
-		(bar as AimBar).lock()
+	await _lock_true(bs)
 	await _hold()
 
 
@@ -927,7 +921,8 @@ func _enemycard() -> void:
 	for f: int in 20:
 		await tree.process_frame
 	_mark()
-	for f: int in 30:
+	# The fight seen first; then the card, pressed open on the raider.
+	for f: int in 95:
 		await tree.process_frame
 	bs._open_enemy_card(0)
 	await _hold()
@@ -956,3 +951,27 @@ func _badges() -> void:
 		var tw: Tween = sc.create_tween()
 		tw.tween_property(sc, "scroll_vertical", int(sc.get_v_scroll_bar().max_value), 3.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	await _hold()
+
+
+## The aim locked as a player locks it: the needle let run until it is inside
+## the critical band (seen getting there), then locked (Kong: the bar must be
+## seen landing in the zone, never a needle moved into it).
+func _lock_true(bs: BattleStage) -> void:
+	var bars: Array = bs.find_children("", "AimBar", true, false)
+	var guard: int = 0
+	while bars.is_empty() and guard < 120:
+		guard += 1
+		await tree.process_frame
+		bars = bs.find_children("", "AimBar", true, false)
+	if bars.is_empty():
+		return
+	var bar: AimBar = bars[0]
+	# Let it make a pass first, so it is seen moving.
+	for f: int in 25:
+		await tree.process_frame
+	guard = 0
+	while is_instance_valid(bar) and absf(bar._pos - (bar._zone + bar._seam)) > bar.crit_w * 0.6 and guard < 900:
+		guard += 1
+		await tree.process_frame
+	if is_instance_valid(bar):
+		bar.lock()
