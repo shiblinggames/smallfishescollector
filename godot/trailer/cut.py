@@ -15,12 +15,19 @@ marks = json.loads((CLIPS / "marks.json").read_text())
 
 # (shot, seconds used, the transition INTO the next: "x" crossfade, "b" via black)
 EDIT = [
-    ("sail", 7.0, "x"),
+    ("flotilla", 4.3, "x"),
     ("charter", 4.0, "x"),
-    ("flotilla", 5.2, "x"),
-    ("together", 6.6, "x"),
-    ("log", 3.8, "x"),
-    ("crate", 3.8, "b"),
+    ("fish", 7.6, "x"),
+    ("log", 3.6, "x"),
+    ("rod", 3.2, "x"),
+    ("friends", 3.4, "x"),
+    ("finn", 4.0, "x"),
+    ("treasure", 3.6, "x"),
+    ("crate", 3.6, "x"),
+    ("wardrobe", 6.0, "x"),
+    ("skins", 3.4, "x"),
+    ("badges", 2.4, "b"),
+    ("campaign", 3.0, "x"),
     ("ready", 3.2, "x"),
     ("coop", 7.2, "x"),
     ("summon", 4.3, "x"),
@@ -29,14 +36,11 @@ EDIT = [
     ("forge", 3.1, "x"),
     ("mega", 4.3, "b"),
     ("descent", 4.6, "x"),
-    ("draft", 4.9, "x"),
+    ("draft", 4.2, "x"),
     ("boons", 4.6, "x"),
     ("krust", 3.0, "x"),
-    ("kraken", 3.4, "x"),
     ("don", 4.1, "x"),
     ("haul", 3.5, "b"),
-    ("ui_log", 2.2, "x"),
-    ("ui_home", 2.2, "b"),
     ("end", 6.5, ""),
 ]
 XF = 0.35     # a crossfade between shots
@@ -79,7 +83,7 @@ for i, (name, d, kind) in enumerate(edit):
     starts.append(t)
     fd = BK if kind == "b" else XF
     t += d - fd
-fight_at = starts[[e[0] for e in edit].index("ready")] if "ready" in [e[0] for e in edit] else length * 0.35
+fight_at = starts[[e[0] for e in edit].index("campaign")] if "campaign" in [e[0] for e in edit] else length * 0.35
 end_at = starts[-1]
 total = length
 
@@ -108,6 +112,6 @@ if r.returncode != 0:
     print(r.stderr[-3000:])
     raise SystemExit(1)
 # The poster: a real frame (the crew under sail, the caption up).
-fl = starts[[e[0] for e in edit].index("flotilla")] + 2.4 if "flotilla" in [e[0] for e in edit] else 5.0
+fl = starts[[e[0] for e in edit].index("wardrobe")] + 2.6 if "wardrobe" in [e[0] for e in edit] else 5.0
 subprocess.run([FF, "-y", "-v", "error", "-ss", f"{fl:.2f}", "-i", str(out), "-frames:v", "1", "-q:v", "2", str(HERE / "trailer-poster.jpg")])
 print(f"trailer.mp4  {total:.1f}s  ({len(edit)} shots)")

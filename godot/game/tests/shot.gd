@@ -1723,6 +1723,10 @@ func _init() -> void:
 		"level":
 			var lu: LevelUp = LevelUp.new()
 			lu.claim = { "from": 4.0, "to": 6.0, "granted": [{ "level": 5.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["5"] }, { "level": 6.0, "reward": (Rules.data()["levelRewards"] as Dictionary)["6"] }] }
+			# LV_TO: one level, the one the film wants (its reward as the game grants it).
+			if OS.get_environment("LV_TO") != "":
+				var lt: int = int(OS.get_environment("LV_TO"))
+				lu.claim = { "from": float(lt - 1), "to": float(lt), "granted": [{ "level": float(lt), "reward": (Rules.data()["levelRewards"] as Dictionary).get(str(lt), {}) }] }
 			if OS.get_environment("LV_ONE") != "":
 				lu.claim = { "from": 14.0, "to": 15.0, "granted": [{ "level": 15.0, "reward": (Rules.data()["levelRewards"] as Dictionary).get("15", {}) }] }
 			hud._action.visible = false
@@ -1810,6 +1814,12 @@ func _film_beats(sea: Sea) -> void:
 				{ "t": "execute", "seat": 0, "kind": "deathMark" },
 			]:
 				await bs._one(ev)
+	# FINN_TURNIN: the job handed over to Finn and his seal pressed.
+	if OS.get_environment("FINN_TURNIN") != "":
+		await create_timer(1.0).timeout
+		for c: Node in sea._hud_layer.get_children():
+			if c is FinnScene:
+				(c as FinnScene)._turn_in()
 	if OS.get_environment("READY_FLIP") != "":
 		await create_timer(1.3).timeout
 		for n: Node in root.get_children():

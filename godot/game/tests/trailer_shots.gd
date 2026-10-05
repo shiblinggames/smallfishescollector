@@ -60,17 +60,18 @@ static func caption(t: SceneTree) -> void:
 	box.add_child(col)
 	var big: Label = Label.new()
 	big.text = text
-	big.add_theme_font_override("font", Kit.font("cinzel", 800 if style != "line" else 700))
-	big.add_theme_font_size_override("font_size", 96 if style != "line" else 46)
-	big.add_theme_color_override("font_color", Color(0.97, 0.92, 0.82) if style == "line" else Color("#f0c040"))
+	# The name as the game's own title screen sets it: cream Cinzel, spaced.
+	big.add_theme_font_override("font", Kit.tracked("cinzel", 700, 76, 0.08) if style != "line" else Kit.font("cinzel", 700))
+	big.add_theme_font_size_override("font_size", 76 if style != "line" else 46)
+	big.add_theme_color_override("font_color", Color(0.97, 0.92, 0.82))
 	big.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
 	big.add_theme_constant_override("shadow_outline_size", 14)
 	col.add_child(big)
 	if style == "end" and OS.get_environment("SUB") != "":
 		var sub: Label = Label.new()
-		sub.text = OS.get_environment("SUB")
-		sub.add_theme_font_override("font", Kit.font("cinzel", 700))
-		sub.add_theme_font_size_override("font_size", 34)
+		sub.text = OS.get_environment("SUB").to_upper()
+		sub.add_theme_font_override("font", Kit.tracked("karla", 800, 22, 0.24))
+		sub.add_theme_font_size_override("font_size", 22)
 		sub.add_theme_color_override("font_color", Color(0.97, 0.92, 0.82))
 		sub.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
 		sub.add_theme_constant_override("shadow_outline_size", 10)
@@ -155,6 +156,10 @@ func run(t: SceneTree, s: Sea, h: FishingHud, prof: Dictionary, clip: String) ->
 		"recruit": await _recruit()
 		"armory": await _armory()
 		"forge": await _forge()
+		"fish": await _fish()
+		"treasure": await _treasure()
+		"pets": await _pets()
+		"wardrobe": await _wardrobe()
 
 
 ## Three crewmates in looks of their own, each a Shipmate on your sea.
@@ -577,4 +582,127 @@ func _forge() -> void:
 	var go: BaseButton = _button(fb, "Forge it")
 	if go != null:
 		go.pressed.emit()
+	await _hold()
+
+
+# ── The third pass (Kong, 2026-10-05: more fishing, the collectables, treasure) ──
+
+## FISHING, CLOSE: the cast, the bite, the dial, a perfect strike, the reel, and
+## the catch as the game shows it (its note, the fish into the hold), a
+## crewmate at their line nearby.
+func _fish() -> void:
+	var b: Boat = sea._boat
+	b.position = Vector2(-1500, 2600)
+	sea._zoom_to = 1.55
+	sea._camera.zoom = Vector2.ONE * 1.55
+	_clean(["_dial", "_card", "_toast", "_status"])
+	_crew(["Ben"])
+	_offsets = [Vector2(-330, -170)]
+	for f: int in 30:
+		_keep("wait")
+		await tree.process_frame
+	var ahead: Array = [0.0]
+	var t0: float = Clock.now_ms()
+	var tick0: float = float(Time.get_ticks_msec())
+	Clock.install(func() -> float: return t0 + (float(Time.get_ticks_msec()) - tick0) + float(ahead[0]))
+	_mark()
+	for f: int in 20:
+		_keep("wait")
+		await tree.process_frame
+	hud.cast()
+	for f: int in 60:
+		await tree.process_frame
+	ahead[0] = float(hud._shot["waitMs"]) + 1000.0
+	hud._wait_left = 0.8
+	var guard: int = 0
+	while hud.phase != "hooked" and guard < 900:
+		guard += 1
+		await tree.process_frame
+	for f: int in 55:
+		await tree.process_frame
+	hud._on_struck("perfect", 0.0)
+	for n: Node in tree.root.get_children():
+		if n is Clean:
+			(n as Clean).queue_free()
+	var quiet: Clean = Clean.new()
+	quiet.hud = hud
+	quiet.only = ["FinnArrow", "StoryLine", "XpBar"]
+	tree.root.add_child(quiet)
+	while hud.phase != "result" and guard < 1500:
+		guard += 1
+		await tree.process_frame
+	await _hold()
+
+
+## BURIED TREASURE: a clue scroll's last step, the casket hauled up.
+func _treasure() -> void:
+	var site: Dictionary = (Rules.data()["digSites"] as Array)[0]
+	sea._boat.position = Vector2(float(site["x"]) + 160.0, float(site["y"]) + 60.0)
+	sea._zoom_to = 1.2
+	_clean()
+	for f: int in 60:
+		await tree.process_frame
+	_mark()
+	for f: int in 45:
+		await tree.process_frame
+	Sound.chest(true)
+	var lines: Array = [["The %s's hunt is done. The casket held:" % Clues.TIER_NAME["hard"], "note"],
+		["A Captain's Voucher! Open it in the Crew Hall's Trunk", "body_strong"],
+		["A Harbor Bill, for the Crew Hall", "body_strong"],
+		["A Gold Crate, stowed in your Locker", "body_strong"]]
+	sea._show_find(SeaFinds.panel(sea._room_layer, "sea/dig-box.png", "Hauled up from the bottom", "%s casket" % Clues.TIER_NAME["hard"], lines, [[4200.0, "doubloons"]]))
+	await _hold()
+
+
+## PETS: the Locker's pets, a row of them to choose from.
+func _pets() -> void:
+	p["unlocked_pets"] = ["parrot_red", "parrot_gold", "monkey_golden", "seal_gray", "lizard_indigo", "raccoon_black", "crab_gold", "crab_blue"]
+	p["equipped_pet"] = "parrot_red"
+	hud._open_loadout()
+	for f: int in 20:
+		await tree.process_frame
+	sea._locker.slot = "pet"
+	sea._locker._show_tab("loadout")
+	for f: int in 30:
+		await tree.process_frame
+	_mark()
+	await _hold()
+
+
+## THE LOCKER, A HIGHLIGHT REEL (Kong, 2026-10-05: "switching between various
+## ship skins, cosmetics, rods"): her boat, rod, colour, hat and pet changed on
+## a beat, the Locker following each to its page.
+func _wardrobe() -> void:
+	p["unlocked_boats"] = ["oak", "fire", "golden", "celestial", "ice", "abyssal", "mahogany", "periwinkle"]
+	p["unlocked_hats"] = ["golden", "cheetah", "fuego", "midnight", "sky", "spotted"]
+	p["unlocked_pets"] = ["parrot_red", "parrot_gold", "monkey_golden", "seal_gray", "lizard_indigo", "crab_gold"]
+	p["rod_tier"] = 5.0
+	hud._open_loadout()
+	for f: int in 20:
+		await tree.process_frame
+	sea._locker.slot = "rod"
+	sea._locker._show_tab("loadout")
+	for f: int in 20:
+		await tree.process_frame
+	_mark()
+	var steps: Array = [
+		["boat", "equipped_boat", "celestial"], ["boat", "equipped_boat", "fire"], ["boat", "equipped_boat", "golden"],
+		["rod", "rod_tier", 10.0], ["rod", "rod_tier", 11.0],
+		["skin", "character_color", "galaxy"], ["skin", "character_color", "lava"],
+		["hat", "equipped_hat", "fuego"], ["hat", "equipped_hat", "golden"],
+		["pet", "equipped_pet", "monkey_golden"], ["pet", "equipped_pet", "parrot_gold"],
+	]
+	for st: Array in steps:
+		await tree.create_timer(0.48).timeout
+		p[st[1]] = st[2]
+		if st[0] == "boat":
+			if sea._locker.tab != "boat":
+				sea._locker._show_tab("boat")
+			else:
+				sea._locker._show_tab("boat")
+		else:
+			sea._locker.slot = st[0]
+			sea._locker._show_tab("loadout")
+		sea._boat.set_look(Skipper.look_of(p))
+		Sound.plip()
 	await _hold()

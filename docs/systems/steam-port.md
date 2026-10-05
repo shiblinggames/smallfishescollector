@@ -1718,6 +1718,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     boons firing, fewer band shots. FILM_CLEAR (sea.gd) gives a recording a fair sky (a
     dive's own weather still wins). Fixed in the game on the way: the resting hook now swings
     well back behind the boat under way and lifts a little (it hung out ahead of the bow).
+    Third pass (Kong's notes): a cold open (no title up front; the name only on the end card,
+    set as the game's own title screen sets it, cream Cinzel, spaced); the fishing shot closer
+    and the whole cast-to-catch; the collectables (a Locker reel switching boats, rods,
+    colours, hats and pets; a crew skin revealed; the badge wall); the campaigns (a Finn job
+    handed in and sealed, the expedition chart); buried treasure; a regular's rapport tier;
+    a rod unlocked at Fishing 20. record.py restores one baseline captain before every clip
+    (clips/baseline_captain.json) so no shot inherits another's outfit. Fixed in the game on
+    the way: the level-up named the Chart Room puzzles and the Pirate King by their raw ids.
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

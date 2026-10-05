@@ -162,7 +162,7 @@ static func gains(from: int, to: int) -> Array:
 	for fk: Variant in Js.obj(lg.get("feature")):
 		var fl: int = int(lg["feature"][fk])
 		if fl > from and fl <= to:
-			out.append(["Unlocked", { "market_advanced": "The Market's Advanced board: moods, the Sea Index, movers and price history", "den_roulette": "Fish Roulette in the Den", "den_blackjack": "Blackjack in the Den" }.get(fk, str(fk))])
+			out.append(["Unlocked", { "market_advanced": "The Market's Advanced board: moods, the Sea Index, movers and price history", "den_roulette": "Fish Roulette in the Den", "den_blackjack": "Blackjack in the Den", "chart_minefield": "The Minefield in the Chart Room", "chart_rigging": "Lay the Rigging in the Chart Room", "chart_hold": "The Hold in the Chart Room", "parlor_king": "The Pirate King in the Parlor" }.get(fk, str(fk))])
 	# The Den's daily buy-in grows with Fishing (port rules casino.capByLevel).
 	for st: Variant in Js.list(Js.obj(d.get("casino")).get("capByLevel")):
 		var cl: int = int((st as Array)[0])

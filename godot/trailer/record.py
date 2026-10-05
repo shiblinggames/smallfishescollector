@@ -12,6 +12,14 @@ sys.path.insert(0, str(HERE))
 from shots import SHOTS  # noqa: E402
 
 CLIPS.mkdir(exist_ok=True)
+# The test captain every clip starts from (shots persist what they change, so
+# one shot's outfit would carry into the next): kept in clips/, restored
+# before each clip. The first run takes it from the screenshot rig's save.
+SAVE_DIR = pathlib.Path(os.environ["APPDATA"]) / "Seas the Booty" / "shot_captains"
+BASE = CLIPS / "baseline_captain.json"
+if not BASE.exists():
+    BASE.write_bytes(next(SAVE_DIR.glob("*.json")).read_bytes())
+
 marks = json.loads(MARKS.read_text()) if MARKS.exists() else {}
 want = set(sys.argv[1:])
 override = GAME / "override.cfg"
@@ -23,6 +31,8 @@ try:
         e = dict(os.environ)
         e.update({"FORCE_WINDOW": "1920x1080", "FILM_NOMUSIC": "1", "FILM_CLEAR": "1", "CAPTAIN": "Anna"})
         e.update(env)
+        for old in SAVE_DIR.glob("*.json"):
+            old.write_bytes(BASE.read_bytes())
         out = CLIPS / f"{name}.avi"
         cmd = [GODOT, "--path", str(GAME), "--write-movie", str(out), "--fixed-fps", "60",
                "-s", "tests/shot.gd", "--", str(CLIPS / "x.png"), mode]
