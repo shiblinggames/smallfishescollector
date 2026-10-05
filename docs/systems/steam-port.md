@@ -1691,7 +1691,7 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     the paper is gone. The bottom of the screen darkens softly into the black bar and everything
     stands on the water. The actions are WORDS on the water (round discs with icons were tried
     and turned down): Reload, FIRE, Dodge, Special in Cinzel with a soft shadow, the key small
-    under each; Fire larger and in gold when it can fire, its shot as balls under it; hover
+    under each; Fire larger and in gold when it can fire (the shot in the rack shows only on your ship's plate); hover
     lifts and brightens a word, a spent one fades.
     Keys are drawn AS KEYS (a small keycap) so a number reads as a shortcut, not a rank: beside
     each crewmate's name (1 to 6) and under each action word. Hovering a crewmate shows a

@@ -648,8 +648,6 @@ func _paint_actions() -> void:
 		"fire":
 			# Fire's chooser: the single shot, the volley, the Mega.
 			var fk2: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], true, "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire"), "fire")
-			fk2.pips = int(s["charges"])
-			fk2.pips_full = int(s["maxCharges"])
 			top.add_child(fk2)
 			top.add_child(_word_key("Volley", "V", lg["volley"], lg["volley"], "Three balls: a double-damage broadside", BattleLook.GOLD, func() -> void: _pick_fire("volley"), "volley"))
 			if not mg.is_empty():
@@ -670,8 +668,6 @@ func _paint_actions() -> void:
 		_:
 			top.add_child(_word_key("Reload", "R", lg["reload"], false, "+1 ball", BattleLook.CREAM, func() -> void: _choose("reload"), "reload"))
 			var fk: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire, "fire")
-			fk.pips = int(s["charges"])
-			fk.pips_full = int(s["maxCharges"])
 			top.add_child(fk)
 			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Brace for a shot (not twice running)", BattleLook.CREAM, func() -> void: _choose("dodge"), "dodge"))
 			top.add_child(_word_key("Special", "S", not kit.is_empty(), false, str(kit.get("name", "No special aboard")), BattleLook.CREAM, func() -> void: _open_menu("special"), "special"))
@@ -680,17 +676,7 @@ func _paint_actions() -> void:
 				top.add_child(_word_key(str(drum["name"]), "B", not (s.get("drum", false) or (s["used"] as Array).is_empty()), false, str(drum.get("description", "")), BattleLook.GOLD, _beat_drum, "drum"))
 			if gauntlet == "":
 				top.add_child(_word_key("Flee", "X", true, false, "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me), BattleLook.MUTED, _flee, "flee"))
-	# The shot in the rack: under Fire's word; on its own in the specials.
-	var mag: Control = Control.new()
-	mag.visible = _menu == "special"
-	var cnt: int = int(s["maxCharges"])
-	var step: float = minf(22.0, 110.0 / maxf(1.0, float(cnt)))
-	mag.custom_minimum_size = Vector2(18.0 + step * cnt, 54)
-	mag.tooltip_text = "Shot in the rack: %d of %d" % [int(s["charges"]), cnt]
-	mag.draw.connect(func() -> void:
-		for k: int in cnt:
-			BattleLook.ball(mag, Vector2(16 + k * step, 27), 8.0, k < int(s["charges"])))
-	top.add_child(mag)
+	# The shot in the rack shows on your ship's plate, not here (Kong, 2026-10-05).
 	# The crew's orders: standing up out of the deck's top edge.
 	var crew: Array = s["crew"]
 	for ci: int in crew.size():
