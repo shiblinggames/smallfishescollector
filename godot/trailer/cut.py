@@ -14,41 +14,46 @@ ART = HERE.parent / "game" / "art"
 marks = json.loads((CLIPS / "marks.json").read_text())
 
 # (shot, seconds used, the transition INTO the next: "x" crossfade, "b" via black)
+# (shot, seconds in from its MARK, seconds used, the way into the next: "x"
+# a dissolve, "b" a dip through black). Kong: no cutting away mid-popup; let
+# each moment land and settle before it dissolves.
 EDIT = [
-    ("flotilla", 3.6, "x"),
-    ("charter", 3.8, "x"),
-    ("fish", 9.2, "x"),
-    ("log", 3.0, "x"),
-    ("rod", 2.8, "x"),
-    ("finn", 4.4, "x"),
-    ("friends", 3.6, "x"),
-    ("treasure", 3.2, "x"),
-    ("crate", 3.0, "x"),
-    ("wardrobe", 7.6, "x"),
-    ("skins", 6.4, "x"),
-    ("badges", 2.2, "b"),
-    ("north", 3.6, "x"),
-    ("campaign", 2.4, "x"),
-    ("ready", 3.2, "x"),
-    ("coop", 6.2, "x"),
-    ("recruit", 7.2, "x"),
-    ("summon", 4.2, "x"),
-    ("armory", 2.4, "x"),
-    ("mega", 3.8, "b"),
-    ("descent", 4.4, "x"),
-    ("draft", 4.0, "x"),
-    ("stacked", 8.4, "x"),
-    ("don", 4.1, "x"),
-    ("haul", 3.2, "b"),
-    ("calm", 5.6, "b"),
-    ("end", 6.3, ""),
+    ("flotilla", 0.0, 3.8, "x"),
+    ("charter", 0.0, 4.0, "x"),
+    ("fish", 0.0, 9.4, "x"),
+    ("log", 0.0, 3.4, "x"),
+    ("rod", 0.0, 3.0, "x"),
+    ("finn", 0.0, 4.5, "x"),
+    ("friends", 0.0, 4.2, "x"),
+    ("treasure", 0.0, 3.5, "x"),
+    ("crate", 0.0, 4.9, "x"),
+    ("wardrobe", 0.0, 7.8, "x"),
+    ("badges", 0.0, 2.3, "b"),
+    ("north", 0.0, 3.8, "x"),
+    ("campaign", 0.0, 2.5, "x"),
+    ("ready", 0.0, 3.3, "x"),
+    ("coop", 0.0, 6.6, "x"),
+    ("recruit", 0.0, 7.4, "x"),
+    ("skins", 0.0, 6.6, "x"),
+    ("summon", 0.0, 4.4, "x"),
+    ("armory", 0.0, 2.6, "x"),
+    ("mega", 0.0, 4.0, "b"),
+    ("descent", 0.0, 4.5, "x"),
+    ("draft", 0.0, 3.7, "x"),
+    ("stacked", 0.8, 5.8, "x"),
+    ("don", 0.0, 4.3, "x"),
+    ("haul", 0.0, 5.3, "b"),
+    ("calm", 0.0, 5.8, "b"),
+    ("end", 0.0, 6.3, ""),
 ]
-XF = 0.35     # a crossfade between shots
-BK = 0.8      # a dip through black between sections
+XF = 0.6      # a dissolve between shots
+BK = 1.0      # a dip through black between sections
 SFX_DB = -7.0 # the game's own sound, under the score
 
 edit = [e for e in EDIT if e[0] in marks]
 missing = [e[0] for e in EDIT if e[0] not in marks]
+OFF = {e[0]: e[1] for e in edit}
+edit = [(e[0], e[2], e[3]) for e in edit]
 if missing:
     print("missing shots (left out):", missing)
 
@@ -58,8 +63,10 @@ for i, (name, dur, _t) in enumerate(edit):
     m = marks[name]
     d = min(dur, m["dur"])
     inputs += ["-i", str(CLIPS / f"{name}.avi")]
-    parts.append(f"[{i}:v]trim=start={m['start']:.4f}:duration={d:.4f},setpts=PTS-STARTPTS,fps=60,scale=1920:1080:flags=lanczos,format=yuv420p,settb=AVTB[v{i}];"
-                 f"[{i}:a]atrim=start={m['start']:.4f}:duration={d:.4f},asetpts=PTS-STARTPTS,aresample=48000[a{i}];")
+    st0 = m["start"] + OFF.get(name, 0.0)
+    d = min(d, m["dur"] - OFF.get(name, 0.0))
+    parts.append(f"[{i}:v]trim=start={st0:.4f}:duration={d:.4f},setpts=PTS-STARTPTS,fps=60,scale=1920:1080:flags=lanczos,format=yuv420p,settb=AVTB[v{i}];"
+                 f"[{i}:a]atrim=start={st0:.4f}:duration={d:.4f},asetpts=PTS-STARTPTS,aresample=48000[a{i}];")
     edit[i] = (name, d, _t)
 
 # Chain the transitions: offsets are where each fade starts on the joined line.
@@ -87,18 +94,11 @@ fight_at = starts[[e[0] for e in edit].index("north")] if "north" in [e[0] for e
 end_at = starts[-1]
 total = length
 
-# The score: main theme (from 3s, so its lift lands on the crew), the deep
-# track from 44s under the fights, the main theme's opening under the end.
-inputs += ["-i", str(ART / "fishingsoundtrack.ogg"), "-i", str(ART / "fishingsoundtrackdeep.ogg"), "-i", str(ART / "fishingsoundtrack.ogg")]
+# The score: the main theme, start to finish (Kong: one track, no switching).
+inputs += ["-i", str(ART / "fishingsoundtrack.ogg")]
 n = len(edit)
-x1 = 2.5
-x2 = 2.0
-fc += (f"[{n}:a]atrim=start=3:duration={fight_at + x1:.3f},asetpts=PTS-STARTPTS,aresample=48000[m1];"
-       f"[{n+1}:a]atrim=start=44:duration={end_at - fight_at + x1 + x2:.3f},asetpts=PTS-STARTPTS,aresample=48000[m2];"
-       f"[{n+2}:a]atrim=start=0:duration={total - end_at + x2 + 1:.3f},asetpts=PTS-STARTPTS,aresample=48000[m3];"
-       f"[m1][m2]acrossfade=d={x1}:c1=tri:c2=tri[m12];"
-       f"[m12][m3]acrossfade=d={x2}:c1=tri:c2=tri[mus];"
-       f"[mus]atrim=duration={total:.3f},afade=t=in:d=1.2,afade=t=out:st={total - 2.5:.3f}:d=2.5[score];"
+fc += (f"[{n}:a]atrim=start=3:duration={total:.3f},asetpts=PTS-STARTPTS,aresample=48000,"
+       f"afade=t=in:d=1.2,afade=t=out:st={total - 3.0:.3f}:d=3.0[score];"
        f"[{cur_a}]volume={SFX_DB}dB[sfx];"
        f"[score][sfx]amix=inputs=2:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[aout];"
        f"[{cur_v}]fade=t=in:d=0.8,fade=t=out:st={total - 1.2:.3f}:d=1.2[vout]")

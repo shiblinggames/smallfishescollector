@@ -1738,6 +1738,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     from the rod's tip to where the hook hangs, carried rigidly with the boat, the hook plumb
     (it had been a rope simulated in the world, dragged out of shape by her way, the hook
     turned over by its last stretch); casting, waiting and fights keep the live rope.
+    Fifth pass (Kong's notes): one score, the main theme start to finish; softer, longer
+    dissolves (0.6s, 1.0s through black) and every shot trimmed so a popup has landed and
+    settled before it goes (cut.py EDIT carries each shot's in-point; seams.py shows every
+    cut's first and last frames); the dial struck only with the needle in the zone; the
+    Journal's people (every regular and your standing) for rapport; crew skins beside
+    recruiting.
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

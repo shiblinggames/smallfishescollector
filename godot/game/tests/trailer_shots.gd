@@ -163,6 +163,7 @@ func run(t: SceneTree, s: Sea, h: FishingHud, prof: Dictionary, clip: String) ->
 		"recruits": await _recruits()
 		"skinreel": await _skinreel()
 		"north": await _north()
+		"people": await _people()
 
 
 ## Three crewmates in looks of their own, each a Shipmate on your sea.
@@ -251,7 +252,7 @@ func _together() -> void:
 		await tree.process_frame
 	# The strike, perfect (as the needle would land it); then the HUD may say
 	# what came up (the catch's own words), with only the clutter kept down.
-	hud._on_struck("perfect", 0.0)
+	await _strike_true()
 	for n: Node in tree.root.get_children():
 		if n is Clean:
 			(n as Clean).queue_free()
@@ -623,7 +624,7 @@ func _fish() -> void:
 		await tree.process_frame
 	for f: int in 55:
 		await tree.process_frame
-	hud._on_struck("perfect", 0.0)
+	await _strike_true()
 	for n: Node in tree.root.get_children():
 		if n is Clean:
 			(n as Clean).queue_free()
@@ -811,4 +812,35 @@ func _north() -> void:
 		await tree.process_frame
 	_mark()
 	sea._boat.target = Vector2(North.GATE_X, Explore.NORTH_WALL - 1400.0)
+	await _hold()
+
+
+## The strike as a player makes it: the needle is let run until it is in the
+## perfect band, then the dial is struck (Kong: the dial must be seen landing
+## in the zone, not a catch over a miss). A late zone's fallback: the catch band.
+func _strike_true() -> void:
+	var guard: int = 0
+	while hud._dial.zone_at(hud._dial.angle) != "perfect" and guard < 900:
+		guard += 1
+		await tree.process_frame
+	if hud._dial.zone_at(hud._dial.angle) != "perfect":
+		while hud._dial.zone_at(hud._dial.angle) == "miss" and guard < 1400:
+			guard += 1
+			await tree.process_frame
+	hud._dial.strike()
+
+
+## THE REGULARS: the Journal's people, who you know on the water and how well,
+## a few still to meet.
+func _people() -> void:
+	var pts: Array = [48.0, 30.0, 18.0, 9.0, 4.0, 1.0]
+	var roster: Array = Folk.roster()
+	for i: int in mini(pts.size(), roster.size()):
+		var f0: Dictionary = roster[i]
+		Folk._ensure(sea.session.store, f0["id"])
+		Folk._row(sea.session.store, f0["id"])["points"] = pts[i]
+	hud.open_journal("people")
+	for f: int in 30:
+		await tree.process_frame
+	_mark()
 	await _hold()
