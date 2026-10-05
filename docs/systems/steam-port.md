@@ -1726,6 +1726,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     a rod unlocked at Fishing 20. record.py restores one baseline captain before every clip
     (clips/baseline_captain.json) so no shot inherits another's outfit. Fixed in the game on
     the way: the level-up named the Chart Room puzzles and the Pirate King by their raw ids.
+    Fourth pass (Kong's notes): Kong's own lines ("Sail a world with friends.", "Take on
+    quests and uncover the story behind the seas.", "Build rapport and make friends on the
+    waters.", "Explore the northern seas for expeditions.", "Take on raids solo or with
+    friends.", "Recruit and train crew to help in battles!", "Take on endgame content like
+    the gauntlet.", "...or just go back to fishing."); quests before rapport; recruits before
+    the summon, three boards rolled with a Legendary answering; the Locker reel through every
+    rod; a crew-skin reel (one voucher opened, then the trunk); the northern seas through the
+    arch; a gauntlet fight with a stack of boons played out; the end back on the fishing.
+    Fixed in the game on the way (game/fishing_line.gd _rest_line): at rest the line is laid
+    from the rod's tip to where the hook hangs, carried rigidly with the boat, the hook plumb
+    (it had been a rope simulated in the world, dragged out of shape by her way, the hook
+    turned over by its last stretch); casting, waiting and fights keep the live rope.
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

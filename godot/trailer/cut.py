@@ -15,33 +15,33 @@ marks = json.loads((CLIPS / "marks.json").read_text())
 
 # (shot, seconds used, the transition INTO the next: "x" crossfade, "b" via black)
 EDIT = [
-    ("flotilla", 4.3, "x"),
-    ("charter", 4.0, "x"),
-    ("fish", 7.6, "x"),
-    ("log", 3.6, "x"),
-    ("rod", 3.2, "x"),
-    ("friends", 3.4, "x"),
-    ("finn", 4.0, "x"),
-    ("treasure", 3.6, "x"),
-    ("crate", 3.6, "x"),
-    ("wardrobe", 6.0, "x"),
-    ("skins", 3.4, "x"),
-    ("badges", 2.4, "b"),
-    ("campaign", 3.0, "x"),
+    ("flotilla", 3.6, "x"),
+    ("charter", 3.8, "x"),
+    ("fish", 9.2, "x"),
+    ("log", 3.0, "x"),
+    ("rod", 2.8, "x"),
+    ("finn", 4.4, "x"),
+    ("friends", 3.6, "x"),
+    ("treasure", 3.2, "x"),
+    ("crate", 3.0, "x"),
+    ("wardrobe", 7.6, "x"),
+    ("skins", 6.4, "x"),
+    ("badges", 2.2, "b"),
+    ("north", 3.6, "x"),
+    ("campaign", 2.4, "x"),
     ("ready", 3.2, "x"),
-    ("coop", 7.2, "x"),
-    ("summon", 4.3, "x"),
-    ("recruit", 5.4, "x"),
-    ("armory", 2.6, "x"),
-    ("forge", 3.1, "x"),
-    ("mega", 4.3, "b"),
-    ("descent", 4.6, "x"),
-    ("draft", 4.2, "x"),
-    ("boons", 4.6, "x"),
-    ("krust", 3.0, "x"),
+    ("coop", 6.2, "x"),
+    ("recruit", 7.2, "x"),
+    ("summon", 4.2, "x"),
+    ("armory", 2.4, "x"),
+    ("mega", 3.8, "b"),
+    ("descent", 4.4, "x"),
+    ("draft", 4.0, "x"),
+    ("stacked", 8.4, "x"),
     ("don", 4.1, "x"),
-    ("haul", 3.5, "b"),
-    ("end", 6.5, ""),
+    ("haul", 3.2, "b"),
+    ("calm", 5.6, "b"),
+    ("end", 6.3, ""),
 ]
 XF = 0.35     # a crossfade between shots
 BK = 0.8      # a dip through black between sections
@@ -83,7 +83,7 @@ for i, (name, d, kind) in enumerate(edit):
     starts.append(t)
     fd = BK if kind == "b" else XF
     t += d - fd
-fight_at = starts[[e[0] for e in edit].index("campaign")] if "campaign" in [e[0] for e in edit] else length * 0.35
+fight_at = starts[[e[0] for e in edit].index("north")] if "north" in [e[0] for e in edit] else length * 0.35
 end_at = starts[-1]
 total = length
 

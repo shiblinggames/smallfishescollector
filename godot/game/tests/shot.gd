@@ -1166,8 +1166,14 @@ func _init() -> void:
 				for f: int in 10:
 					await process_frame
 				var gt: GauntletTable = sea._solo_dive
+				# DIVE_BOONS: a captain carrying a stack of powers into the dive.
+				if OS.get_environment("DIVE_BOONS") != "" and gt._r.has("caps") and (gt._r["caps"] as Dictionary).has("me"):
+					gt._r["caps"]["me"]["boons"] = { "broadside_mastery": 2.0, "powder_and_shot": 2.0, "wildfire": 2.0, "chainshot": 2.0, "executioner": 2.0, "giant_killer": 2.0, "dead_eye": 2.0, "rattling_shot": 1.0 }
 				if gstep != "entry":
 					gt.handle("me", sea.session, ["go"])
+					if OS.get_environment("DIVE_BOONS") != "" and gt._r.has("caps") and (gt._r["caps"] as Dictionary).has("me"):
+						gt._r["caps"]["me"]["boons"] = { "broadside_mastery": 2.0, "powder_and_shot": 2.0, "wildfire": 2.0, "chainshot": 2.0, "executioner": 2.0, "giant_killer": 2.0, "dead_eye": 2.0, "rattling_shot": 1.0 }
+						gt._effects_onto(gt._r["b"]["seats"])
 					for f: int in int(OS.get_environment("DIVE_WAIT")) if OS.get_environment("DIVE_WAIT") != "" else 150:
 						await process_frame
 					# CLEAR_FOES: the opening enemy gone (a between-fights shot, clean).
@@ -1797,6 +1803,13 @@ func _film_beats(sea: Sea) -> void:
 			if who != "" and pick >= 0:
 				gt.handle(who, sea.session, ["pick", { "card": float(pick) }])
 				Sound.seal(true)
+	# BOON_AUTO: the fight plays itself out (the stage's own autoplay).
+	if OS.get_environment("BOON_AUTO") != "":
+		for n: Node in sea._hud_layer.get_children():
+			if n is BattleStage:
+				(n as BattleStage).autoplay = true
+				if not (n as BattleStage)._busy:
+					(n as BattleStage)._await_plan()
 	if OS.get_environment("BOON_FX") != "":
 		var bs: BattleStage = null
 		for n: Node in sea._hud_layer.get_children():

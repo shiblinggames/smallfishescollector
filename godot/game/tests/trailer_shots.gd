@@ -160,6 +160,9 @@ func run(t: SceneTree, s: Sea, h: FishingHud, prof: Dictionary, clip: String) ->
 		"treasure": await _treasure()
 		"pets": await _pets()
 		"wardrobe": await _wardrobe()
+		"recruits": await _recruits()
+		"skinreel": await _skinreel()
+		"north": await _north()
 
 
 ## Three crewmates in looks of their own, each a Shipmate on your sea.
@@ -687,13 +690,13 @@ func _wardrobe() -> void:
 	_mark()
 	var steps: Array = [
 		["boat", "equipped_boat", "celestial"], ["boat", "equipped_boat", "fire"], ["boat", "equipped_boat", "golden"],
-		["rod", "rod_tier", 10.0], ["rod", "rod_tier", 11.0],
+		["rod", "rod_tier", 2.0], ["rod", "rod_tier", 4.0], ["rod", "rod_tier", 5.0], ["rod", "rod_tier", 6.0], ["rod", "rod_tier", 7.0], ["rod", "rod_tier", 8.0], ["rod", "rod_tier", 9.0], ["rod", "rod_tier", 10.0], ["rod", "rod_tier", 11.0],
 		["skin", "character_color", "galaxy"], ["skin", "character_color", "lava"],
 		["hat", "equipped_hat", "fuego"], ["hat", "equipped_hat", "golden"],
 		["pet", "equipped_pet", "monkey_golden"], ["pet", "equipped_pet", "parrot_gold"],
 	]
 	for st: Array in steps:
-		await tree.create_timer(0.48).timeout
+		await tree.create_timer(0.36 if st[0] == "rod" else 0.46).timeout
 		p[st[1]] = st[2]
 		if st[0] == "boat":
 			if sea._locker.tab != "boat":
@@ -705,4 +708,107 @@ func _wardrobe() -> void:
 			sea._locker._show_tab("loadout")
 		sea._boat.set_look(Skipper.look_of(p))
 		Sound.plip()
+	await _hold()
+
+
+# ── The fourth pass (Kong, 2026-10-05: more crew and rerolls, a skin reel) ──
+
+## THE CREW HALL, ROLLED AGAIN AND AGAIN: three notices posted, each a fresh
+## board, the last with a Legendary answering; that hand picked, signed on.
+func _recruits() -> void:
+	p["crew_notices"] = { "harbor_bill": 3.0 }
+	p["expedition_xp"] = 3000000.0
+	p["crew_hall_tier"] = 6.0
+	var save_crew: Array = Js.list(sea.session.save.get("crew"))
+	sea.session.save["crew"] = save_crew.slice(0, mini(8, save_crew.size()))
+	var ch: CrewHall = CrewHall.new()
+	ch.session = sea.session
+	ch.room = "recruit"
+	sea._room_layer.add_child(ch)
+	for f: int in 30:
+		await tree.process_frame
+	_mark()
+	for k: int in 3:
+		await tree.create_timer(0.9 if k == 0 else 1.15).timeout
+		if k == 2:
+			# The last board: a Legendary among them (the game's own moment).
+			var r: Dictionary = await ch._act("postNotice", ["harbor_bill"])
+			var recs: Array = Js.list(sea.session.save.get("recruits"))
+			var cat: Dictionary = {}
+			for c: Dictionary in Crew.cards():
+				if str(c.get("slug", "")).to_lower() == "catfish":
+					cat = c
+			if not recs.is_empty() and not cat.is_empty():
+				recs[1]["card_id"] = cat["id"]
+				recs[1]["rarity"] = 4.0
+			await ch._load()
+			ch._pick = {}
+			ch._draw_room()
+			Sound.chest(true)
+			ch._sign_on_moment("A Legendary answers!", Color("#f0c040"))
+		else:
+			var post: BaseButton = _button(ch, "Post it")
+			if post != null:
+				post.pressed.emit()
+	await tree.create_timer(1.6).timeout
+	for c2: Dictionary in Js.list(ch._state.get("board")):
+		if float(c2.get("rarity", 1.0)) >= 4.0:
+			ch._pick = c2
+			ch._pick_kind = "board"
+	ch._draw_room()
+	await tree.create_timer(1.0).timeout
+	var sign: BaseButton = _button(ch, "Sign on")
+	if sign != null:
+		sign.pressed.emit()
+	await _hold()
+
+
+## CREW SKINS, A REEL: a voucher's reveal after another, each a skin to own.
+func _skinreel() -> void:
+	for d: int in 4:
+		var st: Dictionary = RulesApi.run(sea.session.store, sea.session.uid, "getCrewState", [])
+		for c: Dictionary in st["board"]:
+			RulesApi.run(sea.session.store, sea.session.uid, "recruitCrew", [c["id"]])
+		p["last_free_recruit_date"] = "old%d" % d
+	var reveals: Array = []
+	for kind: String in ["captain", "captain", "bosun", "captain", "bosun", "captain", "captain"]:
+		Skins.grant(sea.session.store, sea.session.uid, kind, 1.0)
+		var r: Dictionary = Skins.open(sea.session.store, sea.session.uid, kind)
+		if r.has("skin"):
+			reveals.append(r)
+	var ch: CrewHall = CrewHall.new()
+	ch.session = sea.session
+	ch.room = "trunk"
+	sea._room_layer.add_child(ch)
+	for f: int in 20:
+		await tree.process_frame
+	_mark()
+	# One voucher opened all the way, then the trunk's skins one after another.
+	if reveals.is_empty():
+		await _hold()
+		return
+	var show: Node = SkinReveal.play(ch, reveals[0])
+	await tree.create_timer(2.9).timeout
+	if is_instance_valid(show):
+		show.queue_free()
+	await ch._load()
+	for r2: Dictionary in reveals.slice(1):
+		ch._pick = r2["skin"]
+		ch._pick_kind = "skin"
+		ch._draw_room()
+		Sound.plip()
+		await tree.create_timer(0.62).timeout
+	await _hold()
+
+
+## THE NORTHERN SEAS: north through the arch, onto the campaign's water.
+func _north() -> void:
+	_clean()
+	sea._boat.position = Vector2(North.GATE_X, Explore.NORTH_WALL + 520.0)
+	sea._boat.heading = -PI / 2.0
+	sea._zoom_to = 1.0
+	for f: int in 20:
+		await tree.process_frame
+	_mark()
+	sea._boat.target = Vector2(North.GATE_X, Explore.NORTH_WALL - 1400.0)
 	await _hold()

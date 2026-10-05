@@ -95,7 +95,8 @@ func _ends() -> Dictionary:
 
 
 ## How far the resting hook trails behind her way: her rod tip's speed,
-## smoothed hard, turned into a backward lean (and a little lift), capped.
+## smoothed hard, turned into a small backward lean, capped. (Not used at rest
+## now: see _rest_line.)
 var _trail: Vector2 = Vector2.ZERO
 var _tip_last: Vector2 = Vector2.INF
 var _vel: Vector2 = Vector2.ZERO
@@ -108,14 +109,10 @@ func _follow(dt: float) -> void:
 	if _tip_last != Vector2.INF and tip.distance_to(_tip_last) < 120.0 * absf(global_scale.x):
 		_vel = _vel.lerp((tip - _tip_last) / dt, 1.0 - exp(-dt * 2.5))
 	_tip_last = tip
-	# Under way the hook swings well back behind her (Kong, 2026-10-05: the
-	# hooks "look weird as you're sailing", hanging out ahead of the bow), and
-	# lifts a little as the line is pulled back; still smoothed, never loose.
-	var lean: Vector2 = -_vel * 0.075
-	var cap: float = 40.0 * absf(global_scale.x)
+	var lean: Vector2 = -_vel * 0.035
+	var cap: float = 14.0 * absf(global_scale.x)
 	if lean.length() > cap:
 		lean = lean.normalized() * cap
-	lean.y -= absf(lean.x) * 0.3
 	_trail = _trail.lerp(lean, 1.0 - exp(-dt * 3.0))
 
 
@@ -127,6 +124,15 @@ func _step(dt: float) -> void:
 	_follow(dt)
 	var e: Dictionary = _ends()
 	var tip: Vector2 = e["tip"]
+	# AT REST THE LINE RIDES WITH HER (Kong, 2026-10-05: sailing, the line
+	# "looks contorted" and the hook "always flipped up"; it should rest in its
+	# natural position). A rope simulated in the world is dragged out of shape
+	# by her way, and the hook, drawn along its last stretch, turned over. At
+	# rest it is laid instead: a gentle hang from the tip to where the hook
+	# hangs, carried rigidly with the boat, the hook upright, a slight sway.
+	if skipper.frame == "rest" and not (skipper.line_from != null and skipper.line_clock - skipper.frame_at < 0.5):
+		_rest_line(tip)
+		return
 	var pts: PackedVector2Array = skipper.line_pts
 	var prev: PackedVector2Array = skipper.line_prev
 	# A jump (a teleport, a recall, a new captain): start the rope again in
@@ -177,6 +183,24 @@ func _step(dt: float) -> void:
 	skipper.line_end_ok = true
 
 
+func _rest_line(tip: Vector2) -> void:
+	var now: float = skipper.line_clock
+	var sc: float = absf(global_scale.x)
+	var hang: Vector2 = to_global(_sheet(PTS["rest"][1]))
+	hang += Vector2(sin(now * 1.3) * 1.2, 0.0) * sc
+	var pts: PackedVector2Array = PackedVector2Array()
+	pts.resize(NODES)
+	var side: Vector2 = (hang - tip).orthogonal().normalized()
+	for n: int in NODES:
+		var u: float = float(n) / (NODES - 1)
+		# A hair of belly in the line, easing into the hook's weight.
+		pts[n] = tip.lerp(hang, u) + side * sin(u * PI) * 1.5 * sc * (1.0 - u)
+	skipper.line_pts = pts
+	skipper.line_prev = pts.duplicate()
+	skipper.line_end_prev = pts[NODES - 1]
+	skipper.line_end_ok = true
+
+
 func _draw() -> void:
 	if skipper == null or not PTS.has(skipper.frame) or skipper._roles.get("skin") == null:
 		return
@@ -195,6 +219,9 @@ func _draw() -> void:
 	# thicker or it vanishes when the picture is shrunk.
 	draw_polyline(local, INK, WIDTH if skipper.water else 1.4 * maxf(1.0, skipper.box_scale), true)
 	_last_dir = (local[NODES - 1] - local[NODES - 2]).normalized()
+	if skipper.frame == "rest":
+		# Resting, the hook hangs plumb under its eye.
+		_last_dir = Vector2.DOWN
 	# The hook: on show at rest and in flight; under the water otherwise.
 	if skipper.frame != "wait":
 		_hook(local[NODES - 1], _last_dir)
