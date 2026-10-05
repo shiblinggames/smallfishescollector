@@ -1213,6 +1213,11 @@ func _init() -> void:
 							en["image"] = ap.get("image")
 							en["id"] = want
 						bs2._enemy_enters()
+			# DIVE_DEPTH: the water as at this depth (the band's look).
+			if OS.get_environment("DIVE_DEPTH") != "":
+				for n: Node in sea._hud_layer.get_children():
+					if n is BattleStage:
+						sea.water_theme = (n as BattleStage)._water_theme({ "depth": float(OS.get_environment("DIVE_DEPTH")) })
 			# SHOT_MS: wait this long in real time instead (a moment mid-play).
 			if OS.get_environment("SHOT_MS") != "":
 				await create_timer(float(OS.get_environment("SHOT_MS")) / 1000.0).timeout

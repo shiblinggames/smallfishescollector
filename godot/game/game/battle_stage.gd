@@ -92,6 +92,8 @@ var _ov: GauntletOverlay = null
 ## The dive's moments on the water (game/gauntlet_moments.gd), each staged
 ## before its sheet comes up; the phase the sheet shows; what has been staged.
 var _moments: GauntletMoments = null
+## The dive's own water: each band's murk, dark, weather and drift (DeepAtmos).
+var _atmos: DeepAtmos = null
 var _ov_phase: String = ""
 var _staged: Dictionary = {}
 
@@ -200,6 +202,10 @@ func _ready() -> void:
 		_moments.field = sea._field
 		_moments.fx = _fx
 		sea._world.add_child(_moments)
+		_atmos = DeepAtmos.new()
+		_atmos.sea = sea
+		add_child(_atmos)
+		_atmos.set_look(sea.water_theme)
 	var tw: Tween = create_tween()
 	tw.tween_property(self, "_bars", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	Sound.horn()
@@ -1667,6 +1673,10 @@ func _end(won: bool, fled: bool = false) -> void:
 		_moments.clear()
 		_moments.queue_free()
 		_moments = null
+	if _atmos != null and is_instance_valid(_atmos):
+		_atmos.reparent(sea)
+		_atmos.leave()
+		_atmos = null
 	if gauntlet != "":
 		sea.water_theme = {}
 	sea._boat.modulate = Color.WHITE
@@ -3076,16 +3086,7 @@ class DepthCall:
 ## rise the darkest green of all; the world's light tinted to match.
 func _water_theme(dn: Dictionary) -> Dictionary:
 	var d: int = int(Js.num(dn.get("depth", b.get("depth", 1))))
-	var t: float = minf(1.0, pow(maxf(0.0, (d - 1) / 24.0), 0.85))
-	var heavy: float = minf(1.0, 0.2 + 0.7 * t + 0.24 * (1.0 if dn.get("boss", false) else 0.0))
-	var sea_c: Array
-	var light: Color
-	if gauntlet == "don":
-		sea_c = [Color8(3, 24, 14), Color8(14, 64, 40), Color8(52, 140, 92)]
-		light = Color(0.64, 0.84, 0.68)
-	else:
-		sea_c = [Color8(4, 18, 26), Color8(16, 60, 70), Color8(52, 128, 134)]
-		light = Color(0.66, 0.78, 0.84)
-	if dn.get("apex", false):
-		heavy = 1.0
-	return { "sea": sea_c, "light": light.lerp(Color(0.4, 0.44, 0.5), heavy * 0.5), "dim": heavy * 0.45 }
+	var l: Dictionary = DeepLook.look(gauntlet, maxi(1, d), dn.get("boss", false) == true, dn.get("apex", false) == true)
+	if _atmos != null:
+		_atmos.set_look(l)
+	return l

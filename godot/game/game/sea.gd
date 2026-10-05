@@ -449,7 +449,7 @@ func _process(delta: float) -> void:
 	# Under a squall the light goes grey; a strike lights it all.
 	_night.color = _night.color.lerp(Color(0.6, 0.64, 0.7), _storm * 0.55).lerp(Color(0.84, 0.86, 0.88), _squall.fog * 0.5).lerp(Color(1.0, 1.0, 1.0), _squall.flash * 0.6)
 	if _theme_k > 0.0 and not _theme_last.is_empty():
-		_night.color = _night.color.lerp(_theme_last["light"], _theme_k * 0.75)
+		_night.color = _night.color.lerp(_theme_last["light"], _theme_k * 0.9)
 	_sun.rotation = (-toward).angle() - PI / 2.0
 	_sun.height = lerpf(0.15, 0.85, elev)
 	var sun_col: Color = Color(1.0, 0.62, 0.32).lerp(Color(1.0, 0.97, 0.9), smoothstep(0.0, 0.55, elev))
@@ -807,10 +807,20 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 	else:
 		_water.set_shader_parameter("u_front_w", 0.0)
 	var cloud: float = float(fx["cloud"])
-	_storm = lerpf(_storm, cloud, 1.0 - exp(-delta * 0.55))
-	_squall.step(delta, float(fx["rain"]), 1.0 if fx["lightning"] else 0.5, get_viewport_rect().size)
+	var rain: float = float(fx["rain"])
+	var power: float = 1.0 if fx["lightning"] else 0.5
+	var fog_amt: float = float(fx["fog"])
 	var wind: float = float(fx["k"]) if not f.is_empty() and f["kind"] == "wind" else 0.0
-	_squall.step_air(delta, float(fx["fog"]), _boat.get_global_transform_with_canvas().origin, wind, f.get("dir", Vector2.RIGHT), get_viewport_rect().size)
+	# A dive has its own weather (DeepLook): the sea's is set aside for it.
+	if _theme_k > 0.0 and _theme_last.has("rain"):
+		rain = lerpf(rain, float(_theme_last["rain"]), _theme_k)
+		cloud = lerpf(cloud, float(_theme_last["rain"]) * 0.8, _theme_k)
+		power = lerpf(power, 1.0 if _theme_last.get("storm", false) else 0.5, _theme_k)
+		fog_amt *= 1.0 - _theme_k
+		wind *= 1.0 - _theme_k
+	_storm = lerpf(_storm, cloud, 1.0 - exp(-delta * 0.55))
+	_squall.step(delta, rain, power, get_viewport_rect().size)
+	_squall.step_air(delta, fog_amt, _boat.get_global_transform_with_canvas().origin, wind, f.get("dir", Vector2.RIGHT), get_viewport_rect().size)
 	_water.set_shader_parameter("u_flash", _squall.flash)
 	# The chart is paper over the sea: no rain or fog on it.
 	_squall.visible = _chart == null

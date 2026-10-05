@@ -1659,6 +1659,25 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     Consigliere and the rest sail in as before. Effects are particles and drawn shapes; only
     the idol, the peddler and the hulls are paintings. Gauntlets only; the campaign's raids
     keep their own entries. Fixed on the way: the Walk On card read "5%%".
+  - EACH BAND ITS OWN SEA (game/deep_look.gd, game/deep_atmos.gd; Kong 2026-10-05: "visually it
+    needs to look and feel a lot more intense and different"). Before, the dive's water only
+    darkened a little to depth 25 and then held, the sea's own weather ran on, and the bands
+    were names. Now every band of both gauntlets has its own sea: the water's colours (easing
+    toward the next band's as you go), the light, a rolling murk, a vignette that closes in
+    round the fight deeper down (the Crush and the Maw breathe it), and the dive's OWN weather
+    (the sea's is set aside while you dive: rain, lightning only in the storm bands, no fronts).
+    One thing in the water per band, all drawn in code. Davy: pale wisps in the Shallows of the
+    Dead; wreck planks drifting on the Drowned Shelf; a court of floating candles in the rain at
+    Davy's Court; the Starless Reach black with glowing specks and lightning; violet silt falling
+    in the Silt Fields; the Leviathan's shadow passing under you on its Road, in a storm, the
+    surface ringing over it; ash in the Black Meridian; the Crush red with embers rising and
+    lightning; the Bottom of the World near black, a few embers, the dark tight round you. The
+    Don: green wisps in the Shallows; kelp on the Weedbound Shelf; the Kraken's arm sweeping
+    under the hulls in his Court; ink blooming (green at the edges) in the Ink Reach; fronds
+    falling from the Drowned Canopy; the Leviathan's coil under you; black kelp; spores rising
+    in the Crushing Deep and the Maw. A boss leans the dark in; the Don's rise takes it all the
+    way. The hulls stay readable at any depth: the light never falls all the way to the band's
+    colour and the murk thins between you and the enemy. Leaving a dive eases it all back out.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,
     judgment and afflictions) for aimStyle "dial", centred over the water: the fishing dial's
