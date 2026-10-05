@@ -62,7 +62,7 @@ var _deck_bg: Array = []
 ## The deck: orders on the left, the log's last lines on the right.
 const DECK_W: float = 1280.0
 ## How far the crew's cards stand up above the deck's top edge.
-const CREW_LIFT: float = 150.0
+const CREW_LIFT: float = 174.0
 const LOG_W: float = 400.0
 var _deck_log: Control
 var _strip: Array = []
@@ -317,7 +317,7 @@ func _process(delta: float) -> void:
 			_fx.links = lk
 	if _deck != null:
 		# As tall as what is on it (an order row, the aim bar, the die).
-		var dh: float = maxf(118.0, _deck_box.get_combined_minimum_size().y + 34.0)
+		var dh: float = maxf(110.0, _deck_box.get_combined_minimum_size().y + 20.0)
 		var top_y: float = -BAR - 12.0 - dh
 		# While a round plays the deck stays up (its log is being written);
 		# only the orders dim, out of play.
@@ -527,22 +527,22 @@ func _build_deck() -> void:
 	_deck.offset_bottom = -BAR + 6
 	_deck.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_deck)
-	# The expedition side's night paper, a brass rim and tab over it
-	# (game/battle_look.gd).
-	var paper: Control = Control.new()
-	paper.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	paper.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_deck.add_child(paper)
-	Paper.night = true
-	Paper.sheet(paper, 6.0)
-	Paper.night = false
-	_deck_bg = [paper]
-	var sheet: BattleLook.DeckPanel = BattleLook.DeckPanel.new()
-	sheet.body = false
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_deck.add_child(sheet)
-	_deck_bg.append(sheet)
+	# No paper behind the deck (Kong, 2026-10-05): the bottom of the screen
+	# just darkens softly into the black bar, so the discs, the crew and the
+	# log stand on the water.
+	var fade: ColorRect = ColorRect.new()
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	fade.offset_top = -BAR - 300.0
+	fade.offset_bottom = -BAR
+	var fm: ShaderMaterial = ShaderMaterial.new()
+	var fsh: Shader = Shader.new()
+	fsh.code = "shader_type canvas_item;\nvoid fragment() { float a = smoothstep(0.0, 1.0, UV.y); COLOR = vec4(0.01, 0.015, 0.025, a * a * 0.72); }"
+	fm.shader = fsh
+	fade.material = fm
+	add_child(fade)
+	move_child(fade, _deck.get_index())
+	_deck_bg = [fade]
 	var pad: MarginContainer = MarginContainer.new()
 	pad.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side: Array in [["left", 22], ["right", LOG_W + 34], ["top", 16], ["bottom", 14]]:
@@ -569,12 +569,6 @@ func _build_deck() -> void:
 	_deck_log.offset_bottom = -12.0
 	_deck_log.mouse_filter = Control.MOUSE_FILTER_PASS
 	_deck.add_child(_deck_log)
-	var rule: ColorRect = ColorRect.new()
-	rule.color = Color(1, 1, 1, 0.07)
-	rule.set_anchors_preset(Control.PRESET_LEFT_WIDE)
-	rule.offset_left = -14.0
-	rule.offset_right = -13.0
-	_deck_log.add_child(rule)
 	_log = Kit.text(self, "", "body_strong", CREAM)
 	_log.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_log.offset_left = -470
@@ -648,12 +642,15 @@ func _paint_actions() -> void:
 	var mg: Dictionary = Js.obj(s.get("mega"))
 	var kit: Dictionary = Battle.repair_kit(s)
 	var top: HBoxContainer = HBoxContainer.new()
-	top.add_theme_constant_override("separation", 6)
+	top.add_theme_constant_override("separation", 14)
 	_deck_box.add_child(top)
 	match _menu:
 		"fire":
 			# Fire's chooser: the single shot, the volley, the Mega.
-			top.add_child(_word_key("Fire", "F", lg["fire"], true, "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire"), "fire"))
+			var fk2: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], true, "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire"), "fire")
+			fk2.pips = int(s["charges"])
+			fk2.pips_full = int(s["maxCharges"])
+			top.add_child(fk2)
 			top.add_child(_word_key("Volley", "V", lg["volley"], lg["volley"], "Three balls: a double-damage broadside", BattleLook.GOLD, func() -> void: _pick_fire("volley"), "volley"))
 			if not mg.is_empty():
 				top.add_child(_word_key(str(mg["name"]), "M", lg.get("mega", false), lg.get("mega", false), "%s  ·  %d balls" % [mg.get("tagline", ""), int(Armory.aug()["megaCost"])], Color(str(mg.get("color", "#d8b26b"))), func() -> void: _pick_fire("mega"), "mega"))
@@ -667,12 +664,15 @@ func _paint_actions() -> void:
 					_menu = ""
 					_choose("repair"), "special")
 				kk.sub = why
-				kk.custom_minimum_size = Vector2(maxf(kk.custom_minimum_size.x, 250.0), 54)
+				kk.custom_minimum_size = Vector2(maxf(kk.custom_minimum_size.x, 200.0), 116)
 				top.add_child(kk)
 			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu(), "back"))
 		_:
-			top.add_child(_word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire, "fire"))
 			top.add_child(_word_key("Reload", "R", lg["reload"], false, "+1 ball", BattleLook.CREAM, func() -> void: _choose("reload"), "reload"))
+			var fk: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire, "fire")
+			fk.pips = int(s["charges"])
+			fk.pips_full = int(s["maxCharges"])
+			top.add_child(fk)
 			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Brace for a shot (not twice running)", BattleLook.CREAM, func() -> void: _choose("dodge"), "dodge"))
 			top.add_child(_word_key("Special", "S", not kit.is_empty(), false, str(kit.get("name", "No special aboard")), BattleLook.CREAM, func() -> void: _open_menu("special"), "special"))
 			var drum: Dictionary = Battle.drum_of(s)
@@ -680,8 +680,9 @@ func _paint_actions() -> void:
 				top.add_child(_word_key(str(drum["name"]), "B", not (s.get("drum", false) or (s["used"] as Array).is_empty()), false, str(drum.get("description", "")), BattleLook.GOLD, _beat_drum, "drum"))
 			if gauntlet == "":
 				top.add_child(_word_key("Flee", "X", true, false, "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me), BattleLook.MUTED, _flee, "flee"))
-	# The shot in the rack: the balls themselves.
+	# The shot in the rack: under Fire's word; on its own in the specials.
 	var mag: Control = Control.new()
+	mag.visible = _menu == "special"
 	var cnt: int = int(s["maxCharges"])
 	var step: float = minf(22.0, 110.0 / maxf(1.0, float(cnt)))
 	mag.custom_minimum_size = Vector2(18.0 + step * cnt, 54)
@@ -733,6 +734,8 @@ func _close_menu() -> void:
 func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, accent: Color, f: Callable, icon: String = "") -> BattleLook.ActionKey:
 	var k: BattleLook.ActionKey = BattleLook.ActionKey.new()
 	k.kind = icon
+	k.disc = true
+	k.big = primary and icon == "fire"
 	k.label = word
 	k.key_hint = key
 	k.primary = on and primary
@@ -740,7 +743,7 @@ func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, 
 	k.disabled = not on
 	k.tooltip_text = tip
 	var w: float = Kit.font("karla", 800).get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 44.0 + Kit.font("karla", 800).get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + (30.0 if icon != "" else 0.0)
-	k.custom_minimum_size = Vector2(maxf(170.0 if primary else 120.0, w), 54)
+	k.custom_minimum_size = Vector2(maxf(104.0, w - 40.0), 116 if primary else 108)
 	k.pressed.connect(f)
 	return k
 

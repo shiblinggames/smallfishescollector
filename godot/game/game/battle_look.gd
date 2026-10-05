@@ -213,6 +213,14 @@ class ActionKey:
 	var chosen: bool = false
 	var accent: Color = BattleLook.GOLD
 	var _hover: float = 0.0
+	## The deck's look (Kong, 2026-10-05: no paper strip, no pill buttons): a
+	## round dark disc on the water, its icon in it, its word and key under.
+	var disc: bool = false
+	## The main action's disc: larger, whether or not it can be pressed now.
+	var big: bool = false
+	## Fire carries the shot in the rack under its word: full of this many.
+	var pips: int = -1
+	var pips_full: int = 0
 
 	func _init() -> void:
 		flat = true
@@ -226,6 +234,9 @@ class ActionKey:
 			queue_redraw()
 
 	func _draw() -> void:
+		if disc:
+			_draw_disc()
+			return
 		var a: float = 0.38 if disabled else 1.0
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
 		var bg: Color = BattleLook.LACQUER_HI.lerp(BattleLook.LACQUER_HI.lightened(0.12), _hover)
@@ -259,6 +270,35 @@ class ActionKey:
 			var kr: Rect2 = Rect2(Vector2(r.end.x - 7.0 - kw, r.position.y + 7 if sub != "" else r.get_center().y - 7.5), Vector2(kw, 15))
 			BattleLook.draw_box(self, kr, BattleLook.box(Color(1, 1, 1, 0.08 * a), Color(0, 0, 0, 0), 0, 4))
 			BattleLook.say(self, Kit.font("karla", 800), kr.get_center().x, kr.end.y - 4.0, key_hint, 10, Color(BattleLook.MUTED, a))
+
+
+	func _draw_disc() -> void:
+		var a: float = 0.36 if disabled else 1.0
+		var rad: float = 34.0 if big else 27.0
+		var c: Vector2 = Vector2(size.x * 0.5, rad + 6.0 - 3.0 * _hover)
+		var gold: bool = big and not disabled
+		if gold:
+			draw_texture_rect(FxSheet.glow(), Rect2(c - Vector2.ONE * rad * 2.0, Vector2.ONE * rad * 4.0), false, Color(BattleLook.GOLD, 0.16 + 0.12 * _hover))
+		# The disc: dark, a little see-through, a hairline rim.
+		draw_circle(c + Vector2(0, 3), rad, Color(0, 0, 0, 0.35 * a))
+		draw_circle(c, rad, Color(0.04, 0.05, 0.07, (0.7 + 0.12 * _hover) * a))
+		var rim: Color = Color(BattleLook.GOLD, (0.75 + 0.25 * _hover) * a) if gold else Color(BattleLook.CREAM, (0.22 + 0.35 * _hover) * a)
+		if chosen:
+			rim = Color(BattleLook.GOLD, a)
+		draw_arc(c, rad, 0.0, TAU, 48, rim, 2.0 if gold or chosen else 1.4, true)
+		var ink: Color = Color(BattleLook.GOLD.lerp(BattleLook.CREAM, 0.3) if gold else BattleLook.CREAM, a)
+		BattleLook.icon(self, kind, c, rad * 0.46, ink)
+		var f: Font = Kit.font("karla", 800)
+		var y: float = c.y + rad + 18.0 + 3.0 * _hover
+		BattleLook.say(self, f, size.x * 0.5, y, label.to_upper() if big else label, 14 if big else 13, Color(ink, a), 4)
+		var under: String = key_hint if sub == "" else "%s  ·  %s" % [sub, key_hint]
+		if pips >= 0 and pips_full > 0:
+			var step: float = minf(12.0, 84.0 / float(pips_full))
+			var x0: float = size.x * 0.5 - step * (pips_full - 1) * 0.5
+			for k: int in pips_full:
+				BattleLook.ball(self, Vector2(x0 + k * step, y + 12.0), 4.5, k < pips, a)
+			y += 14.0
+		BattleLook.say(self, f, size.x * 0.5, y + 15.0, under, 10, Color(BattleLook.MUTED, 0.85 * a), 3)
 
 
 ## A crew hand's order on the deck: their portrait in a ring of their class's

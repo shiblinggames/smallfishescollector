@@ -186,6 +186,10 @@ func _mini_add(e: Dictionary) -> void:
 		var old: Node = _mini_rows.get_child(0)
 		_mini_rows.remove_child(old)
 		old.queue_free()
+	# On the water with no panel: the older a line, the fainter.
+	var n: int = _mini_rows.get_child_count()
+	for i: int in n:
+		(_mini_rows.get_child(i) as CanvasItem).modulate.a = lerpf(0.45, 1.0, float(i + 1) / float(n))
 
 
 ## A word that acts as a button (no box until hovered).

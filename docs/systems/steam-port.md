@@ -1687,6 +1687,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     gold; spent: grey, the light out. Keys 1 to 6 give or take back an order (new in the port).
     The actions are taller with drawn icons (ball, reload, swerve, kit), in cream; only Fire,
     the main action, carries gold and a little light. No class colours on any of it.
+    Then (Kong: the brown paper strip "doesn't work for the action bar", nor the button look):
+    the paper is gone. The bottom of the screen darkens softly into the black bar and everything
+    stands on the water: the actions are round dark discs with a hairline rim, a cream icon,
+    the word and key under them, in the order Reload, FIRE, Dodge, Special; Fire is the larger
+    disc, gold rimmed and lit when it can fire, the shot in the rack as balls under its word.
+    The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,
     judgment and afflictions) for aimStyle "dial", centred over the water: the fishing dial's
