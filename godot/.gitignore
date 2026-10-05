@@ -8,3 +8,5 @@ game/addons/godotsteam/
 game/art/
 game/build/
 *.tmp
+# Written by godot/trailer/record.py while it records (a 1080p window); never kept.
+game/override.cfg

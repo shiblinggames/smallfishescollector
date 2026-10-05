@@ -62,7 +62,8 @@ static func _vol(bus: String, lin: float) -> void:
 static func apply() -> void:
 	ensure_buses()
 	_vol("Master", float(value("vol_master")))
-	_vol("UserMusic", float(value("vol_music")))
+	# Recording a film: the score is laid over afterwards, so no music here.
+	_vol("UserMusic", 0.0 if OS.get_environment("FILM_NOMUSIC") != "" else float(value("vol_music")))
 	_vol("SFX", float(value("vol_sfx")))
 	_vol("UserAmb", float(value("vol_amb")))
 	if DisplayServer.get_name() == "headless":
@@ -75,11 +76,14 @@ static func apply() -> void:
 		_:
 			if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-			var parts: PackedStringArray = str(value("window_size")).split("x")
+			# Recording a film (tests/shot.gd MOVIE_S): the window the film needs.
+			var forced: String = OS.get_environment("FORCE_WINDOW")
+			var parts: PackedStringArray = (forced if forced != "" else str(value("window_size"))).split("x")
 			if parts.size() == 2:
 				var want: Vector2i = Vector2i(int(parts[0]), int(parts[1]))
 				var screen: Vector2i = DisplayServer.screen_get_size()
-				want = Vector2i(mini(want.x, screen.x), mini(want.y, screen.y))
+				if forced == "":
+					want = Vector2i(mini(want.x, screen.x), mini(want.y, screen.y))
 				if DisplayServer.window_get_size() != want:
 					DisplayServer.window_set_size(want)
 					DisplayServer.window_set_position(DisplayServer.screen_get_position() + (screen - want) / 2)

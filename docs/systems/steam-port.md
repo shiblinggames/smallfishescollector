@@ -1697,6 +1697,20 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     each crewmate's name (1 to 6) and under each action word. Hovering a crewmate shows a
     caption over them in the same plain style (the order's name, what it does at their level,
     "Press [n]"; spent: why), in place of the engine's default tooltip.
+  - THE GAMEPLAY TRAILER (godot/trailer/, Kong 2026-10-05: "a really professional, polished
+    gameplay trailer"; Steam, ~90s, the game's own soundtrack, a few short cards, Title +
+    Wishlist on Steam). Recorded from the real game by Godot's movie maker (1920x1080, 60fps)
+    and cut by script, so it can be re-shot whenever the game changes: shots.py (the list),
+    record.py, cut.py, peek.py; the trailer-only shots in game/tests/trailer_shots.gd.
+    Recording hooks (tests and films only): FORCE_WINDOW and FILM_NOMUSIC in
+    game_settings.apply, MOVIE_S/CAPTION/CAPTAIN/CLEAR_FOES in tests/shot.gd; record.py
+    writes game/override.cfg for the 1080p window while it runs and removes it (ignored).
+    The order: dawn sail and the title; "Gather a crew." (four ships); "Fish the open sea
+    together." (a perfect strike beside the crew); a giant slain; the crew at night; "Fight
+    side by side." (a Charter's crossfire round); "Call on your crew." (a summon); the
+    Man-o-War's railgun; "Dive as deep as you dare." (the descent, Krust's breach, the shrine,
+    the Leviathan's shadow, the Kraken's arm, the Crush, the Don's rise, the draft table,
+    cashing out); the Captain's Log, the Homestead, the Tavern, the Crew Hall; the end card.
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

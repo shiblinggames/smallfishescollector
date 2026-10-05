@@ -15,7 +15,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "tavern", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive", "log"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "tavern", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive", "log", "trailer"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -79,6 +79,9 @@ func _init() -> void:
 	var p: Dictionary = sea.session.profile()
 	if OS.get_environment("FRONT_KIND") != "" and what != "front" and what != "frontedge":
 		_to_front(sea, OS.get_environment("FRONT_KIND"), 0.5)
+	# CAPTAIN: the captain's name on their plate (a film's, not a test save's).
+	if OS.get_environment("CAPTAIN") != "":
+		p["username"] = OS.get_environment("CAPTAIN")
 	p["current_perfect_streak"] = 8.0
 	p["fishing_xp"] = 2400.0
 	if OS.get_environment("SHOT_XP") != "":
@@ -1140,6 +1143,13 @@ func _init() -> void:
 					gt.handle("me", sea.session, ["go"])
 					for f: int in int(OS.get_environment("DIVE_WAIT")) if OS.get_environment("DIVE_WAIT") != "" else 150:
 						await process_frame
+					# CLEAR_FOES: the opening enemy gone (a between-fights shot, clean).
+					if OS.get_environment("CLEAR_FOES") != "":
+						for n9: Node in sea._hud_layer.get_children():
+							if n9 is BattleStage:
+								for fn: Variant in (n9 as BattleStage)._foe_nodes:
+									if fn != null and is_instance_valid(fn):
+										(fn as Node).queue_free()
 					var gr: Dictionary = gt._r
 					if gstep == "party":
 						# Two more captains at the table (copies of this one).
@@ -1477,6 +1487,11 @@ func _init() -> void:
 			sea._locker._show_tab("boat")
 			for f: int in 40:
 				await process_frame
+		"trailer":
+			# A shot of the trailer (tests/trailer_shots.gd), CLIP its name.
+			await TrailerShots.new().run(self, sea, hud, p, OS.get_environment("CLIP"))
+			quit()
+			return
 		"log":
 			p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[41])
 			p["expedition_xp"] = float((Rules.data()["navXpTable"] as Array)[17])
@@ -1694,6 +1709,15 @@ func _init() -> void:
 		var sy: Node = main.get_child(main.get_child_count() - 1)
 		if sy is Sea:
 			(sy as Sea)._water.set_shader_parameter("u_shore_on", 0.0)
+	# MOVIE_S (with --write-movie and --fixed-fps): from here the shot is
+	# the clip; say where it starts (in movie frames) and run this long.
+	if OS.get_environment("MOVIE_S") != "":
+		print("MARK ", Engine.get_frames_drawn())
+		TrailerShots.caption(self)
+		await create_timer(float(OS.get_environment("MOVIE_S"))).timeout
+		print("END ", Engine.get_frames_drawn())
+		quit()
+		return
 	var wait: int = 150 if what == "crate" else (160 if what in ["card", "finn", "rankup", "slain"] else 50)
 	for f: int in wait:
 		await process_frame
