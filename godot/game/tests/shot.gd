@@ -1221,6 +1221,9 @@ func _init() -> void:
 						if OS.get_environment("CHARGES") != "":
 							bs3.b["seats"][bs3.me]["charges"] = float(OS.get_environment("CHARGES"))
 						bs3._toggle_order(bs3.b["seats"][bs3.me]["crew"][int(OS.get_environment("ORDER"))])
+						if OS.get_environment("HOVER") != "":
+							var cards: Array = bs3._crew_row.get_children().filter(func(n2: Node) -> bool: return not n2.is_queued_for_deletion())
+							(cards[int(OS.get_environment("HOVER"))] as BattleLook.CrewCard).pin_caption = true
 			# DIVE_DEPTH: the water as at this depth (the band's look).
 			if OS.get_environment("DIVE_DEPTH") != "":
 				for n: Node in sea._hud_layer.get_children():

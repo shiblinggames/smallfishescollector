@@ -203,6 +203,35 @@ static func knot(ci: CanvasItem, c: Vector2, s: float, fill: Color, rim: Color) 
 ## An order's key on the deck: a flat rounded tile that lightens under the
 ## pointer, its icon, its name, what it costs, and its key in a small cap.
 ## The lead order is tinted gold; a chosen one wears a gold hairline.
+## Words broken into lines no wider than w.
+static func wrap(f: Font, text: String, fs: int, w: float) -> Array:
+	var out: Array = []
+	var cur: String = ""
+	for word: String in text.split(" ", false):
+		var t: String = word if cur == "" else cur + " " + word
+		if f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w and cur != "":
+			out.append(cur)
+			cur = word
+		else:
+			cur = t
+	if cur != "":
+		out.append(cur)
+	return out
+
+
+## A keyboard key, drawn as one: a small rounded cap with a deeper bottom lip
+## and its letter, so a shortcut reads as a key and not as a count or a rank.
+## Centred on c; returns its width.
+static func keycap(ci: CanvasItem, c: Vector2, key: String, a: float = 1.0) -> float:
+	var f: Font = Kit.font("karla", 800)
+	var w: float = maxf(19.0, f.get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 10.0)
+	var r: Rect2 = Rect2(c - Vector2(w * 0.5, 10.0), Vector2(w, 19.0))
+	draw_box(ci, Rect2(r.position + Vector2(0, 2), r.size), box(Color(0, 0, 0, 0.45 * a), Color(0, 0, 0, 0), 0, 5))
+	draw_box(ci, r, box(Color(0.1, 0.1, 0.12, 0.85 * a), Color(CREAM, 0.55 * a), 1, 5))
+	say(ci, f, c.x, r.end.y - 5.0, key, 11, Color(CREAM, a))
+	return w
+
+
 class ActionKey:
 	extends Button
 	var kind: String = ""
@@ -292,7 +321,6 @@ class ActionKey:
 		if gold:
 			draw_texture_rect(FxSheet.glow(), Rect2(Vector2(cx - size.x * 0.5, y - 36.0), Vector2(size.x, 56.0)), false, Color(BattleLook.GOLD, 0.1 + 0.1 * _hover))
 		BattleLook.say(self, f, cx, y, word, fs, Color(col, a), 6)
-		var under: String = key_hint if sub == "" else "%s  ·  %s" % [sub, key_hint]
 		var y2: float = y + 18.0
 		if pips >= 0 and pips_full > 0:
 			var step: float = minf(16.0, 100.0 / float(pips_full))
@@ -300,7 +328,11 @@ class ActionKey:
 			for k: int in pips_full:
 				BattleLook.ball(self, Vector2(x0 + k * step, y2 + 3.0), 6.0, k < pips, a)
 			y2 += 16.0
-		BattleLook.say(self, Kit.font("karla", 800), cx, y2 + 6.0, under, 10, Color(BattleLook.MUTED, 0.9 * a), 3)
+		if sub != "":
+			BattleLook.say(self, Kit.font("karla", 800), cx, y2 + 6.0, sub, 10, Color(BattleLook.MUTED, 0.9 * a), 3)
+			y2 += 14.0
+		if key_hint != "":
+			BattleLook.keycap(self, Vector2(cx, y2 + 6.0), key_hint, 0.9 * a)
 
 
 ## A crew hand's order on the deck: their portrait in a ring of their class's
@@ -344,7 +376,8 @@ class OrderCard:
 ## A CREW HAND STANDING UP OUT OF THE DECK (Kong, 2026-10-05: the orders were
 ## "too blended into the bar"; then no boxes, no class colours). Frameless:
 ## their art stands on a soft halo of warm light (no shadow under them),
-## their name and order in plain words under them, their key small beside.
+## their name and order in plain words under them, their key drawn as a key;
+## hovered, a caption over them says what the order does.
 ## Ready: the light breathes. Hovered: they rise a little. Ordered: they stand
 ## up out of the line and the light comes up full. Spent: grey, the light out.
 class CrewCard:
@@ -353,6 +386,10 @@ class CrewCard:
 	var hand: String = ""
 	var state: String = ""
 	var key_hint: String = ""
+	## Shown over them on hover: the order's name and what it does (or, when
+	## spent, why).
+	var title: String = ""
+	var desc: String = ""
 	## Kept for callers; not drawn (Kong: no class colours on the cards).
 	var col: Color = Color.WHITE
 	var chosen: bool = false
@@ -360,6 +397,9 @@ class CrewCard:
 	var _lift: float = 0.0
 	var _on: float = 0.0
 	var _t: float = randf() * 6.0
+	var _cap: float = 0.0
+	## Tests and films: the caption shown as if hovered.
+	var pin_caption: bool = false
 	const LIGHT: Color = Color(1.0, 0.86, 0.6)
 
 	func _init() -> void:
@@ -374,6 +414,9 @@ class CrewCard:
 		var want: float = 18.0 if chosen else (-6.0 if disabled else 6.0 * _hover)
 		_lift = lerpf(_lift, want, 1.0 - exp(-delta * 12.0))
 		_on = lerpf(_on, 1.0 if chosen else 0.0, 1.0 - exp(-delta * 10.0))
+		_cap = move_toward(_cap, 1.0 if is_hovered() or pin_caption else 0.0, delta * 9.0)
+		# Its caption over the neighbours while it shows.
+		z_index = 5 if _cap > 0.0 else 0
 		queue_redraw()
 
 	func _draw() -> void:
@@ -398,17 +441,44 @@ class CrewCard:
 			var at: Vector2 = Vector2((w - dw.x) * 0.5, floor_y - dw.y - _lift)
 			var tint: Color = Color(0.38, 0.38, 0.42, 0.6) if grey else Color.WHITE.lerp(Color(1.08, 1.04, 0.96), _on)
 			draw_texture_rect(tex, Rect2(at, dw), false, tint)
-		# Their name, their order, their key.
+		# Their key (drawn as a key), their name; their order under.
 		var f: Font = Kit.font("karla", 800)
 		var fs: int = 14
-		while fs > 10 and f.get_string_size(hand, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w - 8.0:
+		var cap_w: float = 0.0 if key_hint == "" or grey else 25.0
+		while fs > 10 and f.get_string_size(hand, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w - 8.0 - cap_w:
 			fs -= 1
-		BattleLook.say(self, f, w * 0.5, floor_y + 20.0, hand, fs, Color(BattleLook.CREAM, 0.5 if grey else 1.0), 4)
-		var line: String = state if key_hint == "" or grey else "%s  ·  %s" % [state, key_hint]
+		var nw: float = f.get_string_size(hand, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var x0: float = w * 0.5 - (nw + cap_w) * 0.5
+		if cap_w > 0.0:
+			BattleLook.keycap(self, Vector2(x0 + 9.5, floor_y + 15.0), key_hint)
+		BattleLook.say(self, f, x0 + cap_w + nw * 0.5, floor_y + 20.0, hand, fs, Color(BattleLook.CREAM, 0.5 if grey else 1.0), 4)
 		var ss: int = 10
-		while ss > 8 and f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, ss).x > w - 4.0:
+		while ss > 8 and f.get_string_size(state, HORIZONTAL_ALIGNMENT_LEFT, -1, ss).x > w - 4.0:
 			ss -= 1
-		BattleLook.say(self, f, w * 0.5, floor_y + 34.0, line, ss, Color(BattleLook.GOLD, 1.0) if chosen else Color(BattleLook.MUTED, 0.6 if grey else 1.0), 3)
+		BattleLook.say(self, f, w * 0.5, floor_y + 34.0, state, ss, Color(BattleLook.GOLD, 1.0) if chosen else Color(BattleLook.MUTED, 0.6 if grey else 1.0), 3)
+		if _cap > 0.01:
+			_draw_caption(floor_y)
+
+	## Over them while hovered: what the order is and does, in plain words,
+	## with how to give it from the keyboard (or, spent, why not).
+	func _draw_caption(floor_y: float) -> void:
+		var a: float = _cap
+		var cw: float = 250.0
+		var cx: float = size.x * 0.5
+		var body: Font = Kit.font("karla", 600)
+		var lines: Array = BattleLook.wrap(body, desc, 13, cw)
+		var h: float = 26.0 + 18.0 * lines.size() + (24.0 if key_hint != "" and not disabled else 0.0)
+		var top: float = floor_y - 128.0 - _lift - h
+		draw_texture_rect(FxSheet.glow(), Rect2(Vector2(cx - cw * 0.75, top - 26.0), Vector2(cw * 1.5, h + 52.0)), false, Color(0, 0, 0, 0.75 * a))
+		BattleLook.say(self, Kit.font("cinzel", 700), cx, top + 16.0, title, 16, Color(BattleLook.CREAM, a), 5)
+		var y: float = top + 36.0
+		for ln: String in lines:
+			BattleLook.say(self, body, cx, y, ln, 13, Color(BattleLook.CREAM, 0.9 * a), 4)
+			y += 18.0
+		if key_hint != "" and not disabled:
+			var pw: float = Kit.font("karla", 800).get_string_size("Press", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+			BattleLook.say(self, Kit.font("karla", 800), cx - 12.0 - pw * 0.5 + 6.0, y + 8.0, "Press", 11, Color(BattleLook.MUTED, a), 3)
+			BattleLook.keycap(self, Vector2(cx + 18.0, y + 4.0), key_hint, a)
 
 
 ## Kept for the deck's layering: it draws nothing now (the deck is the night

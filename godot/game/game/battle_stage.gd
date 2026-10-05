@@ -762,7 +762,8 @@ func _order_card(s: Dictionary, c: Dictionary, i: int = 0) -> Control:
 	bt.key_hint = str(i + 1) if i < 6 else ""
 	bt.state = ("ORDERED" if chosen else str(cls.get("shortLabel", "")).to_upper()) if why == "" else ("USED" if why.begins_with("Already") else why.to_upper())
 	bt.disabled = why != ""
-	bt.tooltip_text = "%s  ·  %s" % [cls.get("name", ""), Js.obj(c["ms"]).get("desc", "")] if why == "" else why
+	bt.title = str(cls.get("shortLabel", cls.get("name", "")))
+	bt.desc = str(Js.obj(c["ms"]).get("desc", "")) if why == "" else why
 	if (s["crew"] as Array).size() > 5:
 		bt.custom_minimum_size = Vector2(100, 168)
 	bt.pressed.connect(func() -> void: _toggle_order(c))

@@ -1693,6 +1693,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     and turned down): Reload, FIRE, Dodge, Special in Cinzel with a soft shadow, the key small
     under each; Fire larger and in gold when it can fire, its shot as balls under it; hover
     lifts and brightens a word, a spent one fades.
+    Keys are drawn AS KEYS (a small keycap) so a number reads as a shortcut, not a rank: beside
+    each crewmate's name (1 to 6) and under each action word. Hovering a crewmate shows a
+    caption over them in the same plain style (the order's name, what it does at their level,
+    "Press [n]"; spent: why), in place of the engine's default tooltip.
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,
