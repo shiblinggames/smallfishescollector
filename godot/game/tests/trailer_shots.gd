@@ -150,6 +150,11 @@ func run(t: SceneTree, s: Sea, h: FishingHud, prof: Dictionary, clip: String) ->
 		"coop": await _coop()
 		"summon": await _summon()
 		"mega": await _mega()
+		"log": await _log()
+		"crate": await _crate()
+		"recruit": await _recruit()
+		"armory": await _armory()
+		"forge": await _forge()
 
 
 ## Three crewmates in looks of their own, each a Shipmate on your sea.
@@ -182,7 +187,7 @@ func _sail(crew: bool) -> void:
 	_clean()
 	b.position = Chart.HOME + Vector2(700, 600)
 	b.heading = 0.15
-	sea._zoom_to = 1.3 if crew else 1.7
+	sea._zoom_to = 0.85 if crew else 1.0
 	sea._camera.zoom = Vector2.ONE * sea._zoom_to
 	if crew:
 		_crew(["Ben", "Cal", "Dot"])
@@ -206,8 +211,8 @@ func _sail(crew: bool) -> void:
 func _together() -> void:
 	var b: Boat = sea._boat
 	b.position = Vector2(-1500, 2600)
-	sea._zoom_to = 1.35
-	sea._camera.zoom = Vector2.ONE * 1.35
+	sea._zoom_to = 0.95
+	sea._camera.zoom = Vector2.ONE * 0.95
 	_clean(["_dial", "_card", "_toast", "_status"])
 	_crew(["Ben", "Cal"])
 	_offsets = [Vector2(-430, -240), Vector2(450, 230)]
@@ -412,4 +417,164 @@ func _mega() -> void:
 	for bar: Node in bs.find_children("", "AimBar", true, false):
 		(bar as AimBar)._pos = (bar as AimBar)._zone
 		(bar as AimBar).lock()
+	await _hold()
+
+
+# ── The second pass (Kong, 2026-10-05: the log, crates, recruits, ship items) ──
+
+## A button anywhere under n whose words begin so (Paper buttons are capitals).
+func _button(n: Node, starts: String) -> BaseButton:
+	for c: Node in n.find_children("", "BaseButton", true, false):
+		if c is Button and (c as Button).text.to_upper().begins_with(starts.to_upper()) and not (c as Button).disabled:
+			return c
+	return null
+
+
+## A captain with a log worth showing: most of the sea's fish caught, a few
+## golden, many new.
+func _fill_log() -> void:
+	var save: Dictionary = sea.session.save
+	var n: int = 0
+	for f: Dictionary in save["species"]:
+		if str(f.get("habitat", "")) == "ancient_deep":
+			continue
+		n += 1
+		if n % 5 == 3:
+			continue
+		var id: String = str(int(f["id"]))
+		save["collection"][id] = { "catch_count": float(1 + (n * 7) % 13), "is_golden": n % 11 == 0 }
+		save["lifetime"][id] = { "n": float(2 + (n * 5) % 19), "last": "2026-10-04T10:00:00.000Z", "first": "2026-09-29T10:00:00.000Z" }
+	p["lifetime_species_count"] = float(save["collection"].size())
+
+
+## THE FISHING LOG: the collector's page, the book of the sea's fish, read
+## down slowly.
+func _log() -> void:
+	_fill_log()
+	hud._open_log()
+	for f: int in 40:
+		await tree.process_frame
+	_mark()
+	for f: int in 30:
+		await tree.process_frame
+	var sc: ScrollContainer = null
+	for c: Node in tree.root.find_children("", "ScrollContainer", true, false):
+		if (c as ScrollContainer).is_visible_in_tree() and (c as ScrollContainer).get_v_scroll_bar().max_value > 400.0:
+			sc = c
+	if sc != null:
+		var tw: Tween = sc.create_tween()
+		tw.tween_property(sc, "scroll_vertical", 520, 3.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await _hold()
+
+
+## A CHEST OPENED: the gold crate from the Locker's crates.
+func _crate() -> void:
+	p["crate_stash"] = { "gold": 2.0, "wooden": 3.0, "ancient": 1.0 }
+	hud._open_loadout()
+	for f: int in 30:
+		await tree.process_frame
+	sea._locker._show_tab("crates")
+	for f: int in 30:
+		await tree.process_frame
+	_mark()
+	for f: int in 30:
+		await tree.process_frame
+	sea._locker._open_crate("gold")
+	await _hold()
+
+
+## NEW HANDS: the board re-rolled with a posted notice, a hand picked, signed on.
+func _recruit() -> void:
+	p["crew_notices"] = { "harbor_bill": 2.0 }
+	# Room aboard to sign them (a seasoned captain, a built hall).
+	p["expedition_xp"] = 3000000.0
+	p["crew_hall_tier"] = 6.0
+	var save_crew: Array = Js.list(sea.session.save.get("crew"))
+	sea.session.save["crew"] = save_crew.slice(0, mini(8, save_crew.size()))
+	var ch: CrewHall = CrewHall.new()
+	ch.session = sea.session
+	ch.room = "recruit"
+	sea._room_layer.add_child(ch)
+	for f: int in 30:
+		await tree.process_frame
+	_mark()
+	for f: int in 45:
+		await tree.process_frame
+	var post: BaseButton = _button(ch, "Post it")
+	if post != null:
+		post.pressed.emit()
+	for f: int in 80:
+		await tree.process_frame
+	var board: Array = Js.list(ch._state.get("board"))
+	if not board.is_empty():
+		var best: Dictionary = board[0]
+		for c: Dictionary in board:
+			if float(c.get("rarity", 1.0)) > float(best.get("rarity", 1.0)):
+				best = c
+		ch._pick = best
+		ch._pick_kind = "board"
+		ch._draw_room()
+	for f: int in 55:
+		await tree.process_frame
+	var sign: BaseButton = _button(ch, "Sign on")
+	if sign != null:
+		sign.pressed.emit()
+	await _hold()
+
+
+func _items_owned() -> void:
+	p["ship_tier"] = 6.0
+	p["expedition_xp"] = 3000000.0
+	p["raid_items"] = ["gunners_sight", "reinforced_hull", "war_drum", "corsair_prime_cannon", "corsair_prime_cannon", "captains_carapace", "davys_hand_cannon", "navigators_compass", "quartermasters_anchor", "incendiary_cannonball", "frozen_cannonball", "thunder_drum"]
+	p["equipped_raid_items"] = ["corsair_prime_cannon", "gunners_sight", "captains_carapace"]
+
+
+## SHIP ITEMS: the Gunwharf's armory, her mounts and the hold of pieces.
+func _armory() -> void:
+	_items_owned()
+	var gw: GunwharfSheet = GunwharfSheet.new()
+	gw.session = sea.session
+	gw._tab = "armory"
+	sea._room_layer.add_child(gw)
+	for f: int in 30:
+		await tree.process_frame
+	_mark()
+	await _hold()
+
+
+## THE FORGE: two pieces on the anvil, a recipe discovered, forged.
+func _forge() -> void:
+	_items_owned()
+	p["gauntlet_upgrades"] = ["forge"]
+	p["dons_gauntlet_upgrades"] = ["dg_abyssal_forge", "dg_abyssal_accel"]
+	p["gauntlet_fathoms"] = 340.0
+	p["forge_scrap"] = 60.0
+	p["forge_recipes_learned"] = ["heavy_gunners_sight", "dreadnought_cannon"]
+	hud._set_phase("idle")
+	hud._dial.visible = false
+	sea._dock("forge_isle")
+	var fb: ForgeBench = null
+	for f: int in 12:
+		await tree.process_frame
+	for n: Node in sea._room_layer.get_children():
+		if n is ForgeBench:
+			fb = n
+	fb._tab = "anvil"
+	fb._paint()
+	for f: int in 20:
+		await tree.process_frame
+	_mark()
+	for f: int in 40:
+		await tree.process_frame
+	fb._slots = ["incendiary_cannonball", ""]
+	fb._paint()
+	for f: int in 35:
+		await tree.process_frame
+	fb._slots = ["incendiary_cannonball", "frozen_cannonball"]
+	fb._try()
+	for f: int in 90:
+		await tree.process_frame
+	var go: BaseButton = _button(fb, "Forge it")
+	if go != null:
+		go.pressed.emit()
 	await _hold()

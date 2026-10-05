@@ -1711,6 +1711,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     Man-o-War's railgun; "Dive as deep as you dare." (the descent, Krust's breach, the shrine,
     the Leviathan's shadow, the Kraken's arm, the Crush, the Don's rise, the draft table,
     cashing out); the Captain's Log, the Homestead, the Tavern, the Crew Hall; the end card.
+    Second pass (Kong's notes): wider on the sea; no Ancient caught (a spoiler, never in a
+    trailer); the fishing log; a Charter forming on the title screen with friends joining;
+    the co-op ready check; a chest opened; the recruit board re-rolled and a hand signed on;
+    the armory and a forge discovery; the gauntlet as its draft table played out and its
+    boons firing, fewer band shots. FILM_CLEAR (sea.gd) gives a recording a fair sky (a
+    dive's own weather still wins). Fixed in the game on the way: the resting hook now swings
+    well back behind the boat under way and lifts a little (it hung out ahead of the bow).
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

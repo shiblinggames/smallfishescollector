@@ -95,7 +95,7 @@ func _ends() -> Dictionary:
 
 
 ## How far the resting hook trails behind her way: her rod tip's speed,
-## smoothed hard, turned into a small backward lean, capped.
+## smoothed hard, turned into a backward lean (and a little lift), capped.
 var _trail: Vector2 = Vector2.ZERO
 var _tip_last: Vector2 = Vector2.INF
 var _vel: Vector2 = Vector2.ZERO
@@ -108,10 +108,14 @@ func _follow(dt: float) -> void:
 	if _tip_last != Vector2.INF and tip.distance_to(_tip_last) < 120.0 * absf(global_scale.x):
 		_vel = _vel.lerp((tip - _tip_last) / dt, 1.0 - exp(-dt * 2.5))
 	_tip_last = tip
-	var lean: Vector2 = -_vel * 0.035
-	var cap: float = 14.0 * absf(global_scale.x)
+	# Under way the hook swings well back behind her (Kong, 2026-10-05: the
+	# hooks "look weird as you're sailing", hanging out ahead of the bow), and
+	# lifts a little as the line is pulled back; still smoothed, never loose.
+	var lean: Vector2 = -_vel * 0.075
+	var cap: float = 40.0 * absf(global_scale.x)
 	if lean.length() > cap:
 		lean = lean.normalized() * cap
+	lean.y -= absf(lean.x) * 0.3
 	_trail = _trail.lerp(lean, 1.0 - exp(-dt * 3.0))
 
 

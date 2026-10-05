@@ -811,6 +811,12 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 	var power: float = 1.0 if fx["lightning"] else 0.5
 	var fog_amt: float = float(fx["fog"])
 	var wind: float = float(fx["k"]) if not f.is_empty() and f["kind"] == "wind" else 0.0
+	# Recording a film (tests/shot.gd, FILM_CLEAR): a fair sky.
+	if OS.get_environment("FILM_CLEAR") != "":
+		rain = 0.0
+		cloud = 0.0
+		fog_amt = 0.0
+		wind = 0.0
 	# A dive has its own weather (DeepLook): the sea's is set aside for it.
 	if _theme_k > 0.0 and _theme_last.has("rain"):
 		rain = lerpf(rain, float(_theme_last["rain"]), _theme_k)

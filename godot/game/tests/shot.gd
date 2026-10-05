@@ -26,9 +26,18 @@ func _init() -> void:
 		at = base + cycle * float(OS.get_environment("SHOT_T"))
 	Clock.install(func() -> float: return at)
 	Main.straight_to_sea = what != "title" and what != "titlenew"
+	var title_ch: Charter = null
 	if what == "title" or what == "titlenew":
 		Captains.dir_override = "user://shot_title_captains"
 		Charter.dir_override = "user://shot_title_charters"
+		# A film starts from empty folders (friends join while it rolls).
+		if OS.get_environment("MOVIE_S") != "":
+			Captains.dir_override = "user://film_title_captains"
+			Charter.dir_override = "user://film_title_charters"
+			for dd: String in [Captains.dir_override, Charter.dir_override]:
+				if DirAccess.dir_exists_absolute(dd):
+					for ff: String in DirAccess.get_files_at(dd):
+						DirAccess.remove_absolute(dd + "/" + ff)
 		if Captains.list().is_empty():
 			Captains.make("Anna")
 			var ben: Session = Captains.make("Ben_the_Bold")
@@ -37,7 +46,7 @@ func _init() -> void:
 			ben.profile()["character_color"] = "blue"
 			ben.profile()["equipped_hat"] = "golden"
 			ben.persist()
-			Charter.found("The Salt Ledger", true, SteamLayer.player_key(), "Anna")
+			title_ch = Charter.found("The Salt Ledger", OS.get_environment("MOVIE_S") == "", SteamLayer.player_key(), "Anna")
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -55,6 +64,24 @@ func _init() -> void:
 			main._screen.add_child(ss)
 		for f: int in 40:
 			await process_frame
+		# A film: Ben, then Cal, sign on to the Charter on the title screen.
+		if OS.get_environment("MOVIE_S") != "":
+			print("MARK ", Engine.get_frames_drawn())
+			TrailerShots.caption(self)
+			var tt2: Title = main._screen
+			for who: Array in [["ben-key", "Ben"], ["cal-key", "Cal"]]:
+				await create_timer(1.1).timeout
+				if title_ch != null:
+					var ms: Session = title_ch.add_member(str(who[0]), str(who[1]))
+					ms.profile()["character_color"] = "ruby" if who[1] == "Ben" else "forest"
+					ms.profile()["equipped_hat"] = "golden" if who[1] == "Ben" else "green"
+					title_ch.write()
+					Sound.bell()
+					tt2._build()
+			await create_timer(maxf(0.5, float(OS.get_environment("MOVIE_S")) - 2.2)).timeout
+			print("END ", Engine.get_frames_drawn())
+			quit()
+			return
 		root.get_texture().get_image().save_png(out)
 		print("  saved ", out)
 		quit()
@@ -1166,7 +1193,7 @@ func _init() -> void:
 						"draft", "party":
 							gr["caps"]["me"]["boons"] = { "grapeshot": 1.0, "powder_and_shot": 2.0 }
 							gt._open_draft("", 7)
-							if gstep == "party":
+							if gstep == "party" and OS.get_environment("DRAFT_SEQ") == "":
 								gt.handle("ben", sea.session, ["pick", { "card": 1.0 }])
 						"curse":
 							gr["_x"] = 0
@@ -1714,6 +1741,7 @@ func _init() -> void:
 	if OS.get_environment("MOVIE_S") != "":
 		print("MARK ", Engine.get_frames_drawn())
 		TrailerShots.caption(self)
+		_film_beats(sea)
 		await create_timer(float(OS.get_environment("MOVIE_S"))).timeout
 		print("END ", Engine.get_frames_drawn())
 		quit()
@@ -1740,3 +1768,56 @@ func _to_front(sea: Sea, kind: String, u: float) -> void:
 			Clock.install(func() -> float: return tk)
 			sea._boat.position = spot
 			return
+
+
+## A film's beats after its MARK (tests and films only): DRAFT_SEQ plays the
+## party's draft pick by pick; BOON_FX plays a fight's boons and bonds firing;
+## READY_FLIP has the last captain at the ready check say Ready.
+func _film_beats(sea: Sea) -> void:
+	if OS.get_environment("DRAFT_SEQ") != "":
+		var gt: GauntletTable = sea._solo_dive
+		for k: int in 3:
+			await create_timer(1.25).timeout
+			var d: Dictionary = Js.obj(gt._r.get("draft"))
+			if d.is_empty():
+				break
+			var order: Array = Js.list(d.get("order"))
+			var who: String = str(order[int(Js.num(d.get("turn")))]) if int(Js.num(d.get("turn"))) < order.size() else ""
+			var stamps: Dictionary = Js.obj(d.get("stamps"))
+			var cards: Array = Js.list(d.get("cards"))
+			var pick: int = -1
+			for i: int in cards.size():
+				if not stamps.has(str(i)) and str(cards[i].get("card", "")) != "crew":
+					if pick == -1 or (who == "me" and str(cards[i].get("rarity", "")) == "legendary"):
+						pick = i
+			if who != "" and pick >= 0:
+				gt.handle(who, sea.session, ["pick", { "card": float(pick) }])
+				Sound.seal(true)
+	if OS.get_environment("BOON_FX") != "":
+		var bs: BattleStage = null
+		for n: Node in sea._hud_layer.get_children():
+			if n is BattleStage:
+				bs = n
+		if bs != null:
+			await create_timer(0.4).timeout
+			bs._busy = true
+			bs._clear_deck()
+			for ev: Dictionary in [
+				{ "t": "bond", "seat": 0, "to": 0, "text": "Echo  +1 ball" },
+				{ "t": "streak", "seat": 0, "n": 3.0, "pct": 9.0 },
+				{ "t": "reaction", "id": "powder_keg", "name": "Powder Keg", "seat": 0, "foe": 0, "others": [], "enemyHp": 5.0, "dmg": 24.0, "new": [] },
+				{ "t": "comboNote", "foe": 0, "text": "War Drums  +1 ball" },
+				{ "t": "execute", "seat": 0, "kind": "deathMark" },
+			]:
+				await bs._one(ev)
+	if OS.get_environment("READY_FLIP") != "":
+		await create_timer(1.3).timeout
+		for n: Node in root.get_children():
+			if n is RaidTable:
+				var rt: RaidTable = n
+				var st: Dictionary = rt.state.duplicate(true)
+				for m: Dictionary in st.get("members", []):
+					m["ready"] = true
+				st["seq"] = int(Js.num(st.get("seq"))) + 1
+				rt._state(st)
+				Sound.bell()

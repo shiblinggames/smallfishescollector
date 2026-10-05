@@ -21,7 +21,7 @@ try:
         if want and name not in want:
             continue
         e = dict(os.environ)
-        e.update({"FORCE_WINDOW": "1920x1080", "FILM_NOMUSIC": "1", "CAPTAIN": "Anna"})
+        e.update({"FORCE_WINDOW": "1920x1080", "FILM_NOMUSIC": "1", "FILM_CLEAR": "1", "CAPTAIN": "Anna"})
         e.update(env)
         out = CLIPS / f"{name}.avi"
         cmd = [GODOT, "--path", str(GAME), "--write-movie", str(out), "--fixed-fps", "60",

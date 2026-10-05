@@ -16,26 +16,27 @@ marks = json.loads((CLIPS / "marks.json").read_text())
 # (shot, seconds used, the transition INTO the next: "x" crossfade, "b" via black)
 EDIT = [
     ("sail", 7.0, "x"),
-    ("flotilla", 5.6, "x"),
-    ("together", 7.0, "x"),
-    ("giant", 3.2, "x"),
-    ("night", 4.2, "b"),
-    ("coop", 7.4, "x"),
-    ("summon", 4.4, "x"),
-    ("mega", 4.4, "b"),
+    ("charter", 4.0, "x"),
+    ("flotilla", 5.2, "x"),
+    ("together", 6.6, "x"),
+    ("log", 3.8, "x"),
+    ("crate", 3.8, "b"),
+    ("ready", 3.2, "x"),
+    ("coop", 7.2, "x"),
+    ("summon", 4.3, "x"),
+    ("recruit", 5.4, "x"),
+    ("armory", 2.6, "x"),
+    ("forge", 3.1, "x"),
+    ("mega", 4.3, "b"),
     ("descent", 4.6, "x"),
+    ("draft", 4.9, "x"),
+    ("boons", 4.6, "x"),
     ("krust", 3.0, "x"),
-    ("shrine", 2.6, "x"),
-    ("leviathan", 4.0, "x"),
-    ("kraken", 3.6, "x"),
-    ("crush", 3.0, "x"),
+    ("kraken", 3.4, "x"),
     ("don", 4.1, "x"),
-    ("draft", 2.8, "x"),
     ("haul", 3.5, "b"),
     ("ui_log", 2.2, "x"),
-    ("ui_home", 2.2, "x"),
-    ("ui_tavern", 2.2, "x"),
-    ("ui_crew", 2.2, "b"),
+    ("ui_home", 2.2, "b"),
     ("end", 6.5, ""),
 ]
 XF = 0.35     # a crossfade between shots
@@ -78,7 +79,7 @@ for i, (name, d, kind) in enumerate(edit):
     starts.append(t)
     fd = BK if kind == "b" else XF
     t += d - fd
-fight_at = starts[[e[0] for e in edit].index("coop")] if "coop" in [e[0] for e in edit] else length * 0.35
+fight_at = starts[[e[0] for e in edit].index("ready")] if "ready" in [e[0] for e in edit] else length * 0.35
 end_at = starts[-1]
 total = length
 
