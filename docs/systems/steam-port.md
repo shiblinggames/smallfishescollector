@@ -1744,6 +1744,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     cut's first and last frames); the dial struck only with the needle in the zone; the
     Journal's people (every regular and your standing) for rapport; crew skins beside
     recruiting.
+    Sixth pass (Kong's notes): the XP and the levels (a catch that fills the bar to Fishing
+    20 and its level-up card; the crew's XP after a fight); an enemy's stat card; a whole
+    co-op round (both captains choosing, Ben's order in, yours, the crossfire); the badge wall
+    scrolled through; the gauntlet as a highlight reel (bosses arriving, the draft, a curse,
+    the shrine, the fence, the Don's job, the breather's vote, the haul, the run records),
+    no lone fights. glitch.py finds any frame that shows for one frame only.
+    Fixed in the game on the way: THE CREW'S XP after a fight (BattleStage._crew_gains, the
+    xp each hand earned now in RaidRun.award_kill's grants as "gained"): the hands who sailed
+    it stand up on the deck with their XP rising off them, one reaching a level flashes it
+    gold and names a stronger order it opens. And four one-frame flashes: the fishing dial
+    drawn in the corner before it was centred; the catch note and a crate's tag shown before
+    they were hidden and placed; the fight deck's height read mid-repaint (now eased). The
+    corner notices are held for films (FILM_QUIET).
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

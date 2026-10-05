@@ -36,12 +36,18 @@ func _mark() -> void:
 ## in the middle, "end" the title and SUB under it). Cinzel, a soft dark
 ## breath behind, fading in and out; nothing else.
 static func caption(t: SceneTree) -> void:
-	var text: String = OS.get_environment("CAPTION")
+	_caption(t, "")
+	if OS.get_environment("CAPTION2") != "":
+		_caption(t, "2")
+
+
+static func _caption(t: SceneTree, n: String) -> void:
+	var text: String = OS.get_environment("CAPTION" + n)
 	if text == "":
 		return
 	var style: String = OS.get_environment("CAPTION_STYLE") if OS.get_environment("CAPTION_STYLE") != "" else "line"
-	var at: float = float(OS.get_environment("CAPTION_AT")) if OS.get_environment("CAPTION_AT") != "" else 0.6
-	var hold: float = float(OS.get_environment("CAPTION_FOR")) if OS.get_environment("CAPTION_FOR") != "" else 2.6
+	var at: float = float(OS.get_environment("CAPTION%s_AT" % n)) if OS.get_environment("CAPTION%s_AT" % n) != "" else 0.6
+	var hold: float = float(OS.get_environment("CAPTION%s_FOR" % n)) if OS.get_environment("CAPTION%s_FOR" % n) != "" else 2.6
 	var layer: CanvasLayer = CanvasLayer.new()
 	layer.layer = 60
 	t.root.add_child(layer)
@@ -164,6 +170,9 @@ func run(t: SceneTree, s: Sea, h: FishingHud, prof: Dictionary, clip: String) ->
 		"skinreel": await _skinreel()
 		"north": await _north()
 		"people": await _people()
+		"crewxp": await _crewxp()
+		"enemycard": await _enemycard()
+		"badges": await _badges()
 
 
 ## Three crewmates in looks of their own, each a Shipmate on your sea.
@@ -321,11 +330,15 @@ func _coop() -> void:
 		await tree.process_frame
 	kb["seats"][0]["charges"] = 3.0
 	kb["seats"][1]["charges"] = 3.0
-	push.call("plan", [], { "plans": { "ben": { "action": "volley", "aim": "critical" } } })
+	push.call("plan", [], {})
 	for f: int in 20:
 		await tree.process_frame
 	_mark()
-	for f: int in 50:
+	# Both captains choosing; Ben's order comes in; then yours.
+	for f: int in 80:
+		await tree.process_frame
+	push.call("plan", [], { "plans": { "ben": { "action": "volley", "aim": "critical" } } })
+	for f: int in 70:
 		await tree.process_frame
 	bs._choose("volley")
 	for f: int in 70:
@@ -599,7 +612,12 @@ func _fish() -> void:
 	b.position = Vector2(-1500, 2600)
 	sea._zoom_to = 1.55
 	sea._camera.zoom = Vector2.ONE * 1.55
-	_clean(["_dial", "_card", "_toast", "_status"])
+	# A catch short of Fishing 20: the bar fills and the level comes.
+	p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[19]) - 6.0
+	p["claimed_fishing_levels"] = 19.0
+	hud._level_seen = sea.session.level()
+	hud.refresh()
+	_clean(["_dial", "_card", "_toast", "_status", "_xp"])
 	_crew(["Ben"])
 	_offsets = [Vector2(-330, -170)]
 	for f: int in 30:
@@ -630,7 +648,7 @@ func _fish() -> void:
 			(n as Clean).queue_free()
 	var quiet: Clean = Clean.new()
 	quiet.hud = hud
-	quiet.only = ["FinnArrow", "StoryLine", "XpBar"]
+	quiet.only = ["FinnArrow", "StoryLine"]
 	tree.root.add_child(quiet)
 	while hud.phase != "result" and guard < 1500:
 		guard += 1
@@ -843,4 +861,98 @@ func _people() -> void:
 	for f: int in 30:
 		await tree.process_frame
 	_mark()
+	await _hold()
+
+
+# ── The fifth pass (Kong, 2026-10-05: XP and levels, a stat card, a full round) ──
+
+## A captain at the Gunwharf with a crew aboard, into Pete's raid; their crew
+## a breath short of Level 10 (a milestone) when CREW_NEAR is set.
+func _into_raid(raid: String, near: bool = false) -> BattleStage:
+	var bdb: CaptainStore = sea.session.store
+	var bu: String = sea.session.uid
+	p["expedition_xp"] = 2000.0
+	p["ship_tier"] = 5.0
+	for d: int in 2:
+		var st1: Dictionary = RulesApi.run(bdb, bu, "getCrewState", [])
+		for c: Dictionary in st1["board"]:
+			RulesApi.run(bdb, bu, "recruitCrew", [c["id"]])
+		p["last_free_recruit_date"] = "old%d" % d
+	var ids2: Array = (RulesApi.run(bdb, bu, "getCrewState", [])["roster"] as Array).map(func(m: Dictionary) -> float: return float(m["id"]))
+	for k: int in mini(3, ids2.size()):
+		RulesApi.run(bdb, bu, "assignToRaid", [ids2[k], float(k)])
+	if near:
+		var tb: Array = Crew.t()["xpTable"]
+		for c2: Dictionary in Crew.live(bdb):
+			if c2.get("raid_slot") != null:
+				c2["xp"] = float(tb[9]) - 2.0
+	if sea._berths.has("gunwharf"):
+		sea._boat.position = (sea._berths["gunwharf"] as Node2D).position + Vector2(-500, 200)
+	for f: int in 60:
+		await tree.process_frame
+	sea._launch(raid, "")
+	for f: int in 10:
+		await tree.process_frame
+	var bs: BattleStage = _stage()
+	bs._spoke = true
+	while bs._busy:
+		await tree.process_frame
+	return bs
+
+
+## THE CREW LEVEL UP: a shot that sinks the raider, and the crew's XP after.
+func _crewxp() -> void:
+	var bs: BattleStage = await _into_raid("corsairs_reckoning", true)
+	bs.b["seats"][0]["charges"] = 2.0
+	bs.b["enemy"]["hp"] = 1.0
+	bs.b["enemy"]["pattern"] = ["reload"]
+	bs._paint_actions()
+	for f: int in 20:
+		await tree.process_frame
+	_mark()
+	for f: int in 30:
+		await tree.process_frame
+	bs._choose("fire")
+	for f: int in 50:
+		await tree.process_frame
+	for bar: Node in bs.find_children("", "AimBar", true, false):
+		(bar as AimBar)._pos = (bar as AimBar)._zone
+		(bar as AimBar).lock()
+	await _hold()
+
+
+## AN ENEMY'S STAT CARD: pressed open on the raider.
+func _enemycard() -> void:
+	var bs: BattleStage = await _into_raid("captain_krust")
+	for f: int in 20:
+		await tree.process_frame
+	_mark()
+	for f: int in 30:
+		await tree.process_frame
+	bs._open_enemy_card(0)
+	await _hold()
+
+
+## THE BADGE WALL, scrolled through.
+func _badges() -> void:
+	var have: Array = []
+	var k: int = 0
+	for d: Dictionary in Achievements.defs():
+		k += 1
+		if k % 3 != 0:
+			have.append(d["id"])
+	p["unlocked_badges"] = have
+	hud.open_guide("achievements")
+	for f: int in 30:
+		await tree.process_frame
+	_mark()
+	for f: int in 20:
+		await tree.process_frame
+	var sc: ScrollContainer = null
+	for c: Node in tree.root.find_children("", "ScrollContainer", true, false):
+		if (c as ScrollContainer).is_visible_in_tree() and (c as ScrollContainer).get_v_scroll_bar().max_value > 600.0:
+			sc = c
+	if sc != null:
+		var tw: Tween = sc.create_tween()
+		tw.tween_property(sc, "scroll_vertical", int(sc.get_v_scroll_bar().max_value), 3.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	await _hold()

@@ -1352,11 +1352,18 @@ var _badge_note: Control
 
 
 ## A note in the same slip as an achievement's: eyebrow, title, line, picture.
+static var _film_quiet: bool = OS.get_environment("FILM_QUIET") != ""
+
+
 func notify(eyebrow: String, title: String, line: String, art: Texture2D = null) -> void:
 	_badge_q.append([eyebrow, title, line, art])
 
 
 func _badge_step(delta: float) -> void:
+	# Recording a film (godot/trailer, FILM_QUIET): no notices at the corner.
+	if _film_quiet:
+		_badge_q.clear()
+		return
 	_badge_t -= delta
 	if _badge_t > 0.0 or _badge_q.is_empty():
 		return
@@ -1554,6 +1561,8 @@ func _bite() -> void:
 	_dial.stage = 1
 	_boss_sweep = sweep
 	_dial.begin(zones, sweep)
+	# In its place before its first frame (it showed in the corner for one).
+	_place_dial()
 	_dial.visible = true
 	_dial.modulate.a = 0.0
 	_dial.pivot_offset = Vector2(150, 150)
@@ -1833,6 +1842,9 @@ func _catch_note(r: Dictionary, perfect: bool) -> void:
 		news.append(["Trophy", Color(0.66, 0.2, 0.15)])
 	var note: Pane = Kit.pane(self, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Paper.rarity(rar), 0.7)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 4)], "pad": [10, 6, 14, 6], "paper": true })
 	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Unseen until it is measured and placed (it flashed in the corner for a
+	# frame before).
+	note.modulate.a = 0.0
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE

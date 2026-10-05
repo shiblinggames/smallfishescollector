@@ -54,6 +54,9 @@ var _bars: float = 0.0
 var _deck: Control
 var _deck_box: VBoxContainer
 var _crew_row: HBoxContainer
+## The crew's XP showing after a fight: their row stays lit while it plays.
+var _crew_lit: bool = false
+var _deck_h: float = 0.0
 var _log: Label
 ## The combat log on the right edge (game/combat_log.gd).
 var _clog: CombatLog
@@ -317,7 +320,11 @@ func _process(delta: float) -> void:
 			_fx.links = lk
 	if _deck != null:
 		# As tall as what is on it (an order row, the aim bar, the die).
-		var dh: float = maxf(110.0, _deck_box.get_combined_minimum_size().y + 20.0)
+		# Eased, not snapped: a repaint swaps the deck's rows over a frame, and
+		# the height read mid-swap made it jump for that frame.
+		var want_h: float = maxf(110.0, _deck_box.get_combined_minimum_size().y + 20.0)
+		_deck_h = want_h if _deck_h <= 0.0 else lerpf(_deck_h, want_h, 1.0 - exp(-delta * 14.0))
+		var dh: float = _deck_h
 		var top_y: float = -BAR - 12.0 - dh
 		# While a round plays the deck stays up (its log is being written);
 		# only the orders dim, out of play.
@@ -325,7 +332,7 @@ func _process(delta: float) -> void:
 		_deck.offset_top = top_y + dip
 		_deck.offset_bottom = -BAR - 12.0 + dip
 		_deck_box.modulate.a = 1.0 - 0.65 * clampf(_drop / 190.0, 0.0, 1.0)
-		_crew_row.modulate.a = _deck_box.modulate.a
+		_crew_row.modulate.a = 1.0 if _crew_lit else _deck_box.modulate.a
 		_log.offset_top = top_y - 54.0
 		_log.offset_bottom = top_y - 22.0
 	for n: Dictionary in _numbers:
@@ -1632,6 +1639,7 @@ func _won() -> void:
 	sea.session.persist()
 	_say("%s sunk" % e["name"])
 	_log_line("+%d Navigation XP  ·  +%d ⟡" % [int(paid["xp"]), int(paid["doubloons"])])
+	await _crew_gains(Js.list(paid.get("crew")))
 	await _wait(2.0)
 	# A tide turns after some kills; the Throne offers a reprieve before its don.
 	var tide: Dictionary = Battle.tide_due(b)
@@ -1653,6 +1661,54 @@ func _won() -> void:
 		await _pre_fight_words()
 	await _enemy_enters()
 	_await_plan()
+
+
+## THE CREW'S XP (Kong, 2026-10-05): after a fight, the hands who sailed it
+## stand up on the deck, their XP rising off them; one who reached a level
+## flashes it, and says the stronger order it brings when it brings one.
+func _crew_gains(grants: Array) -> void:
+	if grants.is_empty() or _crew_row == null:
+		return
+	var s: Dictionary = b["seats"][me]
+	var by_id: Dictionary = {}
+	for g: Dictionary in grants:
+		by_id[str(g["id"])] = g
+	for c0: Node in _crew_row.get_children():
+		c0.queue_free()
+	var any_up: bool = false
+	var crew: Array = s["crew"]
+	for ci: int in crew.size():
+		var c: Dictionary = crew[ci]
+		var g: Dictionary = by_id.get(str(c["id"]), {})
+		var card: BattleLook.CrewCard = _order_card(s, c, ci) as BattleLook.CrewCard
+		card.disabled = true
+		card.state = str(Js.obj(Js.obj(Crew.t().get("classes")).get(c["cls"])).get("shortLabel", "")).to_upper()
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_crew_row.add_child(card)
+		if g.is_empty():
+			continue
+		card.disabled = false
+		card.gain = "+%d XP" % int(paid_xp(g))
+		card._gt = -0.15 * ci
+		var lo: int = int(g["oldLevel"])
+		var hi: int = int(g["newLevel"])
+		if hi > lo:
+			any_up = true
+			card.level_up = "Level %d!" % hi
+			var cls: Dictionary = Crew.class_of(str(c.get("slug", "")))
+			for m: Dictionary in Js.list(cls.get("milestones")):
+				if int(m["unlockLevel"]) > lo and int(m["unlockLevel"]) <= hi:
+					card.unlock = "New: %s" % str(m.get("desc", ""))
+	_crew_lit = true
+	Sound.xp_tick()
+	if any_up:
+		get_tree().create_timer(0.6).timeout.connect(func() -> void: Sound.streak(5))
+	await _wait(2.4 if any_up else 1.6)
+	_crew_lit = false
+
+
+static func paid_xp(g: Dictionary) -> float:
+	return Js.num(g.get("gained"))
 
 
 func _crate() -> void:

@@ -238,6 +238,8 @@ func _tag() -> void:
 	holder.position = Vector2(0, -56)
 	_body.add_child(holder)
 	var tag: Pane = Kit.pane(holder, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.4)], "shadow": [Color(0, 0, 0, 0.35), 14, Vector2(0, 5)], "pad": [16, 10, 16, 12], "paper": true })
+	# Unseen until measured and placed (it flashed for a frame before).
+	tag.modulate.a = 0.0
 	tag.light_mask = 0
 	var col: VBoxContainer = VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER

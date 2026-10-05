@@ -51,7 +51,7 @@ static func award_kill(db: CaptainStore, uid: String, raid: Dictionary, enemy_id
 			var old: float = Js.num(c.get("xp"))
 			var cxp: float = float(Js.round(xp * command))
 			c["xp"] = old + cxp
-			crew_grants.append({ "id": c["id"], "oldLevel": float(Crew.level(old)), "newLevel": float(Crew.level(old + cxp)) })
+			crew_grants.append({ "id": c["id"], "oldLevel": float(Crew.level(old)), "newLevel": float(Crew.level(old + cxp)), "gained": cxp })
 	return { "xp": xp, "doubloons": gold, "crew": crew_grants }
 
 

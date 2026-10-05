@@ -20,30 +20,37 @@ marks = json.loads((CLIPS / "marks.json").read_text())
 EDIT = [
     ("flotilla", 0.0, 3.8, "x"),
     ("charter", 0.0, 4.0, "x"),
-    ("fish", 0.0, 9.4, "x"),
-    ("log", 0.0, 3.4, "x"),
-    ("rod", 0.0, 3.0, "x"),
+    ("fish", 0.0, 10.8, "x"),
+    ("log", 0.0, 3.0, "x"),
     ("finn", 0.0, 4.5, "x"),
-    ("friends", 0.0, 4.2, "x"),
-    ("treasure", 0.0, 3.5, "x"),
-    ("crate", 0.0, 4.9, "x"),
-    ("wardrobe", 0.0, 7.8, "x"),
-    ("badges", 0.0, 2.3, "b"),
-    ("north", 0.0, 3.8, "x"),
-    ("campaign", 0.0, 2.5, "x"),
+    ("friends", 0.0, 3.8, "x"),
+    ("treasure", 0.3, 3.1, "x"),
+    ("crate", 0.4, 3.8, "x"),
+    ("wardrobe", 0.0, 6.0, "x"),
+    ("badges", 0.0, 3.8, "b"),
+    ("north", 0.0, 3.4, "x"),
     ("ready", 0.0, 3.3, "x"),
-    ("coop", 0.0, 6.6, "x"),
-    ("recruit", 0.0, 7.4, "x"),
-    ("skins", 0.0, 6.6, "x"),
+    ("coop", 0.6, 8.4, "x"),
+    ("enemycard", 0.0, 3.0, "x"),
+    ("recruit", 0.6, 6.0, "x"),
+    ("skins", 0.0, 5.0, "x"),
     ("summon", 0.0, 4.4, "x"),
+    ("crewxp", 1.6, 4.8, "x"),
     ("armory", 0.0, 2.6, "x"),
-    ("mega", 0.0, 4.0, "b"),
-    ("descent", 0.0, 4.5, "x"),
+    ("mega", 0.4, 3.4, "b"),
+    ("descent", 0.0, 4.0, "x"),
     ("draft", 0.0, 3.7, "x"),
-    ("stacked", 0.8, 5.8, "x"),
-    ("don", 0.0, 4.3, "x"),
-    ("haul", 0.0, 5.3, "b"),
-    ("calm", 0.0, 5.8, "b"),
+    ("g_spet", 0.0, 3.0, "x"),
+    ("g_curse", 0.0, 3.2, "x"),
+    ("g_shrine", 0.6, 3.6, "x"),
+    ("g_admiral", 0.0, 3.0, "x"),
+    ("g_fence", 0.6, 3.5, "x"),
+    ("g_job", 0.4, 3.0, "x"),
+    ("don", 0.4, 3.7, "x"),
+    ("g_breather", 0.6, 2.8, "x"),
+    ("haul", 1.0, 4.2, "x"),
+    ("g_records", 0.0, 3.0, "b"),
+    ("calm", 0.0, 5.2, "b"),
     ("end", 0.0, 6.3, ""),
 ]
 XF = 0.6      # a dissolve between shots
@@ -97,7 +104,8 @@ total = length
 # The score: the main theme, start to finish (Kong: one track, no switching).
 inputs += ["-i", str(ART / "fishingsoundtrack.ogg")]
 n = len(edit)
-fc += (f"[{n}:a]atrim=start=3:duration={total:.3f},asetpts=PTS-STARTPTS,aresample=48000,"
+m_in = max(0.0, min(3.0, 122.6 - total))   # the theme is 122.8s: never run off its end
+fc += (f"[{n}:a]atrim=start={m_in:.2f}:duration={total:.3f},asetpts=PTS-STARTPTS,aresample=48000,"
        f"afade=t=in:d=1.2,afade=t=out:st={total - 3.0:.3f}:d=3.0[score];"
        f"[{cur_a}]volume={SFX_DB}dB[sfx];"
        f"[score][sfx]amix=inputs=2:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[aout];"

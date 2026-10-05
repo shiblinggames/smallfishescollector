@@ -400,6 +400,12 @@ class CrewCard:
 	var _cap: float = 0.0
 	## Tests and films: the caption shown as if hovered.
 	var pin_caption: bool = false
+	## After a fight (Kong, 2026-10-05: "the dopamine of getting xp"): their XP
+	## rising off them, a level reached flashing gold, the new order's words.
+	var gain: String = ""
+	var level_up: String = ""
+	var unlock: String = ""
+	var _gt: float = -1.0
 	const LIGHT: Color = Color(1.0, 0.86, 0.6)
 
 	func _init() -> void:
@@ -415,6 +421,8 @@ class CrewCard:
 		_lift = lerpf(_lift, want, 1.0 - exp(-delta * 12.0))
 		_on = lerpf(_on, 1.0 if chosen else 0.0, 1.0 - exp(-delta * 10.0))
 		_cap = move_toward(_cap, 1.0 if is_hovered() or pin_caption else 0.0, delta * 9.0)
+		if gain != "":
+			_gt += delta
 		# Its caption over the neighbours while it shows.
 		z_index = 5 if _cap > 0.0 else 0
 		queue_redraw()
@@ -458,6 +466,28 @@ class CrewCard:
 		BattleLook.say(self, f, w * 0.5, floor_y + 34.0, state, ss, Color(BattleLook.GOLD, 1.0) if chosen else Color(BattleLook.MUTED, 0.6 if grey else 1.0), 3)
 		if _cap > 0.01:
 			_draw_caption(floor_y)
+		if gain != "" and _gt >= 0.0:
+			_draw_gain(floor_y)
+
+	func _draw_gain(floor_y: float) -> void:
+		var cx: float = size.x * 0.5
+		var f: Font = Kit.font("cinzel", 800)
+		var u: float = clampf(_gt / 1.4, 0.0, 1.0)
+		var a: float = minf(1.0, _gt * 4.0) * (1.0 - smoothstep(0.75, 1.0, u)) if level_up == "" else minf(1.0, _gt * 4.0)
+		var y: float = floor_y - 150.0 - _lift - 34.0 * u
+		BattleLook.say(self, f, cx, y, gain, 24, Color(Color("#9be7ff"), a), 6)
+		if level_up != "":
+			var la: float = clampf((_gt - 0.6) * 3.0, 0.0, 1.0)
+			if la > 0.0:
+				var pulse: float = 1.0 + 0.25 * maxf(0.0, 1.0 - (_gt - 0.6) * 2.5)
+				draw_texture_rect(FxSheet.glow(), Rect2(Vector2(cx - 90.0 * pulse, floor_y - 150.0 - 60.0 * pulse), Vector2(180.0 * pulse, 120.0 * pulse)), false, Color(BattleLook.GOLD, 0.45 * la))
+				BattleLook.say(self, f, cx, floor_y - 114.0 - _lift, level_up, 30, Color(BattleLook.GOLD, la), 7)
+				if unlock != "":
+					var lines: Array = BattleLook.wrap(Kit.font("karla", 800), unlock, 14, 220.0)
+					var yy: float = floor_y - 90.0 - _lift
+					for ln: String in lines:
+						BattleLook.say(self, Kit.font("karla", 800), cx, yy, ln, 14, Color(BattleLook.CREAM, la), 5)
+						yy += 17.0
 
 	## Over them while hovered: what the order is and does, in plain words,
 	## with how to give it from the keyboard (or, spent, why not).
