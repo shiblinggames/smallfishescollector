@@ -343,7 +343,7 @@ class OrderCard:
 
 ## A CREW HAND STANDING UP OUT OF THE DECK (Kong, 2026-10-05: the orders were
 ## "too blended into the bar"; then no boxes, no class colours). Frameless:
-## their art stands on a soft halo of warm light with a shadow at their feet,
+## their art stands on a soft halo of warm light (no shadow under them),
 ## their name and order in plain words under them, their key small beside.
 ## Ready: the light breathes. Hovered: they rise a little. Ordered: they stand
 ## up out of the line and the light comes up full. Spent: grey, the light out.
@@ -388,16 +388,8 @@ class CrewCard:
 			var hs: float = lerpf(1.0, 1.25, _on)
 			var hc: Vector2 = Vector2(w * 0.5, floor_y - 58.0 - _lift)
 			draw_texture_rect(g, Rect2(hc - Vector2(70, 70) * hs, Vector2(140, 140) * hs), false, Color(LIGHT, ga))
-			# Ordered: a pool of light on the floor under them.
-			if _on > 0.02:
-				draw_set_transform(Vector2(w * 0.5, floor_y), 0.0, Vector2(1.0, 0.28))
-				draw_texture_rect(g, Rect2(-Vector2(64, 64), Vector2(128, 128)), false, Color(LIGHT, 0.5 * _on))
-				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		# The shadow at their feet.
-		draw_set_transform(Vector2(w * 0.5, floor_y + 2.0), 0.0, Vector2(1.0, 0.22))
-		draw_circle(Vector2.ZERO, 40.0 - _lift * 0.6, Color(0, 0, 0, 0.45))
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		# The crewmate, standing on the floor line.
+		# The crewmate, standing on the floor line (no shadow or pool under
+		# them: Kong, 2026-10-05, "the shadows look weird").
 		if tex != null:
 			var ts: Vector2 = tex.get_size()
 			var box: Vector2 = Vector2(w - 6.0, floor_y - 6.0)
