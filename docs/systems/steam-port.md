@@ -1612,6 +1612,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     giants landed, the gallery the Almanac's count. Each room painted with what is in it at the
     web's spots. The crew's one base in a Charter (the save's "homestead"). Its 8 badges are
     earnable (221 of 243 now).
+  - THE TAVERN (game/tavern_room.gd, core/tavern.gd, content/tavern.json; the Mainland's
+    first door, open now): the social room, saying how things stand. OVERHEARD: three snatches
+    of the room's talk from the web's 81 (lib/tavernGossip.ts), shuffled per captain, turning
+    over on the hour, each line always said by the same two patrons (Avatar faces hashed off
+    the line); eight lines reworded to be true in the port (the anvil's two-for-one, the
+    Gauntlet without a daily limit, hardcore crews, boards that post anew when finished, the
+    slots' catfish line, the Parlor's king, fresh hands at the Crew Hall). YOUR CREW: the
+    Charter's captains with their faces, aboard or ashore (alone: what a Charter is and where it
+    is founded). THE SALT ROAD: the three regulars who know you best and their standing, read
+    only. The web's daily tot and races are cut with their systems.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,
     judgment and afflictions) for aimStyle "dial", centred over the water: the fishing dial's

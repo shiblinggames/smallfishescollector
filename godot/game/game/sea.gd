@@ -1705,6 +1705,8 @@ func _enter_room(door: String) -> void:
 			room = ParlorRoom.new()
 		"chart_room":
 			room = ChartStudy.new()
+		"tavern":
+			room = TavernRoom.new()
 		_:
 			room = TackleRoom.new()
 	room.session = session

@@ -3,8 +3,7 @@ extends Control
 ## GOING ASHORE AT THE MAINLAND (Godot port of MainlandAshore in
 ## app/(app)/sea/SeaMap.tsx and ashoreDoors.ts, docking): not a town screen but
 ## a picker over the chart, two rows of three doors: the Market, the Tackle
-## Shop, the Parlor, the Den and the Chart Room; the Tavern is still to come
-## and says so.
+## Shop, the Parlor, the Den, the Chart Room and the Tavern.
 
 signal closed
 signal chose(door: String)
@@ -12,7 +11,7 @@ signal chose(door: String)
 ## [key, name, blurb, cta, art, accent]
 const ROWS: Array = [
 	["Your crew, your catch, your gear", [
-		["tavern", "The Tavern", "Other captains, the regulars and the day’s races", "Enter", "sea/tavern.png", "#e0a545"],
+		["tavern", "The Tavern", "Your crew, the regulars and the room's talk", "Enter", "sea/tavern.png", "#e0a545"],
 		["market", "The Market", "Sell the hold at full price", "Trade", "sea/market.png", "#7fd6a0"],
 		["tackle", "Tackle Shop", "Rods, hooks, reels and bait", "Browse", "sea/tackle.png", "#67d4e8"],
 	]],
@@ -22,7 +21,7 @@ const ROWS: Array = [
 		["chart_room", "The Chart Room", "Weekly puzzles that uncover the World Chart", "Study", "sea/charting.png", "#6fc4b4"],
 	]],
 ]
-const BUILT: Array[String] = ["market", "tackle", "den", "parlor", "chart_room"]
+const BUILT: Array[String] = ["tavern", "market", "tackle", "den", "parlor", "chart_room"]
 
 var _card: Pane
 var _first: Button = null
