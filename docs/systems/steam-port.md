@@ -1678,6 +1678,15 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     in the Crushing Deep and the Maw. A boss leans the dark in; the Don's rise takes it all the
     way. The hulls stay readable at any depth: the light never falls all the way to the band's
     colour and the murk thins between you and the enemy. Leaving a dive eases it all back out.
+  - THE FIGHT DECK, CREW STANDING UP (game/battle_look.gd CrewCard; Kong 2026-10-05: the orders
+    and actions were "too blended into the bar"; boxed cards were "really ugly", and "no need
+    for class colors"). The crew's orders stand above the deck's top edge, frameless: each
+    crewmate's art on a soft halo of warm light with a shadow at their feet, name and order in
+    plain words under them with their key. Ready: the light breathes; hover: they rise a little;
+    ordered: they stand up out of the line, the light full and a pool under them, the order in
+    gold; spent: grey, the light out. Keys 1 to 6 give or take back an order (new in the port).
+    The actions are taller with drawn icons (ball, reload, swerve, kit), in cream; only Fire,
+    the main action, carries gold and a little light. No class colours on any of it.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,
     judgment and afflictions) for aimStyle "dial", centred over the water: the fishing dial's

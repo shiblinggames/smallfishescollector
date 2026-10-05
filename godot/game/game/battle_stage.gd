@@ -53,6 +53,7 @@ var _fx: BattleFx
 var _bars: float = 0.0
 var _deck: Control
 var _deck_box: VBoxContainer
+var _crew_row: HBoxContainer
 var _log: Label
 ## The combat log on the right edge (game/combat_log.gd).
 var _clog: CombatLog
@@ -60,6 +61,8 @@ var _clog: CombatLog
 var _deck_bg: Array = []
 ## The deck: orders on the left, the log's last lines on the right.
 const DECK_W: float = 1280.0
+## How far the crew's cards stand up above the deck's top edge.
+const CREW_LIFT: float = 150.0
 const LOG_W: float = 400.0
 var _deck_log: Control
 var _strip: Array = []
@@ -314,7 +317,7 @@ func _process(delta: float) -> void:
 			_fx.links = lk
 	if _deck != null:
 		# As tall as what is on it (an order row, the aim bar, the die).
-		var dh: float = maxf(150.0, _deck_box.get_combined_minimum_size().y + 34.0)
+		var dh: float = maxf(118.0, _deck_box.get_combined_minimum_size().y + 34.0)
 		var top_y: float = -BAR - 12.0 - dh
 		# While a round plays the deck stays up (its log is being written);
 		# only the orders dim, out of play.
@@ -322,6 +325,7 @@ func _process(delta: float) -> void:
 		_deck.offset_top = top_y + dip
 		_deck.offset_bottom = -BAR - 12.0 + dip
 		_deck_box.modulate.a = 1.0 - 0.65 * clampf(_drop / 190.0, 0.0, 1.0)
+		_crew_row.modulate.a = _deck_box.modulate.a
 		_log.offset_top = top_y - 54.0
 		_log.offset_bottom = top_y - 22.0
 	for n: Dictionary in _numbers:
@@ -548,6 +552,14 @@ func _build_deck() -> void:
 	_deck_box.add_theme_constant_override("separation", 8)
 	_deck_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	pad.add_child(_deck_box)
+	# The crew stand up out of the deck's top edge, half over the water.
+	_crew_row = HBoxContainer.new()
+	_crew_row.add_theme_constant_override("separation", 10)
+	_crew_row.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_crew_row.offset_left = 26.0
+	_crew_row.offset_top = -CREW_LIFT
+	_crew_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_deck.add_child(_crew_row)
 	# The log's last lines, on the deck's right, a rule between.
 	_deck_log = Control.new()
 	_deck_log.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
@@ -592,6 +604,9 @@ func _deck_paper(on: bool) -> void:
 func _clear_deck() -> void:
 	for c: Node in _deck_box.get_children():
 		c.queue_free()
+	if _crew_row != null:
+		for c2: Node in _crew_row.get_children():
+			c2.queue_free()
 
 
 ## Films and tests: the deck plays itself (fire when loaded, else reload;
@@ -638,11 +653,11 @@ func _paint_actions() -> void:
 	match _menu:
 		"fire":
 			# Fire's chooser: the single shot, the volley, the Mega.
-			top.add_child(_word_key("Fire", "F", lg["fire"], true, "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire")))
-			top.add_child(_word_key("Volley", "V", lg["volley"], false, "Three balls: a double-damage broadside", BattleLook.GOLD, func() -> void: _pick_fire("volley")))
+			top.add_child(_word_key("Fire", "F", lg["fire"], true, "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire"), "fire"))
+			top.add_child(_word_key("Volley", "V", lg["volley"], lg["volley"], "Three balls: a double-damage broadside", BattleLook.GOLD, func() -> void: _pick_fire("volley"), "volley"))
 			if not mg.is_empty():
-				top.add_child(_word_key(str(mg["name"]), "M", lg.get("mega", false), lg.get("mega", false), "%s  ·  %d balls" % [mg.get("tagline", ""), int(Armory.aug()["megaCost"])], Color(str(mg.get("color", "#d8b26b"))), func() -> void: _pick_fire("mega")))
-			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu()))
+				top.add_child(_word_key(str(mg["name"]), "M", lg.get("mega", false), lg.get("mega", false), "%s  ·  %d balls" % [mg.get("tagline", ""), int(Armory.aug()["megaCost"])], Color(str(mg.get("color", "#d8b26b"))), func() -> void: _pick_fire("mega"), "mega"))
+			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu(), "back"))
 		"special":
 			# The specials: the repair kit (the crew's orders have their row).
 			if not kit.is_empty():
@@ -650,39 +665,35 @@ func _paint_actions() -> void:
 				var why: String = "Used this fight" if s.get("kitUsed", false) else ("Hull already full" if float(s["hp"]) >= float(s["max"]) else "Heals %d-%d, costs your turn" % [int(rg.x), int(rg.y)])
 				var kk: BattleLook.ActionKey = _word_key(str(kit["name"]), "1", lg.get("repair", false), lg.get("repair", false), str(kit.get("description", "")), Color(0.5, 0.95, 0.6), func() -> void:
 					_menu = ""
-					_choose("repair"))
+					_choose("repair"), "special")
 				kk.sub = why
-				kk.custom_minimum_size = Vector2(maxf(kk.custom_minimum_size.x, 230.0), 48)
+				kk.custom_minimum_size = Vector2(maxf(kk.custom_minimum_size.x, 250.0), 54)
 				top.add_child(kk)
-			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu()))
+			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu(), "back"))
 		_:
-			top.add_child(_word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire))
-			top.add_child(_word_key("Reload", "R", lg["reload"], false, "+1 ball", BattleLook.GOLD, func() -> void: _choose("reload")))
-			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Brace for a shot (not twice running)", BattleLook.GOLD, func() -> void: _choose("dodge")))
-			top.add_child(_word_key("Special", "S", not kit.is_empty(), false, str(kit.get("name", "No special aboard")), Color(0.75, 0.6, 1.0), func() -> void: _open_menu("special")))
+			top.add_child(_word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire, "fire"))
+			top.add_child(_word_key("Reload", "R", lg["reload"], false, "+1 ball", BattleLook.CREAM, func() -> void: _choose("reload"), "reload"))
+			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Brace for a shot (not twice running)", BattleLook.CREAM, func() -> void: _choose("dodge"), "dodge"))
+			top.add_child(_word_key("Special", "S", not kit.is_empty(), false, str(kit.get("name", "No special aboard")), BattleLook.CREAM, func() -> void: _open_menu("special"), "special"))
 			var drum: Dictionary = Battle.drum_of(s)
 			if not drum.is_empty():
-				top.add_child(_word_key(str(drum["name"]), "B", not (s.get("drum", false) or (s["used"] as Array).is_empty()), false, str(drum.get("description", "")), BattleLook.GOLD, _beat_drum))
+				top.add_child(_word_key(str(drum["name"]), "B", not (s.get("drum", false) or (s["used"] as Array).is_empty()), false, str(drum.get("description", "")), BattleLook.GOLD, _beat_drum, "drum"))
 			if gauntlet == "":
-				top.add_child(_word_key("Flee", "X", true, false, "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me), BattleLook.MUTED, _flee))
+				top.add_child(_word_key("Flee", "X", true, false, "Roll to get away: a %d or better on a d20. A miss takes a parting shot." % Battle.flee_need(b, me), BattleLook.MUTED, _flee, "flee"))
 	# The shot in the rack: the balls themselves.
 	var mag: Control = Control.new()
 	var cnt: int = int(s["maxCharges"])
 	var step: float = minf(22.0, 110.0 / maxf(1.0, float(cnt)))
-	mag.custom_minimum_size = Vector2(18.0 + step * cnt, 42)
+	mag.custom_minimum_size = Vector2(18.0 + step * cnt, 54)
 	mag.tooltip_text = "Shot in the rack: %d of %d" % [int(s["charges"]), cnt]
 	mag.draw.connect(func() -> void:
 		for k: int in cnt:
-			BattleLook.ball(mag, Vector2(16 + k * step, 21), 8.0, k < int(s["charges"])))
+			BattleLook.ball(mag, Vector2(16 + k * step, 27), 8.0, k < int(s["charges"])))
 	top.add_child(mag)
-	# The crew's orders, under them.
+	# The crew's orders: standing up out of the deck's top edge.
 	var crew: Array = s["crew"]
-	if not crew.is_empty():
-		var row: HBoxContainer = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		_deck_box.add_child(row)
-		for c: Dictionary in crew:
-			row.add_child(_order_card(s, c))
+	for ci: int in crew.size():
+		_crew_row.add_child(_order_card(s, crew[ci], ci))
 	_target_row()
 
 
@@ -719,41 +730,52 @@ func _close_menu() -> void:
 
 
 ## An action on the deck: its word and its key, nothing else.
-func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, accent: Color, f: Callable) -> BattleLook.ActionKey:
+func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, accent: Color, f: Callable, icon: String = "") -> BattleLook.ActionKey:
 	var k: BattleLook.ActionKey = BattleLook.ActionKey.new()
+	k.kind = icon
 	k.label = word
 	k.key_hint = key
 	k.primary = on and primary
 	k.accent = accent
 	k.disabled = not on
 	k.tooltip_text = tip
-	var w: float = Kit.font("karla", 800).get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 40.0 + Kit.font("karla", 800).get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-	k.custom_minimum_size = Vector2(maxf(92.0, w), 42)
+	var w: float = Kit.font("karla", 800).get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 44.0 + Kit.font("karla", 800).get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + (30.0 if icon != "" else 0.0)
+	k.custom_minimum_size = Vector2(maxf(170.0 if primary else 120.0, w), 54)
 	k.pressed.connect(f)
 	return k
 
 
-func _order_card(s: Dictionary, c: Dictionary) -> Control:
+func _order_card(s: Dictionary, c: Dictionary, i: int = 0) -> Control:
 	var why: String = Battle.ability_ok(b, s, c["id"])
 	var chosen: bool = Js.obj(_plan.get("ability")).get("crew") == c["id"]
 	var cls: Dictionary = Js.obj(Js.obj(Crew.t().get("classes")).get(c["cls"]))
-	var bt: BattleLook.OrderCard = BattleLook.OrderCard.new()
+	var bt: BattleLook.CrewCard = BattleLook.CrewCard.new()
 	bt.tex = Skipper.tex("card_thumbs/%s.png" % str(c["filename"]).get_basename())
 	bt.hand = str(c["name"])
 	bt.col = Color(str(cls.get("color", "#cccccc")))
 	bt.chosen = chosen
+	bt.key_hint = str(i + 1) if i < 6 else ""
 	bt.state = ("ORDERED" if chosen else str(cls.get("shortLabel", "")).to_upper()) if why == "" else ("USED" if why.begins_with("Already") else why.to_upper())
 	bt.disabled = why != ""
 	bt.tooltip_text = "%s  ·  %s" % [cls.get("name", ""), Js.obj(c["ms"]).get("desc", "")] if why == "" else why
-	bt.custom_minimum_size = Vector2(150 if (s["crew"] as Array).size() <= 4 else 124, 42)
-	bt.pressed.connect(func() -> void:
-		if chosen:
-			_plan.erase("ability")
-		else:
-			_plan["ability"] = { "crew": c["id"], "target": me }
-			Sound.plip()
-		_paint_actions())
+	if (s["crew"] as Array).size() > 5:
+		bt.custom_minimum_size = Vector2(100, 168)
+	bt.pressed.connect(func() -> void: _toggle_order(c))
 	return bt
+
+
+## A crew hand's order given (or taken back): their card stands up, lit.
+func _toggle_order(c: Dictionary) -> void:
+	var s: Dictionary = b["seats"][me]
+	if Battle.ability_ok(b, s, c["id"]) != "":
+		return
+	if Js.obj(_plan.get("ability")).get("crew") == c["id"]:
+		_plan.erase("ability")
+		Sound.plip()
+	else:
+		_plan["ability"] = { "crew": c["id"], "target": me }
+		Sound.charge()
+	_paint_actions()
 
 
 ## The crew orders that may go to another ship in the line.
@@ -867,6 +889,14 @@ func _unhandled_input(e: InputEvent) -> void:
 				KEY_X:
 					if gauntlet == "":
 						_flee()
+				KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6:
+					# The crew's orders, by their number on the card.
+					var crew: Array = b["seats"][me]["crew"]
+					var ci: int = kc - KEY_1
+					if ci < crew.size():
+						_toggle_order(crew[ci])
+					else:
+						hit = false
 				_: hit = false
 	if hit:
 		get_viewport().set_input_as_handled()

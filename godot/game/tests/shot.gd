@@ -1213,6 +1213,12 @@ func _init() -> void:
 							en["image"] = ap.get("image")
 							en["id"] = want
 						bs2._enemy_enters()
+			# ORDER: give this crew order (its index) before the shot.
+			if OS.get_environment("ORDER") != "":
+				for n: Node in sea._hud_layer.get_children():
+					if n is BattleStage:
+						var bs3: BattleStage = n
+						bs3._toggle_order(bs3.b["seats"][bs3.me]["crew"][int(OS.get_environment("ORDER"))])
 			# DIVE_DEPTH: the water as at this depth (the band's look).
 			if OS.get_environment("DIVE_DEPTH") != "":
 				for n: Node in sea._hud_layer.get_children():

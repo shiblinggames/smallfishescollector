@@ -125,6 +125,14 @@ static func icon(ci: CanvasItem, kind: String, c: Vector2, s: float, col: Color)
 			for k: int in 2:
 				var x: float = c.x + s * 0.35 - k * s * 0.6
 				ci.draw_polyline(PackedVector2Array([Vector2(x, c.y - s * 0.6), Vector2(x - s * 0.5, c.y), Vector2(x, c.y + s * 0.6)]), Color(col, 1.0 - 0.35 * k), 2.2, true)
+		"special":
+			# The kit: a chest with a cross on it.
+			ci.draw_rect(Rect2(c.x - s * 0.75, c.y - s * 0.5, s * 1.5, s * 1.05), Color(col, 0.3))
+			ci.draw_rect(Rect2(c.x - s * 0.75, c.y - s * 0.5, s * 1.5, s * 1.05), col, false, 1.8)
+			ci.draw_line(c + Vector2(0, -s * 0.28), c + Vector2(0, s * 0.36), col, 2.4, true)
+			ci.draw_line(c + Vector2(-s * 0.32, s * 0.04), c + Vector2(s * 0.32, s * 0.04), col, 2.4, true)
+		"back":
+			ci.draw_polyline(PackedVector2Array([c + Vector2(s * 0.3, -s * 0.55), c + Vector2(-s * 0.3, 0), c + Vector2(s * 0.3, s * 0.55)]), col, 2.2, true)
 		"drum":
 			ci.draw_rect(Rect2(c.x - s * 0.7, c.y - s * 0.35, s * 1.4, s * 0.8), Color(col, 0.3))
 			_ellipse(ci, c + Vector2(0, -s * 0.35), Vector2(s * 0.7, s * 0.22), col)
@@ -227,14 +235,18 @@ class ActionKey:
 			rim = Color(accent, 0.45 + 0.3 * _hover)
 		if chosen:
 			rim = Color(BattleLook.GOLD, 0.95)
-		BattleLook.draw_box(self, r, BattleLook.box(Color(bg, a), Color(rim, rim.a * a), 2 if chosen else 1, 10))
+		if primary and not disabled:
+			# The main action carries a little light of its own.
+			draw_texture_rect(FxSheet.glow(), r.grow(14.0), false, Color(accent, 0.12 + 0.1 * _hover))
+		BattleLook.draw_box(self, r, BattleLook.box(Color(bg, a), Color(rim, rim.a * a), 2 if chosen or (primary and not disabled) else 1, 10))
 		var tx: float = r.position.x + 14.0
 		var ink: Color = Color(BattleLook.CREAM, a)
 		if kind != "":
-			BattleLook.icon(self, kind, Vector2(r.position.x + 26, r.get_center().y), 11.0, Color(accent if primary and not disabled else BattleLook.CREAM, a))
-			tx = r.position.x + 46.0
+			var ic: float = 13.0 if size.y >= 50.0 else 11.0
+			BattleLook.icon(self, kind, Vector2(r.position.x + 14.0 + ic, r.get_center().y), ic, Color(accent if not disabled else BattleLook.CREAM, a))
+			tx = r.position.x + 22.0 + ic * 2.0
 		var f: Font = Kit.font("karla", 800)
-		var fs: int = 15
+		var fs: int = 17 if size.y >= 50.0 else 15
 		var avail: float = r.end.x - tx - (26.0 if key_hint != "" else 8.0)
 		while fs > 11 and f.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > avail:
 			fs -= 1
@@ -285,6 +297,84 @@ class OrderCard:
 		var avail: float = r.end.x - tx - 6.0
 		draw_string(Kit.font("karla", 800), Vector2(tx, r.get_center().y - 2), hand, HORIZONTAL_ALIGNMENT_LEFT, avail, 13, Color(BattleLook.CREAM, a))
 		draw_string(Kit.font("karla", 700), Vector2(tx, r.get_center().y + 13), state, HORIZONTAL_ALIGNMENT_LEFT, avail, 10, Color(col.lightened(0.3) if not disabled else BattleLook.MUTED, a))
+
+
+## A CREW HAND STANDING UP OUT OF THE DECK (Kong, 2026-10-05: the orders were
+## "too blended into the bar"; then no boxes, no class colours). Frameless:
+## their art stands on a soft halo of warm light with a shadow at their feet,
+## their name and order in plain words under them, their key small beside.
+## Ready: the light breathes. Hovered: they rise a little. Ordered: they stand
+## up out of the line and the light comes up full. Spent: grey, the light out.
+class CrewCard:
+	extends Button
+	var tex: Texture2D
+	var hand: String = ""
+	var state: String = ""
+	var key_hint: String = ""
+	## Kept for callers; not drawn (Kong: no class colours on the cards).
+	var col: Color = Color.WHITE
+	var chosen: bool = false
+	var _hover: float = 0.0
+	var _lift: float = 0.0
+	var _on: float = 0.0
+	var _t: float = randf() * 6.0
+	const LIGHT: Color = Color(1.0, 0.86, 0.6)
+
+	func _init() -> void:
+		flat = true
+		focus_mode = Control.FOCUS_NONE
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		custom_minimum_size = Vector2(116, 172)
+
+	func _process(delta: float) -> void:
+		_t += delta
+		_hover = move_toward(_hover, 1.0 if is_hovered() and not disabled else 0.0, delta * 8.0)
+		var want: float = 18.0 if chosen else (-6.0 if disabled else 6.0 * _hover)
+		_lift = lerpf(_lift, want, 1.0 - exp(-delta * 12.0))
+		_on = lerpf(_on, 1.0 if chosen else 0.0, 1.0 - exp(-delta * 10.0))
+		queue_redraw()
+
+	func _draw() -> void:
+		var w: float = size.x
+		var grey: bool = disabled
+		var floor_y: float = size.y - 40.0
+		var g: Texture2D = FxSheet.glow()
+		var breath: float = 0.5 + 0.5 * sin(_t * 2.0)
+		# The light behind them (none when spent).
+		if not grey:
+			var ga: float = lerpf(0.16 + 0.08 * breath + 0.14 * _hover, 0.62, _on)
+			var hs: float = lerpf(1.0, 1.25, _on)
+			var hc: Vector2 = Vector2(w * 0.5, floor_y - 58.0 - _lift)
+			draw_texture_rect(g, Rect2(hc - Vector2(70, 70) * hs, Vector2(140, 140) * hs), false, Color(LIGHT, ga))
+			# Ordered: a pool of light on the floor under them.
+			if _on > 0.02:
+				draw_set_transform(Vector2(w * 0.5, floor_y), 0.0, Vector2(1.0, 0.28))
+				draw_texture_rect(g, Rect2(-Vector2(64, 64), Vector2(128, 128)), false, Color(LIGHT, 0.5 * _on))
+				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# The shadow at their feet.
+		draw_set_transform(Vector2(w * 0.5, floor_y + 2.0), 0.0, Vector2(1.0, 0.22))
+		draw_circle(Vector2.ZERO, 40.0 - _lift * 0.6, Color(0, 0, 0, 0.45))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# The crewmate, standing on the floor line.
+		if tex != null:
+			var ts: Vector2 = tex.get_size()
+			var box: Vector2 = Vector2(w - 6.0, floor_y - 6.0)
+			var k: float = minf(box.x / ts.x, box.y / ts.y)
+			var dw: Vector2 = ts * k
+			var at: Vector2 = Vector2((w - dw.x) * 0.5, floor_y - dw.y - _lift)
+			var tint: Color = Color(0.38, 0.38, 0.42, 0.6) if grey else Color.WHITE.lerp(Color(1.08, 1.04, 0.96), _on)
+			draw_texture_rect(tex, Rect2(at, dw), false, tint)
+		# Their name, their order, their key.
+		var f: Font = Kit.font("karla", 800)
+		var fs: int = 14
+		while fs > 10 and f.get_string_size(hand, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w - 8.0:
+			fs -= 1
+		BattleLook.say(self, f, w * 0.5, floor_y + 20.0, hand, fs, Color(BattleLook.CREAM, 0.5 if grey else 1.0), 4)
+		var line: String = state if key_hint == "" or grey else "%s  ·  %s" % [state, key_hint]
+		var ss: int = 10
+		while ss > 8 and f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, ss).x > w - 4.0:
+			ss -= 1
+		BattleLook.say(self, f, w * 0.5, floor_y + 34.0, line, ss, Color(BattleLook.GOLD, 1.0) if chosen else Color(BattleLook.MUTED, 0.6 if grey else 1.0), 3)
 
 
 ## Kept for the deck's layering: it draws nothing now (the deck is the night
