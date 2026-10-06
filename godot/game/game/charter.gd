@@ -564,6 +564,8 @@ func _chest_item(s: Session, verb: String, id_: String) -> Dictionary:
 		held.append(id_)
 		_bump(items, id_, -1.0)
 	s.store.update_profile(s.uid, { "raid_items": held })
+	# The last copy gone: its grade (and any mount) goes with it.
+	Forge._tidy(s.store, s.uid)
 	return { "what": str(def.get("name", id_)) }
 
 

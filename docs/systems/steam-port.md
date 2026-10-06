@@ -2101,6 +2101,24 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- THE LOOT AUDIT (2026-10-06). Kong's calls on balance: a crew's coin multiplying into the one
+  purse is FINE (every captain still buys their own gear and ships); drops stay as they are
+  (copies break down into components); the crew chest stays open; repeats (the Sunken Hand's
+  12k to 18k) stay. Fixed: co-op on a raid that is its boss alone (the Quartermaster's Ghost,
+  the Sunken Hand) crashed picking an escort from an empty list (Battle._escorts now fields
+  the boss alone); the Ghost's crate follows its uniqueShare again, one of its eight items
+  half the time (the port had rolled each at 10%), and the entry screen shows that; an owned
+  Primeval Eye no longer drops again and re-seats itself; Kingpin's Cut lifts ancients as the
+  web did; a raid's Challenge needs the raid itself beaten to join or be asked; the breather's
+  odds show gear you already hold (copies still drop), the live chest offer and the combat
+  depth, as the haul rolls them; a spare Maw salvages (ancient 40 scrap); giving the last copy
+  away through the crew chest gives up its grade and mount (Forge._tidy); and a dive is
+  written down as each fight begins, so quitting or crashing mid-fight resumes into that same
+  fight, not the breather before it with a fresh look ahead. STILL OPEN with Kong: the
+  hardcore-only dive drops (Blood Cannon, Don's Palisade, Bad Blood and Pitch Black hulls)
+  cannot drop anywhere since hardcore gauntlets were cut, which leaves three forge recipes
+  dead; order sweeps roll their crate from the crew's highest Fishing level; a co-op raid
+  counts once per seat toward the crew's bounties.
 - PINGS AND CREWMATE STATUS (Kong, 2026-10-06, picked from a co-op list). PINGS
   (game/crew_pings.gd, CrewNet.send_ping): hold G over the water and four callouts open
   round the pointer (Hotspot here, Over here, Need a hand, Look); slide toward one and let

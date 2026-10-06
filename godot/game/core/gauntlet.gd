@@ -210,12 +210,14 @@ static func pressure_skin_chance(pressure: float, depth: int) -> float:
 
 ## Everything a chest banked at this depth could still pay this captain, and
 ## how likely (chestOdds). The cash-out rolls against these same numbers.
-static func chest_odds(depth: int, variant: String, hardcore: bool, pressure: float, owned_items: Array, owned_skins: Array, odds_mult: float = 1.0, fortune_mult: float = 1.0) -> Array:
+static func chest_odds(depth: int, variant: String, hardcore: bool, pressure: float, owned_items: Array, owned_skins: Array, odds_mult: float = 1.0, fortune_mult: float = 1.0, combat_depth: int = -1) -> Array:
 	var pay: int = mini(depth, REWARD_DEPTH_CAP)
 	var tier: int = int(chest_for_depth(pay)["tier"])
 	var m: Callable = func(c: float) -> float: return minf(CHEST_ODDS_CAP, c * odds_mult * fortune_mult)
-	var cannon: float = m.call(cannon_drop_chance(pay))
-	var skin: float = m.call(skin_drop_chance(pay))
+	# The port's breather passes the combat depth, as the haul rolls on it.
+	var cd: int = combat_depth if combat_depth >= 0 else pay
+	var cannon: float = m.call(cannon_drop_chance(cd))
+	var skin: float = m.call(skin_drop_chance(cd))
 	var out: Array = []
 	if variant == "don":
 		for id: String in DON_ITEMS:

@@ -197,6 +197,9 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 		return { "error": "The line is full." }
 	if not eligible(s, str(_r["nodeId"])):
 		return { "error": "Your map has not reached that raid yet." }
+	var base: String = str(_r["raidId"]).trim_suffix("_challenge")
+	if base != str(_r["raidId"]) and s.store.clear_count(s.uid, base) <= 0:
+		return { "error": "Beat the raid itself before its Challenge." }
 	if not near(str(_r["nodeId"]), p):
 		return { "error": "Sail to the raid to join it." }
 	mem.append({ "key": key, "name": s.captain_name(), "ready": false, "card": card_of(s, str(_r["raidId"])) })
@@ -633,7 +636,12 @@ func _answer(key: String, yes: bool) -> Dictionary:
 
 
 func _invite_refusal(s: Session) -> String:
-	return "" if eligible(s, str(_r["nodeId"])) else "Their map has not reached this raid."
+	if not eligible(s, str(_r["nodeId"])):
+		return "Their map has not reached this raid."
+	var base: String = str(_r["raidId"]).trim_suffix("_challenge")
+	if base != str(_r["raidId"]) and s.store.clear_count(s.uid, base) <= 0:
+		return "They have not beaten the raid itself yet."
+	return ""
 
 
 ## A captain back on the line mid-raid: back in their seat, and shown where

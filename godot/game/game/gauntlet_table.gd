@@ -483,6 +483,9 @@ func _advance() -> void:
 			_enter("dead")
 		"haul":
 			_enter("haul")
+		"refight":
+			# A dive taken up where it was left mid-fight: that same fight.
+			_descend()
 		"breather":
 			_breather()
 		"chain":
@@ -1412,8 +1415,11 @@ func _bank_view(key: String) -> Dictionary:
 	var cleared: int = int(run["roll"]["cleared"])
 	var c: Dictionary = _r["caps"][key]
 	var chest: Dictionary = Gauntlet.chest_for_depth(mini(cleared, Gauntlet.REWARD_DEPTH_CAP))
+	# Gear drops as copies, so what is held can still come (the item list is
+	# passed empty); the live offer's chest and the combat depth count, as the
+	# haul rolls them (the loot audit, 2026-10-06).
 	var odds: Array = Gauntlet.chest_odds(cleared, str(run["variant"]), false, 0.0,
-		Js.list(p.get("raid_items")), Js.list(p.get("owned_ship_skins")), 1.0, _fortune(key))
+		[], Js.list(p.get("owned_ship_skins")), Gauntlet.offer_chest_mult(Js.obj(run.get("offer"))), _fortune(key), cleared + int(run["skip"]))
 	return {
 		"chest": chest, "chestLabel": Gauntlet.chest_label(chest, str(run["variant"]), false),
 		"doubloons": float(Js.round(floor(float(run["pot"])) * float(chest["potMult"]) * Gauntlet.haul_mult(c["ups"]))),
@@ -1489,6 +1495,10 @@ func _descend() -> void:
 	var run: Dictionary = _r["run"]
 	_r.erase("job")
 	var field: Dictionary = run["peek"]
+	# Written down as the fight begins (the loot audit, 2026-10-06): a crash or
+	# a quit mid-fight resumes into this same fight, never the breather before
+	# it with a fresh look at what comes next.
+	_checkpoint("fighting", field)
 	run["peek"] = {}
 	_r["fight"] = field
 	var b: Dictionary = _r["b"]
@@ -2047,9 +2057,9 @@ func _held_note(variant: String) -> Dictionary:
 
 
 ## The dive written down as it stands at a breather.
-func _checkpoint(status: String) -> void:
+func _checkpoint(status: String, fight: Dictionary = {}) -> void:
 	var run: Dictionary = _r["run"].duplicate(true)
-	run["peek"] = {}
+	run["peek"] = fight.duplicate(true)
 	var seats: Array = []
 	for st: Dictionary in _r["b"]["seats"]:
 		if _keys_in().has(st.get("key")):
@@ -2126,7 +2136,8 @@ func _resume() -> Dictionary:
 	_r["fight"] = {}
 	_r["descent"] = {}
 	_began_ms = Time.get_ticks_msec()
-	_step("breather", [{ "t": "resume", "depth": h["depth"] }])
+	var mid: bool = str(h.get("status", "")) == "fighting" and not Js.obj(Js.obj(h["run"]).get("peek")).is_empty()
+	_step("refight" if mid else "breather", [{ "t": "resume", "depth": h["depth"] }])
 	return { "ok": true }
 
 

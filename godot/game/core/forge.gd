@@ -27,7 +27,7 @@ const NOTE_COST: float = 60.0
 const TEMPER_SCRAP: Array = [10.0, 25.0, 50.0]
 const MAX_GRADE: int = 3
 const GRADE_STEP: float = 0.10
-const SALVAGE: Dictionary = { "rare": 5.0, "epic": 10.0, "legendary": 25.0 }
+const SALVAGE: Dictionary = { "rare": 5.0, "epic": 10.0, "legendary": 25.0, "ancient": 40.0 }
 const TRANSMUTE_SCRAP: float = 25.0
 const EPIC_TO_LEGENDARY: Dictionary = {
 	"corsair_cannon": "corsair_prime_cannon", "krusts_carapace": "captains_carapace",

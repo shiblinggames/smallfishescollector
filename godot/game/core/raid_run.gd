@@ -68,10 +68,29 @@ static func open_crate(db: CaptainStore, uid: String, raid: Dictionary, fortune:
 	var rolls: int = 1 + int(Js.num(tier.get("extraRolls")))
 	var items: Array = []
 	var owned: Array = Js.list(prof.get("owned_ship_skins"))
-	for row: Dictionary in Js.list(raid.get("loot")):
+	var spec: Dictionary = Rules.data()["specialOwnedColumn"]
+	# A crate that pays one of its items, or none (the Quartermaster's Ghost:
+	# uniqueShare, the web's rule; the port had rolled every item apart).
+	var share: float = Js.num(raid.get("uniqueShare"))
+	if share > 0.0 and not Rules.web_only:
+		var pool: Array = []
+		for row0: Dictionary in Js.list(raid.get("loot")):
+			if rollable(row0, owned):
+				pool.append(row0)
+		var p0: float = minf(0.95, share * (1.0 + minf(1.0, fortune / 150.0)) * float(Js.nz(tier.get("rarityMult"), 1.0)))
+		for k0: int in rolls:
+			if not pool.is_empty() and Dice.next() < p0:
+				var got: Dictionary = pool[int(floor(Dice.next() * pool.size()))]
+				if not items.has(got):
+					items.append(got)
+	for row: Dictionary in (Js.list(raid.get("loot")) if share <= 0.0 or Rules.web_only else []):
 		# Coin rows and owned skins are passed over without a roll; every other
 		# row rolls (at 0 too), as the web's does.
 		if not rollable(row, owned):
+			continue
+		# A special already owned (the Primeval Eye) is not rolled again: it
+		# would only re-seat itself over the captain's choice (the audit).
+		if not Rules.web_only and spec.has(row["id"]) and prof.get(spec[row["id"]]) == true:
 			continue
 		var p: float = item_chance(raid, row, fortune, tier, owned, 2.0 if Gauntlet.owns(prof, "dg_kingpin_cut") else 1.0)
 		# A tier's extra rolls: each a fresh chance, the item at most once.
@@ -125,8 +144,10 @@ static func item_chance(raid: Dictionary, row: Dictionary, fortune: float, tier:
 	var challenge: bool = str(raid["raidId"]).ends_with("_challenge")
 	var flm: float = 1.0 + minf(1.0, fortune / 150.0)
 	var rarity: Dictionary = { "epic": 0.20 if challenge else 0.10, "legendary": 0.10 if challenge else 0.05, "cosmetic": 0.05 if challenge else 0.025, "ancient": 0.10 if challenge else 0.05 }
-	# Kingpin's Cut (the Don's Locker): legendaries twice as often.
-	var lm: float = legend_mult if str(row.get("rarity", "")) == "legendary" else 1.0
+	# Kingpin's Cut (the Don's Locker): legendaries twice as often (and, as
+	# the web had it, the ancients).
+	var rar: String = str(row.get("rarity", ""))
+	var lm: float = legend_mult if rar == "legendary" or (rar == "ancient" and not Rules.web_only) else 1.0
 	return minf(0.95, float(rarity.get(str(row.get("rarity", "")), 0.0)) * flm * float(Js.nz(tier.get("rarityMult"), 1.0)) * lm)
 
 
@@ -135,7 +156,13 @@ static func item_chance(raid: Dictionary, row: Dictionary, fortune: float, tier:
 static func crate_odds(raid: Dictionary, fortune: float, tier: Dictionary = {}, owned_skins: Array = [], legend_mult: float = 1.0) -> Dictionary:
 	var rolls: int = 1 + int(Js.num(tier.get("extraRolls")))
 	var out: Array = []
-	for row: Dictionary in Js.list(raid.get("loot")):
+	var share: float = Js.num(raid.get("uniqueShare"))
+	if share > 0.0 and not Rules.web_only:
+		var pool: Array = Js.list(raid.get("loot")).filter(func(r0: Dictionary) -> bool: return rollable(r0, owned_skins))
+		var p0: float = minf(0.95, share * (1.0 + minf(1.0, fortune / 150.0)) * float(Js.nz(tier.get("rarityMult"), 1.0)))
+		for r1: Dictionary in pool:
+			out.append({ "id": r1["id"], "label": r1.get("label", r1["id"]), "rarity": r1.get("rarity", ""), "chance": 1.0 - pow(1.0 - p0 / float(pool.size()), rolls), "image": r1.get("image", "") })
+	for row: Dictionary in (Js.list(raid.get("loot")) if share <= 0.0 or Rules.web_only else []):
 		var p: float = item_chance(raid, row, fortune, tier, owned_skins, legend_mult)
 		if p > 0.0:
 			out.append({ "id": row["id"], "label": row.get("label", row["id"]), "rarity": row.get("rarity", ""), "chance": 1.0 - pow(1.0 - p, rolls), "image": row.get("image", "") })

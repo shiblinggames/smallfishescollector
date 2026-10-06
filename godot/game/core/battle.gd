@@ -432,6 +432,11 @@ static func _escorts(b: Dictionary, raid: Dictionary, f: Dictionary, n: int, hp_
 		k += 1
 	k = clampi(k, 1, 4)
 	var seq: Array = Js.list(raid.get("sequence"))
+	# A raid that is its boss alone (the Quartermaster's Ghost, the Sunken
+	# Hand) has no crew to field: the boss stands alone, at the tier's weight
+	# (the loot audit, 2026-10-06: picking from the empty list crashed).
+	if seq.is_empty():
+		return
 	for j: int in range(1, k):
 		var id: Variant = seq[int(floor(Dice.next() * seq.size()))]
 		var e: Dictionary = enemy_def(raid, id)
