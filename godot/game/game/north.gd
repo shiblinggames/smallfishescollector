@@ -212,10 +212,10 @@ static func bow_left(path: Variant) -> bool:
 	var p: String = str(path).trim_prefix("/")
 	if p.contains("man-o-war") or p.contains("finnship"):
 		return true
+	# A skin's Man-o-War painting (its smaller hulls face right like the rest).
 	for sk: Dictionary in Js.list(Rules.data().get("shipSkins")):
-		for v: Variant in Js.obj(sk.get("imageByTier")).values():
-			if str(v).trim_prefix("/") == p:
-				return true
+		if str(Js.obj(sk.get("imageByTier")).get("6", "")).trim_prefix("/") == p:
+			return true
 	return false
 
 

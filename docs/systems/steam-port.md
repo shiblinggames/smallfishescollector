@@ -2101,6 +2101,20 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- THE NORTHERN CHAPTERS' OWN SEAS (Kong, 2026-10-06: on the web "each area feels very unique
+  and special to itself"; "port the web's mood but improve it in any way through Godot's
+  engine"; crossing: blend, plus the arrival banner and horn). game/chapter_look.gd holds a
+  look per bay, blended by distance from its water as the colours are (Sea._chapter): the
+  water's swell (BAY_MOOD's), the light laid over the world, a screen grade (brightness,
+  contrast, saturation) and added bloom, a haze and vignette with things drifting in the air
+  (a DeepAtmos of its own), and the bay's weather over the sea's. I clear warm green with a
+  long swell and spray; II flat jade under fog, dim green light, spores; III amber light, a
+  glow, gold dust; IV black water, heavy swell, night at noon, cold glowing specks, rain and
+  lightning; V violet-blood tempest with ash. A dive's own water sets it aside.
+- ENEMY SHIPS STAY ON THE V3 PAINTINGS (Kong, 2026-10-06: "you should be using v3 boat
+  images"). The chapter hull skins' smaller ships (enemychapter1..3 at tiers 0 to 5) are the
+  old v2-era designs, so the chapter fleets are NOT dressed in them; how to colour the fleets
+  is open. North.bow_left now counts only a skin's Man-o-War painting as bow-left.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

@@ -405,6 +405,7 @@ func _process(delta: float) -> void:
 	var clock: Dictionary = SeaClock.at(now)
 	var dark: float = clock["darkness"]
 	var stops: Array[Color] = Chart.sea_at(cam_world, dark)
+	_chapter(delta, cam_world)
 	# A gauntlet's water (BattleStage sets it for a dive's fights): the sea in
 	# that descent's own colours, eased in and out.
 	_theme_k = move_toward(_theme_k, 1.0 if not water_theme.is_empty() else 0.0, delta * 0.8)
@@ -443,6 +444,7 @@ func _process(delta: float) -> void:
 	_water.set_shader_parameter("u_shadow", shadow_k)
 	Skipper.sun(-toward * lerpf(30.0, 5.0, elev), shadow_k)
 	_water.set_shader_parameter("u_rush", clampf(_boat.velocity.length() / Boat.MAX_SPEED, 0.0, 1.0) * 0.6)
+	_water.set_shader_parameter("u_swell", lerpf(1.0, float(_ch_look.get("swell", 1.0)), _ch_k))
 	_water.set_shader_parameter("u_lantern", dark)
 
 	# Night on the solid world: dim and cool it, and let the lights pool.
@@ -453,6 +455,9 @@ func _process(delta: float) -> void:
 	_night.color = day_col.lerp(Color(0.40, 0.46, 0.64), dark)
 	# Under a squall the light goes grey; a strike lights it all.
 	_night.color = _night.color.lerp(Color(0.6, 0.64, 0.7), _storm * 0.55).lerp(Color(0.84, 0.86, 0.88), _squall.fog * 0.5).lerp(Color(1.0, 1.0, 1.0), _squall.flash * 0.6)
+	# A northern chapter's own light, less of it by night.
+	if _ch_k > 0.0:
+		_night.color = _night.color.lerp(Color(str(_ch_look["light"])), _ch_k * 0.55 * (1.0 - dark * 0.6))
 	if _theme_k > 0.0 and not _theme_last.is_empty():
 		_night.color = _night.color.lerp(_theme_last["light"], _theme_k * 0.9)
 	_sun.rotation = (-toward).angle() - PI / 2.0
@@ -798,6 +803,32 @@ func _night_water(dark: float, at: Vector2) -> void:
 	_water.set_shader_parameter("u_blooms", blooms)
 
 
+## THE NORTHERN CHAPTERS' OWN SEAS (ChapterLook): how far into a bay's water
+## the camera is (eased, and set aside while a dive has its own water), and
+## its haze, dark and drifting things (a DeepAtmos of its own).
+var _ch_k: float = 0.0
+var _ch_look: Dictionary = {}
+var _ch_atmos: DeepAtmos = null
+
+
+func _chapter(delta: float, at: Vector2) -> void:
+	var ch: Dictionary = ChapterLook.at(at)
+	if not ch.is_empty():
+		_ch_look = ch["look"]
+	var to: float = float(ch.get("k", 0.0)) * (1.0 - _theme_k)
+	_ch_k = lerpf(_ch_k, to, 1.0 - exp(-delta * 1.2))
+	if _ch_k < 0.002 and to <= 0.0:
+		_ch_k = 0.0
+	if _ch_look.is_empty():
+		return
+	if _ch_atmos == null and _ch_k > 0.01:
+		_ch_atmos = DeepAtmos.new()
+		_ch_atmos.sea = self
+		add_child(_ch_atmos)
+	if _ch_atmos != null:
+		_ch_atmos.set_look(ChapterLook.atmos(_ch_look, _ch_k))
+
+
 ## The weather (core/weather.gd's fronts): on the water, in the air, on the
 ## hull and in how she sails.
 func _weather(delta: float, now: float, at: Vector2) -> void:
@@ -816,6 +847,13 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 	var power: float = 1.0 if fx["lightning"] else 0.5
 	var fog_amt: float = float(fx["fog"])
 	var wind: float = float(fx["k"]) if not f.is_empty() and f["kind"] == "wind" else 0.0
+	# A northern chapter's own weather, over the sea's (ChapterLook).
+	if _ch_k > 0.0:
+		rain = maxf(rain, float(_ch_look["rain"]) * _ch_k)
+		cloud = maxf(cloud, float(_ch_look["rain"]) * 0.8 * _ch_k)
+		fog_amt = maxf(fog_amt, float(_ch_look["fog"]) * _ch_k)
+		if _ch_look.get("storm", false):
+			power = lerpf(power, 1.0, _ch_k)
 	# Recording a film (tests/shot.gd, FILM_CLEAR): a fair sky.
 	if OS.get_environment("FILM_CLEAR") != "":
 		rain = 0.0
@@ -885,11 +923,22 @@ func _grade(delta: float, at: Vector2, dark: float) -> void:
 	var w: Dictionary = Chart.water_at(at)
 	var g: Array = GRADES.get(str(w.get("id", "")), GRADES[""])
 	var k: float = 1.0 - exp(-delta * 0.8)
-	_env.adjustment_brightness = lerpf(_env.adjustment_brightness, float(g[0]), k)
-	_env.adjustment_contrast = lerpf(_env.adjustment_contrast, float(g[1]), k)
-	_env.adjustment_saturation = lerpf(_env.adjustment_saturation, float(g[2]) * (1.0 - dark * 0.15), k)
+	var gb: float = float(g[0])
+	var gc: float = float(g[1])
+	var gs: float = float(g[2])
+	var glow: float = 0.0
+	# A northern chapter grades the whole screen its own way.
+	if _ch_k > 0.0:
+		var cg: Array = _ch_look["grade"]
+		gb = lerpf(gb, float(cg[0]), _ch_k)
+		gc = lerpf(gc, float(cg[1]), _ch_k)
+		gs = lerpf(gs, float(cg[2]), _ch_k)
+		glow = float(_ch_look.get("glow", 0.0)) * _ch_k
+	_env.adjustment_brightness = lerpf(_env.adjustment_brightness, gb, k)
+	_env.adjustment_contrast = lerpf(_env.adjustment_contrast, gc, k)
+	_env.adjustment_saturation = lerpf(_env.adjustment_saturation, gs * (1.0 - dark * 0.15), k)
 	# Night blooms more: the lights are what is left.
-	_env.glow_intensity = lerpf(_env.glow_intensity, 0.12 + dark * 0.7, k)
+	_env.glow_intensity = lerpf(_env.glow_intensity, 0.12 + dark * 0.7 + glow, k)
 
 
 ## Where the boat is and what it has seen, saved (before any claim, too: the
