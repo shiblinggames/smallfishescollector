@@ -290,6 +290,59 @@ func _cleared_now(r: Variant) -> void:
 
 # ── Each kind ─────────────────────────────────────────────────────────────────
 
+## What the boss's crate can hold, as pictures (Kong, 2026-10-06: the drops
+## "should show the item image"): each raid item's painting and each hull
+## skin's Man-o-War (a skin shows on her only), frameless on the paper, the
+## name under it and what it is.
+func _drops(raid: Dictionary) -> void:
+	var rows: Array = []
+	for row: Dictionary in Js.list(raid.get("loot")):
+		var rid: String = str(row["id"])
+		if rid.begins_with("doubloons") or rid.begins_with("gems") or rid.begins_with("pack"):
+			continue
+		var it: Dictionary = Armory.item(rid)
+		var pic: String = ""
+		var kind: String = ""
+		if not it.is_empty():
+			pic = str(it.get("image", ""))
+			kind = str(it.get("rarity", "")).capitalize()
+		else:
+			for sk: Dictionary in Js.list(Rules.data().get("shipSkins")):
+				if sk["id"] == rid:
+					pic = str(Js.obj(sk.get("imageByTier")).get("6", sk.get("image", "")))
+					kind = "Ship skin"
+		rows.append([str(row.get("label", it.get("name", rid))), pic.trim_prefix("/"), kind])
+	if rows.is_empty():
+		return
+	Paper.text(_body, "THE CRATE MAY HOLD", "eyebrow", GOLD)
+	var flow: HFlowContainer = HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 14)
+	flow.add_theme_constant_override("v_separation", 8)
+	_body.add_child(flow)
+	for r: Array in rows:
+		var v: VBoxContainer = VBoxContainer.new()
+		v.custom_minimum_size = Vector2(118, 0)
+		v.add_theme_constant_override("separation", 0)
+		v.tooltip_text = "%s  ·  %s" % [r[0], r[2]] if r[2] != "" else str(r[0])
+		flow.add_child(v)
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = Skipper.tex(r[1]) if r[1] != "" else null
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(118, 80)
+		tr.flip_h = r[2] == "Ship skin" and North.bow_left(r[1])
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(tr)
+		var n: Label = Paper.text(v, r[0], "small", Paper.ink(), true)
+		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		n.custom_minimum_size = Vector2(118, 0)
+		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if r[2] != "":
+			var k: Label = Paper.text(v, r[2], "small", Paper.ink_soft())
+			k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			k.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
 ## The boss card: who waits, what they carry, your best, and Normal or the
 ## Challenge (the harder run hanging off this one, open once it is beaten).
 func _boss_card(det: Dictionary) -> void:
@@ -298,14 +351,7 @@ func _boss_card(det: Dictionary) -> void:
 	if not foes.is_empty():
 		Paper.stat(_body, "The run", " · ".join(PackedStringArray(foes)), Paper.ink())
 	var raid: Dictionary = Js.obj(Rules.data()["raids"].get(_n["raidId"]))
-	var drops: Array = []
-	for row: Dictionary in Js.list(raid.get("loot")):
-		var rid: String = str(row["id"])
-		if rid.begins_with("doubloons") or rid.begins_with("gems") or rid.begins_with("pack"):
-			continue
-		drops.append(str(row.get("label", rid)))
-	if not drops.is_empty():
-		Paper.stat(_body, "The crate may hold", ", ".join(PackedStringArray(drops)), GOLD)
+	_drops(raid)
 	var rec: Dictionary = Js.obj(Js.obj(sea._campaign.view.get("raidRecords")).get(_n["raidId"]))
 	var times: int = sea.session.store.clear_count(sea.session.uid, str(_n["raidId"]))
 	if times > 0:
