@@ -20,6 +20,12 @@ extends RefCounted
 ## "bounty_events" for the moments nothing else keeps (a big hit, a depth
 ## reached, a Gauntlet run ended). The catalogue is content/bounties.json
 ## (tools/export_bounties.mts). The board is the profile's "bounty_board".
+##
+## IN A CHARTER ONE BOARD FOR THE CREW (Kong, 2026-10-06; CrewRules): the
+## board, the points and the ladder are shared profile columns; every
+## captain's play counts toward it; the board is dealt for the captain
+## furthest along; a claim pays the crew's purse once; a ladder rung's ship
+## skin goes to every captain.
 
 static var _data: Dictionary = {}
 
@@ -54,7 +60,31 @@ static func rung_pay(slots: Array) -> float:
 
 ## The raids this captain has cleared (tier keys like "raid@coop" left out).
 static func _cleared(db: CaptainStore, uid: String) -> Array:
-	return db.cleared_raid_ids(uid).filter(func(r: Variant) -> bool: return not str(r).contains("@"))
+	var seen: Dictionary = {}
+	for m: Array in CrewRules.of(db, uid):
+		var cdb: CaptainStore = m[0]
+		for r: Variant in cdb.cleared_raid_ids(str(m[1])):
+			if not str(r).contains("@"):
+				seen[r] = true
+	return seen.keys()
+
+
+## Has anyone in the crew run a Gauntlet.
+static func _crew_ran(db: CaptainStore, uid: String) -> bool:
+	for m: Array in CrewRules.of(db, uid):
+		var cdb: CaptainStore = m[0]
+		if _ran_gauntlet(cdb.me(str(m[1]))):
+			return true
+	return false
+
+
+## A lifetime counter summed over the crew.
+static func _crew_counter(db: CaptainStore, uid: String, col: String) -> float:
+	var n: float = 0.0
+	for m: Array in CrewRules.of(db, uid):
+		var cdb: CaptainStore = m[0]
+		n += _counter(cdb.me(str(m[1])), col)
+	return n
 
 
 static func rung_for(cleared: Array) -> Dictionary:
@@ -164,13 +194,21 @@ static func _smallest(kind: String) -> float:
 
 static func _signals(db: CaptainStore, uid: String, since_ms: float) -> Dictionary:
 	var since: String = Js.iso(since_ms)
-	var raids: Array = Js.list(db.save.get("raidClears")).filter(func(c: Dictionary) -> bool:
-		return str(c.get("at", "")) >= since and not str(c["raid_id"]).contains("@")).map(func(c: Dictionary) -> Dictionary:
-		return { "raid_id": c["raid_id"], "elapsed_ms": c.get("ms") })
-	var voyages: Array = Js.list(db.save.get("voyages")).filter(func(v: Dictionary) -> bool:
-		return v.get("status") == "revealed" and float(v["created_ms"]) >= since_ms)
-	var events: Array = Js.list(db.save.get("bounty_events")).filter(func(e: Dictionary) -> bool: return float(e["at_ms"]) >= since_ms)
-	return { "raids": raids, "voyages": voyages, "events": events, "profile": db.me(uid) }
+	var raids: Array = []
+	var voyages: Array = []
+	var events: Array = []
+	var profiles: Array = []
+	# Every captain in the crew (a solo captain is a crew of one).
+	for m: Array in CrewRules.of(db, uid):
+		var cdb: CaptainStore = m[0]
+		raids += Js.list(cdb.save.get("raidClears")).filter(func(c: Dictionary) -> bool:
+			return str(c.get("at", "")) >= since and not str(c["raid_id"]).contains("@")).map(func(c: Dictionary) -> Dictionary:
+			return { "raid_id": c["raid_id"], "elapsed_ms": c.get("ms") })
+		voyages += Js.list(cdb.save.get("voyages")).filter(func(v: Dictionary) -> bool:
+			return v.get("status") == "revealed" and float(v["created_ms"]) >= since_ms)
+		events += Js.list(cdb.save.get("bounty_events")).filter(func(e: Dictionary) -> bool: return float(e["at_ms"]) >= since_ms)
+		profiles.append(cdb.me(str(m[1])))
+	return { "raids": raids, "voyages": voyages, "events": events, "profile": db.me(uid), "profiles": profiles }
 
 
 static func _base_of(id: String) -> String:
@@ -217,7 +255,10 @@ static func measure(m: Dictionary, s: Dictionary, baseline: float) -> float:
 		"voyage_route":
 			return float((s["voyages"] as Array).filter(func(v: Dictionary) -> bool: return v["route"] == m["route"]).size())
 		"counter":
-			return maxf(0.0, _counter(s["profile"], str(m["column"])) - baseline)
+			var sum: float = 0.0
+			for p: Dictionary in Js.list(s.get("profiles", [s["profile"]])):
+				sum += _counter(p, str(m["column"]))
+			return maxf(0.0, sum - baseline)
 		"event":
 			return float((s["events"] as Array).filter(func(e: Dictionary) -> bool: return e["kind"] == m["eventKind"] and float(e["value"]) >= float(m["atLeast"])).size())
 	return 0.0
@@ -235,11 +276,11 @@ static func _counter(p: Dictionary, col: String) -> float:
 
 static func _deal(db: CaptainStore, uid: String, rung: Dictionary, n: float) -> Dictionary:
 	var p: Dictionary = db.me(uid)
-	var picked: Array = roll("%s:board-%d" % [uid, int(n)], rung["slots"], _cleared(db, uid), _ran_gauntlet(p))
+	var picked: Array = roll("%s:board-%d" % [uid, int(n)], rung["slots"], _cleared(db, uid), _crew_ran(db, uid))
 	var baselines: Dictionary = {}
 	for b: Dictionary in picked:
 		if b["meter"]["kind"] == "counter":
-			baselines[b["id"]] = _counter(p, str(b["meter"]["column"]))
+			baselines[b["id"]] = _crew_counter(db, uid, str(b["meter"]["column"]))
 	var board: Dictionary = {
 		"n": n, "ids": picked.map(func(b: Dictionary) -> String: return b["id"]), "baselines": baselines,
 		"claimed": picked.map(func(_b: Dictionary) -> bool: return false), "assigned_ms": Clock.now_ms(), "reroll_used": false,
@@ -364,7 +405,7 @@ static func reroll(db: CaptainStore, uid: String, id: String) -> Dictionary:
 	var old: Dictionary = by_id(id)
 	var p: Dictionary = db.me(uid)
 	var cleared: Array = _cleared(db, uid)
-	var ran: bool = _ran_gauntlet(p)
+	var ran: bool = _crew_ran(db, uid)
 	var others: Array = ids.filter(func(x: Variant) -> bool: return x != id).map(func(x: Variant) -> Dictionary: return by_id(str(x)))
 	var pool: Array = (data()["bounties"] as Array).filter(func(b: Dictionary) -> bool:
 		return b["tier"] == old["tier"] and b["id"] != id and not ids.has(b["id"]) \
@@ -377,7 +418,7 @@ static func reroll(db: CaptainStore, uid: String, id: String) -> Dictionary:
 	var baselines: Dictionary = Js.obj(row.get("baselines")).duplicate()
 	baselines.erase(id)
 	if rep["meter"]["kind"] == "counter":
-		baselines[rep["id"]] = _counter(p, str(rep["meter"]["column"]))
+		baselines[rep["id"]] = _crew_counter(db, uid, str(rep["meter"]["column"]))
 	row["ids"] = ids
 	row["baselines"] = baselines
 	row["reroll_used"] = true
@@ -401,9 +442,14 @@ static func claim_milestone(db: CaptainStore, uid: String) -> Dictionary:
 		db.grant(uid, "doubloons", d)
 		db.ledger(uid, d, "Bounty milestone")
 	var skin: Variant = null
-	if m.get("shipSkinId") != null and not Js.list(p.get("owned_ship_skins")).has(m["shipSkinId"]):
-		db.add_to_list(uid, "owned_ship_skins", m["shipSkinId"])
-		skin = m["shipSkinId"]
+	# The rung's ship skin: to every captain in the crew.
+	if m.get("shipSkinId") != null:
+		for cm: Array in CrewRules.of(db, uid):
+			var cdb: CaptainStore = cm[0]
+			if not Js.list(cdb.me(str(cm[1])).get("owned_ship_skins")).has(m["shipSkinId"]):
+				cdb.add_to_list(str(cm[1]), "owned_ship_skins", m["shipSkinId"])
+				if cdb == db:
+					skin = m["shipSkinId"]
 	return { "ok": true, "label": m["label"], "doubloons": d, "shipSkinId": skin }
 
 

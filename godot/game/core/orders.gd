@@ -16,6 +16,11 @@ extends RefCounted
 ##
 ## Kept on the profile as "orders": { board, master, level, mlevel, p, claimed,
 ## mp, mclaimed }. The web's per-date rows stay for the parity run only.
+##
+## IN A CHARTER ONE BOARD FOR THE CREW (Kong, 2026-10-06; CrewRules): "orders"
+## is a shared profile column, every captain's catches count, a board is dealt
+## for the crew's highest Fishing level, an order's doubloons go to the purse
+## once, and a sweep or a Master puts a crate in EVERY captain's stash.
 
 const MASTER_WEIGHTS: Array = [["wooden", 25.0], ["metal", 35.0], ["gold", 28.0], ["diamond", 12.0]]
 const WATERS: Array = ["ancient_deep", "abyss", "deep", "open_waters", "shallows"]
@@ -41,6 +46,18 @@ static func _level(p: Dictionary) -> float:
 	return float(Rules.level_from_xp(Js.num(p.get("fishing_xp"))))
 
 
+## The level the board is dealt for: the crew's highest (a solo captain's own).
+static func _lvl(db: CaptainStore, uid: String) -> float:
+	return CrewRules.top_fishing_level(db, uid)
+
+
+## A crate in every crew stash, and the stat counted for each.
+static func _crew_crate(db: CaptainStore, uid: String, tier: String, stat: String) -> void:
+	for m: Array in CrewRules.of(db, uid):
+		_stash(m[0], str(m[1]), tier)
+		(m[0] as CaptainStore).bump_stat(str(m[1]), stat, 1.0)
+
+
 ## The board's three orders (pinned to the level it was dealt at).
 static func board(o: Dictionary) -> Array:
 	var key: String = "board-%d" % int(o["board"])
@@ -61,7 +78,7 @@ static func master(o: Dictionary, level: float) -> Dictionary:
 static func _pinned(db: CaptainStore, uid: String) -> Dictionary:
 	var p: Dictionary = db.me(uid)
 	var o: Dictionary = _o(p)
-	var lvl: float = _level(p)
+	var lvl: float = _lvl(db, uid)
 	var dirty: bool = not p.has("orders")
 	if o.get("level") == null:
 		o["level"] = lvl
@@ -76,7 +93,7 @@ static func _pinned(db: CaptainStore, uid: String) -> Dictionary:
 
 static func state(db: CaptainStore, uid: String) -> Dictionary:
 	var o: Dictionary = _pinned(db, uid)
-	var lvl: float = _level(db.me(uid))
+	var lvl: float = _lvl(db, uid)
 	var m: Dictionary = master(o, lvl)
 	return {
 		"board": int(o["board"]) + 1, "orders": board(o), "progress": o["p"], "claimed": o["claimed"],
@@ -109,7 +126,7 @@ static func count(db: CaptainStore, uid: String, habitat: String, rarity: float,
 		o["p"][i] = minf(was + Daily.increment(c, habitat, rarity, sell_value, qty, perfect), float(c["target"]))
 		if was < float(c["target"]) and float(o["p"][i]) >= float(c["target"]):
 			done.append(c["label"])
-	var m: Dictionary = master(o, _level(db.me(uid)))
+	var m: Dictionary = master(o, _lvl(db, uid))
 	if not m.is_empty() and o["mclaimed"] != true:
 		var was: float = float(o["mp"])
 		o["mp"] = minf(was + Daily.increment(m, habitat, rarity, sell_value, qty, perfect), float(m["target"]))
@@ -124,7 +141,7 @@ static func claim(db: CaptainStore, uid: String, i: int) -> Dictionary:
 	var o: Dictionary = _pinned(db, uid)
 	var p: Dictionary = db.me(uid)
 	if i == 3:
-		var m: Dictionary = master(o, _level(p))
+		var m: Dictionary = master(o, _lvl(db, uid))
 		if m.is_empty():
 			return { "error": "The Master order opens at Fishing %d." % int(Rules.data()["daily"]["masterMinLevel"]) }
 		if float(o["mp"]) < float(m["target"]):
@@ -134,10 +151,9 @@ static func claim(db: CaptainStore, uid: String, i: int) -> Dictionary:
 		o["master"] = float(o["master"]) + 1.0
 		o["mp"] = 0.0
 		o["mclaimed"] = false
-		o["mlevel"] = _level(p)
+		o["mlevel"] = _lvl(db, uid)
 		db.update_profile(uid, { "orders": o })
-		_stash(db, uid, tier)
-		db.bump_stat(uid, "daily_master_cleared", 1.0)
+		_crew_crate(db, uid, tier, "daily_master_cleared")
 		return { "ok": true, "crate": tier }
 	if i < 0 or i > 2:
 		return { "error": "No such order." }
@@ -158,8 +174,7 @@ static func sweep(db: CaptainStore, uid: String) -> Dictionary:
 	var o: Dictionary = _pinned(db, uid)
 	if not (o["claimed"] as Array).all(func(c: Variant) -> bool: return c == true):
 		return { "error": "Claim all three orders first." }
-	var p: Dictionary = db.me(uid)
-	var lvl: float = _level(p)
+	var lvl: float = _lvl(db, uid)
 	var water: String = "shallows"
 	for w: String in WATERS:
 		if lvl >= float(Daily.ZONE_MIN_LEVEL.get(w, 999)):
@@ -171,8 +186,7 @@ static func sweep(db: CaptainStore, uid: String) -> Dictionary:
 	o["claimed"] = [false, false, false]
 	o["level"] = lvl
 	db.update_profile(uid, { "orders": o })
-	_stash(db, uid, tier)
-	db.bump_stat(uid, "daily_challenge_sweeps", 1.0)
+	_crew_crate(db, uid, tier, "daily_challenge_sweeps")
 	return { "ok": true, "crate": tier }
 
 

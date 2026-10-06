@@ -50,7 +50,12 @@ const SHARED_PROFILE: Array[String] = [
 	"zone_shallows_rewarded", "zone_open_waters_rewarded", "zone_deep_rewarded", "zone_abyss_rewarded",
 	"ancient_catches", "ancient_vigil", "lifetime_species", "lifetime_species_count",
 	"sea_explored", "portal_tier",
+	# One crew board (Kong, 2026-10-06): the bounties and the day's orders.
+	"bounty_board", "bounty_points", "bounty_milestones_claimed", "orders",
 ]
+## Rules that reach every captain's own save (a skin or a crate for each), so
+## every berth is written and sent.
+const CREW_WIDE: Array[String] = ["claimBountyMilestone", "claimOrder", "sweepOrders"]
 const LEDGER_KEEP: int = 400
 static var dir_override: String = ""
 
@@ -205,8 +210,20 @@ func session_for(key: String) -> Session:
 
 func _adopt_session(key: String, s: Session) -> void:
 	sessions[key] = s
+	CrewRules.crew_of = _crew_for
 	s.writer = func() -> void: write(key)
 	s.charter = self
+
+
+## The crew a captain of this Charter sails with, for the shared rules.
+func _crew_for(uid: String) -> Array:
+	var out: Array = []
+	var mine: bool = false
+	for k: String in sessions:
+		var s: Session = sessions[k]
+		out.append([s.store, s.uid])
+		mine = mine or s.uid == uid
+	return out if mine else []
 
 
 func set_sail() -> void:
@@ -348,6 +365,10 @@ func run(s: Session, op: String, args: Array) -> Variant:
 			_shared()["golden_by"][str(k)] = who
 	# Only a change to what the crew shares goes out to the crew (Kong's audit,
 	# 2026-10-06: every action used to send every crewmate their whole save).
+	if CREW_WIDE.has(op):
+		_spread("")
+		write()
+		return r
 	if _shared().hash() != shared_before:
 		_spread(key)
 	write(key)

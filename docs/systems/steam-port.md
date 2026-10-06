@@ -2064,7 +2064,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     has reached it, and a gauntlet only once they have opened it themselves.
   - THE NEARBY FISHING BONUS: NOT A NUMBER (Kong: "make group fishing more fun and
     interesting ... not basic xp boost stuff"). To plan with Kong before anything is built.
-  STILL NOT YET: the shared daily and bounty boards, and a first-run setup beyond the name.
+  - ONE CREW BOARD (Kong, 2026-10-06), bounties and the day's orders alike (core/crew_rules.gd:
+    the open Charter tells the rules who is aboard; a solo captain is a crew of one, so the
+    parity run is untouched). The board, its points and ladder, and "orders" are shared
+    profile columns. Every captain's play counts (raid clears, voyages, bounty events and
+    counters summed over the crew; any catch counts on the orders). The board is dealt for the
+    captain FURTHEST ALONG (the bounty rung by any captain's clears, the orders by the crew's
+    highest Fishing level). Anyone claims; an order's or bounty's doubloons go to the purse
+    once (the ledger names the claimer). Bounty points are one crew ladder: its doubloons
+    land in the purse once, its ship skin goes to EVERY captain, and the ranks read off the
+    crew's points. A sweep of the orders or a Master order puts a crate in EVERY captain's
+    stash and counts for every captain's sweep badges.
+  STILL NOT YET: a first-run setup beyond the name.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

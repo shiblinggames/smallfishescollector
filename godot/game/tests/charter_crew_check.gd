@@ -57,6 +57,44 @@ func _init() -> void:
 	check((c._chest()["log"] as Array).size() == 6, "the chest's log names every move")
 	check(Js.obj(Js.obj(cal.save.get("charter")).get("chest")).get("scrap") == 15.0, "every captain sees the chest")
 
+	# ── One crew board: bounties and the day's orders ──
+	cal.store.add_clear(cal.uid, "captain_krust", 300000.0)
+	var bs: Dictionary = await c.run(a, "bountyState", [])
+	check(bs.get("unlocked", false), "Cal's Chapter I clear opens the crew's bounty board for Anna too")
+	var bs2: Dictionary = await c.run(b, "bountyState", [])
+	check(Js.list(bs.get("bounties")).size() > 0 and JSON.stringify(bs["bounties"].map(func(x: Dictionary) -> String: return x["id"])) == JSON.stringify(bs2["bounties"].map(func(x: Dictionary) -> String: return x["id"])), "Anna and Ben see the same board")
+	var os: Dictionary = await c.run(a, "ordersState", [])
+	var first: Dictionary = os["orders"][0]
+	# Ben's catches count on the board Anna sees.
+	c._lend(b)
+	for k: int in 40:
+		Orders.count(b.store, b.uid, str(first.get("zone", "shallows")) if first.get("zone") != null else "shallows", 5.0, 500.0, 1.0, true)
+	c._take(b)
+	c._spread("")
+	var os2: Dictionary = await c.run(a, "ordersState", [])
+	check(float(os2["progress"][0]) > 0.0, "Ben's catches move the crew's orders")
+	var o: Dictionary = Js.obj(a.profile()["orders"]).duplicate(true)
+	o["claimed"] = [true, true, true]
+	c._shared()["profile"]["orders"] = o
+	c._spread("")
+	var crates0: Array = []
+	for s0: Session in [a, b]:
+		var st0: Dictionary = Js.obj(s0.profile().get("crate_stash"))
+		var n0: float = 0.0
+		for t0: Variant in st0:
+			n0 += Js.num(st0[t0])
+		crates0.append(n0)
+	check(not (await c.run(a, "sweepOrders", [])).has("error"), "Anna sweeps the crew's board")
+	var i0: int = 0
+	for s1: Session in [a, b]:
+		var st1: Dictionary = Js.obj(s1.profile().get("crate_stash"))
+		var n1: float = 0.0
+		for t1: Variant in st1:
+			n1 += Js.num(st1[t1])
+		check(n1 == crates0[i0] + 1.0, "a sweep puts a crate in every captain's stash (%s)" % s1.captain_name())
+		i0 += 1
+	check(int(Js.num(Js.obj(b.profile()["orders"]).get("board"))) == int(Js.num(o.get("board"))) + 1, "and a new crew board is dealt")
+
 	# ── Release and handover ──
 	check(c.release("anna-key") != "", "the founder cannot release herself")
 	check(c.release("cal-key") == "", "Anna releases Cal's berth")
