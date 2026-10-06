@@ -948,7 +948,9 @@ var _chart_fx: ChartGainFx
 
 
 ## The northern fog lifting for the first time: what it pays rises off that
-## water and pours into the Navigation bar (the rules pay it on the next save).
+## water as a small word, and the Navigation bar fills as the rules pay it on
+## the save it brings forward (Kong, 2026-10-06: a flight for every patch would
+## be too much; small +XP and the bar filling are enough).
 func _on_charted(cells: Array) -> void:
 	if Rules.web_only or _chart_fx == null:
 		return
@@ -965,8 +967,7 @@ func _on_charted(cells: Array) -> void:
 		return
 	var at: Vector2 = _world.get_global_transform_with_canvas() * (c / float(n))
 	_chart_fx.word(at, Charting.words(xp))
-	_hud.nav_gain(xp, at, clampf(0.25 + xp / 12.0, 0.3, 1.2))
-	# Saved (and paid) in a moment, so the bar rises as the motes land.
+	# Saved (and paid) in a moment, so the bar fills right after.
 	_save_t = maxf(_save_t, 4.4)
 
 
