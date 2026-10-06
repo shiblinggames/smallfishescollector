@@ -17,6 +17,7 @@ var _last: Dictionary = {}
 var _opened_seq: int = -1
 var _screen: ReadyScreen = null
 var _join: Button = null
+var _rang: Array = [-1]
 
 
 func _ready() -> void:
@@ -65,6 +66,39 @@ func _on_table(st: Dictionary) -> void:
 			_close()
 
 
+## An invite to this captain on the banner: who is asking, and On my way
+## (the place pinned on the compass, a road to it on the water: they sail
+## there themselves) or Not now. A chime the first time it arrives.
+static func invite_block(body: VBoxContainer, st: Dictionary, my_key: String, by: String, what: String, sea: Sea, op: String, pin_id: String, rang: Array) -> void:
+	var inv: String = str(Js.obj(st.get("invites")).get(my_key, ""))
+	if inv == "":
+		return
+	if inv == "asked":
+		if int(rang[0]) != int(Js.num(st.get("seq"))):
+			rang[0] = int(Js.num(st.get("seq")))
+			Sound.bell()
+		Kit.text(body, "%s wants you in the line for %s." % [by, what], "body_strong", Kit.GOLD, true)
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		body.add_child(row)
+		var go: Button = Kit.button("On my way", "primary")
+		go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		go.pressed.connect(func() -> void:
+			go.disabled = true
+			await sea.session.act(op, ["answer", true])
+			if sea._compass != null:
+				sea._compass.pinned = pin_id
+			sea._hud.toast("Pinned on your compass. Sail there to join."))
+		row.add_child(go)
+		var no: Button = Kit.button("Not now", "secondary")
+		no.pressed.connect(func() -> void:
+			no.disabled = true
+			sea.session.act(op, ["answer", false]))
+		row.add_child(no)
+	elif inv == "coming":
+		Kit.text(body, "On your way. It is pinned on your compass.", "small", Kit.GOLD, true)
+
+
 func _close() -> void:
 	_join = null
 	if _card != null:
@@ -101,6 +135,7 @@ func _paint(st: Dictionary) -> void:
 	Kit.text(_body, "%s is forming a raid" % by, "small", Dossier.SOFT)
 	Kit.text(_body, str(raid.get("raidTitle", node.get("label", "A raid"))), "title")
 	Kit.text(_body, "In the line: %s  ·  %d of %d seats" % [", ".join(PackedStringArray(names)), names.size(), RaidTable.MAX_SEATS], "small", Dossier.SOFT, true)
+	invite_block(_body, st, _my_key(), by, str(raid.get("raidTitle", "a raid")), sea, "raidTable", "muster", _rang)
 	_left = null
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)

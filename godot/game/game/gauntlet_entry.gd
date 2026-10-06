@@ -158,10 +158,15 @@ func _paint() -> void:
 	seats.size = Vector2(w - right_w - pad * 2.0 - 24.0, h - 206 - 104)
 	seats.add_theme_constant_override("separation", 10)
 	_body.add_child(seats)
+	# The crewmates aboard but not in the line, each in an open seat.
+	var crew: Array = Js.list(_st.get("crew")) if table.solo == null else []
+	var pool: Vector2 = GauntletTable.maelstrom_of(v)
 	for i: int in GauntletTable.MAX_SEATS:
 		var sc: DiveSeat = DiveSeat.new()
 		sc.solo = table.solo != null
 		sc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if i >= members.size() and i - members.size() < crew.size():
+			ReadyScreen.invite_seat(sc, crew[i - members.size()], sea, pool, func(a: Array) -> void: _act(a))
 		if i < members.size():
 			var m: Dictionary = members[i]
 			sc.member = m

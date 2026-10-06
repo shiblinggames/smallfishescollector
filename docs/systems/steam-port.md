@@ -2101,6 +2101,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- INVITES TO A RAID OR A DIVE (Kong, 2026-10-06: "an option to invite them and they get a
+  notification"; "no automatic sailing. They still will have to sail there"). The tables
+  (RaidTable/GauntletTable "invite" and "answer", CrewNet sets `aboard`) list in the muster
+  state every crewmate aboard but not in the line ("crew": can they come, and their answer:
+  asked, coming, no). ON THE ENTRY SCREEN each open seat holds one of them: name, how far
+  off they are in sailing time ("4 min away", "here"), and Invite for any captain in the
+  line; then "Asked · waiting for an answer", "On the way · 3 min", or "Not now" with Ask
+  again. A crewmate who cannot come says why in the seat instead ("Their map has not
+  reached this raid", "They have not opened this descent yet", or for a dive left on Solo
+  "Switch the dive to Co-op to bring the crew"). THE ONE ASKED gets the banner with a chime:
+  "Anna wants you in the line for Corsair's Reckoning", On my way (the raid or maelstrom is
+  pinned on their compass with the gold road on the water, on whichever side of the reef
+  they are; they sail there and Join as before) or Not now. Joining clears the invite.
 - WEATHER THAT FEELS LIKE WEATHER (Kong, 2026-10-06: "does weather feel like weather?"; he
   took 1 to 4 of: rain on the water, wind you can see, seeing a front coming, lightning you
   see). game/weather_fx.gd, fed by Sea._weather, all drawn in code: RAIN RINGS open on the

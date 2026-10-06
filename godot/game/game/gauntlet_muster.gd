@@ -25,6 +25,9 @@ func _ready() -> void:
 		_on_table(table.state)
 
 
+var _rang: Array = [-1]
+
+
 func _member(st: Dictionary) -> bool:
 	return Js.list(st.get("members")).any(func(m: Dictionary) -> bool: return m["key"] == my_key) or Js.obj(st.get("caps")).has(my_key)
 
@@ -87,6 +90,7 @@ func _paint(st: Dictionary) -> void:
 	Kit.text(body, "%s is gathering a %s dive" % [by, "co-op" if str(st.get("mode", "solo")) == "coop" else "solo"], "small", Dossier.SOFT)
 	Kit.text(body, str(Gauntlet.NAMES.get(str(st.get("variant", "davy")), "")), "title")
 	Kit.text(body, "In the line: %s  ·  %d of %d" % [", ".join(PackedStringArray(names)), names.size(), GauntletTable.MAX_SEATS], "small", Dossier.SOFT, true)
+	RaidMuster.invite_block(body, st, my_key, by, str(Gauntlet.NAMES.get(str(st.get("variant", "davy")), "a dive")), sea, "gauntletTable", "dive", _rang)
 	if names.size() < GauntletTable.MAX_SEATS:
 		var jn: Button = Kit.button("Join the dive", "primary")
 		_join = jn

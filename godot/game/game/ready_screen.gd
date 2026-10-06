@@ -162,10 +162,15 @@ func _paint() -> void:
 	seats.size = Vector2(w - right_w - pad * 2.0 - 24.0, h - 206 - 104)
 	seats.add_theme_constant_override("separation", 10)
 	_body.add_child(seats)
+	# The crewmates aboard but not in the line, each in an open seat.
+	var crew: Array = Js.list(_st.get("crew")) if table != null else []
+	var dock: Vector2 = RaidTable.dock_of(str(_st.get("nodeId", "")))
 	for i: int in RaidTable.MAX_SEATS:
 		var sc: SeatCard = SeatCard.new()
 		sc.solo = table == null
 		sc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if i >= members.size() and i - members.size() < crew.size():
+			invite_seat(sc, crew[i - members.size()], sea, dock, _act)
 		if i < members.size():
 			var m: Dictionary = members[i]
 			sc.member = m
@@ -229,6 +234,42 @@ func _paint() -> void:
 		_button(btns, "Leave", "secondary", func() -> void: _act(["leave"]))
 		_button(btns, "Not ready" if my_ready else "Ready", "secondary" if my_ready else "primary", func() -> void: _act(["ready", not my_ready]))
 	Pane.set_night(_body, true)
+
+
+## An open seat given to a crewmate aboard (the table's "crew" row): their
+## name and where things stand, and Invite (or Ask again) for any captain in
+## the line. `to` is where the line forms (for how far off they are);
+## `act` sends ["invite", key].
+static func invite_seat(sc: SeatCard, c: Dictionary, sea: Sea, to: Vector2, act: Callable) -> void:
+	var state: String = str(c.get("state", ""))
+	var can: String = str(c.get("can", ""))
+	var away: String = ""
+	if sea != null and sea._mates.has(c["key"]):
+		var d: float = (sea._mates[c["key"]] as Node2D).position.distance_to(to)
+		var s: float = d / maxf(1.0, Boat.SPEED * 0.92)
+		away = "here" if d < RaidTable.NEAR else ("%s away" % ("%ds" % int(ceil(s)) if s < 60.0 else "%d min" % int(round(s / 60.0))))
+	var line: String = away
+	match state:
+		"asked": line = "Asked  ·  waiting for an answer"
+		"coming": line = "On the way  ·  %s" % away if away != "" else "On the way"
+		"no": line = "Not now"
+	if can != "":
+		line = can
+	sc.invitee = { "name": c["name"], "line": line, "faint": can != "" }
+	if can != "" or state == "coming":
+		return
+	var b: Button = Kit.button("Ask again" if state == "no" else ("Invited" if state == "asked" else "Invite"), "primary" if state == "" else "secondary", "small")
+	b.disabled = state == "asked"
+	b.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	b.offset_left = -60
+	b.offset_right = 60
+	b.offset_top = -64
+	b.offset_bottom = -30
+	b.pressed.connect(func() -> void:
+		b.disabled = true
+		Sound.plip()
+		act.call(["invite", c["key"]]))
+	sc.add_child(b)
 
 
 static func _terms(tier: String, tc: Dictionary) -> String:
@@ -334,6 +375,8 @@ class SeatCard:
 	var ship_tex: Texture2D
 	var ship_name: String = "Ship"
 	var crew_tex: Array = []
+	## An open seat with a crewmate aboard to ask: { name, line, faint }.
+	var invitee: Dictionary = {}
 	var _frames: int = 0
 
 	# A texture first loaded in _draw is white until the next frame: draw again.
@@ -344,6 +387,13 @@ class SeatCard:
 
 	func _draw() -> void:
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
+		if member.is_empty() and not invitee.is_empty():
+			# A crewmate aboard, to be asked: their name and where things stand.
+			_dashed(r.grow(-1.0))
+			BattleLook.say(self, Kit.font("karla", 600), r.size.x / 2.0, r.size.y * 0.3, "Open seat", 12, Dossier.FAINT)
+			BattleLook.say(self, Kit.font("cinzel", 700), r.size.x / 2.0, r.size.y * 0.42, str(invitee.get("name", "")), 18, Dossier.INK)
+			BattleLook.say(self, Kit.font("karla", 600), r.size.x / 2.0, r.size.y * 0.42 + 22.0, str(invitee.get("line", "")), 12, Dossier.FAINT if invitee.get("faint", false) else Dossier.SOFT)
+			return
 		if member.is_empty():
 			_dashed(r.grow(-1.0))
 			BattleLook.say(self, Kit.font("cinzel", 700), r.size.x / 2.0, r.size.y * 0.46, "Open seat", 16, Color(Dossier.SOFT, 0.7))

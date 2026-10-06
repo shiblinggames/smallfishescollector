@@ -112,6 +112,10 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 				m["ready"] = false
 			_push()
 			return { "ok": true }
+		"invite":
+			return _invite(key, str(payload))
+		"answer":
+			return _answer(key, payload == true)
 		"plan":
 			return _plan(key, Js.obj(payload))
 		"played":
@@ -161,7 +165,7 @@ func _call(key: String, s: Session, p: Dictionary) -> Dictionary:
 	if not near(node_id, p):
 		return { "error": "Sail to the raid to call the crew to it." }
 	_r = { "phase": "muster", "seq": int(_r["seq"]) + 1, "left": -1.0, "raidId": raid_id, "nodeId": node_id, "by": key, "tier": "normal",
-		"members": [{ "key": key, "name": s.captain_name(), "ready": true, "card": card_of(s, raid_id) }], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "tidePicks": {}, "gone": {}, "result": "" }
+		"members": [{ "key": key, "name": s.captain_name(), "ready": true, "card": card_of(s, raid_id) }], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "tidePicks": {}, "gone": {}, "result": "", "invites": {} }
 	_push()
 	return { "ok": true }
 
@@ -196,6 +200,8 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 	if not near(str(_r["nodeId"]), p):
 		return { "error": "Sail to the raid to join it." }
 	mem.append({ "key": key, "name": s.captain_name(), "ready": false, "card": card_of(s, str(_r["raidId"])) })
+	if _r.has("invites"):
+		_r["invites"].erase(key)
 	_push()
 	return { "ok": true }
 
@@ -523,6 +529,7 @@ func _process(delta: float) -> void:
 func _push() -> void:
 	_clock()
 	if _r["phase"] == "muster":
+		_r["crew"] = _crew_view()
 		_r["tiers"] = tiers_open(Js.list(_r.get("members")))
 		if str(_r["tiers"].get(_r.get("tier", "normal"), "")) != "":
 			_r["tier"] = "normal"
@@ -570,6 +577,63 @@ func _clock() -> void:
 
 func _waited() -> bool:
 	return Time.get_ticks_msec() - _phase_ms >= int((AFK_WAIT - 5.0) * 1000.0)
+
+
+# ── Invites (Kong, 2026-10-06: "an option to invite them and they get a
+#    notification"; no sailing for them: they still sail there) ─────────────
+
+## Who is aboard the Charter now ([{ key, name }]; CrewNet sets it).
+var aboard: Callable = Callable()
+
+
+## The crewmates aboard but not in the line: each with whether they can come
+## ("" or why not) and what they said to an invite ("", asked, coming, no).
+func _crew_view() -> Array:
+	var out: Array = []
+	if not aboard.is_valid():
+		return out
+	var inv: Dictionary = Js.obj(_r.get("invites"))
+	for a: Dictionary in aboard.call():
+		var k: String = str(a["key"])
+		if (_r["members"] as Array).any(func(m: Dictionary) -> bool: return m["key"] == k):
+			continue
+		var s: Session = _session(k)
+		out.append({ "key": k, "name": a["name"], "can": _invite_refusal(s) if s != null else "Not aboard.", "state": str(inv.get(k, "")) })
+	return out
+
+
+## A captain in the line asks a crewmate aboard to come.
+func _invite(key: String, who: String) -> Dictionary:
+	if _r["phase"] != "muster":
+		return { "error": "Not now." }
+	if not (_r["members"] as Array).any(func(m: Dictionary) -> bool: return m["key"] == key):
+		return { "error": "Only a captain in the line can ask." }
+	var row: Dictionary = {}
+	for c: Dictionary in _crew_view():
+		if c["key"] == who:
+			row = c
+	if row.is_empty():
+		return { "error": "They are not aboard." }
+	if str(row["can"]) != "":
+		return { "error": str(row["can"]) }
+	if not _r.has("invites"):
+		_r["invites"] = {}
+	_r["invites"][who] = "asked"
+	_push()
+	return { "ok": true }
+
+
+## An invited captain's answer: on their way, or not now.
+func _answer(key: String, yes: bool) -> Dictionary:
+	if _r["phase"] != "muster" or not Js.obj(_r.get("invites")).has(key):
+		return { "ok": true }
+	_r["invites"][key] = "coming" if yes else "no"
+	_push()
+	return { "ok": true }
+
+
+func _invite_refusal(s: Session) -> String:
+	return "" if eligible(s, str(_r["nodeId"])) else "Their map has not reached this raid."
 
 
 ## A captain back on the line mid-raid: back in their seat, and shown where

@@ -74,6 +74,8 @@ func _ready() -> void:
 	add_child(raids)
 	gauntlets = GauntletTable.new()
 	add_child(gauntlets)
+	raids.aboard = _aboard
+	gauntlets.aboard = _aboard
 	fishing = CrewFishing.new()
 	fishing.name = "CrewFishing"
 	add_child(fishing)
@@ -510,6 +512,17 @@ func _req(n: int, op: String, args: Array) -> void:
 		r = { "error": "That is not in this build yet." }
 	s.persist()
 	_res.rpc_id(id, n, r, _ship(s))
+
+
+## Who is aboard now, by name (for the tables' invites).
+func _aboard() -> Array:
+	var out: Array = []
+	if charter == null:
+		return out
+	for id: Variant in _members:
+		var k: String = _members[id]
+		out.append({ "key": k, "name": str(charter.berth_of(k).get("name", "A crewmate")) })
+	return out
 
 
 ## A captain's save to send to their own game. The founder keeps no copy of

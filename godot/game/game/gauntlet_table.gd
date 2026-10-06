@@ -121,6 +121,8 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 		"contract": return _contract_vote(key, int(Js.num(p)))
 		"mark": return _mark(key, str(p))
 		"vote": return _vote(key, str(p))
+		"invite": return _invite(key, str(p))
+		"answer": return _answer(key, p == true)
 		"home": return _home(key)
 		"nudge": return _nudge(key)
 	return { "error": "There is no such order." }
@@ -166,7 +168,7 @@ func _call(key: String, s: Session, p: Dictionary) -> Dictionary:
 	if solo == null and not near(variant, p):
 		return { "error": "Sail to the maelstrom to call the crew to it." }
 	_r = { "phase": "muster", "seq": int(_r["seq"]) + 1, "variant": variant, "by": key, "mode": "solo", "resume": false,
-		"members": [_member(key, s, variant, true)], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "gone": {}, "result": "" }
+		"members": [_member(key, s, variant, true)], "ev": [], "plans": {}, "acks": {}, "flareRes": {}, "gone": {}, "result": "", "invites": {} }
 	_r["held"] = _held_note(variant)
 	_push()
 	return { "ok": true }
@@ -212,6 +214,8 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 	if not near(str(_r["variant"]), p):
 		return { "error": "Sail to the maelstrom to join the dive." }
 	mem.append(_member(key, s, str(_r["variant"]), false))
+	if _r.has("invites"):
+		_r["invites"].erase(key)
 	_push()
 	return { "ok": true }
 
@@ -1753,6 +1757,8 @@ func _settle() -> void:
 
 func _push() -> void:
 	_clock()
+	if str(_r.get("phase", "")) == "muster":
+		_r["crew"] = _crew_view()
 	var pub: Dictionary = _r.duplicate(true)
 	if pub.has("run"):
 		# Kept on the founder's game: the next fight before it is fought.
@@ -1868,6 +1874,66 @@ func _nudge(key: String) -> Dictionary:
 				if not _r["acks"].has(k):
 					_home(k)
 	return { "ok": true }
+
+
+# ── Invites (Kong, 2026-10-06: "an option to invite them and they get a
+#    notification"; no sailing for them: they still sail there) ─────────────
+
+## Who is aboard the Charter now ([{ key, name }]; CrewNet sets it).
+var aboard: Callable = Callable()
+
+
+## The crewmates aboard but not in the line: each with whether they can come
+## ("" or why not) and what they said to an invite ("", asked, coming, no).
+func _crew_view() -> Array:
+	var out: Array = []
+	if not aboard.is_valid():
+		return out
+	var inv: Dictionary = Js.obj(_r.get("invites"))
+	for a: Dictionary in aboard.call():
+		var k: String = str(a["key"])
+		if (_r["members"] as Array).any(func(m: Dictionary) -> bool: return m["key"] == k):
+			continue
+		var s: Session = _session(k)
+		out.append({ "key": k, "name": a["name"], "can": _invite_refusal(s) if s != null else "Not aboard.", "state": str(inv.get(k, "")) })
+	return out
+
+
+## A captain in the line asks a crewmate aboard to come.
+func _invite(key: String, who: String) -> Dictionary:
+	if _r["phase"] != "muster":
+		return { "error": "Not now." }
+	if not (_r["members"] as Array).any(func(m: Dictionary) -> bool: return m["key"] == key):
+		return { "error": "Only a captain in the line can ask." }
+	var row: Dictionary = {}
+	for c: Dictionary in _crew_view():
+		if c["key"] == who:
+			row = c
+	if row.is_empty():
+		return { "error": "They are not aboard." }
+	if str(row["can"]) != "":
+		return { "error": str(row["can"]) }
+	if not _r.has("invites"):
+		_r["invites"] = {}
+	_r["invites"][who] = "asked"
+	_push()
+	return { "ok": true }
+
+
+## An invited captain's answer: on their way, or not now.
+func _answer(key: String, yes: bool) -> Dictionary:
+	if _r["phase"] != "muster" or not Js.obj(_r.get("invites")).has(key):
+		return { "ok": true }
+	_r["invites"][key] = "coming" if yes else "no"
+	_push()
+	return { "ok": true }
+
+
+func _invite_refusal(s: Session) -> String:
+	if str(_r.get("mode", "solo")) == "solo":
+		return "Switch the dive to Co-op to bring the crew."
+	var why: String = shut(s, str(_r["variant"]))
+	return "They have not opened this descent yet." if why != "" else ""
 
 
 ## A captain back on the line mid-dive (their game dropped and came back):

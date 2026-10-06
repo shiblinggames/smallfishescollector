@@ -120,6 +120,15 @@ func _gather() -> Array:
 	# The World Chart's track.
 	if sea._course != null and sea._course.active():
 		always.append(_mark("track", sea._course.label, sea._course.dest, GOLD, "your course"))
+	# A raid or a dive the crew asked you to (whichever side it lies).
+	var me_key: String = sea.net.key if sea.net != null else ""
+	if me_key != "":
+		var rt: RaidTable = RaidTable.live
+		if rt != null and str(rt.state.get("phase", "")) == "muster" and ["asked", "coming"].has(str(Js.obj(rt.state.get("invites")).get(me_key, ""))):
+			always.append(_mark("muster", str(Battle.raid_def(str(rt.state.get("raidId", ""))).get("raidTitle", "The raid")), RaidTable.dock_of(str(rt.state.get("nodeId", ""))), GOLD, "the crew's raid"))
+		var gt: GauntletTable = GauntletTable.live
+		if gt != null and str(gt.state.get("phase", "")) == "muster" and ["asked", "coming"].has(str(Js.obj(gt.state.get("invites")).get(me_key, ""))):
+			always.append(_mark("dive", str(Gauntlet.NAMES.get(str(gt.state.get("variant", "davy")), "The dive")), GauntletTable.maelstrom_of(str(gt.state.get("variant", "davy"))), GOLD, "the crew's dive"))
 	# Your crewmates, in their own teal.
 	for k: String in sea._mates:
 		var m: Shipmate = sea._mates[k]
