@@ -2101,6 +2101,25 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- THE COMPASS, OVERHAULED AS A HEADING RIBBON (Kong, 2026-10-06: "a visual overhaul and
+  improvement of the compass system in Godot"; he chose the ribbon over words at the edge or
+  a compass rose, pinning, and fading while fishing). game/compass_ribbon.gd: a thin strip
+  under the level bar centred on the bow's heading; N/NE/E... and ticks every 15 degrees
+  slide along it as she turns; each mark sits at its true bearing as a tick in its colour
+  with its name and sailing time under it (at the hull's full speed, so a faster ship's
+  times are shorter); what lies behind her waits at the ribbon's end ("‹ Saltmarsh");
+  labels that would collide drop to a second row. The web's role rules (ocean-hub.md "The
+  compass"), only what is off the screen, SLOTS 5: always a pin, the World Chart's track and
+  crewmates (teal); fishing side the nearest port, the water's buyer (gold), Finn when he has
+  a job, met regulars waiting on a fish or with a word (amber), the next water out and in at
+  their nearest edge (dim with "Fishing 30" when not yet open), the other ports; in the
+  anchorage "Fishing" (the reef's gap) and the northern ports; out in a bay the campaign's
+  next stop first, then The Anchorage. PRESS A MARK TO PIN IT (again to let go): it stays lit
+  and gold dots run on the water toward it until you are within 420; it never steers (the
+  web's sail-to-mark stays removed). It fades to almost nothing while the line is out, and
+  hides in a fight, under a sheet and in films. It REPLACES the edge marks: the buyer's "!",
+  the crew's edge names, Finn's arrow and the course's edge mark are hidden (still set by
+  their code). The story line, cues, course row, spot badge and toasts moved down under it.
 - CHARTING THE NORTHERN WATER PAYS NAVIGATION XP (Kong, 2026-10-06: early Navigation is
   slow and players re-farm the first raids; RuneScape's sailing pays for sailing; "this
   should only be for the northern waters"). core/charting.gd, from Explore.save_sea_position:

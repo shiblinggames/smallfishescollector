@@ -56,6 +56,7 @@ var _squall: SquallFx
 var _sound: SeaSound
 var _course: Course
 var _course_mark: Course.CourseMark
+var _compass: CompassRibbon
 var _course_t: float = 0.0
 var _life: SeaLife
 var _sky: SeaSky
@@ -329,9 +330,13 @@ func _ready() -> void:
 	_room_layer = CanvasLayer.new()
 	_room_layer.layer = 20
 	add_child(_room_layer)
+	# The edge marks gave way to the compass ribbon (game/compass_ribbon.gd);
+	# kept, hidden, as the places that set them still do.
 	_mark = BuyerMark.new()
+	_mark.visible = false
 	hud_layer.add_child(_mark)
 	_crew_marks = CrewMarks.new()
+	_crew_marks.visible = false
 	hud_layer.add_child(_crew_marks)
 	var sound: Sound = Sound.new()
 	add_child(sound)
@@ -354,7 +359,13 @@ func _ready() -> void:
 	_chart_fx = ChartGainFx.new()
 	hud_layer.add_child(_chart_fx)
 	_course_mark = Course.CourseMark.new()
+	_course_mark.visible = false
 	hud_layer.add_child(_course_mark)
+	# THE COMPASS: a heading ribbon under the level bar.
+	_compass = CompassRibbon.new()
+	_compass.sea = self
+	FishingHud._place(_compass, Vector2(0.5, 0.0), Vector2(-CompassRibbon.W / 2.0 - 60.0, 56), Vector2(CompassRibbon.W + 120.0, 100))
+	hud_layer.add_child(_compass)
 	if net != null:
 		net.mate_boat.connect(_on_mate_boat)
 		net.mate_look.connect(_on_mate_look)

@@ -156,10 +156,12 @@ func _ready() -> void:
 	_xp.pressed.connect(open_guide)
 	# The story line under it (The Long Cast), and the arrow to Finn.
 	_story = StoryLine.new()
-	_place(_story, Vector2(0.5, 0.0), Vector2(-StoryLine.W / 2.0, 64), Vector2(StoryLine.W, 52))
+	_place(_story, Vector2(0.5, 0.0), Vector2(-StoryLine.W / 2.0, 160), Vector2(StoryLine.W, 52))
 	add_child(_story)
 	_story.pressed.connect(func() -> void: open_journal("story"))
 	_finn_arrow = FinnArrow.new()
+	# Finn is on the compass ribbon now (game/compass_ribbon.gd).
+	_finn_arrow.visible = false
 	add_child(_finn_arrow)
 	move_child(_finn_arrow, 0)
 	var purse_row: HBoxContainer = HBoxContainer.new()
@@ -353,16 +355,16 @@ func _ready() -> void:
 	_cues.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cues.anchor_left = 0.0
 	_cues.anchor_right = 1.0
-	_cues.offset_top = 156.0
-	_cues.offset_bottom = 186.0
+	_cues.offset_top = 216.0
+	_cues.offset_bottom = 246.0
 	add_child(_cues)
 	_course = HBoxContainer.new()
 	_course.alignment = BoxContainer.ALIGNMENT_CENTER
 	_course.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_course.anchor_left = 0.0
 	_course.anchor_right = 1.0
-	_course.offset_top = 192.0
-	_course.offset_bottom = 230.0
+	_course.offset_top = 250.0
+	_course.offset_bottom = 288.0
 	add_child(_course)
 	_reach_btn = Pane.PaneButton.new(
 		{ "radius": 999, "fill": [Color(0.04, 0.078, 0.11, 0.88)], "border": [1, Color(0.7, 0.84, 0.91, 0.45)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 4)], "pad": 0 },
@@ -393,7 +395,7 @@ func _ready() -> void:
 
 	_spot_badge = Pane.new({ "radius": 14, "fill": [Color(0.016, 0.04, 0.07, 0.86)], "border": [1, Color(1, 1, 1, 0.14)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 4)], "pad": [14, 9, 14, 10] })
 	_spot_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_place(_spot_badge, Vector2(0.5, 0.0), Vector2(-180, 168), Vector2(360, 0))
+	_place(_spot_badge, Vector2(0.5, 0.0), Vector2(-180, 216), Vector2(360, 0))
 	_spot_badge.visible = false
 	add_child(_spot_badge)
 	var sv: VBoxContainer = VBoxContainer.new()
@@ -412,7 +414,7 @@ func _ready() -> void:
 
 	_toast = Kit.lift(Kit.text(self, "", "heading", GOLD))
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 120), Vector2(600, 30))
+	_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 292), Vector2(600, 30))
 	_level_seen = session.level()
 	refresh()
 	# What the sea owes on opening: levels not yet celebrated, then a golden
@@ -1450,7 +1452,7 @@ func toast(text: String) -> void:
 	if _dial != null and _dial.visible:
 		_place(_toast, Vector2(0.5, 0.5), Vector2(-300, 66), Vector2(600, 30))
 	else:
-		_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 120), Vector2(600, 30))
+		_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 292), Vector2(600, 30))
 	_toast.text = text
 	_toast.modulate.a = 1.0
 	_toast_t = 2.4

@@ -28,16 +28,16 @@ func _ready() -> void:
 	_call_l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_call_l.offset_left = -520
 	_call_l.offset_right = 520
-	_call_l.offset_top = 166
-	_call_l.offset_bottom = 200
+	_call_l.offset_top = 362
+	_call_l.offset_bottom = 396
 	_call_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_call_l.modulate.a = 0.0
 	_streak_l = _label(18, Color(1.0, 0.84, 0.42))
 	_streak_l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_streak_l.offset_left = -200
 	_streak_l.offset_right = 200
-	_streak_l.offset_top = 132
-	_streak_l.offset_bottom = 160
+	_streak_l.offset_top = 330
+	_streak_l.offset_bottom = 358
 	_streak_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_streak_l.visible = false
 	_derby_box = VBoxContainer.new()

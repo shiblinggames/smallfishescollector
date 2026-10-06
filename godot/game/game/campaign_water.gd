@@ -87,6 +87,17 @@ func _ready() -> void:
 	refresh()
 
 
+## Where a campaign stop stands on the water (its ship or its island), or null.
+func node_at(nid: String) -> Variant:
+	if _ships.has(nid):
+		return (_ships[nid] as Node2D).position
+	for id: String in _isles:
+		var n: Isle = _isles[id]
+		if str(n.carries.get("node", "")) == nid:
+			return n.position
+	return null
+
+
 ## Read the map again and set every mark, island and bay by it. Anything that
 ## came into view since the last read rises out of the water.
 func refresh() -> void:
