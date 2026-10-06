@@ -48,6 +48,16 @@ void fragment() {
 		col = vec4(c, 0.96 * (1.0 - smoothstep(-0.5, 0.5, d_body)));
 	}
 
+	// The crit seam stands proud of the track, top and bottom.
+	{
+		float px_u0 = u_track.z;
+		float dc0 = abs((p.x - u_track.x) / px_u0 - u_crit_c) * px_u0;
+		float cw0 = max(1.6, u_crit * px_u0);
+		float over = abs(p.y - tc.y) - th.y;
+		if (dc0 < cw0 && over > 0.0 && over < 6.0) {
+			col = vec4(CRIT, (1.0 - smoothstep(cw0 - 1.2, cw0, dc0)) * 0.95);
+		}
+	}
 	// THE TRACK: flat and dark, the bands solid on it.
 	if (d_track < 0.5) {
 		float u = (p.x - u_track.x) / u_track.z;
@@ -59,14 +69,28 @@ void fragment() {
 		c = mix(c, vec3(1.0), (1.0 - step(0.75, maj)) * 0.08 * foot);
 		float dz = abs(u - u_zone) * px_u;
 		float dc = abs(u - u_crit_c) * px_u;
-		if (dz < (u_hit + u_graze) * px_u) {
-			c = mix(TRACK, GRAZE, u_lit == 1 ? 0.95 : 0.5);
+		float yy = p.y - tc.y;
+		// THE ZONE, redrawn (Kong, 2026-10-05: the blocks "look really ugly"):
+		// the graze a faint wash fading at its ends; the hit an inset, rounded
+		// capsule with a fine light rim; the crit a crisp gold seam.
+		float gw = (u_hit + u_graze) * px_u;
+		if (dz < gw) {
+			float fade = 1.0 - smoothstep(gw - 14.0, gw, dz);
+			c = mix(c, GRAZE, (u_lit == 1 ? 0.42 : 0.22) * fade);
 		}
-		if (dz < u_hit * px_u) {
-			c = mix(TRACK, HIT, u_lit == 2 ? 1.0 : 0.62);
+		float hw = u_hit * px_u;
+		float d_hit = sd_box(vec2(abs(u - u_zone) * px_u, yy), vec2(0.0), vec2(hw, th.y - 5.0), th.y - 5.0);
+		if (d_hit < 0.5) {
+			float inside = 1.0 - smoothstep(-0.5, 0.5, d_hit);
+			float rim = 1.0 - smoothstep(0.0, 1.4, abs(d_hit + 0.8));
+			vec3 hc = mix(TRACK, HIT, u_lit == 2 ? 0.92 : 0.6);
+			hc = mix(hc, vec3(0.86, 1.0, 0.9), rim * 0.55);
+			c = mix(c, hc, inside);
 		}
-		if (dc < u_crit * px_u) {
-			c = mix(TRACK, CRIT, u_lit == 3 ? 1.0 : 0.85);
+		float cw = max(1.6, u_crit * px_u);
+		if (dc < cw) {
+			float core = 1.0 - smoothstep(cw - 1.2, cw, dc);
+			c = mix(c, CRIT, (u_lit == 3 ? 1.0 : 0.9) * core);
 		}
 		// A lock flashes the band it hit (flat, fading).
 		c = mix(c, u_burst_col, u_burst * 0.5 * (1.0 - step(70.0, abs(p.x - (u_track.x + u_burst_x * px_u)))));

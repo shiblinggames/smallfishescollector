@@ -18,22 +18,22 @@ marks = json.loads((CLIPS / "marks.json").read_text())
 # a dissolve, "b" a dip through black). Kong: no cutting away mid-popup; let
 # each moment land and settle before it dissolves.
 EDIT = [
-    ("flotilla", 0.0, 4.4, "x"),
+    ("flotilla", 0.0, 6.6, "x"),
     ("charter", 0.0, 4.2, "x"),
     ("fish", 0.0, 11.4, "x"),
+    ("log", 0.0, 3.6, "x"),
     ("finn", 0.0, 6.0, "x"),
     ("friends", 0.0, 6.0, "x"),
     ("wardrobe", 0.0, 7.8, "x"),
-    ("badges", 0.0, 5.6, "b"),
-    ("north", 0.0, 5.0, "x"),
+    ("badges", 0.0, 3.8, "b"),
     ("ready", 0.0, 5.2, "x"),
-    ("coop", 0.8, 9.6, "x"),
+    ("coop", 0.6, 7.2, "x"),
     ("recruit", 0.6, 6.8, "x"),
     ("skins", 0.0, 6.4, "x"),
     ("summon", 0.0, 4.4, "x"),
-    ("crewxp", 1.4, 5.0, "x"),
-    ("mega", 0.2, 4.0, "b"),
-    ("descent", 0.0, 4.6, "x"),
+    ("crewxp", 1.0, 4.8, "b"),
+    ("maelstrom", 0.0, 5.6, "x"),
+    ("coopdive", 0.6, 9.6, "x"),
     ("draft", 0.0, 4.4, "x"),
     ("don", 0.0, 4.4, "x"),
     ("g_shrine", 0.0, 5.8, "x"),
@@ -85,7 +85,7 @@ for i, (name, d, kind) in enumerate(edit):
     starts.append(t)
     fd = BK if kind == "b" else XF
     t += d - fd
-fight_at = starts[[e[0] for e in edit].index("north")] if "north" in [e[0] for e in edit] else length * 0.35
+fight_at = starts[[e[0] for e in edit].index("ready")] if "ready" in [e[0] for e in edit] else length * 0.35
 end_at = starts[-1]
 total = length
 

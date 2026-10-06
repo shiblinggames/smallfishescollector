@@ -1757,6 +1757,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     drawn in the corner before it was centred; the catch note and a crate's tag shown before
     they were hidden and placed; the fight deck's height read mid-repaint (now eased). The
     corner notices are held for films (FILM_QUIET).
+    Seventh pass (Kong's notes): a cinematic open (close on her at sunset, the camera
+    pulling back to the whole crew under sail); the log after the catch; the Locker showing
+    every rod as it is worn; a shorter badge scroll; no northern seas; a short, true aim; a
+    different Man-o-War skin in each fight (SHIP_SKIN); the gauntlet rebuilt: the crew under
+    sail into the maelstrom, then a three-ship co-op dive at depth 45 in the storm against a
+    pack, both broadsides landing a crossfire (tests/trailer_shots.gd FilmTable: the real
+    co-op table with three sessions on one machine, Ben's and Cal's orders played for them).
+    Fixed in the game on the way: the aim bar's zone redrawn (a faint amber graze wash, the
+    hit an inset rounded capsule with a fine rim, the crit a crisp gold seam standing proud
+    of the track); the recruit moment ("A Legendary answers!", "Kat is aboard!") and the
+    voucher reveal lose their coloured disc, ring and rays (words over a soft dark band; the
+    card alone).
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

@@ -109,6 +109,14 @@ func _init() -> void:
 	# CAPTAIN: the captain's name on their plate (a film's, not a test save's).
 	if OS.get_environment("CAPTAIN") != "":
 		p["username"] = OS.get_environment("CAPTAIN")
+	# SHIP_SKIN: a Man-o-War in this skin (a film's variety).
+	if OS.get_environment("SHIP_SKIN") != "":
+		p["ship_tier"] = 6.0
+		var owned_sk: Array = Js.list(p.get("owned_ship_skins")).duplicate()
+		if not owned_sk.has(OS.get_environment("SHIP_SKIN")):
+			owned_sk.append(OS.get_environment("SHIP_SKIN"))
+		p["owned_ship_skins"] = owned_sk
+		p["equipped_ship_skin"] = OS.get_environment("SHIP_SKIN")
 	p["current_perfect_streak"] = 8.0
 	p["fishing_xp"] = 2400.0
 	if OS.get_environment("SHOT_XP") != "":

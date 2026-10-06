@@ -173,6 +173,8 @@ func run(t: SceneTree, s: Sea, h: FishingHud, prof: Dictionary, clip: String) ->
 		"crewxp": await _crewxp()
 		"enemycard": await _enemycard()
 		"badges": await _badges()
+		"maelstrom": await _maelstrom()
+		"coopdive": await _coopdive()
 
 
 ## Three crewmates in looks of their own, each a Shipmate on your sea.
@@ -215,6 +217,13 @@ func _sail(crew: bool) -> void:
 	for f: int in 90:
 		_keep()
 		await tree.process_frame
+	# CINE: the camera pulls back from close on her to the whole crew under
+	# sail, slow and eased (the first thing a viewer sees).
+	if OS.get_environment("CINE") != "":
+		sea._zoom_to = 2.6
+		sea._camera.zoom = Vector2.ONE * 2.6
+		var zt: Tween = sea.create_tween()
+		zt.tween_property(sea, "_zoom_to", 0.82, float(OS.get_environment("MOVIE_S")) * 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_mark()
 	var end: float = Time.get_ticks_msec() + 1000.0 * (float(OS.get_environment("MOVIE_S")) if OS.get_environment("MOVIE_S") != "" else 6.0)
 	var frames: int = int(60.0 * (float(OS.get_environment("MOVIE_S")) if OS.get_environment("MOVIE_S") != "" else 6.0))
@@ -228,6 +237,12 @@ func _sail(crew: bool) -> void:
 ## cast, the bite, a perfect strike and the catch.
 func _together() -> void:
 	var b: Boat = sea._boat
+	# No hotspot ring in this one (it read as clutter round the boats).
+	for k: Variant in sea._spots:
+		var sp: Variant = sea._spots[k]
+		if sp is CanvasItem and is_instance_valid(sp):
+			(sp as CanvasItem).visible = false
+	sea._spot_t = -1.0e9
 	b.position = Vector2(-1500, 2600)
 	sea._zoom_to = 0.95
 	sea._camera.zoom = Vector2.ONE * 0.95
@@ -286,7 +301,7 @@ func _coop() -> void:
 	var kdb: CaptainStore = sea.session.store
 	var ku: String = sea.session.uid
 	p["expedition_xp"] = 2000.0
-	p["ship_tier"] = 5.0
+	p["ship_tier"] = 6.0
 	for d: int in 2:
 		var kst: Dictionary = RulesApi.run(kdb, ku, "getCrewState", [])
 		for c: Dictionary in kst["board"]:
@@ -303,6 +318,10 @@ func _coop() -> void:
 	s1["key"] = "ben"
 	Dice.install(Dice.Mulberry32.new(7))
 	var kb: Dictionary = Battle.begin("captain_krust", [s0, s1], "normal")
+	# Sturdy enough that both broadsides land (a crossfire is both ships).
+	for fo: Dictionary in Battle.foes(kb):
+		fo["hp"] = maxf(float(fo["hp"]), 260.0)
+		fo["max"] = maxf(float(fo["max"]), 260.0)
 	var mate: Shipmate = sea._mate("ben")
 	mate.set_mate_name("Ben")
 	var look: Dictionary = Skipper.look_of(p).duplicate()
@@ -357,7 +376,7 @@ func _summon() -> void:
 	var bdb: CaptainStore = sea.session.store
 	var bu: String = sea.session.uid
 	p["expedition_xp"] = 2000.0
-	p["ship_tier"] = 5.0
+	p["ship_tier"] = 6.0
 	for d: int in 2:
 		var st1: Dictionary = RulesApi.run(bdb, bu, "getCrewState", [])
 		for c: Dictionary in st1["board"]:
@@ -695,6 +714,10 @@ func _wardrobe() -> void:
 	p["unlocked_hats"] = ["golden", "cheetah", "fuego", "midnight", "sky", "spotted"]
 	p["unlocked_pets"] = ["parrot_red", "parrot_gold", "monkey_golden", "seal_gray", "lizard_indigo", "crab_gold"]
 	p["rod_tier"] = 5.0
+	var rods: Dictionary = {}
+	for r0: Dictionary in Rules.data()["rods"]:
+		rods[str(r0.get("slug", r0.get("id", ""))).trim_prefix("rod_")] = 1.0
+	sea.session.save["rodItems"] = rods
 	hud._open_loadout()
 	for f: int in 20:
 		await tree.process_frame
@@ -868,7 +891,7 @@ func _into_raid(raid: String, near: bool = false) -> BattleStage:
 	var bdb: CaptainStore = sea.session.store
 	var bu: String = sea.session.uid
 	p["expedition_xp"] = 2000.0
-	p["ship_tier"] = 5.0
+	p["ship_tier"] = 6.0
 	for d: int in 2:
 		var st1: Dictionary = RulesApi.run(bdb, bu, "getCrewState", [])
 		for c: Dictionary in st1["board"]:
@@ -949,7 +972,7 @@ func _badges() -> void:
 			sc = c
 	if sc != null:
 		var tw: Tween = sc.create_tween()
-		tw.tween_property(sc, "scroll_vertical", int(sc.get_v_scroll_bar().max_value), 3.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw.tween_property(sc, "scroll_vertical", int(sc.get_v_scroll_bar().max_value * 0.35), 2.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	await _hold()
 
 
@@ -966,12 +989,201 @@ func _lock_true(bs: BattleStage) -> void:
 	if bars.is_empty():
 		return
 	var bar: AimBar = bars[0]
-	# Let it make a pass first, so it is seen moving.
-	for f: int in 25:
-		await tree.process_frame
+	# A short run in: the needle starts a little way off the band (QUICK_AIM),
+	# or makes a pass first so it is seen moving.
+	if OS.get_environment("QUICK_AIM") != "":
+		bar._pos = clampf(bar._zone + bar._seam - 0.28 * bar._dir, 0.02, 0.98)
+		for f: int in 6:
+			await tree.process_frame
+	else:
+		for f: int in 25:
+			await tree.process_frame
 	guard = 0
 	while is_instance_valid(bar) and absf(bar._pos - (bar._zone + bar._seam)) > bar.crit_w * 0.6 and guard < 900:
 		guard += 1
 		await tree.process_frame
 	if is_instance_valid(bar):
 		bar.lock()
+
+
+# ── The gauntlet, together (Kong, 2026-10-05: "build it out") ─────────────────
+
+## A dive table for a film: three captains (Anna, Ben, Cal) at it on one
+## machine, each their own session, the real co-op rules running.
+class FilmTable:
+	extends GauntletTable
+	var others: Dictionary = {}
+	## The dive's first fight rolled at this depth (a film's deep water).
+	var start_depth: int = 0
+
+	func _roll_field(n: int) -> Dictionary:
+		if start_depth > 1:
+			_r["run"]["roll"]["cleared"] = float(start_depth - 1)
+			start_depth = 0
+		return super._roll_field(n)
+
+	func _session(key: String) -> Session:
+		if key == "me":
+			return solo
+		return others.get(key)
+
+
+## The whole map cleared and the gates open: the maelstroms are on the water.
+func _campaign_open() -> void:
+	var gdb: CaptainStore = sea.session.store
+	var gu: String = sea.session.uid
+	p["expedition_xp"] = 3000000.0
+	p["ship_tier"] = 6.0
+	p["gauntlet_upgrades"] = ["second_cast", "salt_ward", "sounding_line", "vigor"]
+	var gcl: Array = []
+	for n: Dictionary in Campaign.nodes():
+		if n["type"] == "raid":
+			gdb.add_clear(gu, str(n["raidId"]), 200000.0)
+		elif n["type"] == "skirmish":
+			p["has_completed_practice_raid"] = true
+		else:
+			gcl.append(n["id"])
+	p["raid_node_progress"] = { "cleared": gcl, "choices": {} }
+	sea._campaign.refresh()
+	sea._open_sea_gate()
+
+
+## A crewmate's captain for the film: a copy of this one, their own name,
+## colour and hull.
+func _film_captain(key: String, name: String, color: String, hat: String, skin: String) -> Session:
+	var save: Dictionary = sea.session.save.duplicate(true)
+	save["uid"] = "film-" + key
+	save["profile"]["id"] = save["uid"]
+	save["profile"]["username"] = name
+	save["profile"]["character_color"] = color
+	save["profile"]["equipped_hat"] = hat
+	save["profile"]["ship_tier"] = 6.0
+	var owned: Array = Js.list(save["profile"].get("owned_ship_skins")).duplicate()
+	owned.append(skin)
+	save["profile"]["owned_ship_skins"] = owned
+	save["profile"]["equipped_ship_skin"] = skin
+	return Session.new(save, {})
+
+
+## INTO THE MAELSTROM: the crew under sail toward the whirlpool, and into it.
+func _maelstrom() -> void:
+	_clean()
+	_campaign_open()
+	var at: Vector2 = GauntletTable.maelstrom_of("davy")
+	var b: Boat = sea._boat
+	b.position = at + Vector2(-1700, 980)
+	sea._zoom_to = 0.7
+	sea._camera.zoom = Vector2.ONE * 0.7
+	_crew(["Ben", "Cal"])
+	_offsets = [Vector2(-420, -330), Vector2(-460, 330)]
+	b.target = at + Vector2(-300, 120)
+	for f: int in 40:
+		_keep()
+		await tree.process_frame
+	_mark()
+	var frames: int = int(60.0 * float(OS.get_environment("MOVIE_S")))
+	for f: int in frames:
+		_keep()
+		await tree.process_frame
+	print("END ", Engine.get_frames_drawn())
+
+
+## A CO-OP DIVE: three ships against a pack, deep in a storm band, every
+## captain's powers firing. Ben and Cal's orders are played for them.
+func _coopdive() -> void:
+	_campaign_open()
+	for d: int in 2:
+		var gst: Dictionary = RulesApi.run(sea.session.store, sea.session.uid, "getCrewState", [])
+		for c: Dictionary in gst["board"]:
+			RulesApi.run(sea.session.store, sea.session.uid, "recruitCrew", [c["id"]])
+		p["last_free_recruit_date"] = "old%d" % d
+	var gids: Array = (RulesApi.run(sea.session.store, sea.session.uid, "getCrewState", [])["roster"] as Array).map(func(m: Dictionary) -> float: return float(m["id"]))
+	for k: int in mini(3, gids.size()):
+		RulesApi.run(sea.session.store, sea.session.uid, "assignToRaid", [gids[k], float(k)])
+	var variant: String = OS.get_environment("DIVE_V") if OS.get_environment("DIVE_V") != "" else "davy"
+	var at: Vector2 = GauntletTable.maelstrom_of(variant)
+	sea._boat.position = at + Vector2(-1150, 950)
+	for f: int in 30:
+		await tree.process_frame
+	Dice.install(Dice.Mulberry32.new(int(OS.get_environment("DIVE_SEED")) if OS.get_environment("DIVE_SEED") != "" else 23))
+	var t: FilmTable = FilmTable.new()
+	t.solo = sea.session
+	t.start_depth = int(OS.get_environment("DIVE_DEPTH")) if OS.get_environment("DIVE_DEPTH") != "" else 45
+	var mates: Array = [["ben", "Ben", "ruby", "golden", "bad_blood_hull"], ["cal", "Cal", "forest", "green", "galaxy_hull"]]
+	for m: Array in mates:
+		t.others[m[0]] = _film_captain(m[0], m[1], m[2], m[3], m[4])
+	sea.add_child(t)
+	sea._solo_dive = t
+	var gm: GauntletMuster = GauntletMuster.new()
+	gm.sea = sea
+	gm.table = t
+	gm.my_key = "me"
+	sea._hud_layer.add_child(gm)
+	t.handle("me", sea.session, ["call", { "variant": variant }])
+	t._r["mode"] = "coop"
+	for m2: Array in mates:
+		(t._r["members"] as Array).append(t._member(m2[0], t.others[m2[0]], variant, true))
+	# Ben and Cal at the maelstrom with you, in their own looks.
+	var keys: Array = ["ben", "cal"]
+	for i: int in keys.size():
+		var sm: Shipmate = sea._mate(keys[i])
+		sm.set_mate_name(mates[i][1])
+		sm.set_look(Skipper.look_of((t.others[keys[i]] as Session).profile()))
+	# Deep in the dive: the band's storm, the run's powers stacked.
+	t.handle("me", sea.session, ["go"])
+	var boons: Dictionary = { "broadside_mastery": 2.0, "powder_and_shot": 2.0, "wildfire": 2.0, "chainshot": 2.0, "executioner": 1.0, "dead_eye": 2.0 }
+	for k2: String in Js.obj(t._r.get("caps")):
+		t._r["caps"][k2]["boons"] = boons.duplicate()
+	t._effects_onto(t._r["b"]["seats"])
+	for s: Dictionary in t._r["b"]["seats"]:
+		s["charges"] = 3.0
+		# Guns and boons, not crew orders, in this one.
+		s["crew"] = []
+	var bs: BattleStage = null
+	for f: int in 20:
+		await tree.process_frame
+		bs = _stage()
+		if bs != null:
+			break
+	if bs == null:
+		print("NO STAGE")
+		return
+	bs._spoke = true
+	bs.autoplay = true
+	# Their hulls in the line beside yours.
+	for f: int in 90:
+		await tree.process_frame
+	for i2: int in keys.size():
+		var si: int = t._seat_of(keys[i2])
+		var mp: Vector2 = bs._at + BattleStage._offset(si)
+		(sea._mate(keys[i2]) as Shipmate).state({ "x": mp.x, "y": mp.y, "facing": 1.0 })
+	# Their orders, each plan phase: a critical volley when loaded, a crew
+	# order when one is ready.
+	var feed: Callable = func() -> void:
+		var ph: String = str(t._r.get("phase", ""))
+		if ph == "playing":
+			for k4: String in keys:
+				t.handle(k4, t.others[k4], ["played", int(Js.num(t._r.get("seq")))])
+			return
+		if ph == "flares":
+			for k5: String in keys:
+				t.handle(k5, t.others[k5], ["flares", { "hit": 0.0, "of": 0.0 }])
+			return
+		if ph != "plan":
+			return
+		for k3: String in keys:
+			if Js.obj(t._r.get("plans")).has(k3):
+				continue
+			var si3: int = t._seat_of(k3)
+			if si3 < 0:
+				continue
+			var st3: Dictionary = t._r["b"]["seats"][si3]
+			var plan: Dictionary = { "action": "volley" if float(st3.get("charges", 0.0)) >= 3.0 else ("fire" if float(st3.get("charges", 0.0)) >= 1.0 else "reload"), "aim": "critical", "target": maxi(0, Battle.first_foe(t._r["b"])) }
+			t.handle(k3, t.others[k3], ["plan", plan])
+	var pump: Callable = func(_st: Dictionary) -> void: feed.call()
+	t.changed.connect(pump)
+	feed.call()
+	for f: int in 40:
+		await tree.process_frame
+	_mark()
+	await _hold()

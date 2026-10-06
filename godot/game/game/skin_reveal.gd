@@ -215,40 +215,23 @@ func _draw_back() -> void:
 	inner.set_corner_radius_all(10)
 	_back.draw_style_box(inner, r.grow(-12.0))
 	if _face.visible:
-		# The face: the tier's colour pooled behind the painting.
-		_back.draw_circle(CARD / 2.0, CARD.x * 0.42, Color(g, 0.22))
-		_back.draw_circle(CARD / 2.0, CARD.x * 0.30, Color(g, 0.18))
 		return
 	var c: Vector2 = CARD / 2.0
-	# The voucher itself, painted, on a pool of the glow.
-	_back.draw_circle(c, 120.0, Color(g, 0.10 + 0.06 * pulse))
+	# The voucher itself, painted (no pool of glow behind it).
 	if _seal != null:
 		var sz: Vector2 = _seal.get_size()
 		var k: float = 230.0 / maxf(sz.x, sz.y)
 		_back.draw_texture_rect(_seal, Rect2(c - sz * k / 2.0, sz * k), false)
 
 
-## Behind the card: a ring breaking out at the flip, and for the best tiers
-## slow rays turning.
+## Behind the card: motes drifting up once it has landed.
 func _draw_fx() -> void:
+	# No disc, ring or rays behind the card (Kong, 2026-10-05: "that circle
+	# behind the voucher ... looks bad"): only the motes, once it has landed.
 	var c: Vector2 = _fx.size / 2.0 + Vector2(0, -40)
 	if not _landed:
-		var g: Color = _glow_now()
-		_fx.draw_circle(c, 260.0, Color(g, 0.05))
 		return
 	var since: float = _t - float(get_meta("landed_at", _t))
-	var u: float = clampf(since / 1.2, 0.0, 1.0)
-	var r: float = 120.0 + 420.0 * (1.0 - pow(1.0 - u, 3.0))
-	_fx.draw_arc(c, r, 0.0, TAU, 96, Color(_col, (1.0 - u) * 0.85), 8.0 * (1.0 - u) + 1.0, true)
-	_fx.draw_circle(c, 300.0, Color(_col, 0.07 + 0.05 * (1.0 - u)))
-	var tier: String = str(result.get("tier", "rare"))
-	if tier in ["legendary", "chase"]:
-		var n: int = 18 if tier == "chase" else 12
-		var a0: float = _t * (0.25 if tier == "chase" else 0.15)
-		for i: int in n:
-			var a: float = a0 + TAU * float(i) / float(n)
-			var p: PackedVector2Array = PackedVector2Array([c, c + Vector2.from_angle(a - 0.05) * 460.0, c + Vector2.from_angle(a + 0.05) * 460.0])
-			_fx.draw_colored_polygon(p, Color(_col, 0.045 * minf(1.0, since * 2.0)))
 	# Motes drifting up from the card.
 	for i: int in 26:
 		var seed: float = float(i) * 12.9898

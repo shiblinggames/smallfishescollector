@@ -838,12 +838,13 @@ func _sign_on_moment(name: String, col: Color) -> void:
 	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(layer)
 	var t: Array = [0.0]
+	# No ring or disc behind it (Kong, 2026-10-05: they "look so cheap"): the
+	# words alone over a soft dark band, so they read on anything.
 	layer.draw.connect(func() -> void:
 		var c: Vector2 = layer.size / 2.0
 		var u: float = clampf(t[0] / 1.7, 0.0, 1.0)
-		var r: float = 40.0 + 260.0 * (1.0 - pow(1.0 - u, 3.0))
-		layer.draw_arc(c, r, 0.0, TAU, 64, Color(col, (1.0 - u) * 0.8), 6.0 * (1.0 - u) + 1.0, true)
-		layer.draw_circle(c, 120.0 * (1.0 - u * 0.4), Color(col, 0.15 * (1.0 - u))))
+		var a: float = minf(1.0, u * 6.0) * (1.0 - smoothstep(0.75, 1.0, u))
+		layer.draw_texture_rect(FxSheet.glow(), Rect2(c - Vector2(520, 90), Vector2(1040, 180)), false, Color(0, 0, 0, 0.55 * a)))
 	var l: Label = Kit.text(layer, name if name.ends_with("!") else "%s is aboard!" % name, "display", Color(0.98, 0.95, 0.88))
 	l.add_theme_font_size_override("font_size", 44)
 	l.add_theme_color_override("font_shadow_color", Color(col.darkened(0.5), 0.9))
