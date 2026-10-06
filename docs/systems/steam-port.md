@@ -1769,6 +1769,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     of the track); the recruit moment ("A Legendary answers!", "Kat is aboard!") and the
     voucher reveal lose their coloured disc, ring and rays (words over a soft dark band; the
     card alone).
+    Polish pass: cuts land on the theme's beats (beats.py: 86 bpm; cut.py moves each cut's
+    middle onto the nearest beat); slow push-ins on the paper shots; one gentle grade and a
+    soft vignette over the film; captions as a centred lower third over a soft dark band;
+    the score ducks under the game's big sounds, a limiter guards the peaks, a sting lands
+    with the name on the end card. For films (FILM_QUIET) the game also holds back the
+    compass "!" at the screen's edge, the level card's "Press anywhere to continue", the
+    Journal's red reminders, and the banner of a field's generated names.
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

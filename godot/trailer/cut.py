@@ -52,6 +52,32 @@ edit = [(e[0], e[2], e[3]) for e in edit]
 if missing:
     print("missing shots (left out):", missing)
 
+# ON THE BEAT (beats.py): each cut's middle moved onto the nearest beat of the
+# theme (as it plays in the film, from M_IN), by stretching or trimming the
+# shot before it a little, never past what the clip holds.
+M_IN = 3.0
+BEATS = []
+if (CLIPS / "beats.json").exists():
+    BEATS = [b - M_IN for b in json.loads((CLIPS / "beats.json").read_text())["beats"] if b > M_IN]
+if BEATS:
+    t0 = 0.0
+    for i in range(len(edit) - 1):
+        name, dur, kind = edit[i]
+        room = marks[name]["dur"] - OFF.get(name, 0.0)
+        fd = BK if kind == "b" else XF
+        cut_mid = t0 + dur - fd / 2.0
+        near = min(BEATS, key=lambda b: abs(b - cut_mid))
+        if abs(near - cut_mid) <= 0.45:
+            nd = dur + (near - cut_mid)
+            if 2.0 <= nd <= room:
+                dur = nd
+        edit[i] = (name, dur, kind)
+        t0 += dur - fd
+
+# Slow push-ins on the shots that are a sheet of paper (Kong: menus that sit
+# still read as screenshots).
+PUSH = {"charter", "log", "finn", "friends", "badges", "ready", "recruit", "skins", "draft", "g_records", "wardrobe"}
+
 inputs = []
 parts = []
 for i, (name, dur, _t) in enumerate(edit):
@@ -60,7 +86,12 @@ for i, (name, dur, _t) in enumerate(edit):
     inputs += ["-i", str(CLIPS / f"{name}.avi")]
     st0 = m["start"] + OFF.get(name, 0.0)
     d = min(d, m["dur"] - OFF.get(name, 0.0))
-    parts.append(f"[{i}:v]trim=start={st0:.4f}:duration={d:.4f},setpts=PTS-STARTPTS,fps=60,scale=1920:1080:flags=lanczos,format=yuv420p,settb=AVTB[v{i}];"
+    push = ""
+    if name in PUSH:
+        nfr = max(1, int(d * 60))
+        push = (f",scale=3840:2160:flags=lanczos,zoompan=z='1+0.045*on/{nfr}':d=1:"
+                f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=60")
+    parts.append(f"[{i}:v]trim=start={st0:.4f}:duration={d:.4f},setpts=PTS-STARTPTS,fps=60,scale=1920:1080:flags=lanczos{push},format=yuv420p,settb=AVTB[v{i}];"
                  f"[{i}:a]atrim=start={st0:.4f}:duration={d:.4f},asetpts=PTS-STARTPTS,aresample=48000[a{i}];")
     edit[i] = (name, d, _t)
 
@@ -90,14 +121,20 @@ end_at = starts[-1]
 total = length
 
 # The score: the main theme, start to finish (Kong: one track, no switching).
-inputs += ["-i", str(ART / "fishingsoundtrack.ogg")]
+inputs += ["-i", str(ART / "fishingsoundtrack.ogg"), "-i", str(ART / "fishingperfect.mp3")]
 n = len(edit)
-m_in = max(0.0, min(3.0, 122.6 - total))   # the theme is 122.8s: never run off its end
+m_in = max(0.0, min(M_IN, 122.6 - total))   # the theme is 122.8s: never run off its end
 fc += (f"[{n}:a]atrim=start={m_in:.2f}:duration={total:.3f},asetpts=PTS-STARTPTS,aresample=48000,"
        f"afade=t=in:d=1.2,afade=t=out:st={total - 3.0:.3f}:d=3.0[score];"
-       f"[{cur_a}]volume={SFX_DB}dB[sfx];"
-       f"[score][sfx]amix=inputs=2:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[aout];"
-       f"[{cur_v}]fade=t=in:d=0.8,fade=t=out:st={total - 1.2:.3f}:d=1.2[vout]")
+       f"[{cur_a}]volume={SFX_DB}dB,asplit=2[sfx][key];"
+       # The score ducks a touch under the game's big sounds.
+       f"[score][key]sidechaincompress=threshold=0.04:ratio=3:attack=15:release=350:makeup=1[ducked];"
+       # A sting as the name lands on the end card.
+       f"[{n + 1}:a]adelay={int((end_at + 0.6) * 1000)}|{int((end_at + 0.6) * 1000)},volume=-4dB,aresample=48000[sting];"
+       f"[ducked][sfx][sting]amix=inputs=3:normalize=0:duration=first,alimiter=limit=0.89,loudnorm=I=-14:TP=-1.5:LRA=11[aout];"
+       # One gentle grade over the whole film, and a soft vignette.
+       f"[{cur_v}]eq=contrast=1.04:saturation=1.07:gamma=0.98,vignette=angle=PI/5:mode=forward,"
+       f"fade=t=in:d=0.8,fade=t=out:st={total - 1.2:.3f}:d=1.2[vout]")
 
 out = HERE / "trailer.mp4"
 cmd = [FF, "-y", "-v", "error", *inputs, "-filter_complex", fc, "-map", "[vout]", "-map", "[aout]",

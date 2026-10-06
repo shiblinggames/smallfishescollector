@@ -446,7 +446,10 @@ func _enemy_enters() -> void:
 	_frame()
 	var e0: Dictionary = fs[0]
 	var f: Dictionary = Battle.fight_at(_raid, int(b["fight"])) if gauntlet == "" else { "of": 0 }
-	if fs.size() > 1:
+	# Films (FILM_QUIET): no banner of the field's generated names.
+	if OS.get_environment("FILM_QUIET") != "":
+		pass
+	elif fs.size() > 1:
 		_say("%s and %d more" % [e0["name"], fs.size() - 1])
 	else:
 		_say("%s%s" % [("Boss: " if e0["boss"] else ("Elite: " if e0.get("elite", false) else "")), e0["name"]])

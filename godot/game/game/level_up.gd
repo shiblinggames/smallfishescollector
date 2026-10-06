@@ -65,6 +65,8 @@ func _ready() -> void:
 	add_child(slip_row)
 	_slip = _build_slip(slip_row, from, to)
 	_hint = _letter(self, "Press anywhere to continue", 13, Color(CREAM, 0.6), false)
+	if OS.get_environment("FILM_QUIET") != "":
+		_hint.visible = false
 	_hint.anchor_top = 1.0
 	_hint.anchor_bottom = 1.0
 	_hint.anchor_right = 1.0

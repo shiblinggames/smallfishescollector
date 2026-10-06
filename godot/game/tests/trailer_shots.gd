@@ -85,10 +85,24 @@ static func _caption(t: SceneTree, n: String) -> void:
 		col.add_child(sub)
 	var vp: Vector2 = t.root.get_visible_rect().size
 	if style == "line":
-		big.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		col.position = Vector2(vp.x * 0.07, vp.y * 0.70)
-		shade.position = col.position + Vector2(-220, -110)
-		shade.size = Vector2(1300, 300)
+		# A lower third: centred, over a soft dark band across the foot of the
+		# frame, so it reads the same over the sea and over a sheet of paper.
+		big.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		col.size = Vector2(vp.x, 0)
+		col.position = Vector2(0, vp.y * 0.80)
+		var g: Gradient = Gradient.new()
+		g.set_color(0, Color(0, 0, 0, 0))
+		g.set_color(1, Color(0, 0, 0, 0.78))
+		var gt: GradientTexture2D = GradientTexture2D.new()
+		gt.gradient = g
+		gt.fill_from = Vector2(0, 0)
+		gt.fill_to = Vector2(0, 1)
+		gt.width = 4
+		gt.height = 128
+		shade.texture = gt
+		shade.modulate = Color.WHITE
+		shade.position = Vector2(0, vp.y * 0.62)
+		shade.size = Vector2(vp.x, vp.y * 0.38)
 	else:
 		big.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		col.size = Vector2(vp.x, 0)

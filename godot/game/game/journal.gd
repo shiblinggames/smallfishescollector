@@ -386,6 +386,6 @@ func _card(parent: Node, f: Dictionary, r: Dictionary, met: bool) -> void:
 			reason = "Their fish is in your hold"
 		elif not r.get("chattedToday", false):
 			reason = "A word to be had today"
-		if reason != "":
+		if reason != "" and OS.get_environment("FILM_QUIET") == "":
 			var rl: Label = Paper.text(col, "●  " + reason, "small", Paper.RED)
 			rl.add_theme_font_size_override("font_size", 12)

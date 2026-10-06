@@ -2137,7 +2137,8 @@ class BuyerMark:
 		queue_redraw()
 
 	func _draw() -> void:
-		if target == null:
+		# Films (FILM_QUIET): no compass mark at the edge.
+		if target == null or OS.get_environment("FILM_QUIET") != "":
 			return
 		var off: Vector2 = target
 		var half: Vector2 = size / 2.0 - Vector2(48, 90)
