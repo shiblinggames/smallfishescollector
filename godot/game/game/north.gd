@@ -219,6 +219,57 @@ static func bow_left(path: Variant) -> bool:
 	return false
 
 
+## EACH CHAPTER SAILS IN ITS GANG'S COLOURS (Kong, 2026-10-06: bosses "should
+## be wearing their dropped hull cosmetic"; the whole chapter fleet; on the v3
+## ships): the v3 ships recoloured in each bay's hull (tools/dye_fleet.py bakes
+## art/fleet/<bay>_<ship>.png). Finn's own red ship is his already.
+const FLEET_BAYS: Array = ["thread", "sunken_hand", "the_coffers", "the_last_fathom"]
+const FLEET_SHIPS: Array = ["man-o-war", "brigantine", "schooner", "galleon", "sloop"]
+static var _raid_bay: Dictionary = {}
+
+
+## The bay a raid belongs to (by the anchored ship that leads to it, else by
+## the chapter hull it drops), or "".
+static func raid_bay(raid_id: String) -> String:
+	if _raid_bay.is_empty():
+		var by_node: Dictionary = {}
+		for n: Dictionary in Campaign.nodes():
+			if n.get("raidId") != null:
+				by_node[str(n["id"])] = str(n["raidId"])
+		for enc: Dictionary in Js.list(Js.obj(Rules.data().get("campaignWater")).get("encounters")):
+			var rid: String = str(by_node.get(str(enc.get("node", "")), ""))
+			if rid != "":
+				_raid_bay[rid] = str(enc.get("bay", ""))
+		var drops: Dictionary = { "finndicate_hull": "thread", "chartmaker_hull": "sunken_hand", "coffers_hull": "the_coffers", "last_fathom_hull": "the_last_fathom" }
+		for rid2: Variant in Js.obj(Rules.data().get("raids")):
+			if _raid_bay.has(rid2):
+				continue
+			var base: String = str(rid2).trim_suffix("_challenge")
+			if _raid_bay.has(base):
+				_raid_bay[rid2] = _raid_bay[base]
+				continue
+			for row: Dictionary in Js.list(Js.obj(Rules.data()["raids"][rid2]).get("loot")):
+				if drops.has(str(row.get("id", ""))) and not _raid_bay.has(rid2):
+					_raid_bay[rid2] = drops[str(row["id"])]
+		_raid_bay["_built"] = ""
+	return str(_raid_bay.get(raid_id, ""))
+
+
+## A chapter ship's painting in its bay's colours: the same v3 ship. Anything
+## that is not a plain ship (Finn's) is kept.
+static func fleet_art(image: Variant, bay: String) -> String:
+	var path: String = str(image)
+	if not FLEET_BAYS.has(bay):
+		return path
+	var file: String = path.get_file()
+	if not (path.contains("ship-hero/") or file.begins_with("enemychapter")):
+		return path
+	for ship: String in FLEET_SHIPS:
+		if file.contains(ship):
+			return "fleet/%s_%s.png" % [bay, ship]
+	return path
+
+
 static func ship_art(ship_tier: Variant, skin: Variant) -> Dictionary:
 	var tier: int = clampi(int(Js.num(ship_tier)), 2, 6)
 	var def: Dictionary = {}

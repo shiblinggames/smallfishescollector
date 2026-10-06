@@ -2111,10 +2111,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   long swell and spray; II flat jade under fog, dim green light, spores; III amber light, a
   glow, gold dust; IV black water, heavy swell, night at noon, cold glowing specks, rain and
   lightning; V violet-blood tempest with ash. A dive's own water sets it aside.
-- ENEMY SHIPS STAY ON THE V3 PAINTINGS (Kong, 2026-10-06: "you should be using v3 boat
-  images"). The chapter hull skins' smaller ships (enemychapter1..3 at tiers 0 to 5) are the
-  old v2-era designs, so the chapter fleets are NOT dressed in them; how to colour the fleets
-  is open. North.bow_left now counts only a skin's Man-o-War painting as bow-left.
+- EACH CHAPTER'S FLEET IN ITS GANG'S COLOURS, ON THE V3 SHIPS (Kong, 2026-10-06: bosses wear
+  the hull they drop, the whole chapter fleet; "you should be using v3 boat images"). The
+  chapter skins' own smaller ships are old v2-era designs, so the v3 ships are RECOLOURED
+  instead: tools/dye_fleet.py bakes art/fleet/<bay>_<ship>.png (the warm wood takes the
+  chapter's hull colour with its grain and shading, the black canvas the sail colour, the
+  skulls and ropes kept; a 256-colour palette like the v3 originals). I Finndicate dark wood,
+  II Chartmaker bone white, III Coffers dusky pink, IV Last Fathom navy (Chapter IV's old
+  enemychapter4 ships go too), each with weathered canvas. North.raid_bay and fleet_art hand
+  them to every raid's ships (BattleStage) and the anchored ships on each bay's water
+  (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
+  tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
+  as bow-left (its smaller ships face right).
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

@@ -420,9 +420,11 @@ func _enemy_enters() -> void:
 	for j: int in fs.size():
 		var e: Dictionary = fs[j]
 		var node: HullRig = HullRig.new()
-		node.tex = Skipper.tex(str(e["image"]).trim_prefix("/"))
+		# A chapter's raid: its ships in the gang's colours (North.fleet_art).
+		var hull_art: String = North.fleet_art(e["image"], North.raid_bay(str(b.get("raidId", ""))))
+		node.tex = Skipper.tex(hull_art.trim_prefix("/"))
 		# Bow toward the line: a bow-left painting (a Man-o-War) is not turned.
-		node.def = { "seaFlip": North.bow_left(e["image"]) }
+		node.def = { "seaFlip": North.bow_left(hull_art) }
 		node.box = 400.0 if e["boss"] else (340.0 if j == 0 else 300.0)
 		node.face = -1.0
 		var at: Vector2 = lead_at + _foe_offset(j)
