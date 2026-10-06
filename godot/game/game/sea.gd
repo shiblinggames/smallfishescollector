@@ -54,6 +54,7 @@ var _field: SeaField
 var _motes: GPUParticles2D
 var _squall: SquallFx
 var _sound: SeaSound
+var _wfx: WeatherFx
 var _course: Course
 var _course_mark: Course.CourseMark
 var _compass: CompassRibbon
@@ -211,6 +212,11 @@ func _ready() -> void:
 	add_child(_sky)
 	_sky.attach(_world)
 	_squall.struck.connect(_sound.thunder)
+	# The weather on the water: rings, wind, curtains, bolts (WeatherFx).
+	_wfx = WeatherFx.new()
+	_wfx.sea = self
+	add_child(_wfx)
+	_squall.struck.connect(_wfx.strike)
 	for port: Dictionary in Chart.ports():
 		_sound.add_surf(_world, Vector2(float(port["x"]), float(port["y"])), float(port["r"]))
 	for i: Dictionary in Rules.data()["isles"]:
@@ -887,6 +893,12 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 	_water.set_shader_parameter("u_flash", _squall.flash)
 	# The chart is paper over the sea: no rain or fog on it.
 	_squall.visible = _chart == null
+	if _wfx != null:
+		var vp2: Vector2 = get_viewport_rect().size
+		var half2: Vector2 = Vector2(vp2.x / 2.0 / _camera.zoom.x, vp2.y / 2.0 / _camera.zoom.x / Chart.GROUND)
+		# A dive's own water, or a film's fair sky, sets the sea's front aside.
+		var front: Dictionary = f if _theme_k < 0.5 and OS.get_environment("FILM_CLEAR") == "" else {}
+		_wfx.step(delta, _squall.rain, _storm, front, now, at, half2, _chart == null)
 	_boat.storm = _storm
 	_boat.weather_speed = float(fx["speed"])
 	_boat.weather_turn = float(fx["turn"])

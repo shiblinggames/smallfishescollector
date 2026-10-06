@@ -123,6 +123,13 @@ static func _streak() -> Texture2D:
 	return ImageTexture.create_from_image(img)
 
 
+## How far the rain leans off the fall (0 the gentle lean it always has;
+## a gale's wind pushes it over, WeatherFx).
+func slant(k: float) -> void:
+	var m: ParticleProcessMaterial = _drops.process_material
+	m.direction = Vector3(-0.28 + k, 1.0, 0.0).normalized()
+
+
 ## deep: how far into a squall the view is; power: that squall's power.
 func step(delta: float, deep: float, power: float, screen: Vector2) -> void:
 	rain = lerpf(rain, deep, 1.0 - exp(-delta * 0.8))

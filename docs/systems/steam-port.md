@@ -2101,6 +2101,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- WEATHER THAT FEELS LIKE WEATHER (Kong, 2026-10-06: "does weather feel like weather?"; he
+  took 1 to 4 of: rain on the water, wind you can see, seeing a front coming, lightning you
+  see). game/weather_fx.gd, fed by Sea._weather, all drawn in code: RAIN RINGS open on the
+  sea round you in the world (up to ~260 a second in the heaviest, lying flat on the water);
+  in a Gale or Tempest (and lightly in a Fair Wind) FOAM STREAKS run the way it blows and
+  WHITECAPS break, she throws SPRAY off her bow when under way, and the rain sheet SLANTS
+  with the wind (SquallFx.slant); a front ON ITS WAY is a dark rain CURTAIN at that side of
+  the screen, nearer and darker inside 6,000 (and the same going away), and a Tempest
+  grumbles before it arrives with its curtain lit from inside; a LIGHTNING strike is a
+  forked white-blue bolt down to the sea with the flash (SquallFx.struck). A dive's own
+  water and a film's fair sky set the sea's front aside. Not yet: each kind's own character
+  (Fog's muffled sound and foghorn, a following sea under a Fair Wind) and the clear-air
+  moment after a storm.
 - THE COMPASS, OVERHAULED AS A HEADING RIBBON (Kong, 2026-10-06: "a visual overhaul and
   improvement of the compass system in Godot"; he chose the ribbon over words at the edge or
   a compass rose, pinning, and fading while fishing). game/compass_ribbon.gd: a thin strip
