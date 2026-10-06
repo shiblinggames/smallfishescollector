@@ -41,6 +41,8 @@ signal _voted(id: int)
 signal _answered(n: int, result: Variant)
 
 const PORT: int = 24650
+## How long a crewmate waits on one action before giving up on it.
+const REQUEST_WAIT: float = 20.0
 const LOBBY_FRIENDS_ONLY: int = 1
 
 var hosting: bool = false
@@ -78,7 +80,12 @@ func _ready() -> void:
 	if steam != null:
 		steam.connect("lobby_created", _on_lobby_created)
 		steam.connect("lobby_joined", _on_lobby_joined)
-		steam.connect("join_requested", func(lobby: int, _who: int) -> void: join_lobby(lobby))
+		steam.connect("join_requested", func(lobby: int, _who: int) -> void:
+			# Not while running a Charter for a crew: joining another would drop
+			# them all (Kong's audit, 2026-10-06).
+			if hosting and multiplayer.multiplayer_peer != null:
+				return
+			join_lobby(lobby))
 
 
 func _process(_delta: float) -> void:
@@ -202,7 +209,7 @@ func leave() -> void:
 	SteamLayer.presence_home()
 	_fail_open("You left the Charter.")
 	if charter != null and hosting:
-		charter.write()
+		charter.flush()
 
 
 func _drop(why: String) -> void:
@@ -234,12 +241,13 @@ func _on_peer_disconnected(id: int) -> void:
 		return
 	var k: Variant = _members.get(id)
 	_members.erase(id)
-	for n: Variant in _votes:
-		if k != null and (_votes[n]["asked"] as Array).has(k):
+	for n: Variant in _votes.keys():
+		if k != null and _votes.has(n) and (_votes[n]["asked"] as Array).has(k):
 			_tally(int(n), str(k), false)
 	if k != null:
 		raids.drop(str(k))
 		gauntlets.drop(str(k))
+		tables.drop(str(k))
 		mate_left.emit(k)
 		_left.rpc(k)
 		charter.write()
@@ -252,8 +260,17 @@ func _hello(k: String, as_name: String) -> void:
 		return
 	var id: int = multiplayer.get_remote_sender_id()
 	var why: String = charter.refusal(k)
+	# The same captain saying hello again (their game dropped and came back
+	# before this one noticed): the old line is the stale one; let it go and
+	# take the new (Kong's audit, 2026-10-06: they were refused for up to 30s).
 	if why == "" and _members.values().has(k):
-		why = "That captain is already aboard."
+		for old: Variant in _members.keys():
+			if _members[old] == k and int(old) != id and int(old) != 1:
+				_on_peer_disconnected(int(old))
+				if multiplayer.multiplayer_peer != null:
+					multiplayer.multiplayer_peer.disconnect_peer(int(old))
+		if _members.values().has(k):
+			why = "That captain is already aboard."
 	if why != "":
 		_refused.rpc_id(id, why)
 		await get_tree().create_timer(0.5).timeout
@@ -264,7 +281,11 @@ func _hello(k: String, as_name: String) -> void:
 	if s == null:
 		s = charter.add_member(k, as_name)
 	_members[id] = k
-	_welcome.rpc_id(id, _info(), SaveFile.serialize(s.save, s.carried, Js.iso(Clock.now_ms())))
+	_welcome.rpc_id(id, _info(), _ship(s))
+	# What is going on at the tables now (a muster, a dive): the newcomer's
+	# screens catch up at once rather than at the next change.
+	raids.welcome(k, id)
+	gauntlets.welcome(k, id)
 	# What the newcomer should see at once: every ship's look.
 	for other: Variant in _looks:
 		var l: Array = _looks[other]
@@ -344,6 +365,13 @@ func request(op: String, args: Array) -> Variant:
 	var n: int = _next
 	_open[n] = true
 	_req.rpc_id(1, n, op, args)
+	# Never wait forever (Kong's audit, 2026-10-06): an answer that has not come
+	# in REQUEST_WAIT seconds (the founder's game hit an error, or the line is
+	# hung) comes back as an error, and the screen carries on.
+	get_tree().create_timer(REQUEST_WAIT).timeout.connect(func() -> void:
+		if _open.has(n):
+			_open.erase(n)
+			_answered.emit(n, { "error": "The founder's game did not answer. Try again." }))
 	while true:
 		# A signal with two arguments awaits as an array of them.
 		var pair: Array = await _answered
@@ -365,8 +393,20 @@ func _req(n: int, op: String, args: Array) -> void:
 	var r: Variant = await charter.run(s, op, args)
 	if r is String and r == "not ported":
 		r = { "error": "That is not in this build yet." }
+	if r == null:
+		push_error("a crewmate's %s came back empty on the founder's game: %s" % [op, str(args)])
+		r = { "error": "That did not go through on the founder's game." }
 	s.persist()
-	_res.rpc_id(id, n, r, SaveFile.serialize(s.save, s.carried, Js.iso(Clock.now_ms())))
+	_res.rpc_id(id, n, r, _ship(s))
+
+
+## A captain's save to send to their own game. The founder keeps no copy of
+## the badge notices once they are on their way (the crewmate's game shows
+## them and clears its own; kept here they came back with every save).
+func _ship(s: Session) -> String:
+	var text: String = SaveFile.serialize(s.save, s.carried, Js.iso(Clock.now_ms()))
+	s.save.erase("badges_new")
+	return text
 
 
 @rpc("authority", "reliable")
@@ -391,8 +431,42 @@ func _on_shared_changed(actor_key: String) -> void:
 		if int(id) == 1 or k == actor_key:
 			continue
 		var s: Session = charter.session_for(k)
-		if s != null:
-			_sync.rpc_id(int(id), SaveFile.serialize(s.save, s.carried, Js.iso(Clock.now_ms())))
+		if s == null:
+			continue
+		# A table (a raid, a dive, the Den) changes each captain's own rewards:
+		# their whole save. One captain's action changes only what the crew
+		# shares: just that.
+		if actor_key == "":
+			_sync.rpc_id(int(id), _ship(s))
+		else:
+			_sync_shared.rpc_id(int(id), _shared_slice(s))
+
+
+## What the crew shares, as it stands in this captain's save (lent), to lay
+## over their game's copy.
+func _shared_slice(s: Session) -> Dictionary:
+	var sv: Dictionary = {}
+	for k: String in Charter.SHARED_SAVE:
+		if s.save.has(k):
+			sv[k] = s.save[k]
+	var pf: Dictionary = {}
+	for c: String in Charter.SHARED_PROFILE:
+		pf[c] = s.profile().get(c)
+	return { "save": sv, "profile": pf, "charter": s.save.get("charter", {}) }
+
+
+@rpc("authority", "reliable")
+func _sync_shared(slice: Dictionary) -> void:
+	if _mine == null:
+		return
+	var sv: Dictionary = slice.get("save", {})
+	for k: Variant in sv:
+		_mine.save[k] = sv[k]
+	var pf: Dictionary = slice.get("profile", {})
+	for c: Variant in pf:
+		_mine.profile()[c] = pf[c]
+	_mine.save["charter"] = slice.get("charter", {})
+	_mine.changed.emit()
 
 
 @rpc("authority", "reliable")

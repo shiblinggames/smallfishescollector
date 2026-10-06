@@ -122,6 +122,7 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 		"mark": return _mark(key, str(p))
 		"vote": return _vote(key, str(p))
 		"home": return _home(key)
+		"nudge": return _nudge(key)
 	return { "error": "There is no such order." }
 
 
@@ -576,9 +577,16 @@ func _flare_result(key: String, res: Dictionary) -> Dictionary:
 	if _r["phase"] != "flares":
 		return { "ok": true }
 	_r["flareRes"][key] = res
+	_flares_check()
+	return { "ok": true }
+
+
+## The flares land once every captain still afloat has answered them (or at
+## once, pressed on: an unanswered sky lets every flare through).
+func _flares_check(now: bool = false) -> void:
 	for s: Dictionary in Battle.alive(_r["b"]):
-		if not _r["flareRes"].has(s["key"]):
-			return { "ok": true }
+		if not now and not _r["flareRes"].has(s["key"]) and not Js.obj(_r.get("gone")).has(s["key"]):
+			return
 	var b: Dictionary = _r["b"]
 	var res2: Array = []
 	for s2: Dictionary in b["seats"]:
@@ -586,9 +594,8 @@ func _flare_result(key: String, res: Dictionary) -> Dictionary:
 	var ev: Array = Battle.flares_land(b, res2)
 	if b["state"] == "lost":
 		_dive_lost(ev)
-		return { "ok": true }
+		return
 	_step("plan", ev)
-	return { "ok": true }
 
 
 func _drum(key: String) -> Dictionary:
@@ -973,17 +980,24 @@ func _pick(key: String, p: Dictionary) -> Dictionary:
 		d["stamps"][str(i)] = key
 	d["took"][key] = got
 	d["turn"] = float(d["turn"]) + 1.0
-	# Skip anyone with nothing they can take.
-	while _turn_key() != "" and not _can_pick(_turn_key()):
+	_turn_on()
+	return { "ok": true }
+
+
+## The draft's turn passes on: past anyone with nothing they can take and
+## anyone gone from the Charter (Kong's audit, 2026-10-06: a dropped captain
+## next in line held the table forever); the draft closes after the last.
+func _turn_on() -> void:
+	var d: Dictionary = _r["draft"]
+	while _turn_key() != "" and (Js.obj(_r.get("gone")).has(_turn_key()) or not _can_pick(_turn_key())):
 		d["took"][_turn_key()] = { "kind": "none" }
 		d["turn"] = float(d["turn"]) + 1.0
 	if _turn_key() == "":
 		_r["seq"] = int(_r["seq"]) + 1
 		_push()
 		_draft_done()
-		return { "ok": true }
+		return
 	_push()
-	return { "ok": true }
 
 
 func _can_pick(key: String) -> bool:
@@ -1270,10 +1284,16 @@ func _contract_vote(key: String, stake: int) -> Dictionary:
 	if _r["phase"] != "contract":
 		return { "error": "Not now." }
 	_r["job"]["votes"][key] = float(clampi(stake, 0, 3))
+	_contract_check()
+	return { "ok": true }
+
+
+## The stake settles once every captain still in has voted.
+func _contract_check() -> void:
 	for k: String in _keys_in():
 		if not _r["job"]["votes"].has(k):
 			_push()
-			return { "ok": true }
+			return
 	var tally: Dictionary = {}
 	for k2: String in _r["job"]["votes"]:
 		var v: int = int(_r["job"]["votes"][k2])
@@ -1292,7 +1312,6 @@ func _contract_vote(key: String, stake: int) -> Dictionary:
 		_r["run"]["contract"] = _r["job"]["offers"][best - 1]
 	_r["jobTaken"] = best
 	_descend()
-	return { "ok": true }
 
 
 func _job_land(jr: Dictionary) -> void:
@@ -1413,23 +1432,29 @@ func _vote(key: String, v: String) -> Dictionary:
 	if v == "bank" and str(_r.get("bankShut", "")) != "":
 		return { "error": str(_r["bankShut"]) }
 	_r["votes"][key] = v
+	_vote_check()
+	return { "ok": true }
+
+
+## The breather settles once every captain still in has voted (a captain who
+## drops is not counted, and casts nothing).
+func _vote_check() -> void:
 	var ks: Array = _keys_in()
 	for k: String in ks:
 		if not _r["votes"].has(k):
 			_push()
-			return { "ok": true }
+			return
 	# Everyone to hold it: held. Otherwise a vote to hold counts as banking.
 	var holds: int = _r["votes"].values().filter(func(x: Variant) -> bool: return x == "hold").size()
 	if holds == ks.size():
 		_hold()
-		return { "ok": true }
+		return
 	var banks: int = _r["votes"].values().filter(func(x: Variant) -> bool: return x == "bank" or x == "hold").size()
 	# A majority carries; a tie banks.
 	if banks * 2 >= ks.size() and str(_r.get("bankShut", "")) == "":
 		_bank()
 	else:
 		_dive()
-	return { "ok": true }
 
 
 func _dive() -> void:
@@ -1668,13 +1693,20 @@ func _death_pay(key: String, s: Session, cd: int) -> Dictionary:
 func _home(key: String) -> Dictionary:
 	if not ["haul", "dead", "jobResult", "held"].has(str(_r["phase"])):
 		return { "ok": true }
+	_r["acks"][key] = true
+	_acks_check()
+	return { "ok": true }
+
+
+## The end screens (and a job's verdict) move on once every captain still in
+## has pressed on.
+func _acks_check() -> void:
 	if _r["phase"] == "jobResult":
 		# Onward from a job's verdict: a curse or a draft it brought, then on.
-		_r["acks"][key] = true
 		for k: String in _keys_in():
 			if not _r["acks"].has(k):
 				_push()
-				return { "ok": true }
+				return
 		var run: Dictionary = _r["run"]
 		var nx: String = str(run.get("jobNext", ""))
 		run.erase("jobNext")
@@ -1684,19 +1716,17 @@ func _home(key: String) -> Dictionary:
 			if not cu.is_empty():
 				_r["curse"] = { "offer": cu, "acks": {}, "rerolls": {} }
 				_enter("curse")
-				return { "ok": true }
+				return
 		if nx == "draft" and _open_draft("", nd):
-			return { "ok": true }
+			return
 		_chain()
-		return { "ok": true }
-	_r["acks"][key] = true
+		return
 	for k2: String in Js.obj(_r.get("caps")):
 		if not _r["acks"].has(k2) and not Js.obj(_r.get("gone")).has(k2):
 			_push()
-			return { "ok": true }
+			return
 	_r["phase"] = "done"
 	_push()
-	return { "ok": true }
 
 
 # ── The Charter's book and the wire ──────────────────────────────────────────
@@ -1720,6 +1750,7 @@ func _settle() -> void:
 
 
 func _push() -> void:
+	_clock()
 	var pub: Dictionary = _r.duplicate(true)
 	if pub.has("run"):
 		# Kept on the founder's game: the next fight before it is fought.
@@ -1767,6 +1798,95 @@ func _process(delta: float) -> void:
 		_advance()
 
 
+
+## GO ON WITHOUT THEM (Kong's audit, 2026-10-06: one captain gone to make tea
+## held the whole crew). Once a choice has waited AFK_WAIT seconds, any
+## captain still in can move it on: the ones not yet answered take the
+## default (a ship holds and reloads, a curse is borne, a vote banks). The
+## clock is the founder's, from when the choice opened.
+const AFK_WAIT: float = 60.0
+var _phase_ms: int = 0
+var _phase_seen: String = ""
+
+
+func _clock() -> void:
+	var tag: String = "%s:%s:%s" % [_r.get("phase", ""), str(_r.get("seq", "")), str(Js.obj(_r.get("draft")).get("turn", ""))]
+	if tag != _phase_seen:
+		_phase_seen = tag
+		_phase_ms = Time.get_ticks_msec()
+
+
+func _waited() -> bool:
+	return Time.get_ticks_msec() - _phase_ms >= int((AFK_WAIT - 5.0) * 1000.0)
+
+
+func _nudge(key: String) -> Dictionary:
+	if not _keys_in().has(key):
+		return { "error": "You are out of this dive." }
+	if not _waited():
+		return { "error": "Give them a moment more." }
+	var ph: String = str(_r["phase"])
+	match ph:
+		"plan":
+			_resolve()
+			return { "ok": true }
+		"flares":
+			_flares_check(true)
+			return { "ok": true }
+		"draft":
+			var tk: String = _turn_key()
+			if tk != "" and tk != key:
+				_r["draft"]["took"][tk] = { "kind": "none" }
+				_r["draft"]["turn"] = float(_r["draft"]["turn"]) + 1.0
+				_turn_on()
+			return { "ok": true }
+	for k: String in _keys_in():
+		if k == key or str(_r["phase"]) != ph:
+			continue
+		match ph:
+			"curse":
+				if not _r["curse"]["acks"].has(k):
+					_bear(k)
+			"shrine":
+				if not _r["shrine"]["picks"].has(k):
+					_shrine(k, { "choice": "walk" })
+			"fence":
+				if not _r["fence"]["done"].has(k):
+					_done(k)
+			"marks":
+				if not _r["marks"]["picks"].has(k):
+					_mark(k, "shark")
+			"breather":
+				if not _r["votes"].has(k):
+					_vote(k, "dive" if str(_r.get("bankShut", "")) != "" else "bank")
+			"contract":
+				if not _r["job"]["votes"].has(k):
+					_contract_vote(k, 0)
+			"jobResult":
+				if not _r["acks"].has(k):
+					_home(k)
+	return { "ok": true }
+
+
+## A captain back on the line mid-dive (their game dropped and came back):
+## back in their seat, and shown where the dive is now.
+func welcome(key: String, id: int) -> void:
+	if _r.get("phase", "idle") == "idle":
+		return
+	if Js.obj(_r.get("gone")).has(key) and not ["muster", "done"].has(str(_r["phase"])):
+		_r["gone"].erase(key)
+		var si: int = _seat_of(key)
+		if si >= 0 and not _r["b"]["seats"][si].get("sunk", false):
+			_r["b"]["seats"][si].erase("fled")
+		_push()
+		return
+	if multiplayer.multiplayer_peer != null:
+		var pub: Dictionary = _r.duplicate(true)
+		if pub.has("run"):
+			(pub["run"] as Dictionary).erase("peek")
+		_state.rpc_id(id, pub)
+
+
 ## A captain's game has dropped out of the Charter: out of the muster, or
 ## out of the dive (keeping nothing of the pot), and nothing waits on them.
 func drop(key: String) -> void:
@@ -1791,13 +1911,15 @@ func drop(key: String) -> void:
 		"playing":
 			if _everyone_played():
 				_advance()
+		"flares":
+			_flares_check()
 		"draft":
 			if _turn_key() == key:
-				_r["draft"]["turn"] = float(_r["draft"]["turn"]) + 1.0
-				if _turn_key() == "":
-					_draft_done()
-				else:
-					_push()
+				_turn_on()
+			else:
+				_push()
+		"jobResult", "haul", "dead", "held":
+			_acks_check()
 		"curse":
 			_bear(key)
 		"shrine":
@@ -1808,11 +1930,12 @@ func drop(key: String) -> void:
 			_marks_check()
 		"breather":
 			_r["votes"].erase(key)
-			var ks: Array = _keys_in()
-			if not ks.is_empty():
-				_vote(str(ks[0]), str(_r["votes"].get(ks[0], "dive")))
+			_vote_check()
 		"contract":
-			_contract_vote(key, 0)
+			_r["job"]["votes"].erase(key)
+			_contract_check()
+		_:
+			_push()
 
 
 

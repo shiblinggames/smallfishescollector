@@ -122,6 +122,8 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 			return _tide_pick(key, str(payload))
 		"drum":
 			return _drum(key)
+		"nudge":
+			return _nudge(key)
 		"out":
 			# Sunk or got away: this screen has left the fight, so the rounds
 			# no longer wait on it.
@@ -506,6 +508,7 @@ func _process(delta: float) -> void:
 
 ## Send the raid to everyone (and to this game's own screens).
 func _push() -> void:
+	_clock()
 	if _r["phase"] == "muster":
 		_r["tiers"] = tiers_open(Js.list(_r.get("members")))
 		if str(_r["tiers"].get(_r.get("tier", "normal"), "")) != "":
@@ -532,6 +535,63 @@ func _settle_saves() -> void:
 
 func _session(key: String) -> Session:
 	return charter.session_for(key) if charter != null else null
+
+
+
+## GO ON WITHOUT THEM (Kong's audit, 2026-10-06: one captain gone to make tea
+## held the whole crew). Once a choice has waited AFK_WAIT seconds, any
+## captain still in can move it on: the ones not yet answered take the
+## default (a ship holds and reloads, a curse is borne, a vote banks). The
+## clock is the founder's, from when the choice opened.
+const AFK_WAIT: float = 60.0
+var _phase_ms: int = 0
+var _phase_seen: String = ""
+
+
+func _clock() -> void:
+	var tag: String = "%s:%s:%s" % [_r.get("phase", ""), str(_r.get("seq", "")), str(Js.obj(_r.get("draft")).get("turn", ""))]
+	if tag != _phase_seen:
+		_phase_seen = tag
+		_phase_ms = Time.get_ticks_msec()
+
+
+func _waited() -> bool:
+	return Time.get_ticks_msec() - _phase_ms >= int((AFK_WAIT - 5.0) * 1000.0)
+
+
+## A captain back on the line mid-raid: back in their seat, and shown where
+## the raid is now.
+func welcome(key: String, id: int) -> void:
+	if str(_r.get("phase", "idle")) == "idle":
+		return
+	if Js.obj(_r.get("gone")).has(key) and not ["muster", "done"].has(str(_r["phase"])):
+		_r["gone"].erase(key)
+		var si: int = _seat_of(key)
+		if si >= 0 and not _r["b"]["seats"][si].get("sunk", false):
+			_r["b"]["seats"][si].erase("fled")
+		_push()
+		return
+	if multiplayer.multiplayer_peer != null:
+		_state.rpc_id(id, _r.duplicate(true))
+
+
+func _nudge(key: String) -> Dictionary:
+	var si: int = _seat_of(key)
+	if si < 0 or not Battle.alive(_r["b"]).has(_r["b"]["seats"][si]):
+		return { "error": "You are out of this fight." }
+	if not _waited():
+		return { "error": "Give them a moment more." }
+	match str(_r["phase"]):
+		"plan":
+			_resolve()
+		"flares":
+			_land_flares()
+		"tide":
+			for s: Dictionary in Battle.alive(_r["b"]):
+				if str(_r["phase"]) == "tide" and not _r["tidePicks"].has(s["key"]):
+					var ch: Array = Js.list(_r["tide"].get("choices"))
+					_tide_pick(s["key"], str(ch[ch.size() - 1]["id"]) if not ch.is_empty() else "")
+	return { "ok": true }
 
 
 ## A captain's game has dropped out of the Charter: out of the muster, or out

@@ -189,6 +189,8 @@ func _ready() -> void:
 	_banner.offset_bottom = BAR + 110
 	_banner.modulate.a = 0.0
 	_build_deck()
+	if table != null:
+		_nudge_build()
 	if gauntlet != "":
 		sea.water_theme = _water_theme({})
 		_ov = GauntletOverlay.new()
@@ -267,6 +269,8 @@ func _frame() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if _nudge_btn != null:
+		_nudge_btn.visible = not _gone and Time.get_ticks_msec() - _wait_ms >= int(RaidTable.AFK_WAIT * 1000.0) and _held_up()
 	# Every player ship in the line faces the enemy, bow to the right, for the
 	# whole fight (Kong, 2026-10-05: one hull was seen turned away); only a
 	# ship running from it (fled, the stage gone) turns about.
@@ -2380,9 +2384,81 @@ func _act(args: Array) -> Variant:
 	return await sea.session.act("raidTable", args)
 
 
+## GO ON WITHOUT THEM: a crew choice that has waited a minute on someone
+## (you have answered, they have not) can be moved on by you; they take the
+## default (the tables, _nudge).
+var _nudge_btn: Button = null
+var _wait_tag: String = ""
+var _wait_ms: int = 0
+
+
+func _nudge_build() -> void:
+	_nudge_btn = Kit.button("Go on without them", "secondary", "small")
+	_nudge_btn.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_nudge_btn.offset_left = -130
+	_nudge_btn.offset_right = 130
+	_nudge_btn.offset_top = BAR + 120
+	_nudge_btn.offset_bottom = BAR + 160
+	_nudge_btn.tooltip_text = "Anyone who has not chosen yet takes the default and the crew carry on."
+	_nudge_btn.visible = false
+	_nudge_btn.pressed.connect(func() -> void:
+		_nudge_btn.visible = false
+		_wait_ms = Time.get_ticks_msec()
+		var r: Variant = await _act(["nudge"])
+		if r is Dictionary and (r as Dictionary).has("error"):
+			_log_line(str(r["error"])))
+	add_child(_nudge_btn)
+
+
+## You have answered the choice in front of the crew, and someone still in
+## has not.
+func _held_up() -> bool:
+	var st: Dictionary = _latest
+	var ph: String = str(st.get("phase", ""))
+	if Js.list(st.get("members")).size() < 2:
+		return false
+	var gone: Dictionary = Js.obj(st.get("gone"))
+	if ph == "draft":
+		var d: Dictionary = Js.obj(st.get("draft"))
+		var order: Array = Js.list(d.get("order"))
+		var i: int = int(Js.num(d.get("turn")))
+		return i < order.size() and str(order[i]) != my_key and not gone.has(str(order[i]))
+	var given: Dictionary
+	var keys: Array = []
+	match ph:
+		"plan", "flares", "tide":
+			given = Js.obj(st.get({ "plan": "plans", "flares": "flareRes", "tide": "tidePicks" }[ph]))
+			for s: Dictionary in Battle.alive(Js.obj(st.get("b"))):
+				keys.append(str(s.get("key", "")))
+		"curse", "shrine", "fence", "marks", "contract":
+			var sub: Dictionary = Js.obj(st.get("job" if ph == "contract" else ph))
+			given = Js.obj(sub.get({ "curse": "acks", "fence": "done", "contract": "votes" }.get(ph, "picks")))
+		"breather":
+			given = Js.obj(st.get("votes"))
+		"jobResult":
+			given = Js.obj(st.get("acks"))
+		_:
+			return false
+	if keys.is_empty():
+		var caps: Dictionary = Js.obj(st.get("caps"))
+		for k: Variant in caps:
+			if str(Js.obj(caps[k]).get("out", "")) == "":
+				keys.append(str(k))
+	if not given.has(my_key):
+		return false
+	for k2: String in keys:
+		if k2 != my_key and not given.has(k2) and not gone.has(k2):
+			return true
+	return false
+
+
 ## Every state the table sends: each phase is handled once, in order.
 func _pump(st: Dictionary) -> void:
 	_latest = st
+	var wt: String = "%s:%s:%s" % [st.get("phase", ""), str(st.get("seq", "")), str(Js.obj(st.get("draft")).get("turn", ""))]
+	if wt != _wait_tag:
+		_wait_tag = wt
+		_wait_ms = Time.get_ticks_msec()
 	var ph0: String = str(st.get("phase", ""))
 	# A sheet's own updates go straight to it; a NEW sheet waits for its moment.
 	if _ov != null and not _gone and ph0 != "playing" and (not GauntletOverlay.PHASES.has(ph0) or ph0 == _ov_phase):

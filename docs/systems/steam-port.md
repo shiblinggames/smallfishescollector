@@ -736,6 +736,35 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   battle.crossfire.pct). A hit turned crit by gear or a tide does not count. On the water: a
   "Crossfire!" call, gold lines from each ship to the enemy; while choosing, "Ben landed a
   critical. Land one too for a crossfire." NOT YET TESTED over a real Steam lobby.
+- MULTIPLAYER HARDENING (2026-10-06, after an audit before the first session with friends).
+  STILL OPEN: steam/ids.json appIds are 0; the Steam lobby needs a real App ID (Kong's).
+  - GO ON WITHOUT THEM: no clock still (Kong's 2026-10-03 rule stands), but a valve. Once a crew
+    choice has waited a minute on someone (you answered, they did not), a "Go on without them"
+    button shows under the top bar (BattleStage._held_up). Pressed, the founder's game
+    (RaidTable/GauntletTable._nudge, its own clock from when the choice opened) gives the
+    others the default: a ship reloads or braces; flares unanswered all get through; a tide
+    takes its last choice; in a dive a curse is borne, the shrine walked past, the Fence left,
+    the shark Mark taken, a breather vote banks (dives when banking is shut), a Don's job is
+    walked away from, a draft turn passes. They stay in the run.
+  - DROPS NEVER STALL A DIVE: a gone captain is skipped in the draft order; a drop re-checks
+    flares, the job verdict and the end screens; a drop at a breather or a Don's job casts no
+    vote for them (it used to cast "dive" and count the leaver's stake as 0).
+  - REJOIN: a second hello from a captain already aboard (their game dropped and came back
+    before the founder's noticed) replaces the stale line instead of being refused. On welcome
+    the raid and dive states are sent at once, and a captain dropped mid-fight or mid-dive is
+    seated again (gone cleared, their ship back in the line).
+  - THE DEN: a dropped captain stands from the wheel and the blackjack table (DenTables.drop);
+    the blackjack turn hung on them before.
+  - TIMEOUTS: a crewmate's action waits CrewNet.REQUEST_WAIT (20s) at most, then comes back as
+    an error. An action that came back empty on the founder's game is logged and answered.
+  - THE FOUNDER'S FRAME: the Charter file is written in a batch (Charter.write marks a berth;
+    flush() 1.5s later serializes only those, at once on leaving, closing the window, founding
+    and setting sail). An ordinary action sends the other crewmates only the shared slice
+    (_sync_shared: the shared save keys, the shared profile columns, the charter block), and
+    only when the shared book changed; a table (raid, dive, Den) still sends whole saves.
+  - BADGES: the founder drops a crewmate's badge notices once they are sent (they came back
+    with every save after). Closing the founder's window tells the crew at once (CrewNet.leave).
+    A Steam invite is ignored while hosting a crew.
 - THE FIGHT'S LOOK, OVERHAULED (2026-10-03; game/battle_look.gd). Kong: the fight UI and the
   plates "look a bit elementary"; then "still in the similar style as what our overall theme
   is", "use the players profile pic ... like how the leaderboard on the web game displays the

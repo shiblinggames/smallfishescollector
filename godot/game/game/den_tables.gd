@@ -69,6 +69,16 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 	return r
 
 
+## A captain whose game dropped off the line: up from both tables, as if they
+## had stood (a blackjack hand of theirs stands as it is). Without this the
+## wheel waited on them and the blackjack turn hung on them.
+func drop(key: String) -> void:
+	if _rl["seats"].has(key):
+		_rl_handle(key, null, "leave", null)
+	if _bj["seats"].has(key):
+		_bj_handle(key, null, "leave", null)
+
+
 func _seat_color(table: Dictionary, key: String) -> String:
 	var used: Array = []
 	for k: String in table["seats"]:

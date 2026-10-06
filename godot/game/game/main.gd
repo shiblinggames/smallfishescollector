@@ -201,6 +201,13 @@ func _notification(what: int) -> void:
 			# Closing the window saves the captain at sea first.
 			if _screen is Sea and (_screen as Sea).session != null:
 				(_screen as Sea).session.persist()
+				# A Charter's file goes out now (its writes are batched), and the
+				# crew hear at once that the founder's game is closing.
+				var cs: Sea = _screen
+				if cs.session.charter != null:
+					cs.session.charter.flush()
+				if cs.net != null:
+					cs.net.leave()
 		NOTIFICATION_APPLICATION_FOCUS_OUT:
 			if bool(GameSettings.value("quiet_unfocused")):
 				AudioServer.set_bus_mute(0, true)

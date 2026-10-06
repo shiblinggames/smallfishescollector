@@ -96,6 +96,7 @@ static func found(charter_name: String, hardcore: bool, founder_key: String, cap
 	if s != null:
 		s.profile()["character_color"] = color
 	c.write()
+	c.flush()
 	return c
 
 
@@ -191,13 +192,15 @@ func session_for(key: String) -> Session:
 
 func _adopt_session(key: String, s: Session) -> void:
 	sessions[key] = s
-	s.writer = write
+	s.writer = func() -> void: write(key)
 	s.charter = self
 
 
 func set_sail() -> void:
 	data["sailed"] = true
 	write()
+	flush()
+	flush()
 
 
 # ── The shared book, purse and market ──────────────────────────────────────────
@@ -304,6 +307,7 @@ func run(s: Session, op: String, args: Array) -> Variant:
 		if not agreed:
 			return { "error": "The crew said not yet." }
 	_lend(s)
+	var shared_before: int = _shared().hash()
 	var ledger_n: int = (s.save["ledger"] as Array).size()
 	var bests_before: Dictionary = (s.save["bests"] as Dictionary).duplicate(true)
 	var golden_before: Dictionary = {}
@@ -323,8 +327,11 @@ func run(s: Session, op: String, args: Array) -> Variant:
 	for k: Variant in s.save["collection"]:
 		if Js.obj((s.save["collection"] as Dictionary)[k]).get("is_golden") == true and not golden_before.get(k, false):
 			_shared()["golden_by"][str(k)] = who
-	_spread(key)
-	write()
+	# Only a change to what the crew shares goes out to the crew (Kong's audit,
+	# 2026-10-06: every action used to send every crewmate their whole save).
+	if _shared().hash() != shared_before:
+		_spread(key)
+	write(key)
 	return r
 
 
@@ -339,16 +346,43 @@ func _prestige_text(s: Session, zone: String) -> String:
 	return "Prestige %d in %s. The crew's log there is wiped; goldens stay. In return, +%d%% XP on every catch there for the whole crew." % [lvl + 1, water, (lvl + 1) * 10]
 
 
-## Every opened captain back into its berth, and the file written.
-func write() -> void:
+## THE FILE, WRITTEN IN A BATCH (Kong's audit, 2026-10-06: every action used
+## to serialize every captain and write the whole file, twice, on the main
+## thread; with four aboard the founder's game froze for a fifth of a second
+## each time). write(key) marks that captain's berth changed ("" marks them
+## all) and the file goes out once, a moment later, with only the changed
+## captains serialized afresh. flush() writes at once (leaving, closing).
+const WRITE_AFTER: float = 1.5
+var _dirty: Dictionary = {}
+var _write_due: bool = false
+
+
+func write(key: String = "") -> void:
+	_dirty[key] = true
+	if _write_due:
+		return
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree == null:
+		flush()
+		return
+	_write_due = true
+	tree.create_timer(WRITE_AFTER).timeout.connect(flush)
+
+
+func flush() -> void:
+	_write_due = false
+	if _dirty.is_empty():
+		return
+	var all: bool = _dirty.has("")
 	for b: Dictionary in data["berths"]:
 		var s: Session = sessions.get(b["key"])
-		if s != null:
+		if s != null and (all or _dirty.has(b["key"]) or not b.has("captain")):
 			b["captain"] = SaveFile.serialize(s.save, s.carried, Js.iso(Clock.now_ms()))
 			b["name"] = s.captain_name()
 			# How they look, for the title screen's crew row (no need to open
 			# every captain's save to draw a portrait).
 			b["look"] = Skipper.look_of(s.profile())
+	_dirty.clear()
 	DirAccess.make_dir_recursive_absolute(_dir())
 	var err: Error = SaveFile.write_file(ProjectSettings.globalize_path(_path(id())), JsJson.stringify(data))
 	if err != OK:
