@@ -95,6 +95,40 @@ func _init() -> void:
 		i0 += 1
 	check(int(Js.num(Js.obj(b.profile()["orders"]).get("board"))) == int(Js.num(o.get("board"))) + 1, "and a new crew board is dealt")
 
+	# ── Fishing together: pops, callouts, the crew streak, a derby ──
+	var cf: CrewFishing = CrewFishing.new()
+	root.add_child(cf)
+	cf.charter = c
+	c.fishing = cf
+	var calls: Array = []
+	var pops: Array = []
+	cf.called.connect(func(t: String, _about: String) -> void: calls.append(t))
+	cf.popped.connect(func(k: String, _p: Dictionary) -> void: pops.append(k))
+	cf.note_pos("anna-key", { "x": 0.0, "y": 0.0 })
+	cf.note_pos("ben-key", { "x": 900.0, "y": 300.0 })
+	var marlin: Dictionary = { "id": 12.0, "name": "Marlin" }
+	for k2: int in 3:
+		cf.on_reel("anna-key" if k2 % 2 == 0 else "ben-key", "perfect", { "caught": true, "fish": marlin, "sizeIn": 40.0 + k2 })
+	check(pops.size() == 3, "every catch pops on the crew's water")
+	check(cf.streak == 3 and cf.streak_keys.size() == 2, "perfects in company build one crew streak (%d)" % cf.streak)
+	cf.on_reel("ben-key", "catch", { "caught": true, "fish": marlin, "sizeIn": 30.0 })
+	check(cf.streak == 0, "a plain catch breaks it")
+	check(Js.num(Js.obj(c.data.get("crewStreak")).get("n")) == 3.0, "the crew's best streak is kept")
+	cf.on_reel("anna-key", "perfect", { "caught": true, "fish": marlin, "sizeIn": 50.0, "isShiny": true })
+	check(calls.any(func(t: String) -> bool: return t.contains("golden Marlin")), "a golden is called out")
+	cf.note_pos("ben-key", { "x": 90000.0, "y": 0.0 })
+	cf.on_reel("anna-key", "perfect", { "caught": true, "fish": marlin, "sizeIn": 20.0 })
+	check(cf.streak <= 1, "alone, no crew streak")
+	check((await c.run(b, "crewDerby", ["start", "biggest"])).get("ok", false), "Ben starts a derby")
+	check((await c.run(a, "crewDerby", ["start", "species"])).has("error"), "one derby at a time")
+	cf.on_reel("anna-key", "catch", { "caught": true, "fish": marlin, "sizeIn": 61.0 })
+	cf.on_reel("ben-key", "catch", { "caught": true, "fish": { "id": 3.0, "name": "Cod" }, "sizeIn": 22.0 })
+	check(Js.list(cf.derby.get("rows")).size() == 2 and cf.derby["rows"][0]["name"] == "Anna", "the standings lead with the biggest fish")
+	cf._derby_end_ms = 0
+	cf._process(0.1)
+	check(cf.derby.is_empty() and calls.back().contains("Anna won the derby"), "the derby ends and its winner is called")
+	check(Js.list(c.data.get("derbies")).size() == 1, "and kept in the Charter's records")
+
 	# ── Release and handover ──
 	check(c.release("anna-key") != "", "the founder cannot release herself")
 	check(c.release("cal-key") == "", "Anna releases Cal's berth")

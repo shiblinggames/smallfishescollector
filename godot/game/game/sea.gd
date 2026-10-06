@@ -363,6 +363,11 @@ func _ready() -> void:
 				_mates.erase(k))
 		_send_look()
 		net.proposed.connect(_on_proposed)
+		var cw: CrewWatersView = CrewWatersView.new()
+		cw.sea = self
+		cw.fishing = net.fishing
+		cw.my_key = net.key
+		hud_layer.add_child(cw)
 
 
 func _process(delta: float) -> void:

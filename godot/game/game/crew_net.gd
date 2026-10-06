@@ -63,6 +63,7 @@ var _looks: Dictionary = {}
 var tables: DenTables
 var raids: RaidTable
 var gauntlets: GauntletTable
+var fishing: CrewFishing
 
 
 func _ready() -> void:
@@ -73,6 +74,9 @@ func _ready() -> void:
 	add_child(raids)
 	gauntlets = GauntletTable.new()
 	add_child(gauntlets)
+	fishing = CrewFishing.new()
+	fishing.name = "CrewFishing"
+	add_child(fishing)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected)
@@ -208,6 +212,8 @@ func host(c: Charter) -> Error:
 	c.raids = raids
 	gauntlets.charter = c
 	c.gauntlets = gauntlets
+	fishing.charter = c
+	c.fishing = fishing
 	if not c.shared_changed.is_connected(_on_shared_changed):
 		c.shared_changed.connect(_on_shared_changed)
 	if not c.sinking.is_connected(_on_sinking):
@@ -355,6 +361,7 @@ func _on_peer_disconnected(id: int) -> void:
 		raids.drop(str(k))
 		gauntlets.drop(str(k))
 		tables.drop(str(k))
+		fishing.drop(str(k))
 		mate_left.emit(k)
 		_left.rpc(k)
 		charter.write()
@@ -393,6 +400,7 @@ func _hello(k: String, as_name: String) -> void:
 	# screens catch up at once rather than at the next change.
 	raids.welcome(k, id)
 	gauntlets.welcome(k, id)
+	fishing.welcome(id)
 	# What the newcomer should see at once: every ship's look.
 	for other: Variant in _looks:
 		var l: Array = _looks[other]
@@ -500,9 +508,6 @@ func _req(n: int, op: String, args: Array) -> void:
 	var r: Variant = await charter.run(s, op, args)
 	if r is String and r == "not ported":
 		r = { "error": "That is not in this build yet." }
-	if r == null:
-		push_error("a crewmate's %s came back empty on the founder's game: %s" % [op, str(args)])
-		r = { "error": "That did not go through on the founder's game." }
 	s.persist()
 	_res.rpc_id(id, n, r, _ship(s))
 
@@ -674,6 +679,8 @@ func bind(s: Session) -> void:
 
 ## Ten times a second: where my boat is, how it moves, what the captain is doing.
 func send_boat(delta: float, state: Dictionary) -> void:
+	if hosting:
+		fishing.note_pos(key, state)
 	if multiplayer.multiplayer_peer == null or multiplayer.get_peers().is_empty():
 		return
 	_boat_t += delta
@@ -691,6 +698,8 @@ func send_look(look: Dictionary, as_name: String) -> void:
 
 @rpc("any_peer", "unreliable_ordered")
 func _boat(k: String, state: Dictionary) -> void:
+	if hosting:
+		fishing.note_pos(k, state)
 	mate_boat.emit(k, state)
 
 

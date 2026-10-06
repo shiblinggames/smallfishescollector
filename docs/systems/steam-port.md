@@ -756,7 +756,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   - THE DEN: a dropped captain stands from the wheel and the blackjack table (DenTables.drop);
     the blackjack turn hung on them before.
   - TIMEOUTS: a crewmate's action waits CrewNet.REQUEST_WAIT (20s) at most, then comes back as
-    an error. An action that came back empty on the founder's game is logged and answered.
+    an error. (An empty answer is a real answer for some rules, heldGolden for one, so it
+    is passed on as it is.)
   - THE FOUNDER'S FRAME: the Charter file is written in a batch (Charter.write marks a berth;
     flush() 1.5s later serializes only those, at once on leaving, closing the window, founding
     and setting sail). An ordinary action sends the other crewmates only the shared slice
@@ -2075,6 +2076,23 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     land in the purse once, its ship skin goes to EVERY captain, and the ranks read off the
     crew's points. A sweep of the orders or a Master order puts a crate in EVERY captain's
     stash and counts for every captain's sweep badges.
+  - FISHING TOGETHER (Kong, 2026-10-06, picked from a list: crew streak, derbies, callouts and
+    catch pops; nothing that touches what bites or pays; game/crew_fishing.gd on the founder's
+    game, game/crew_waters_view.gd on every screen):
+    - CATCH POPS: a crewmate's catch shows over their ship on your water, the fish and its
+      length, a golden in gold (your own catch keeps its own moment).
+    - CALLOUTS to the whole crew (not the catcher): an ancient, a golden, a species new to the
+      crew's book, a new crew best (the Almanac's bests are shared, so a PB is the crew's).
+    - THE CREW STREAK: perfects by captains in company (another crewmate within 2,200 of them,
+      seen in the last 6s) build one streak; any other reel by one of them breaks it ("Ben
+      broke the crew streak at 7"). From 2 it shows under the top bar for those in it, with
+      gold motes rising round each of their hulls, more as it climbs; every 10 is called. The
+      crew's best is kept in the Charter with the names (the Charter sheet).
+    - THE DERBY: any captain starts one from the Charter sheet for everyone aboard, 10
+      minutes, BIGGEST FISH (one catch's length, any species) or MOST SPECIES. Standings and
+      the clock at the right of the screen; the winner called out; the last results kept in
+      the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
+      built.)
   STILL NOT YET: a first-run setup beyond the name.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer

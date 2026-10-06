@@ -70,6 +70,8 @@ var tables: DenTables = null
 ## The Charter's raid together, run on the founder's game (game/raid_table.gd).
 var raids: RaidTable = null
 var gauntlets: GauntletTable = null
+## Fishing together: catch pops, callouts, the crew streak, derbies.
+var fishing: CrewFishing = null
 
 
 static func _dir() -> String:
@@ -265,6 +267,7 @@ func _lend(s: Session) -> void:
 		"goldens": _crew_goldens(), "crew": _crew_names(),
 		"lives": lives(), "livesMax": float(lives_max()),
 		"chest": _chest_view(), "founder": data["founder"] == key_of(s),
+		"crewStreak": data.get("crewStreak", {}), "derbies": Js.list(data.get("derbies")).slice(-5),
 		"members": _members_view(),
 	}
 
@@ -334,6 +337,10 @@ func run(s: Session, op: String, args: Array) -> Variant:
 		return gauntlets.handle(key, s, args)
 	if op == "crewChest":
 		return chest_run(key, s, args)
+	if op == "crewDerby":
+		if fishing == null:
+			return { "error": "A derby needs the crew aboard." }
+		return fishing.handle(key, args)
 	if op == "raidTable":
 		if raids == null:
 			return { "error": "The crew cannot muster for a raid here." }
@@ -351,6 +358,8 @@ func run(s: Session, op: String, args: Array) -> Variant:
 		golden_before[k] = Js.obj((s.save["collection"] as Dictionary)[k]).get("is_golden") == true
 	var r: Variant = RulesApi.run(s.store, s.uid, op, args)
 	_take(s)
+	if op == "reelIn" and fishing != null:
+		fishing.on_reel(key, str(args[1]) if args.size() > 1 else "", r)
 	var who: String = s.captain_name()
 	for e: Dictionary in (s.save["ledger"] as Array).slice(ledger_n):
 		if str(e.get("currency", "doubloons")) == "doubloons" and float(e.get("amount", 0.0)) != 0.0:

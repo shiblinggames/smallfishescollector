@@ -52,6 +52,30 @@ static func purse_sheet(session: Session, hand: Callable = Callable(), aboard: A
 					row.add_child(hb)
 			if crew.get("founder", false):
 				s.note("Hand the Charter over and it lives on their machine instead; they host it from then on. Release a berth from the title screen.")
+		# Fishing together: start a derby for everyone aboard; the records.
+		s.section("Derby")
+		s.note("Everyone aboard fishes for %d minutes. Standings show on the water." % int(CrewFishing.DERBY_S / 60.0))
+		var drow: HBoxContainer = HBoxContainer.new()
+		drow.add_theme_constant_override("separation", 10)
+		s.body.add_child(drow)
+		for kind: String in CrewFishing.DERBY_KINDS:
+			var db_: Button = Kit.button(str(CrewFishing.DERBY_KINDS[kind]).capitalize(), "secondary", "small")
+			db_.pressed.connect(func() -> void:
+				db_.disabled = true
+				var r: Variant = await session.act("crewDerby", ["start", kind])
+				if r is Dictionary and (r as Dictionary).has("error"):
+					db_.text = str(r["error"])
+				else:
+					s.close())
+			drow.add_child(db_)
+		var cs: Dictionary = Js.obj(crew.get("crewStreak"))
+		if not cs.is_empty():
+			s.stat("Crew best streak", "%d  (%s)" % [int(Js.num(cs.get("n"))), ", ".join(PackedStringArray(Js.list(cs.get("names")).map(func(x: Variant) -> String: return str(x))))])
+		var dl: Array = Js.list(crew.get("derbies")).duplicate()
+		dl.reverse()
+		for d: Dictionary in dl:
+			if str(d.get("winner", "")) != "":
+				s.stat("%s derby" % str(CrewFishing.DERBY_KINDS.get(d.get("kind"), "")).capitalize(), "%s: %s" % [d["winner"], d.get("label", "")])
 		s.section("The ledger")
 		var rows: Array = Js.list(crew.get("ledger")).duplicate()
 		rows.reverse()
