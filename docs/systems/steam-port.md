@@ -2114,7 +2114,7 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
 - EACH CHAPTER'S FLEET IN ITS GANG'S COLOURS, ON THE V3 SHIPS (Kong, 2026-10-06: bosses wear
   the hull they drop, the whole chapter fleet; "you should be using v3 boat images"). The
   chapter skins' own smaller ships are old v2-era designs, so the v3 ships are RECOLOURED
-  instead: tools/dye_fleet.py bakes art/fleet/<bay>_<ship>.png (the warm wood takes the
+  instead: tools/dye_fleet.py bakes port_art/fleet/<bay>_<ship>.png (copied into art/ by setup) (the warm wood takes the
   chapter's hull colour with its grain and shading, the black canvas the sail colour, the
   skulls and ropes kept; a 256-colour palette like the v3 originals). I Finndicate dark wood,
   II Chartmaker bone white, III Coffers dusky pink, IV Last Fathom navy (Chapter IV's old

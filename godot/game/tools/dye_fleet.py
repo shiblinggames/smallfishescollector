@@ -5,8 +5,10 @@ colours, on the v3 ships ("you should be using v3 boat images"); the only
 chapter-coloured paintings were the old v2-era ships, so the v3 ones are
 recoloured here instead: the warm wood takes the chapter's hull colour (its
 grain and shading kept), the black canvas its sail colour, the white skulls
-and the ropes left as they are. Written to art/fleet/<bay>_<ship>.png, which
-North.fleet_art hands out. Run again if the v3 ships are repainted:
+and the ropes left as they are. Written to port_art/fleet/<bay>_<ship>.png
+(committed; tools/setup.mjs copies it into art/ like the port's other own
+art) and straight into art/fleet too, which North.fleet_art hands out. Run
+again if the v3 ships are repainted:
 
     python tools/dye_fleet.py      (from godot/game)
 """
@@ -16,7 +18,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.join(HERE, '..', 'art')
-OUT = os.path.join(ART, 'fleet')
+OUTS = [os.path.join(HERE, '..', 'port_art', 'fleet'), os.path.join(ART, 'fleet')]
 SHIPS = ['sloop', 'schooner', 'brigantine', 'galleon', 'man-o-war']
 # bay: (hull, sails), from each chapter skin's own painting.
 BAYS = {
@@ -66,7 +68,8 @@ def dye(im, hull, sail):
 
 
 def main():
-    os.makedirs(OUT, exist_ok=True)
+    for out in OUTS:
+        os.makedirs(out, exist_ok=True)
     for ship in SHIPS:
         src = os.path.join(ART, 'ship-hero', '%s_v3.png' % ship)
         im = np.array(Image.open(src).convert('RGBA')).astype(float) / 255.0
@@ -74,8 +77,9 @@ def main():
             pic = Image.fromarray((dye(im, hexc(hull), hexc(sail)) * 255).round().astype(np.uint8), 'RGBA')
             # A 256-colour palette with alpha, as the v3 ships themselves are.
             pic = pic.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
-            pic.save(os.path.join(OUT, '%s_%s.png' % (bay, ship)), optimize=True)
-    print('fleet: %d hulls written to art/fleet' % (len(SHIPS) * len(BAYS)))
+            for out in OUTS:
+                pic.save(os.path.join(out, '%s_%s.png' % (bay, ship)), optimize=True)
+    print('fleet: %d hulls written to port_art/fleet and art/fleet' % (len(SHIPS) * len(BAYS)))
 
 
 if __name__ == '__main__':
