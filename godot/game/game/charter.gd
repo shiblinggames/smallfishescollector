@@ -27,11 +27,20 @@ extends RefCounted
 ## records who did it, and the file is written. A captain's file in its berth
 ## carries the shared parts too, but the shared copy is the one that counts.
 ##
-## NOT YET: the crew chest (waits on the inventory sitting; zone rewards pay
-## the purse meanwhile) and the shared daily board (the daily rules count each
-## captain's own play against a snapshot; sharing it is its own pass).
+## THE CREW CHEST (Kong, 2026-10-06): raid items, forge scrap and rods, put
+## in and taken out by anyone, one action at a time on the founder's game
+## (Terraria's chest). Hooks and reels are each captain's own upgrades.
+## HARDCORE LIVES: one per captain and one spare, fixed at Set Sail; a captain
+## sunk in a lost fight spends one; at none the Charter sinks for good (moved
+## to charters/sunk, never deleted). RELEASE: the founder frees a berth (its
+## captain kept in the file, unplayable). HANDOVER: the founder hands the
+## whole file to a crewmate, who hosts from then on.
+## NOT YET: the shared daily and bounty boards.
 
 signal shared_changed(actor_key: String)
+## A hardcore Charter's last life is spent (CrewNet sinks it once the fight
+## that spent it is over).
+signal sinking
 
 const DIR: String = "user://charters"
 const BERTHS: int = 4
@@ -80,7 +89,11 @@ static func list() -> Array:
 			for b: Dictionary in (d as Dictionary).get("berths", []):
 				names.append(b.get("name", "?"))
 				looks.append(b.get("look", { "color": "default" }))
-			out.append({ "id": d["id"], "name": d["name"], "hardcore": d.get("hardcore", false), "sailed": d.get("sailed", false), "crew": names, "looks": looks, "founder": d.get("founder", ""), "at": FileAccess.get_modified_time(_path(d["id"])) })
+			var keys: Array = (d as Dictionary).get("berths", []).map(func(b: Dictionary) -> String: return str(b.get("key", "")))
+			var lv: float = -1.0
+			if d.get("hardcore", false):
+				lv = Js.num(d.get("lives", float(keys.size() + 1)))
+			out.append({ "id": d["id"], "name": d["name"], "hardcore": d.get("hardcore", false), "sailed": d.get("sailed", false), "crew": names, "looks": looks, "keys": keys, "lives": lv, "founder": d.get("founder", ""), "at": FileAccess.get_modified_time(_path(d["id"])) })
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["at"]) > int(b["at"]))
 	return out
 
@@ -198,8 +211,9 @@ func _adopt_session(key: String, s: Session) -> void:
 
 func set_sail() -> void:
 	data["sailed"] = true
+	if data.get("hardcore", false) and not data.has("lives"):
+		data["lives"] = float(lives_max())
 	write()
-	flush()
 	flush()
 
 
@@ -232,6 +246,9 @@ func _lend(s: Session) -> void:
 		"ledger": ledger.slice(maxi(0, ledger.size() - 60)),
 		"bestBy": sh["best_by"], "goldenBy": sh["golden_by"],
 		"goldens": _crew_goldens(), "crew": _crew_names(),
+		"lives": lives(), "livesMax": float(lives_max()),
+		"chest": _chest_view(), "founder": data["founder"] == key_of(s),
+		"members": _members_view(),
 	}
 
 
@@ -298,6 +315,8 @@ func run(s: Session, op: String, args: Array) -> Variant:
 		if gauntlets == null:
 			return { "error": "The crew cannot dive together here." }
 		return gauntlets.handle(key, s, args)
+	if op == "crewChest":
+		return chest_run(key, s, args)
 	if op == "raidTable":
 		if raids == null:
 			return { "error": "The crew cannot muster for a raid here." }
@@ -335,6 +354,232 @@ func run(s: Session, op: String, args: Array) -> Variant:
 	return r
 
 
+# ── Hardcore lives ────────────────────────────────────────────────────────────
+
+func lives_max() -> int:
+	return (data["berths"] as Array).size() + 1
+
+
+## Lives left (-1: not a hardcore Charter).
+func lives() -> float:
+	if not data.get("hardcore", false):
+		return -1.0
+	return Js.num(data.get("lives", float(lives_max())))
+
+
+## A captain's ship sunk in a lost fight: a life gone. The last one sinks the
+## Charter.
+func spend_life(key: String, what: String) -> void:
+	if not data.get("hardcore", false) or data.get("sunk", false):
+		return
+	var left: float = maxf(0.0, lives() - 1.0)
+	data["lives"] = left
+	var s: Session = sessions.get(key)
+	var who: String = s.captain_name() if s != null else str(berth_of(key).get("name", "A captain"))
+	if not data.has("lifeLog"):
+		data["lifeLog"] = []
+	(data["lifeLog"] as Array).append({ "by": who, "what": what, "left": left, "at": Js.iso(Clock.now_ms()) })
+	if left <= 0.0:
+		data["sunk"] = true
+	_spread("")
+	write()
+	flush()
+	if left <= 0.0:
+		sinking.emit()
+
+
+## The Charter gone down: its file moved to charters/sunk (nothing is ever
+## deleted; a slip is undone by moving it back by hand).
+func sink() -> void:
+	flush()
+	var to_dir: String = "%s/sunk" % _dir()
+	DirAccess.make_dir_recursive_absolute(to_dir)
+	var stamp: String = Time.get_datetime_string_from_system(true).replace(":", "").replace("-", "")
+	DirAccess.rename_absolute(_path(id()), "%s/%s-%s.json" % [to_dir, id(), stamp])
+	_closed = true
+
+
+# ── The crew, released and handed over ────────────────────────────────────────
+
+func _members_view() -> Array:
+	var out: Array = []
+	for b: Dictionary in data["berths"]:
+		out.append({ "key": b["key"], "name": b.get("name", "?"), "founder": b["key"] == data["founder"] })
+	return out
+
+
+## The founder frees a crewmate's berth. Their captain stays in the file under
+## "released" (never deleted), but nobody plays them again. A Charter that has
+## sailed cannot fill the berth again; one still in harbor can.
+func release(key: String) -> String:
+	if key == data["founder"]:
+		return "The founder cannot release their own berth. Hand the Charter over first."
+	var b: Dictionary = berth_of(key)
+	if b.is_empty():
+		return "There is no such berth."
+	var s: Session = sessions.get(key)
+	if s != null:
+		b["captain"] = SaveFile.serialize(s.save, s.carried, Js.iso(Clock.now_ms()))
+	sessions.erase(key)
+	(data["berths"] as Array).erase(b)
+	b["released_at"] = Js.iso(Clock.now_ms())
+	if not data.has("released"):
+		data["released"] = []
+	(data["released"] as Array).append(b)
+	_spread("")
+	write()
+	flush()
+	return ""
+
+
+## The whole Charter as text, for handing to a crewmate (written first).
+func handover_text(to_key: String) -> String:
+	flush()
+	var d: Dictionary = data.duplicate(true)
+	d["founder"] = to_key
+	d["handed_from"] = data["founder"]
+	d["handed_at"] = Js.iso(Clock.now_ms())
+	return JsJson.stringify(d)
+
+
+## After a handover: this machine's copy moves to charters/handed (kept, not
+## hostable), since the crewmate's copy is the Charter now.
+func handed_off() -> void:
+	flush()
+	_closed = true
+	var to_dir: String = "%s/handed" % _dir()
+	DirAccess.make_dir_recursive_absolute(to_dir)
+	var stamp: String = Time.get_datetime_string_from_system(true).replace(":", "").replace("-", "")
+	DirAccess.rename_absolute(_path(id()), "%s/%s-%s.json" % [to_dir, id(), stamp])
+
+
+## A Charter handed to this machine: written in as its own, founded by me.
+static func take_handover(text: String, my_key: String) -> String:
+	var d: Variant = JsJson.parse(text)
+	if not d is Dictionary or not (d as Dictionary).has("id") or str((d as Dictionary).get("founder", "")) != my_key:
+		return "The Charter did not come across whole."
+	DirAccess.make_dir_recursive_absolute(_dir())
+	var err: Error = SaveFile.write_file(ProjectSettings.globalize_path(_path(str(d["id"]))), text)
+	return "" if err == OK else "The Charter could not be written: %s" % error_string(err)
+
+
+# ── The crew chest ────────────────────────────────────────────────────────────
+
+const CHEST_LOG_KEEP: int = 120
+
+
+func _chest() -> Dictionary:
+	if not data.has("chest"):
+		data["chest"] = { "items": {}, "rods": {}, "scrap": 0.0, "log": [] }
+	return data["chest"]
+
+
+func _chest_view() -> Dictionary:
+	var c: Dictionary = _chest()
+	var lg: Array = c["log"]
+	return { "items": c["items"], "rods": c["rods"], "scrap": c["scrap"], "log": lg.slice(maxi(0, lg.size() - 40)) }
+
+
+## One chest action: [verb ("put"/"take"), kind ("item"/"rod"/"scrap"), id, n].
+func chest_run(key: String, s: Session, args: Array) -> Dictionary:
+	var verb: String = str(args[0]) if args.size() > 0 else ""
+	var kind: String = str(args[1]) if args.size() > 1 else ""
+	var id_: String = str(args[2]) if args.size() > 2 else ""
+	var n: float = maxf(1.0, floor(Js.num(args[3]))) if args.size() > 3 else 1.0
+	if not ["put", "take"].has(verb):
+		return { "error": "The chest does not do that." }
+	var r: Dictionary
+	match kind:
+		"item": r = _chest_item(s, verb, id_)
+		"rod": r = _chest_rod(s, verb, id_)
+		"scrap": r = _chest_scrap(s, verb, n)
+		_: return { "error": "That does not go in the crew chest." }
+	if r.has("error"):
+		return r
+	var c: Dictionary = _chest()
+	(c["log"] as Array).append({ "by": s.captain_name(), "verb": verb, "what": r["what"], "at": Js.iso(Clock.now_ms()) })
+	if (c["log"] as Array).size() > CHEST_LOG_KEEP:
+		c["log"] = (c["log"] as Array).slice((c["log"] as Array).size() - CHEST_LOG_KEEP)
+	_spread("")
+	write(key)
+	return { "ok": true, "chest": _chest_view() }
+
+
+func _bump(d: Dictionary, id_: String, by: float) -> void:
+	var v: float = Js.num(d.get(id_)) + by
+	if v <= 0.0:
+		d.erase(id_)
+	else:
+		d[id_] = v
+
+
+func _chest_item(s: Session, verb: String, id_: String) -> Dictionary:
+	var def: Dictionary = Armory.item(id_)
+	if def.is_empty():
+		return { "error": "There is no such raid item." }
+	var p: Dictionary = s.profile()
+	var held: Array = Js.list(p.get("raid_items")).duplicate()
+	var items: Dictionary = _chest()["items"]
+	if verb == "put":
+		var n: int = held.count(id_)
+		if n <= 0:
+			return { "error": "You do not hold that." }
+		if n == 1 and Js.list(p.get("equipped_raid_items")).has(id_):
+			return { "error": "That is mounted on your ship. Take it off first." }
+		held.erase(id_)
+		_bump(items, id_, 1.0)
+	else:
+		if Js.num(items.get(id_)) < 1.0:
+			return { "error": "The chest has none of that." }
+		held.append(id_)
+		_bump(items, id_, -1.0)
+	s.store.update_profile(s.uid, { "raid_items": held })
+	return { "what": str(def.get("name", id_)) }
+
+
+func _chest_rod(s: Session, verb: String, id_: String) -> Dictionary:
+	var rod: Dictionary = Rules.rod_by_id(id_)
+	if rod.is_empty() or id_ == "bamboo":
+		return { "error": "That rod does not go in the chest." }
+	if rod.get("earnedOnly") == true:
+		return { "error": "The %s was earned. It stays with its captain." % rod["name"] }
+	var rods: Dictionary = _chest()["rods"]
+	if verb == "put":
+		var p: Dictionary = s.profile()
+		var equipped: bool = Js.num(p.get("rod_tier")) == float(rod["tier"])
+		if equipped and s.store.rod_held(s.uid, id_) <= 1.0:
+			return { "error": "You are fishing with that one. Switch rods first." }
+		if not s.store.rod_take(s.uid, id_):
+			return { "error": "You do not carry that rod." }
+		_bump(rods, id_, 1.0)
+	else:
+		if Js.num(rods.get(id_)) < 1.0:
+			return { "error": "The chest has no %s." % rod["name"] }
+		var shop: Dictionary = Js.obj(Js.obj(Rules.data().get("rodShop")).get(Js.key(float(rod["tier"]))))
+		var req: int = int(Js.num(shop.get("levelReq")))
+		if Rules.level_from_xp(Js.num(s.profile().get("fishing_xp"))) < req:
+			return { "error": "Reach Fishing Lv %d to take the %s." % [req, rod["name"]] }
+		s.store.rod_give(s.uid, id_)
+		_bump(rods, id_, -1.0)
+	return { "what": str(rod["name"]) }
+
+
+func _chest_scrap(s: Session, verb: String, n: float) -> Dictionary:
+	var c: Dictionary = _chest()
+	var have: float = Js.num(s.profile().get("forge_scrap"))
+	if verb == "put":
+		if have < n:
+			return { "error": "You have %s scrap." % Js.thousands(have) }
+		s.store.update_profile(s.uid, { "forge_scrap": have - n })
+		c["scrap"] = Js.num(c["scrap"]) + n
+	else:
+		if Js.num(c["scrap"]) < n:
+			return { "error": "The chest holds %s scrap." % Js.thousands(Js.num(c["scrap"])) }
+		s.store.update_profile(s.uid, { "forge_scrap": have + n })
+		c["scrap"] = Js.num(c["scrap"]) - n
+	return { "what": "%s scrap" % Js.thousands(n) }
+
+
 func _prestige_text(s: Session, zone: String) -> String:
 	var lvl: int = int(Js.num(Js.obj(_shared()["profile"].get("prestige_levels")).get(zone)))
 	var water: String = zone.replace("_", " ").capitalize()
@@ -354,6 +599,8 @@ func _prestige_text(s: Session, zone: String) -> String:
 ## captains serialized afresh. flush() writes at once (leaving, closing).
 const WRITE_AFTER: float = 1.5
 var _dirty: Dictionary = {}
+## Sunk or handed over: this machine writes the file no more.
+var _closed: bool = false
 var _write_due: bool = false
 
 
@@ -371,7 +618,7 @@ func write(key: String = "") -> void:
 
 func flush() -> void:
 	_write_due = false
-	if _dirty.is_empty():
+	if _dirty.is_empty() or _closed:
 		return
 	var all: bool = _dirty.has("")
 	for b: Dictionary in data["berths"]:

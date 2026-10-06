@@ -31,6 +31,8 @@ signal welcomed(info: Dictionary, session: Session)
 signal refused_by_founder(why: String)
 signal sailing
 signal lost(why: String)
+## The founder's own game is done with this Charter (sunk, or handed over).
+signal ended(why: String)
 signal mate_boat(key: String, state: Dictionary)
 signal mate_look(key: String, mate_name: String, look: Dictionary)
 signal mate_left(key: String)
@@ -88,9 +90,109 @@ func _ready() -> void:
 			join_lobby(lobby))
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if SteamLayer.up:
 		SteamLayer.steam().call("run_callbacks")
+	if _sink_due:
+		# The fight that spent the last life plays out, and its end is seen.
+		var quiet: bool = ["idle", "done"].has(str(raids._r.get("phase", "idle"))) and ["idle", "done"].has(str(gauntlets._r.get("phase", "idle")))
+		_sink_wait = _sink_wait + delta if quiet else 0.0
+		if _sink_wait >= SINK_AFTER:
+			_sink_due = false
+			_sink_now()
+
+
+# ── A hardcore Charter sinks; a Charter handed over ───────────────────────────
+
+const SINK_AFTER: float = 8.0
+const CHUNK: int = 48000
+var _sink_due: bool = false
+var _sink_wait: float = 0.0
+## What a crewmate is told when the founder's line closes, if the founder said
+## why first (sunk, handed over).
+var _end_note: String = ""
+var _hand_parts: Array = []
+var _hand_to: String = ""
+
+
+func _on_sinking() -> void:
+	_sink_due = true
+	_sink_wait = 0.0
+
+
+func _sink_now() -> void:
+	var log: Array = Js.list(charter.data.get("lifeLog"))
+	var last: Dictionary = Js.obj(log.back()) if not log.is_empty() else {}
+	var why: String = "The %s has sunk. Its last life went down with %s. The Charter and its captains are gone." % [charter.data["name"], last.get("by", "a captain")]
+	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
+		_farewell.rpc(why)
+	charter.sink()
+	await get_tree().create_timer(0.5).timeout
+	leave()
+	ended.emit(why)
+
+
+@rpc("authority", "reliable")
+func _farewell(why: String) -> void:
+	_end_note = why
+
+
+## The founder hands the whole Charter to a crewmate aboard now: the file goes
+## across in parts, the crewmate's game writes it as its own, and this game's
+## copy is put away. Everyone leaves port; the new founder hosts from the
+## title screen.
+func hand_over(to_key: String) -> String:
+	if not hosting:
+		return "Only the founder can hand the Charter over."
+	var id: int = -1
+	for p: Variant in _members:
+		if _members[p] == to_key and int(p) != 1:
+			id = int(p)
+	if id < 0:
+		return "They need to be aboard to take it."
+	if not ["idle", "done"].has(str(raids._r.get("phase", "idle"))) or not ["idle", "done"].has(str(gauntlets._r.get("phase", "idle"))):
+		return "Not while the crew are in a fight."
+	_hand_to = to_key
+	var text: String = charter.handover_text(to_key)
+	var parts: int = int(ceil(float(text.length()) / float(CHUNK)))
+	for i: int in parts:
+		_hand_part.rpc_id(id, i, parts, text.substr(i * CHUNK, CHUNK))
+	return ""
+
+
+@rpc("authority", "reliable")
+func _hand_part(i: int, parts: int, piece: String) -> void:
+	if i == 0:
+		_hand_parts = []
+	_hand_parts.append(piece)
+	if i < parts - 1:
+		return
+	var why: String = Charter.take_handover("".join(PackedStringArray(_hand_parts)), key)
+	_hand_parts = []
+	_handed.rpc_id(1, why)
+
+
+@rpc("any_peer", "reliable")
+func _handed(why: String) -> void:
+	if not hosting:
+		return
+	var from: int = multiplayer.get_remote_sender_id()
+	if _members.get(from) != _hand_to:
+		return
+	if why != "":
+		push_error("a handover did not take: " + why)
+		return
+	var who: String = charter.berth_of(_hand_to).get("name", "your crewmate")
+	var cname: String = str(charter.data["name"])
+	for p: Variant in _members:
+		if int(p) == 1:
+			continue
+		var mine: bool = _members[p] == _hand_to
+		_farewell.rpc_id(int(p), "The %s is yours now. Host it from the title screen and your crew can join." % cname if mine else "%s has the %s now. Join them when they host it." % [who, cname])
+	charter.handed_off()
+	await get_tree().create_timer(0.5).timeout
+	leave()
+	ended.emit("You handed the %s to %s. They host it from now on." % [cname, who])
 
 
 # ── Opening and joining ────────────────────────────────────────────────────────
@@ -108,6 +210,8 @@ func host(c: Charter) -> Error:
 	c.gauntlets = gauntlets
 	if not c.shared_changed.is_connected(_on_shared_changed):
 		c.shared_changed.connect(_on_shared_changed)
+	if not c.sinking.is_connected(_on_sinking):
+		c.sinking.connect(_on_sinking)
 	c.voter = ask_crew
 	key = SteamLayer.player_key()
 	var s: Session = c.session_for(key)
@@ -216,6 +320,9 @@ func _drop(why: String) -> void:
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
+	if _end_note != "":
+		why = _end_note
+		_end_note = ""
 	_fail_open(why)
 	lost.emit(why)
 

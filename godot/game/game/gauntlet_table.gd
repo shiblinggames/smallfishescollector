@@ -1671,6 +1671,8 @@ func _dive_lost(ev: Array) -> void:
 		pays[k] = _death_pay(k, s, cd)
 		_take(s)
 		c["out"] = "sunk"
+		if charter != null:
+			charter.spend_life(k, "Sunk in %s at depth %d" % ["the Don's Gauntlet" if str(run["variant"]) == "don" else "Davy's Gauntlet", cd])
 	_r["pays"] = pays
 	_r["result"] = "lost"
 	_r["lostPot"] = run["pot"]

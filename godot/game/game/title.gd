@@ -26,6 +26,8 @@ const SEA_DYE: Color = Color(0.36, 0.6, 0.58)
 
 var note: String = ""
 var _retiring: String = ""
+## A berth the founder is asked once about releasing ("charter id|key").
+var _releasing: String = ""
 var _hardcore: bool = false
 var _making: bool = false
 var _founding: bool = false
@@ -323,6 +325,9 @@ func _charters(v: VBoxContainer) -> void:
 		col.add_child(top)
 		Kit.text(top, c["name"], "heading", Kit.PAPER_INK).add_theme_font_size_override("font_size", 20)
 		Kit.chip(top, "Hardcore" if c["hardcore"] else "Normal", Color(0.66, 0.2, 0.15) if c["hardcore"] else Kit.ink(SEA_DYE))
+		if c["hardcore"] and c["sailed"]:
+			var lv: int = int(c.get("lives", 0.0))
+			Kit.text(top, "%d %s left" % [lv, "life" if lv == 1 else "lives"], "small", Color(0.66, 0.2, 0.15))
 		var sp: Control = Control.new()
 		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(sp)
@@ -344,6 +349,26 @@ func _charters(v: VBoxContainer) -> void:
 			m.add_child(_portrait(looks[i] if i < looks.size() else { "color": "default" }, Vector2(78, 60)))
 			var nl: Label = Kit.text(m, names[i], "small", Kit.PAPER_INK)
 			nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			# The founder can free a crewmate's berth (asks once).
+			var keys: Array = c.get("keys", [])
+			if c["founder"] == mine and i < keys.size() and keys[i] != mine:
+				var tag: String = "%s|%s" % [c["id"], keys[i]]
+				var asking: bool = _releasing == tag
+				var rel: Button = Kit.button("Release for good?" if asking else "Release", "danger" if asking else "secondary", "small")
+				rel.tooltip_text = "Free this berth. Their captain stays in the Charter's file but sails no more.%s" % (" A Charter that has sailed cannot fill it again." if c["sailed"] else "")
+				rel.pressed.connect(func() -> void:
+					if _releasing != tag:
+						_releasing = tag
+						_build()
+						return
+					_releasing = ""
+					var ch: Charter = Charter.open(c["id"])
+					if ch != null:
+						var why: String = ch.release(str(keys[i]))
+						if why != "":
+							note = why
+					_build())
+				m.add_child(rel)
 		for i: int in range(names.size(), Charter.BERTHS):
 			var e: VBoxContainer = VBoxContainer.new()
 			crew.add_child(e)

@@ -2034,12 +2034,37 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   - `tests/smoke_charter.gd` checks the one purse, the ledger naming the crewmate, the
     crewmate's catch in the founder's log, an agreed vote reaching the rules and a refused
     one stopping, and the founder's spending reaching the crewmate's purse unprompted.
-  NOT YET: the crew chest (waits on the inventory sitting), and the SHARED DAILY BOARD (the
-  daily rules count each captain's own play against a snapshot, so sharing the board needs
-  its own pass). Also
-  not yet: the nearby fishing bonus (to design), hardcore lives (they need sinking, which
-  needs raids), the founder handing the Charter over, releasing a berth, and a first-run
-  setup beyond the name (the web's SetupModal).
+  BUILT 2026-10-06 (Kong's calls that day; tests/charter_crew_check.gd):
+  - THE CREW CHEST holds RAID ITEMS, FORGE SCRAP and RODS. Hooks and reels are each captain's
+    own upgrades and never go in. Anyone puts in or takes out (Charter.chest_run, op
+    "crewChest", one action at a time on the founder's game); the chest keeps a log of who
+    moved what. Refused: the last copy of a mounted raid item, the rod a captain is fishing
+    with (last copy), earned rods (the Completionist and its kind stay with their captain),
+    the bamboo. TAKING A ROD needs the fishing level the tackle shop asks for it. A raid
+    item's temper grade is each captain's own, so a copy taken shows at the taker's grade.
+    At sea: "Crew chest" beside the purse (Menus.chest_sheet).
+  - HARDCORE LIVES: one per captain and one spare, fixed at Set Sail. A life is spent for
+    each captain SUNK IN A LOST FIGHT: a lost raid (every sunk ship in the line) or a lost
+    dive (every captain in it). A ship sunk in a fight the crew wins (towed home in a dive)
+    spends none. AT NONE THE CHARTER SINKS (Kong: it sinks, not plays on): once the fight
+    that spent the last life has ended and been seen (8s), every crewmate is told and sent
+    to the title, and the file moves to charters/sunk (never deleted). Lives show on the
+    title card and in the Charter sheet.
+  - RELEASING A BERTH: on the title screen the founder can release a crewmate (asks once).
+    Their captain is kept in the file under "released" but sails no more; a Charter that
+    has sailed cannot fill the berth again.
+  - HANDOVER: the Charter sheet at sea ("Charter" beside the purse) lists the crew; the
+    founder can hand the whole Charter to a crewmate who is aboard (not mid-fight). The file
+    goes across in parts, the crewmate's game writes it as its own with them as founder,
+    the old founder's copy moves to charters/handed, and everyone leaves port with a note
+    saying who hosts it now. NOT YET TESTED between two machines.
+  - THE CAMPAIGN IS EACH CAPTAIN'S OWN (Kong, 2026-10-06, replacing "shared map, personal
+    credit"): every captain works through the nodes themselves. A co-op raid win counts as
+    a clear for every captain in it, but a captain can join a raid only once their own map
+    has reached it, and a gauntlet only once they have opened it themselves.
+  - THE NEARBY FISHING BONUS: NOT A NUMBER (Kong: "make group fishing more fun and
+    interesting ... not basic xp boost stuff"). To plan with Kong before anything is built.
+  STILL NOT YET: the shared daily and bounty boards, and a first-run setup beyond the name.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the
@@ -2638,9 +2663,9 @@ its system's doc.
          Nothing comes in from a solo game and nothing goes out; everything the crew owns,
          the crew earned. Specialising pays (one fishes and sells, one raids for gear) and
          the chest joins them up.
-       - HARDCORE CHARTER: the crew shares a pool of lives (proposed: one per member plus a
-         spare). A sunk ship or a lost raid spends one. When they run out the Charter plays
-         on and loses its hardcore flag for good.
+       - HARDCORE CHARTER: the crew shares a pool of lives (one per member plus a spare). A
+         ship sunk in a lost fight spends one. When they run out the Charter sinks for good
+         (Kong, 2026-10-06; built, see the Charter's 2026-10-06 notes).
        - THE TERRARIA WAY (Kong, 2026-09-30, replacing an earlier "solo play, merged on
          return"):
          - The Charter's world lives on ONE computer, the founder's. The crew plays it when
@@ -2650,7 +2675,8 @@ its system's doc.
          - The founder can hand the world to another member.
          - Why: without a server, solo play meant a copy on every machine and a merge, and the
            chest would have needed rules against two captains taking the same thing apart.
-       - THE CREW CHEST holds doubloons, raid items and forge materials, and maybe rods.
+       - THE CREW CHEST holds raid items, forge scrap and rods (Kong, 2026-10-06; hooks and
+         reels stay each captain's own; doubloons are the purse).
          Kong: "we may need to revisit how we do our whole inventory system" (next sitting).
        - THE REGULARS AND FINN are each captain's own: everyone builds their own rapport and
          meets Finn themselves. The campaign is the Charter's.
@@ -2678,7 +2704,9 @@ its system's doc.
          - The Steam name, cut to what a username allows, is offered in the setup's name box
            (`SetupModal` `suggestedName`); the web offers nothing.
      - THE CHARTER, WALKED THROUGH SYSTEM BY SYSTEM (Kong, 2026-09-30):
-       - CAMPAIGN: SHARED MAP, PERSONAL CREDIT.
+       - CAMPAIGN: SHARED MAP, PERSONAL CREDIT. SUPERSEDED 2026-10-06: the campaign is each
+         captain's own; a co-op raid win clears it for everyone in it (see the Charter's
+         2026-10-06 notes). The lines below are kept as a record.
          - When anyone clears a node, the Charter's map advances and the water opens for
            the whole crew.
          - First-clear loot, the chapter-end ship class choice, legendary crew unlocks and

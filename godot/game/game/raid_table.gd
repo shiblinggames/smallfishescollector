@@ -357,9 +357,21 @@ func _resolve() -> void:
 			_step("won", ev)
 		"lost", "fled":
 			_r["result"] = str(b["state"])
+			if b["state"] == "lost":
+				_lives_lost()
 			_step("end", ev)
 		_:
 			_step("plan", ev)
+
+
+## A lost raid in a hardcore Charter: a life for every ship that went down.
+func _lives_lost() -> void:
+	if charter == null:
+		return
+	var title: String = str(Battle.raid_def(str(_r["raidId"])).get("raidTitle", "a raid"))
+	for s: Dictionary in _r["b"]["seats"]:
+		if s.get("sunk", false):
+			charter.spend_life(str(s.get("key", "")), "Sunk at %s" % title)
 
 
 ## Each captain's feats over the raid (core/raid_feats.gd), by seat key.
@@ -455,6 +467,7 @@ func _land_flares() -> void:
 		_feat(str(b["seats"][i].get("key", "")), ev, i, int(b["fight"]))
 	if b["state"] == "lost":
 		_r["result"] = "lost"
+		_lives_lost()
 	_step("end" if b["state"] == "lost" else "plan", ev)
 
 

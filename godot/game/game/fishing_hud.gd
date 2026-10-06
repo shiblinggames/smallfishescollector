@@ -83,6 +83,7 @@ var _spot_left: Label
 var _spot_effect: Label
 var _spot: Dictionary = {}
 var _ledger_btn: Button
+var _chest_btn: Button
 var _where: Label
 var _blurb: Label
 var _stir: Label
@@ -167,12 +168,25 @@ func _ready() -> void:
 	tl.add_child(purse_row)
 	_purse = Kit.lift(Kit.text(purse_row, "", "number", GOLD))
 	# In a Charter the purse is the crew's: its ledger is a press away.
-	_ledger_btn = Kit.button("Crew purse", "accent", "small", GOLD)
+	_ledger_btn = Kit.button("Charter", "accent", "small", GOLD)
 	_ledger_btn.focus_mode = Control.FOCUS_NONE
 	_ledger_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_ledger_btn.visible = session.save.has("charter")
-	_ledger_btn.pressed.connect(func() -> void: _open_sheet(Menus.purse_sheet(session)))
+	_ledger_btn.pressed.connect(func() -> void:
+		var net: CrewNet = _crew_net()
+		var hand: Callable = Callable()
+		var aboard: Array = []
+		if net != null and net.hosting:
+			hand = net.hand_over
+			aboard = net._members.values()
+		_open_sheet(Menus.purse_sheet(session, hand, aboard)))
 	purse_row.add_child(_ledger_btn)
+	_chest_btn = Kit.button("Crew chest", "accent", "small", GOLD)
+	_chest_btn.focus_mode = Control.FOCUS_NONE
+	_chest_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_chest_btn.visible = session.save.has("charter")
+	_chest_btn.pressed.connect(func() -> void: _open_sheet(Menus.chest_sheet(session)))
+	purse_row.add_child(_chest_btn)
 	session.changed.connect(func() -> void:
 		if is_inside_tree():
 			refresh())
@@ -996,6 +1010,14 @@ func open_guide(view: String = "levels") -> LevelsSheet:
 		refresh())
 	add_child(g)
 	return g
+
+
+## The crew's line, from the sea this HUD is on (null alone).
+func _crew_net() -> CrewNet:
+	var n: Node = get_parent()
+	while n != null and not n is Sea:
+		n = n.get_parent()
+	return (n as Sea).net if n != null else null
 
 
 func _open_sheet(s: Sheet) -> void:

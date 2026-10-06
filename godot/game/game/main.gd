@@ -40,6 +40,7 @@ func _ready() -> void:
 	net.welcomed.connect(_on_welcomed)
 	net.sailing.connect(_on_sailing)
 	net.refused_by_founder.connect(func(why: String) -> void: title(why))
+	net.ended.connect(func(why: String) -> void: title(why))
 	net.lost.connect(func(why: String) -> void:
 		if _screen is Title:
 			(_screen as Title).note = why
