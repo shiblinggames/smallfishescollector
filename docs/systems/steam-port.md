@@ -2114,11 +2114,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   depth, as the haul rolls them; a spare Maw salvages (ancient 40 scrap); giving the last copy
   away through the crew chest gives up its grade and mount (Forge._tidy); and a dive is
   written down as each fight begins, so quitting or crashing mid-fight resumes into that same
-  fight, not the breather before it with a fresh look ahead. STILL OPEN with Kong: the
-  hardcore-only dive drops (Blood Cannon, Don's Palisade, Bad Blood and Pitch Black hulls)
-  cannot drop anywhere since hardcore gauntlets were cut, which leaves three forge recipes
-  dead; order sweeps roll their crate from the crew's highest Fishing level; a co-op raid
-  counts once per seat toward the crew's bounties.
+  fight, not the breather before it with a fresh look ahead. THE HARDCORE GAUNTLET'S FINDS
+  ARE RARE DROPS IN EVERY DIVE (Kong: "really rare drops from normal gauntlet";
+  Gauntlet.RARE_FIND): the Blood Cannon (Davy's) and Don's Palisade (the Don's) from the third
+  chest at a fifth of the gear chance (2% a bank at depth 50), the Bad Blood Hull from the
+  fourth at a fifth of the hull chance, the Pitch Black Hull from the fifth at a tenth; their
+  three forge recipes live again. STILL OPEN with Kong: order sweeps roll their crate from the
+  crew's highest Fishing level; co-op tasks on a Charter's bounty board.
 - PINGS AND CREWMATE STATUS (Kong, 2026-10-06, picked from a co-op list). PINGS
   (game/crew_pings.gd, CrewNet.send_ping): hold G over the water and four callouts open
   round the pointer (Hotspot here, Over here, Need a hand, Look); slide toward one and let

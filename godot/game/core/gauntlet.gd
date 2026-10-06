@@ -107,6 +107,14 @@ const GHOST_HULL_DROP_MULT: float = 0.5
 const DAVY_CANNONS: Array = ["davys_heavy_cannon", "davys_hand_cannon"]
 const DON_ITEMS: Array = ["opening_statement", "made_man", "the_shakedown"]
 const BLOOD_CANNON: String = "davys_blood_cannon"
+## THE HARDCORE GAUNTLET'S FINDS, NOW RARE IN EVERY DIVE (Kong, 2026-10-06:
+## "they're really rare drops from normal gauntlet"; the hardcore gauntlet was
+## cut, which had left them, and three forge recipes, out of reach): the Blood
+## Cannon (Davy's, from the third chest) and Don's Palisade (the Don's, from
+## the third) at a fifth of the gear chance; the Bad Blood Hull (Davy's, from
+## the fourth) at a fifth of the hull chance, the Pitch Black Hull (Davy's,
+## from the fifth) at a tenth. The port only; the web's hardcore rolls stand.
+const RARE_FIND: float = 0.2
 const DROP_NAMES: Dictionary = {
 	"davys_heavy_cannon": "Davy's Heavy Cannon", "davys_hand_cannon": "Davy's Hand Cannon", "davys_blood_cannon": "Davy's Blood Cannon",
 	"opening_statement": "Vanguard Battery", "made_man": "Dampener Plate", "the_shakedown": "Carrion Sight", "dons_palisade": "Don's Palisade",
@@ -229,6 +237,8 @@ static func chest_odds(depth: int, variant: String, hardcore: bool, pressure: fl
 			out.append({ "id": GHOST_HULL, "name": DROP_NAMES[GHOST_HULL], "kind": "skin", "chance": m.call(skin_drop_chance(pay) * GHOST_HULL_DROP_MULT) })
 		if hardcore and tier >= 3 and not owned_items.has("dons_palisade"):
 			out.append({ "id": "dons_palisade", "name": DROP_NAMES["dons_palisade"], "kind": "item", "chance": cannon })
+		if not hardcore and not Rules.web_only and tier >= 3:
+			out.append({ "id": "dons_palisade", "name": DROP_NAMES["dons_palisade"], "kind": "item", "chance": m.call(cannon_drop_chance(cd) * RARE_FIND) })
 		return out
 	for id: String in DAVY_CANNONS:
 		if not owned_items.has(id):
@@ -246,6 +256,14 @@ static func chest_odds(depth: int, variant: String, hardcore: bool, pressure: fl
 		var c: float = pressure_skin_chance(pressure, pay)
 		if c > 0.0:
 			out.append({ "id": PRESSURE_SKIN, "name": DROP_NAMES[PRESSURE_SKIN], "kind": "skin", "chance": m.call(c) })
+	# The rare finds (RARE_FIND), in every dive of the port.
+	if not hardcore and not Rules.web_only:
+		if tier >= 3:
+			out.append({ "id": BLOOD_CANNON, "name": DROP_NAMES[BLOOD_CANNON], "kind": "item", "chance": m.call(cannon_drop_chance(cd) * RARE_FIND) })
+		if tier >= 4 and not owned_skins.has(BLOOD_HULL):
+			out.append({ "id": BLOOD_HULL, "name": DROP_NAMES[BLOOD_HULL], "kind": "skin", "chance": m.call(skin_drop_chance(cd) * RARE_FIND) })
+		if tier >= 5 and not owned_skins.has(PRESSURE_SKIN):
+			out.append({ "id": PRESSURE_SKIN, "name": DROP_NAMES[PRESSURE_SKIN], "kind": "skin", "chance": m.call(skin_drop_chance(cd) * RARE_FIND * 0.5) })
 	return out
 
 
@@ -270,6 +288,9 @@ static func haul(rd: int, cd: int, variant: String, pot: float, hardcore: bool, 
 			items.append(id)
 	if not don and hardcore and tier >= 3 and Dice.next() < float(drop.call(cannon_drop_chance(cd))):
 		items.append(BLOOD_CANNON)
+	var rare: bool = not hardcore and not Rules.web_only
+	if rare and tier >= 3 and Dice.next() < float(drop.call(cannon_drop_chance(cd) * RARE_FIND)):
+		items.append("dons_palisade" if don else BLOOD_CANNON)
 	var main: String = GALAXY_HULL if don else GOLD_HULL
 	if tier >= 5 and not owned_skins.has(main) and Dice.next() < float(drop.call(skin_drop_chance(cd))):
 		skins.append(main)
@@ -278,6 +299,11 @@ static func haul(rd: int, cd: int, variant: String, pot: float, hardcore: bool, 
 		skins.append(second)
 	if not don and hardcore and not owned_skins.has(PRESSURE_SKIN) and Dice.next() < float(drop.call(pressure_skin_chance(pressure if hardcore else 0.0, pay))):
 		skins.append(PRESSURE_SKIN)
+	if rare and not don:
+		if tier >= 4 and not owned_skins.has(BLOOD_HULL) and Dice.next() < float(drop.call(skin_drop_chance(cd) * RARE_FIND)):
+			skins.append(BLOOD_HULL)
+		if tier >= 5 and not owned_skins.has(PRESSURE_SKIN) and Dice.next() < float(drop.call(skin_drop_chance(cd) * RARE_FIND * 0.5)):
+			skins.append(PRESSURE_SKIN)
 	var gem_mult: float = pressure_gem_mult(pressure if hardcore else 0.0, pay)
 	var base_blood: float = blood_gems_for_depth(pay, Dice.next()) if hardcore else 0.0
 	return {
