@@ -20,7 +20,8 @@ extends RefCounted
 ## IN A CHARTER ONE BOARD FOR THE CREW (Kong, 2026-10-06; CrewRules): "orders"
 ## is a shared profile column, every captain's catches count, a board is dealt
 ## for the crew's highest Fishing level, an order's doubloons go to the purse
-## once, and a sweep or a Master puts a crate in EVERY captain's stash.
+## once, and a sweep or a Master puts a crate in EVERY captain's stash (a
+## sweep's from each captain's own Fishing level).
 
 const MASTER_WEIGHTS: Array = [["wooden", 25.0], ["metal", 35.0], ["gold", 28.0], ["diamond", 12.0]]
 const WATERS: Array = ["ancient_deep", "abyss", "deep", "open_waters", "shallows"]
@@ -175,19 +176,31 @@ static func sweep(db: CaptainStore, uid: String) -> Dictionary:
 	if not (o["claimed"] as Array).all(func(c: Variant) -> bool: return c == true):
 		return { "error": "Claim all three orders first." }
 	var lvl: float = _lvl(db, uid)
-	var water: String = "shallows"
-	for w: String in WATERS:
-		if lvl >= float(Daily.ZONE_MIN_LEVEL.get(w, 999)):
-			water = w
-			break
-	var tier: String = FishingRules.roll_crate_tier(water)
 	o["board"] = float(o["board"]) + 1.0
 	o["p"] = [0.0, 0.0, 0.0]
 	o["claimed"] = [false, false, false]
 	o["level"] = lvl
 	db.update_profile(uid, { "orders": o })
-	_crew_crate(db, uid, tier, "daily_challenge_sweeps")
-	return { "ok": true, "crate": tier }
+	# Every captain's crate from the deepest water THEIR OWN Fishing level
+	# opens (Kong, 2026-10-06: a crewmate at Fishing 1 was getting the top
+	# captain's Abyss crates).
+	var mine: String = ""
+	for m: Array in CrewRules.of(db, uid):
+		var cdb: CaptainStore = m[0]
+		var t: String = FishingRules.roll_crate_tier(_water_for(_level(cdb.me(str(m[1])))))
+		_stash(cdb, str(m[1]), t)
+		cdb.bump_stat(str(m[1]), "daily_challenge_sweeps", 1.0)
+		if str(m[1]) == uid:
+			mine = t
+	return { "ok": true, "crate": mine }
+
+
+## The deepest water a Fishing level opens.
+static func _water_for(lvl: float) -> String:
+	for w: String in WATERS:
+		if lvl >= float(Daily.ZONE_MIN_LEVEL.get(w, 999)):
+			return w
+	return "shallows"
 
 
 static func _stash(db: CaptainStore, uid: String, tier: String) -> void:

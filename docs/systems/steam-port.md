@@ -2082,7 +2082,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     once (the ledger names the claimer). Bounty points are one crew ladder: its doubloons
     land in the purse once, its ship skin goes to EVERY captain, and the ranks read off the
     crew's points. A sweep of the orders or a Master order puts a crate in EVERY captain's
-    stash and counts for every captain's sweep badges.
+    stash and counts for every captain's sweep badges (the sweep's crate rolled from each
+  captain's own Fishing level, 2026-10-06).
   - FISHING TOGETHER (Kong, 2026-10-06, picked from a list: crew streak, derbies, callouts and
     catch pops; nothing that touches what bites or pays; game/crew_fishing.gd on the founder's
     game, game/crew_waters_view.gd on every screen):
@@ -2119,8 +2120,9 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Gauntlet.RARE_FIND): the Blood Cannon (Davy's) and Don's Palisade (the Don's) from the third
   chest at a fifth of the gear chance (2% a bank at depth 50), the Bad Blood Hull from the
   fourth at a fifth of the hull chance, the Pitch Black Hull from the fifth at a tenth; their
-  three forge recipes live again. STILL OPEN with Kong: order sweeps roll their crate from the
-  crew's highest Fishing level; co-op tasks on a Charter's bounty board.
+  three forge recipes live again. A SWEEP'S CRATE comes from each captain's own Fishing level
+  (Kong: "captains own level"; a crewmate at Fishing 1 had been getting the top captain's
+  Abyss crates). STILL OPEN: co-op tasks on a Charter's bounty board (a list proposed).
 - PINGS AND CREWMATE STATUS (Kong, 2026-10-06, picked from a co-op list). PINGS
   (game/crew_pings.gd, CrewNet.send_ping): hold G over the water and four callouts open
   round the pointer (Hotspot here, Over here, Need a hand, Look); slide toward one and let
