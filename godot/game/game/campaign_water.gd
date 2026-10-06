@@ -468,6 +468,7 @@ class Ship:
 		var art: Dictionary = Js.obj(enc.get("art"))
 		rig = HullRig.new()
 		rig.tex = Skipper.tex(str(enc.get("hull", "")).trim_prefix("/"))
+		rig.def = { "seaFlip": North.bow_left(enc.get("hull", "")) }
 		_w = float(art.get("box", 240.0)) / 0.8
 		rig.box = _w
 		rig.face = -1.0

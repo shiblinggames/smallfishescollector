@@ -119,6 +119,9 @@ static func _caption(t: SceneTree, n: String) -> void:
 
 
 func _hold() -> void:
+	if OS.get_environment("FACE_PROBE") != "":
+		var bt: Boat = sea._boat
+		print("FACE facing=", bt._facing, " rig=", bt._ship_rig.scale.x if bt._ship_rig != null else "none", " flip=", bt._ship_flip, " on_ship=", bt.on_ship, " skipper=", bt.skipper.scale.x, " visible=", bt.skipper.visible)
 	await tree.create_timer(float(OS.get_environment("MOVIE_S")) if OS.get_environment("MOVIE_S") != "" else 6.0).timeout
 	print("END ", Engine.get_frames_drawn())
 

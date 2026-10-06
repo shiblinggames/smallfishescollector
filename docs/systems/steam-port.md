@@ -1786,6 +1786,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     rattles, bursts open in light and coin, and what it paid counts up a line at a time,
     the drops last; and the dive's sheet no longer repaints a state it is already showing
     (a repaint had cut the roll short).
+    SHIPS FACE THE RIGHT WAY (Kong, 2026-10-05: every ship is painted bow-right but the
+    Man-o-War and all its skins, which are bow-left). Boat.face_to now turns the hull too:
+    the hull was only turned while she sailed, and a fight holds her still, so a Man-o-War
+    went into every fight facing away; the fight re-asserts it each frame. North.bow_left
+    names the bow-left paintings (man-o-war art, the skins' paintings, Finn's ship), and the
+    enemies in a fight and the ships anchored on the campaign chart use it, so a Man-o-War
+    enemy (the Don's, Finn's) faces the line rather than away. THE MAELSTROMS' WRECKAGE is
+    gone (Kong: the debris fields "look cheap"): the themes' debris lists are empty.
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

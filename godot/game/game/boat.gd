@@ -649,6 +649,14 @@ class Ripple:
 func face_to(f: float) -> void:
 	_facing = signf(f)
 	skipper.scale.x = -_facing
+	# The hull too, at once (Kong, 2026-10-05: in a fight she is held still,
+	# and the hull is otherwise only turned while she sails, so a Man-o-War,
+	# painted bow-left, went into a fight facing away from the enemy).
+	if _ship_rig != null:
+		var fx: float = -1.0 if ((_facing > 0.0) != _ship_flip) else 1.0
+		_ship_rig.scale.x = fx
+		if _ship_mirror != null:
+			_ship_mirror.scale.x = fx
 
 
 

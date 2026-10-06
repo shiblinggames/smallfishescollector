@@ -271,8 +271,7 @@ func _process(delta: float) -> void:
 	# whole fight (Kong, 2026-10-05: one hull was seen turned away); only a
 	# ship running from it (fled, the stage gone) turns about.
 	if not _gone and sea != null:
-		if sea._boat.facing() < 0.0:
-			sea._boat.face_to(1.0)
+		sea._boat.face_to(1.0)
 		if not b.is_empty():
 			for i0: int in (b["seats"] as Array).size():
 				var sm: Shipmate = _mate_of(i0) if i0 != me else null
@@ -418,7 +417,8 @@ func _enemy_enters() -> void:
 		var e: Dictionary = fs[j]
 		var node: HullRig = HullRig.new()
 		node.tex = Skipper.tex(str(e["image"]).trim_prefix("/"))
-		node.def = {}
+		# Bow toward the line: a bow-left painting (a Man-o-War) is not turned.
+		node.def = { "seaFlip": North.bow_left(e["image"]) }
 		node.box = 400.0 if e["boss"] else (340.0 if j == 0 else 300.0)
 		node.face = -1.0
 		var at: Vector2 = lead_at + _foe_offset(j)

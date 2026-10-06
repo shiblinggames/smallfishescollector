@@ -14,7 +14,9 @@ extends Node2D
 ## into (the Don) the eye; the keeper (Davy Jones, Don's Ghost) stands in the
 ## light at the floor and climbs the throat as you come in.
 ##
-## THE WRECKAGE is real physics (Kong, 2026-10-03: "utilize godot physics to
+## (No wreckage now: Kong, 2026-10-05, the debris fields "look cheap"; the
+## themes' lists are empty and nothing is made.)
+## THE WRECKAGE was real physics (Kong, 2026-10-03: "utilize godot physics to
 ## juice them up"): rigid bodies in a flat space of their own, carried round
 ## by the current and knocking into each other, drawn as the painted debris
 ## laid onto the bowl's keystone. And the hull feels the pull (Boat, whirl).
@@ -54,10 +56,10 @@ const STREAM_N: int = 5
 const THEMES: Dictionary = {
 	"davy": { "arm": Color("#156f6c"), "mid": Color("#1f918c"), "wisp": Color("#5fc9c6"), "core": Color("#a6eef0"), "eye": Color("#1a7f7a"), "foam": Color("#8fd6d8"),
 		"spirit": Color("#9cf0ff"), "speed": 0.5, "rise": true, "face": "davyjones.png", "paint": "sea/mael-davy.webp",
-		"debris": ["sea/deb-barrel.webp", "sea/deb-planks.webp", "sea/deb-mast.webp", "sea/deb-planks.webp", "sea/deb-barrel.webp", "sea/deb-planks.webp"] },
+		"debris": [] },
 	"don": { "arm": Color("#1f4a3a"), "mid": Color("#2f6a52"), "wisp": Color("#7fb098"), "core": Color("#d8e6dc"), "eye": Color("#275c46"), "foam": Color("#93b9a5"),
 		"spirit": Color("#d6b25c"), "speed": 0.4, "rise": false, "face": "donsgauntlet.png", "paint": "sea/mael-don.webp",
-		"debris": ["sea/deb-crate.webp", "sea/deb-barrel.webp", "sea/deb-planks.webp", "sea/deb-crate.webp", "sea/deb-mast.webp", "sea/deb-barrel.webp"] },
+		"debris": [] },
 }
 
 var _th: Dictionary
