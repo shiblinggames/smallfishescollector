@@ -383,21 +383,34 @@ static func save_sea_position(db: CaptainStore, uid: String, x: float, y: float,
 		"sea_x": clampf(x, -1e6, 1e6), "sea_y": clampf(y, -1e6, 1e6),
 		"sea_seen_at": Js.iso(Clock.now_ms()), "sea_side": "fishing",
 	}
+	var out: Dictionary = { "helm": "mine" }
 	if not seen.is_empty() or not seen_exp.is_empty():
 		var row: Dictionary = db.profile(uid, "sea_explored, sea_explored_exp")
+		var bits: PackedByteArray = fog_decode(row.get("sea_explored"))
+		var xb: PackedByteArray = xfog_decode(row.get("sea_explored_exp"))
+		# The northern patches lifting for the first time (charting pays).
+		var fresh_x: Array = []
 		if not seen.is_empty():
-			var bits: PackedByteArray = fog_decode(row.get("sea_explored"))
 			for i: Variant in seen:
 				fog_set(bits, int(i))
 			patch["sea_explored"] = fog_encode(bits)
 		# The campaign's own mask, on its own column and grid.
 		if not seen_exp.is_empty():
-			var xb: PackedByteArray = xfog_decode(row.get("sea_explored_exp"))
 			for i: Variant in seen_exp:
+				if not xfog_has(xb, int(i)) and int(i) >= 0 and int(i) < xfog_cells():
+					fresh_x.append(int(i))
 				xfog_set(xb, int(i))
 			patch["sea_explored_exp"] = Marshalls.raw_to_base64(xb)
+		db.update_profile(uid, patch)
+		# CHARTING (the port): new northern water pays Navigation XP
+		# (core/charting.gd).
+		if not Rules.web_only and not fresh_x.is_empty():
+			var paid: Dictionary = Charting.pay(db, uid, fresh_x, xb)
+			out["charted"] = paid["xp"]
+			out["chartedDone"] = paid["done"]
+		return out
 	db.update_profile(uid, patch)
-	return { "helm": "mine" }
+	return out
 
 
 # ── The isles and the digs ─────────────────────────────────────────────────────

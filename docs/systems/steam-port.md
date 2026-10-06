@@ -2101,6 +2101,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- CHARTING THE NORTHERN WATER PAYS NAVIGATION XP (Kong, 2026-10-06: early Navigation is
+  slow and players re-farm the first raids; RuneScape's sailing pays for sailing; "this
+  should only be for the northern waters"). core/charting.gd, from Explore.save_sea_position:
+  each patch of the campaign water's fog (700 square) pays once, the first time that
+  captain's fog lifts there: 6 XP in Chapter I's bay, 7 in II, 8 in III to V, 2.5 between
+  the bays. A bay charted to 95% pays a bonus once (120, 150, 180, 220, 220; profile
+  charted_waters). About 7,500 XP in all; Chapter I's bay whole about 1,070. Water already
+  charted pays nothing (no idling for it); the bays open with their chapters, so it comes as
+  it is needed. The fishing sea's fog pays nothing. At sea a quiet line once 10 XP has
+  gathered ("Charted new water: +14 Nav XP"), and a bay charted whole says so. Stat
+  charting_nav_xp. tests/charting_check.gd. THE FISHING SEA'S FOG IS NOW EACH CAPTAIN'S OWN
+  in a Charter too (Kong: "fog is not shared by crew"; sea_explored left SHARED_PROFILE).
 - THE NORTHERN CHAPTERS' OWN SEAS (Kong, 2026-10-06: on the web "each area feels very unique
   and special to itself"; "port the web's mood but improve it in any way through Godot's
   engine"; crossing: blend, plus the arrival banner and horn). game/chapter_look.gd holds a

@@ -941,6 +941,9 @@ func _grade(delta: float, at: Vector2, dark: float) -> void:
 	_env.glow_intensity = lerpf(_env.glow_intensity, 0.12 + dark * 0.7 + glow, k)
 
 
+var _charted_xp: float = 0.0
+
+
 ## Where the boat is and what it has seen, saved (before any claim, too: the
 ## rules check the saved position).
 func _flush_position() -> void:
@@ -949,8 +952,21 @@ func _flush_position() -> void:
 	var seen_exp: Array = _xfog.fresh.duplicate() if _xfog != null else []
 	if _xfog != null:
 		_xfog.fresh.clear()
-	await session.act("saveSeaPosition", [round(_boat.position.x), round(_boat.position.y), seen, seen_exp])
+	var r: Variant = await session.act("saveSeaPosition", [round(_boat.position.x), round(_boat.position.y), seen, seen_exp])
 	session.persist()
+	# Charting new water pays Navigation XP (core/charting.gd): told in a quiet
+	# line once a little has gathered, and at once when a water is charted.
+	if r is Dictionary:
+		_charted_xp += Js.num((r as Dictionary).get("charted"))
+		var done: Array = Js.list((r as Dictionary).get("chartedDone"))
+		if not done.is_empty():
+			_hud.toast("%s charted: +%s Nav XP" % [" and ".join(PackedStringArray(done.map(func(x: Variant) -> String: return str(x)))), Js.thousands(round(_charted_xp))])
+			_charted_xp = 0.0
+			_hud.refresh()
+		elif _charted_xp >= 10.0:
+			_hud.toast("Charted new water: +%s Nav XP" % Js.thousands(round(_charted_xp)))
+			_charted_xp = 0.0
+			_hud.refresh()
 
 
 ## The isles, the digs' tells and the bottles: what to draw, and how close.

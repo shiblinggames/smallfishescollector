@@ -49,7 +49,7 @@ const SHARED_PROFILE: Array[String] = [
 	"doubloons", "prestige_levels", "zone_golden_boost",
 	"zone_shallows_rewarded", "zone_open_waters_rewarded", "zone_deep_rewarded", "zone_abyss_rewarded",
 	"ancient_catches", "ancient_vigil", "lifetime_species", "lifetime_species_count",
-	"sea_explored", "portal_tier",
+	"portal_tier",
 	# One crew board (Kong, 2026-10-06): the bounties and the day's orders.
 	"bounty_board", "bounty_points", "bounty_milestones_claimed", "orders",
 ]
