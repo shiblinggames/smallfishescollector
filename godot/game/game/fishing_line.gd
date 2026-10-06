@@ -218,10 +218,15 @@ func _draw() -> void:
 	# On the water it is a hair; in a small portrait it has to be drawn
 	# thicker or it vanishes when the picture is shrunk.
 	draw_polyline(local, INK, WIDTH if skipper.water else 1.4 * maxf(1.0, skipper.box_scale), true)
-	_last_dir = (local[NODES - 1] - local[NODES - 2]).normalized()
-	if skipper.frame == "rest":
-		# Resting, the hook hangs plumb under its eye.
-		_last_dir = Vector2.DOWN
+	# The hook hangs from its eye, near plumb, leaning a little the way its
+	# line pulls and settling smoothly (Kong, 2026-10-05: drawn along the
+	# rope's last stretch it flipped about "like a ragdoll" going into the
+	# water). Resting, it hangs plumb.
+	var pull: Vector2 = (local[NODES - 1] - local[NODES - 2]).normalized()
+	var want: float = 0.0 if skipper.frame == "rest" else clampf(Vector2.DOWN.angle_to(pull), -0.5, 0.5)
+	var k: float = 1.0 - exp(-get_process_delta_time() * 7.0)
+	_hook_tilt = lerpf(_hook_tilt, want, k)
+	_last_dir = Vector2.DOWN.rotated(_hook_tilt)
 	# The hook: on show at rest and in flight; under the water otherwise.
 	if skipper.frame != "wait":
 		_hook(local[NODES - 1], _last_dir)
@@ -236,6 +241,7 @@ const HOOK_EYE: Vector2 = Vector2(28.5, 7.0)
 const HOOK_SCALE: float = 0.224
 static var _hooks: Dictionary = {}
 var _last_dir: Vector2 = Vector2.DOWN
+var _hook_tilt: float = 0.0
 
 
 func _hook(at: Vector2, dir: Vector2) -> void:

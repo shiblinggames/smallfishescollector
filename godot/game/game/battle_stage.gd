@@ -267,6 +267,17 @@ func _frame() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	# Every player ship in the line faces the enemy, bow to the right, for the
+	# whole fight (Kong, 2026-10-05: one hull was seen turned away); only a
+	# ship running from it (fled, the stage gone) turns about.
+	if not _gone and sea != null:
+		if sea._boat.facing() < 0.0:
+			sea._boat.face_to(1.0)
+		if not b.is_empty():
+			for i0: int in (b["seats"] as Array).size():
+				var sm: Shipmate = _mate_of(i0) if i0 != me else null
+				if sm != null and sm.face_lock != 1.0:
+					sm.face_lock = 1.0
 	if not b.is_empty():
 		for i: int in (b["seats"] as Array).size():
 			var a0: HullAura = _aura(i)

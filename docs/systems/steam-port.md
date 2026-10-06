@@ -1776,6 +1776,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     with the name on the end card. For films (FILM_QUIET) the game also holds back the
     compass "!" at the screen's edge, the level card's "Press anywhere to continue", the
     Journal's red reminders, and the banner of a field's generated names.
+    Eighth pass (Kong's notes): the shrine and the records gave way to the haul under one
+    line ("Go as far as you can for the best treasure...", setting up "...or just go back
+    to fishing."); the aim made as one clean pass into the crit. Fixed in the game on the
+    way: every player ship in a fight holds its bow to the right, at the enemy, the whole
+    fight (one hull had come into it turned away); the hook in flight hangs from its eye,
+    leaning a little the way its line pulls and settling smoothly (it flipped "like a
+    ragdoll" going into the water); THE HAUL IS ROLLED: the gauntlet's chest comes up shut,
+    rattles, bursts open in light and coin, and what it paid counts up a line at a time,
+    the drops last; and the dive's sheet no longer repaints a state it is already showing
+    (a repaint had cut the roll short).
     The log is plain lines at the bottom right, older ones fainter, no panel.
   - FINN'S FINALE (One Last Ride; Kong 2026-10-05: the dial "a hybrid of the fishing dial and
     expedition aim styling"). game/aim_dial.gd (AimDial extends AimBar: the same needle, zone,

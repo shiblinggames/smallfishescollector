@@ -36,8 +36,7 @@ EDIT = [
     ("coopdive", 0.6, 9.6, "x"),
     ("draft", 0.0, 4.4, "x"),
     ("don", 0.0, 4.4, "x"),
-    ("g_shrine", 0.0, 5.8, "x"),
-    ("g_records", 0.0, 5.2, "b"),
+    ("haul", 0.0, 6.2, "b"),
     ("calm", 0.0, 5.8, "b"),
     ("end", 0.0, 6.3, ""),
 ]
@@ -76,7 +75,7 @@ if BEATS:
 
 # Slow push-ins on the shots that are a sheet of paper (Kong: menus that sit
 # still read as screenshots).
-PUSH = {"charter", "log", "finn", "friends", "badges", "ready", "recruit", "skins", "draft", "g_records", "wardrobe"}
+PUSH = {"charter", "log", "finn", "friends", "badges", "ready", "recruit", "skins", "draft", "haul", "wardrobe"}
 
 inputs = []
 parts = []

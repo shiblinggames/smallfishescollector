@@ -374,8 +374,6 @@ func _coop() -> void:
 	for f: int in 70:
 		await tree.process_frame
 	bs._choose("volley")
-	for f: int in 70:
-		await tree.process_frame
 	await _lock_true(bs)
 	for f: int in 30:
 		await tree.process_frame
@@ -465,8 +463,6 @@ func _mega() -> void:
 	for f: int in 30:
 		await tree.process_frame
 	bs._choose("mega")
-	for f: int in 55:
-		await tree.process_frame
 	await _lock_true(bs)
 	await _hold()
 
@@ -946,8 +942,6 @@ func _crewxp() -> void:
 	for f: int in 30:
 		await tree.process_frame
 	bs._choose("fire")
-	for f: int in 50:
-		await tree.process_frame
 	await _lock_true(bs)
 	await _hold()
 
@@ -1006,17 +1000,25 @@ func _lock_true(bs: BattleStage) -> void:
 	# A short run in: the needle starts a little way off the band (QUICK_AIM),
 	# or makes a pass first so it is seen moving.
 	if OS.get_environment("QUICK_AIM") != "":
-		bar._pos = clampf(bar._zone + bar._seam - 0.28 * bar._dir, 0.02, 0.98)
-		for f: int in 6:
-			await tree.process_frame
+		# One clean pass: from the left end as the bar opens, into the crit.
+		bar._pos = 0.02
+		bar._dir = 1.0
 	else:
 		for f: int in 25:
 			await tree.process_frame
+	# Locked on the frame the needle reaches the crit's centre (a narrow band
+	# can be stepped over in one frame, so a crossing counts as reaching it).
 	guard = 0
-	while is_instance_valid(bar) and absf(bar._pos - (bar._zone + bar._seam)) > bar.crit_w * 0.6 and guard < 900:
+	var last: float = bar._pos - (bar._zone + bar._seam)
+	while is_instance_valid(bar) and guard < 900:
+		var d: float = bar._pos - (bar._zone + bar._seam)
+		if absf(d) <= bar.crit_w * 0.6 or signf(d) != signf(last):
+			break
+		last = d
 		guard += 1
 		await tree.process_frame
 	if is_instance_valid(bar):
+		bar._pos = bar._zone + bar._seam
 		bar.lock()
 
 

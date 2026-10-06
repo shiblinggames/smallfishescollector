@@ -1238,6 +1238,12 @@ func _init() -> void:
 							gr["run"]["pot"] = 9240.0
 							gr["run"]["roll"] = { "cleared": 19.0, "prevWasBoss": true, "roundsSinceBoss": 0.0 }
 							gt._bank()
+							# HAUL_LOOT: the chest's chase drops a film shows off.
+							if OS.get_environment("HAUL_LOOT") != "":
+								var py: Dictionary = gr["pays"]["me"]
+								py["items"] = ["davys_hand_cannon", "captains_carapace"]
+								py["vouchers"] = ["captain"]
+								gt._enter("haul")
 						"dead":
 							gr["run"]["pot"] = 3100.0
 							gt._dive_lost([])

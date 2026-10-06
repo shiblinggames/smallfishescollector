@@ -56,8 +56,16 @@ func show_state(st: Dictionary) -> void:
 		return
 	var tag: String = "%s:%d" % [ph, int(Js.num(st.get("seq")))]
 	var fresh: bool = tag != _seen_tag
+	# The same state handed over again: nothing to redraw (a repaint would cut
+	# short what the sheet is playing, such as the haul's roll).
+	if not fresh and st == _last_st:
+		return
 	_seen_tag = tag
+	_last_st = st.duplicate(true)
 	_paint(fresh)
+
+
+var _last_st: Dictionary = {}
 
 
 const PHASES: Array = ["curse", "draft", "shrine", "fence", "contract", "jobResult", "marks", "breather", "haul", "dead", "held"]
@@ -121,7 +129,7 @@ func _paint(fresh: bool) -> void:
 		"jobResult": _job_result()
 		"marks": _marks()
 		"breather": _breather()
-		"haul": _haul()
+		"haul": _haul(fresh)
 		"dead": _dead()
 		"held": _held()
 	Pane.set_night(_body, true)
@@ -722,7 +730,11 @@ func _breather() -> void:
 
 # ══ The haul, and the deep ════════════════════════════════════════════════════
 
-func _haul() -> void:
+## THE HAUL, ROLLED (Kong, 2026-10-05: "a loot roll ... to show off earning
+## loot"): the chest comes up shut and shakes, bursts open, and what it paid
+## counts up a line at a time, the drops landing last. Seen once (fresh); a
+## repaint shows it as it ended.
+func _haul(fresh: bool = false) -> void:
 	var p: Dictionary = Js.obj(Js.obj(_st.get("pays")).get(my_key))
 	var w: float = _sheet.size.x
 	_head("Banked at depth %d" % int(Js.num(p.get("depth"))), "You climbed back into the light")
@@ -732,6 +744,14 @@ func _haul() -> void:
 	art.size = Vector2(300, 300)
 	art.label = str(p.get("chestLabel", ""))
 	_body.add_child(art)
+	var shown: Array = []
+	var roll: float = 1.5 if fresh else 0.0
+	if fresh:
+		art.shut = _tx("donschestclosed.png" if _don() else "davychestclosed.png")
+		art.open_at = 1.1
+		get_tree().create_timer(1.1).timeout.connect(func() -> void:
+			Sound.chest(true)
+			Rumble.buzz([0, 40, 30, 80]))
 	var rows: Array = [
 		["Doubloons", "%s ⟡" % Js.thousands(Js.num(p.get("doubloons"))), Dossier.WARN],
 		["Navigation XP", "+%s" % Js.thousands(Js.num(p.get("navXp"))), Dossier.INK],
@@ -743,9 +763,10 @@ func _haul() -> void:
 		rows.append(["Every hand aboard", "+%s XP" % Js.thousands(Js.num(p.get("crewXp"))), Dossier.HELP])
 	var y: float = 126.0
 	for r: Array in rows:
-		_label(Vector2(380, y), r[0], "karla", 700, 15, Dossier.SOFT)
+		var kl: Label = _label(Vector2(380, y), r[0], "karla", 700, 15, Dossier.SOFT)
 		var v: Label = _label(Vector2(380, y - 4), r[1], "cinzel", 700, 22, r[2], w - 420.0)
 		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		shown.append([kl, v])
 		y += 42.0
 	var drops: Array = []
 	for it: Variant in Js.list(p.get("items")):
@@ -755,15 +776,40 @@ func _haul() -> void:
 	for vk: Variant in Js.list(p.get("vouchers")):
 		drops.append("a %s skin voucher" % ("Captain's" if str(vk) == "captain" else "Bosun's"))
 	if not drops.is_empty():
-		_label(Vector2(380, y + 6), "From the chest:  " + ", ".join(PackedStringArray(drops)), "karla", 800, 15, Dossier.WARN, w - 420.0)
+		var dl: Label = _label(Vector2(380, y + 6), "From the chest:  " + ", ".join(PackedStringArray(drops)), "karla", 800, 15, Dossier.WARN, w - 420.0)
+		shown.append([dl])
 		y += 40.0
 	if p.get("record", false) == true:
 		_label(Vector2(380, y + 6), "Your deepest descent yet.", "karla", 800, 15, Dossier.HELP, w - 420.0)
 		y += 30.0
 	var ups: Array = Js.list(p.get("crewUp")).filter(func(c: Dictionary) -> bool: return float(c["to"]) > float(c["from"]))
 	if not ups.is_empty():
-		_label(Vector2(380, y + 6), "Level up:  " + ", ".join(PackedStringArray(ups.map(func(c: Dictionary) -> String: return "%s %d" % [c["name"], int(c["to"])]))), "karla", 600, 13, Dossier.SOFT, w - 420.0)
+		var ul: Label = _label(Vector2(380, y + 6), "Level up:  " + ", ".join(PackedStringArray(ups.map(func(c: Dictionary) -> String: return "%s %d" % [c["name"], int(c["to"])]))), "karla", 600, 13, Dossier.SOFT, w - 420.0)
+		shown.append([ul])
 	_home_foot()
+	if fresh:
+		# A line at a time after the lid: each fades in and rises into place,
+		# the numbers counting up as they come.
+		for i: int in shown.size():
+			var at: float = roll + 0.32 * i
+			for c: Variant in shown[i]:
+				var lb: Label = c
+				lb.modulate.a = 0.0
+				var y0: float = lb.position.y
+				lb.position.y = y0 + 8.0
+				var tw: Tween = lb.create_tween().set_parallel()
+				tw.tween_property(lb, "modulate:a", 1.0, 0.25).set_delay(at)
+				tw.tween_property(lb, "position:y", y0, 0.3).set_delay(at).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			if (shown[i] as Array).size() == 2:
+				var val: Label = shown[i][1]
+				var full: String = val.text
+				var m: RegExMatch = RegEx.create_from_string("[0-9][0-9,]*").search(full)
+				if m != null:
+					var n: float = float(m.get_string().replace(",", ""))
+					var pre: String = full.substr(0, m.get_start())
+					var post: String = full.substr(m.get_end())
+					val.create_tween().tween_method(func(f: float) -> void: val.text = pre + Js.thousands(round(f)) + post, 0.0, n, 0.7).set_delay(at).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			get_tree().create_timer(at).timeout.connect(func() -> void: Sound.xp_tick())
 
 
 func _dead() -> void:
@@ -1083,17 +1129,45 @@ class ChestArt:
 	var label: String = ""
 	## Sunk: dimmed and cold, settling slowly in the dark.
 	var sunk: bool = false
+	## Rolled: shut until open_at, shaking harder toward it, then open with a
+	## burst of light and coin.
+	var shut: Texture2D = null
+	var open_at: float = -1.0
 	var _t: float = 0.0
 	var _frames: int = 0
 
 	func _process(d: float) -> void:
 		_t += d
-		if _frames < 12 or sunk:
+		if _frames < 12 or sunk or (open_at > 0.0 and _t < open_at + 2.0):
 			_frames += 1
 			queue_redraw()
 
 	func _draw() -> void:
 		draw_circle(size / 2.0, size.x * 0.42, Color(Color(0.3, 0.55, 0.6) if sunk else BattleLook.GOLD, 0.08))
+		if shut != null and _t < open_at:
+			# Shut, rattling harder as the lid gives.
+			var k: float = clampf(_t / open_at, 0.0, 1.0)
+			var sc0: float = minf(size.x / float(shut.get_width()), (size.y - 40.0) / float(shut.get_height()))
+			var ts0: Vector2 = shut.get_size() * sc0
+			var jig: Vector2 = Vector2(sin(_t * 47.0), cos(_t * 39.0)) * 3.0 * k * k
+			draw_set_transform(Vector2(size.x / 2.0, ts0.y) + jig, sin(_t * 31.0) * 0.05 * k * k, Vector2.ONE)
+			draw_texture_rect(shut, Rect2(Vector2(-ts0.x / 2.0, -ts0.y), ts0), false)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			BattleLook.say(self, Kit.font("cinzel", 700), size.x / 2.0, size.y - 8.0, label, 17, Dossier.INK)
+			return
+		if open_at > 0.0:
+			# The burst: light, and coin thrown up out of it, falling back.
+			var since: float = _t - open_at
+			if since < 1.6:
+				var c0: Vector2 = Vector2(size.x / 2.0, size.y * 0.42)
+				var g: Texture2D = FxSheet.glow()
+				var fl: float = 1.0 - smoothstep(0.0, 1.0, since)
+				draw_texture_rect(g, Rect2(c0 - Vector2(170, 170), Vector2(340, 340)), false, Color(BattleLook.GOLD, 0.55 * fl))
+				for k2: int in 22:
+					var ang: float = -PI / 2.0 + (fposmod(k2 * 0.618, 1.0) - 0.5) * 2.2
+					var sp: float = 260.0 + 160.0 * fposmod(k2 * 0.37, 1.0)
+					var pos: Vector2 = c0 + Vector2.from_angle(ang) * sp * since + Vector2(0, 420.0 * since * since)
+					draw_circle(pos, 4.5, Color(1.0, 0.82, 0.32, 1.0 - smoothstep(0.9, 1.6, since)))
 		if tex != null:
 			var sc: float = minf(size.x / float(tex.get_width()), (size.y - 40.0) / float(tex.get_height()))
 			var ts: Vector2 = tex.get_size() * sc
