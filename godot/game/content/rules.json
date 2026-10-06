@@ -10524,15 +10524,15 @@
     "id": "coffers_fleet",
     "type": "raid",
     "label": "The Harbor Fleet",
-    "flavor": "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colors on every shot, so you never know which gun is the one that's loaded.",
-    "bridge": "The admiral's fleet is wreckage on the harbor floor, and the way to the market's heart is open. The last push is on the keeper himself now.",
+    "flavor": "The Finndicate's coffers keep a war-fleet, and Admiral Ruse has never lost a hull. His gunners fly false colors on every shot, so you never know which gun is the one that's loaded.",
+    "bridge": "Admiral Ruse's fleet is wreckage on the harbor floor, and the Finndicate's coffers lie open. Whatever their mission is, it's paid for in there.",
     "requiresNode": "coffers_keeper",
     "requiresNavLevel": 40,
     "route": "/raids/coffers-fleet",
     "raidId": "coffers_fleet",
     "image": "/raid5_admiralruse.png",
     "detail": {
-     "description": "The Coffers' war-fleet, and the admiral who has never lost a ship. His crews fight under false colors: decoy gun-bands strewn across your aim so you can't tell the live shot from the feint. The biggest hulls you've faced yet, and the admiral rises again when you think you've sunk him.",
+     "description": "The Coffers' war-fleet and its admiral, Ruse, who has never lost a ship. His crews fight under false colors: decoy gun-bands strewn across your aim so you can't tell the live shot from the feint. The biggest hulls you've faced yet, and Ruse rises again when you think you've sunk him.",
      "enemies": [
       "Plume ×2",
       "Fantail ×2",
@@ -10603,7 +10603,7 @@
     "id": "coffers_fleet_challenge",
     "type": "raid",
     "label": "Challenge: The Harbor Fleet",
-    "flavor": "The same fleet, drilled harder and flying meaner colors. The admiral does not lose his wall twice.",
+    "flavor": "The same fleet, drilled harder and flying meaner colors. Admiral Ruse doesn't lose his wall twice.",
     "requiresNode": "coffers_fleet",
     "route": "/raids/coffers-fleet/challenge",
     "raidId": "coffers_fleet_challenge",
@@ -16219,11 +16219,11 @@
    "preFightDialogue": [
     {
      "speaker": "narrator",
-     "text": "Past the harbor wall the Coffers open up: a drowned market ringed by guns, and a line of Galleons already coming about to meet you."
+     "text": "Past the harbor wall the Coffers open up. A large galleon is already coming about to meet you."
     },
     {
      "speaker": "boss",
-     "text": "Far enough, captain. Nobody sails into the Coffers uninvited and lives to count the take."
+     "text": "Far enough, captain. Nobody sails into the Coffers uninvited and lives to tell the tale."
     },
     {
      "speaker": "crew",
@@ -16231,24 +16231,11 @@
       "name": "Kat",
       "portrait": "/card-arts/Catfish.webp"
      },
-     "text": "You're a long way from the docks for a harbormaster."
+     "text": "Ruse..."
     },
     {
      "speaker": "boss",
-     "text": "Admiral, to you. I keep this wall, and my gunners fly whatever colors the market needs. You'll never know which gun is the live one until it's already in you."
-    },
-    {
-     "speaker": "crew",
-     "crew": {
-      "name": "Dole",
-      "portrait": "/card-arts/Dole.webp"
-     },
-     "text": "A fleet that lies about which gun is loaded. How quaint. I have already told the captain which of yours are bluffing, admiral. Do keep pretending."
-    },
-    {
-     "speaker": "boss",
-     "text": "Run out your guns. *Mine are already lying to you.*",
-     "pause": 700
+     "text": "Admiral Ruse, to you. You lot have seemed to cause quite the stir. Mighty bold of you to show up to the Finndicate's coffers all on your own."
     },
     {
      "speaker": "crew",
@@ -16256,7 +16243,48 @@
       "name": "Laz",
       "portrait": "/card-arts/Coelacanth.webp"
      },
-     "text": "Everything in this drowned market lies. I came back from its floor to say so, admiral. Your painted colors do not frighten a dead man."
+     "text": "Mighty bold of you to steal from the weak. Does the Finndicate not have enough at their disposal?"
+    },
+    {
+     "speaker": "boss",
+     "text": "The Finndicate's mission goes far beyond your own."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Laz",
+      "portrait": "/card-arts/Coelacanth.webp"
+     },
+     "text": "And what would that be?"
+    },
+    {
+     "speaker": "boss",
+     "text": "That's way above your pay grade."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Doby",
+      "portrait": "/card-arts/Doby_Mick_v2.webp"
+     },
+     "text": "Well then it's time to claim our paycheck here, Ruse."
+    },
+    {
+     "speaker": "boss",
+     "text": "That's Admiral Ruse, to you."
+    },
+    {
+     "speaker": "crew",
+     "crew": {
+      "name": "Doby",
+      "portrait": "/card-arts/Doby_Mick_v2.webp"
+     },
+     "text": "Sorry, that title's above your pay grade."
+    },
+    {
+     "speaker": "boss",
+     "text": "Brace yourself!",
+     "pause": 600
     }
    ]
   },

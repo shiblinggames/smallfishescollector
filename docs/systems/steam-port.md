@@ -2102,6 +2102,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- THE CAMPAIGN'S WRITING NOW LIVES IN THE PORT (Kong, 2026-10-06: "its ok if it overrides the
+  web version"). The hand-edit of every expedition node (paused on the web at node 32,
+  2026-09-20) goes on in godot/game/content/rules.json itself: campaign.nodes (flavor,
+  bridge, detail, scene) and raids.<id>.preFightDialogue. DO NOT re-run the web's
+  export-godot-rules.mts over it: that would put the web's older text back. Node 32 (The
+  Harbor Fleet) rewritten 2026-10-06: Admiral Ruse named, the Coffers the Finndicate's own, one
+  galleon coming about (the words play at the boss), Kat, Laz and Doby; the Log line hooks the
+  Finndicate's mission ("whatever their mission is, it's paid for in there").
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works
