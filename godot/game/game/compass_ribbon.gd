@@ -129,11 +129,16 @@ func _gather() -> Array:
 		var gt: GauntletTable = GauntletTable.live
 		if gt != null and str(gt.state.get("phase", "")) == "muster" and ["asked", "coming"].has(str(Js.obj(gt.state.get("invites")).get(me_key, ""))):
 			always.append(_mark("dive", str(Gauntlet.NAMES.get(str(gt.state.get("variant", "davy")), "The dive")), GauntletTable.maelstrom_of(str(gt.state.get("variant", "davy"))), GOLD, "the crew's dive"))
+	# Pings while they last (game/crew_pings.gd).
+	if sea._pings != null:
+		for pg: Dictionary in sea._pings.pings:
+			var kd: Array = CrewPings.kind_of(str(pg["kind"]))
+			always.append(_mark("ping:" + str(pg["key"]), "%s: %s" % [pg["name"], kd[1]], pg["at"], kd[2]))
 	# Your crewmates, in their own teal.
 	for k: String in sea._mates:
 		var m: Shipmate = sea._mates[k]
 		if North.is_north(m.position) == north and m.mate_name != "":
-			always.append(_mark("mate:" + k, m.mate_name, m.position, TEAL))
+			always.append(_mark("mate:" + k, m.mate_name, m.position, TEAL, m.status))
 	if north:
 		var anch: bool = at.distance_to(North.EXP_ORIGIN) <= North.EXP_EDGE
 		if not anch:

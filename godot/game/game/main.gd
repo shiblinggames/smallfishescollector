@@ -31,6 +31,7 @@ func _ready() -> void:
 	_bind("chart", [KEY_M], [JOY_BUTTON_BACK], -1, 0.0)
 	_bind("locker", [KEY_I], [JOY_BUTTON_X], -1, 0.0)
 	_bind("swap", [KEY_Q], [JOY_BUTTON_LEFT_SHOULDER], -1, 0.0)
+	_bind("ping", [KEY_G], [], -1, 0.0)
 	GameSettings.apply()
 	_fps_layer()
 	SteamLayer.start()

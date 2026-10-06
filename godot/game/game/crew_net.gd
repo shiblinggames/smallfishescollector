@@ -36,6 +36,8 @@ signal ended(why: String)
 signal mate_boat(key: String, state: Dictionary)
 signal mate_look(key: String, mate_name: String, look: Dictionary)
 signal mate_left(key: String)
+## A crewmate's ping on the water (game/crew_pings.gd).
+signal pinged(key: String, who: String, kind: String, at: Vector2)
 ## The crew is asked to agree to something (a prestige): its id, who asks,
 ## and what it means. Answer with vote().
 signal proposed(id: int, by: String, text: String)
@@ -707,6 +709,21 @@ func send_look(look: Dictionary, as_name: String) -> void:
 	_looks[key] = [as_name, look]
 	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
 		_look.rpc(key, as_name, look)
+
+
+## A ping from this captain, to everyone aboard (and this game).
+func send_ping(kind: String, at: Vector2) -> void:
+	if multiplayer.multiplayer_peer == null:
+		return
+	if multiplayer.get_peers().is_empty():
+		_ping(key, captain_name, kind, at.x, at.y)
+	else:
+		_ping.rpc(key, captain_name, kind, at.x, at.y)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _ping(k: String, who: String, kind: String, x: float, y: float) -> void:
+	pinged.emit(k, who, kind, Vector2(x, y))
 
 
 @rpc("any_peer", "unreliable_ordered")

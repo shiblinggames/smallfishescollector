@@ -12,6 +12,9 @@ var lift: Color = Color.WHITE
 var skipper: Skipper
 var _plate: PanelContainer
 var _name_l: Label
+## What they are doing, under their name (Sea._status_text on their game).
+var status: String = ""
+var _do_l: Label
 var _at: Vector2 = Vector2.ZERO
 var _vel: Vector2 = Vector2.ZERO
 var _age: float = 0.0
@@ -42,11 +45,22 @@ func _ready() -> void:
 	s.content_margin_top = 3
 	s.content_margin_bottom = 4
 	_plate.add_theme_stylebox_override("panel", s)
+	var lines: VBoxContainer = VBoxContainer.new()
+	lines.add_theme_constant_override("separation", -2)
+	_plate.add_child(lines)
 	_name_l = Label.new()
 	_name_l.add_theme_font_override("font", UiTheme.title_font())
 	_name_l.add_theme_font_size_override("font_size", 15)
 	_name_l.add_theme_color_override("font_color", Kit.PAPER_INK)
-	_plate.add_child(_name_l)
+	_name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lines.add_child(_name_l)
+	_do_l = Label.new()
+	_do_l.add_theme_font_override("font", Kit.font("karla", 600))
+	_do_l.add_theme_font_size_override("font_size", 11)
+	_do_l.add_theme_color_override("font_color", Kit.PAPER_INK_SOFT)
+	_do_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_do_l.visible = false
+	lines.add_child(_do_l)
 	holder.add_child(_plate)
 	set_mate_name(mate_name)
 
@@ -109,6 +123,12 @@ func state(st: Dictionary) -> void:
 		position = _at
 		_placed = true
 	skipper.set_frame(str(st.get("pose", "rest")))
+	var d: String = str(st.get("do", ""))
+	if d != status:
+		status = d
+		if _do_l != null:
+			_do_l.text = d
+			_do_l.visible = d != ""
 	var f: float = float(st.get("facing", -1.0)) if face_lock == 0.0 else face_lock
 	skipper.scale.x = -f
 

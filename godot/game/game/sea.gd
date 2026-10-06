@@ -58,6 +58,48 @@ var _wfx: WeatherFx
 var _course: Course
 var _course_mark: Course.CourseMark
 var _compass: CompassRibbon
+var _pings: CrewPings = null
+## What this captain is doing, for the crew (their name plate, their compass
+## mark): worked out once a second and sent with the boat.
+var _status: String = ""
+var _status_t: float = 0.0
+var _input_ms: int = 0
+
+
+## CREWMATE STATUS (Kong, 2026-10-06): in a raid (which fight), diving (how
+## deep), ashore, fishing (which water), away (nothing pressed for three
+## minutes), or where she is sailing.
+func _status_text() -> String:
+	var at: Vector2 = _boat.position
+	for c: Node in _hud_layer.get_children():
+		if c is BattleStage and not (c as BattleStage).is_queued_for_deletion():
+			var bs: BattleStage = c
+			if bs.gauntlet != "":
+				var dep: int = int(Js.num(bs.b.get("depth")))
+				return "diving  ·  depth %d" % dep if dep > 0 else "diving"
+			var raid: Dictionary = Battle.raid_def(bs.raid_id)
+			if raid.is_empty() or bs.b.is_empty():
+				return "in a fight"
+			return "in a raid  ·  fight %d of %d" % [int(Js.num(bs.b.get("fight"))) + 1, int(Battle.fight_at(raid, 0)["of"])]
+	if _input_ms > 0 and Time.get_ticks_msec() - _input_ms > 180000:
+		return "away"
+	var port: Dictionary = Chart.berth_at(at)
+	if _room_layer.get_child_count() > 0:
+		return "ashore at %s" % port["name"] if not port.is_empty() else "ashore"
+	if _hud.phase != "idle":
+		var w: Dictionary = Chart.water_at(at)
+		return "fishing  ·  %s" % w["name"] if not w.is_empty() else "fishing"
+	if not port.is_empty():
+		return "in port at %s" % port["name"]
+	if North.is_north(at):
+		if at.distance_to(North.EXP_ORIGIN) <= North.EXP_EDGE:
+			return "in the anchorage"
+		var ch: Dictionary = ChapterLook.at(at)
+		if not ch.is_empty() and float(ch["k"]) > 0.5:
+			return "sailing  ·  %s" % Charting.bay_name(str(ch["bay"]))
+		return "sailing north"
+	var w2: Dictionary = Chart.water_at(at)
+	return "sailing  ·  %s" % w2["name"] if not w2.is_empty() else "sailing"
 var _course_t: float = 0.0
 var _life: SeaLife
 var _sky: SeaSky
@@ -383,6 +425,9 @@ func _ready() -> void:
 				_mates.erase(k))
 		_send_look()
 		net.proposed.connect(_on_proposed)
+		_pings = CrewPings.new()
+		_pings.sea = self
+		hud_layer.add_child(_pings)
 		var cw: CrewWatersView = CrewWatersView.new()
 		cw.sea = self
 		cw.fishing = net.fishing
@@ -544,7 +589,11 @@ func _process(delta: float) -> void:
 			var look: Dictionary = Skipper.look_of(session.profile())
 			if look != _last_look:
 				_send_look()
-		net.send_boat(delta, { "x": _boat.position.x, "y": _boat.position.y, "vx": _boat.velocity.x, "vy": _boat.velocity.y, "pose": _boat.skipper.frame, "facing": _boat.facing() })
+		_status_t += delta
+		if _status_t > 1.0:
+			_status_t = 0.0
+			_status = _status_text()
+		net.send_boat(delta, { "x": _boat.position.x, "y": _boat.position.y, "vx": _boat.velocity.x, "vy": _boat.velocity.y, "pose": _boat.skipper.frame, "facing": _boat.facing(), "do": _status })
 		var marks: Array = []
 		for k: String in _mates:
 			var m: Shipmate = _mates[k]
@@ -2062,6 +2111,9 @@ func _hail(b: Buyer) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Anything pressed: not away (the crew's status).
+	if (event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton) and event.is_pressed():
+		_input_ms = Time.get_ticks_msec()
 	if not _music_started and (event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton) and event.is_pressed():
 		_music_started = true
 

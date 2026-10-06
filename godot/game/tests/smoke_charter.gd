@@ -78,6 +78,10 @@ func _host(main: Main) -> void:
 	check(c.sailed() and c.refusal("local-somebody-else") != "", "the roster is locked")
 	var sea: Sea = main._screen
 	check(await until(func() -> bool: return sea._mates.has(ben) and (sea._mates[ben] as Shipmate).mate_name == "Ben", 20.0), "the crewmate's ship is on the founder's sea, named")
+	check(await until(func() -> bool: return (sea._mates[ben] as Shipmate).status != "", 10.0), "the crewmate's ship says what they are doing")
+	# A ping (game/crew_pings.gd): it reaches the crewmate's water.
+	main.net.send_ping("hotspot", sea._boat.position + Vector2(300, 0))
+	check(sea._pings != null and sea._pings.pings.any(func(p: Dictionary) -> bool: return p["kind"] == "hotspot"), "the founder's own ping shows on the founder's water")
 	var their: Session = c.session_for(ben)
 	check(await until(func() -> bool: return their.store.hold_count(their.uid) > 0.0 and (their.save["ledger"] as Array).any(func(l: Dictionary) -> bool: return str(l["reason"]).begins_with("Bought 10× Worms")), 90.0), "the crewmate's catch and bait are in their captain, on the founder's game")
 	# THE SHARED RULES. One purse: both captains hold the same doubloons, and
@@ -128,6 +132,12 @@ func _crew(main: Main) -> void:
 			if (sea._mates[k] as Shipmate).mate_name == "Anna":
 				return true
 		return false, 20.0), "the founder's ship is on the crewmate's sea, named")
+	check(await until(func() -> bool: return sea._pings != null and sea._pings.pings.any(func(p: Dictionary) -> bool: return p["name"] == "Anna" and p["kind"] == "hotspot"), 20.0), "the founder's ping reaches the crewmate's water")
+	check(await until(func() -> bool:
+		for k2: String in sea._mates:
+			if (sea._mates[k2] as Shipmate).mate_name == "Anna" and (sea._mates[k2] as Shipmate).status != "":
+				return true
+		return false, 10.0), "the founder's ship says what they are doing")
 	# Fish in the Shallows for real: the founder's clock decides when a bite is due.
 	sea._boat.position = Vector2(0, 2600)
 	var hud: FishingHud = sea._hud

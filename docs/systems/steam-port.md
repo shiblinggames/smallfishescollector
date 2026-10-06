@@ -2101,6 +2101,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- PINGS AND CREWMATE STATUS (Kong, 2026-10-06, picked from a co-op list). PINGS
+  (game/crew_pings.gd, CrewNet.send_ping): hold G over the water and four callouts open
+  round the pointer (Hotspot here, Over here, Need a hand, Look); slide toward one and let
+  go (a tap is Look). Everyone aboard sees it on that water for 12s, its words and the
+  caller's name over rings opening flat on the sea, a soft sound, and on their compass ribbon
+  ("Ben: Hotspot here") while it lasts. One live ping a captain; no more than one each
+  1.2s. Only in a Charter, never in a fight. STATUS (Sea._status_text, sent with the boat
+  as "do"): "in a raid · fight 3 of 5", "diving · depth 14", "ashore at Saltmarsh",
+  "fishing · The Deep", "in port at...", "in the anchorage", "sailing · The Loose Thread",
+  "away" after three minutes with nothing pressed; under each crewmate's name on their plate
+  and on their compass mark. tests/smoke_charter.gd checks both ways.
 - INVITES TO A RAID OR A DIVE (Kong, 2026-10-06: "an option to invite them and they get a
   notification"; "no automatic sailing. They still will have to sail there"). The tables
   (RaidTable/GauntletTable "invite" and "answer", CrewNet sets `aboard`) list in the muster
