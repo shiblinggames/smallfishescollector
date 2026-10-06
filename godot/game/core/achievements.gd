@@ -392,7 +392,7 @@ static func _exp(id: String, db: CaptainStore, uid: String) -> bool:
 		"heavy_broadside": return n.call("highest_raid_damage") >= 250
 		"overkill": return n.call("highest_raid_damage") >= 500
 		"ship_of_the_line": return n.call("ship_tier") >= 6
-		"mark_of_mastery": return Js.obj(p.get("ship_classes")).values().any(func(v: Variant) -> bool: return str(v).ends_with("_iii"))
+		"mark_of_mastery": return Js.obj(p.get("ship_classes")).values().any(func(v: Variant) -> bool: return str(v).ends_with("_iii") or str(v).contains("_iii_"))
 		"weapon_of_legend": return Js.truthy(p.get("manowar_augment"))
 		"six_aboard": return p.get("has_sixth_berth") == true
 		"expanded_armory": return p.get("has_armory_expansion") == true

@@ -605,9 +605,10 @@ func _muster() -> void:
 
 func _class_pick() -> void:
 	var picks: Dictionary = Js.obj(sea.session.profile().get("ship_classes"))
-	var opts: Array = Js.list(_n["classPick"].get("options")) if _n["classPick"].get("options") != null else Campaign.offered_classes(picks)
+	var opts: Array = Campaign.offered_classes(picks) if CaptainClass.on() else (Js.list(_n["classPick"].get("options")) if _n["classPick"].get("options") != null else Campaign.offered_classes(picks))
 	var defs: Dictionary = Rules.data()["shipClasses"]["classes"]
-	Paper.text(_body, "PICK A CLASS  ·  THIS IS PERMANENT", "eyebrow", Paper.ink_soft())
+	var first: bool = CaptainClass.normalize(picks).is_empty()
+	Paper.text(_body, ("PICK A CLASS  ·  ITS ORDER AND ITS PASSIVE" if first else "UPGRADE YOUR CLASS  ·  ONE OF TWO") + "  ·  A REFIT CAN CHANGE IT LATER", "eyebrow", Paper.ink_soft())
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 12)
@@ -627,7 +628,7 @@ func _class_pick() -> void:
 		for b: Dictionary in Js.list(c.get("bullets")):
 			Paper.text(v, ("+  " if b["positive"] else "−  ") + str(b["label"]).trim_prefix("+").trim_prefix("−"), "small", Color(0.5, 0.86, 0.58) if b["positive"] else Paper.red())
 		var cid: String = str(id)
-		var btn: Pane.PaneButton = Paper.button("Sail as the %s" % c.get("name", id) if _armed == cid else "Choose", _armed == cid)
+		var btn: Pane.PaneButton = Paper.button(("Sail as the %s" if first else "Take %s") % c.get("name", id) if _armed == cid else "Choose", _armed == cid)
 		btn.pressed.connect(func() -> void:
 			if _armed != cid:
 				_armed = cid
@@ -635,7 +636,7 @@ func _class_pick() -> void:
 				return
 			_act("pickShipClass", [node_id, cid], func(_r: Variant) -> void:
 				Sound.horn()
-				sea._hud.toast("You sail as the %s." % c.get("name", id))
+				sea._hud.toast(("You sail as the %s." if first else "%s: yours.") % c.get("name", id))
 				_close()))
 		v.add_child(btn)
 

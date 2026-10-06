@@ -2102,6 +2102,42 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
       the Charter sheet. One at a time. (The homestead trophy floated in the pitch is not
       built.)
   STILL NOT YET: a first-run setup beyond the name.
+- CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
+  special abilities vs ... boring damage and health multipliers"; every number his).
+  core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works
+  like a crew order (used once, back when the crew's come back at the raid's rest) but TAKES
+  YOUR TURN, and lives in the Special menu beside the repair kit (key 2 there). Chapters II
+  and III each offer two upgrades of the class, one raising the passive and one shaping the
+  order or adding an edge; VALUES REPLACE, NEVER STACK (a 10% passive raised to 15% is 15%).
+    MASTER GUNNER: Powder Keg (your next attack hits every enemy afloat, for one attack's
+      balls); crits deal 10% more. II: crits 15% (True Aim) or a hit has a 10% chance to come
+      up a crit (Keen Eye). III: Powder Keg takes no turn (Quick Fuse, armed beside an attack)
+      or crits 20% (Gun Master).
+    IRONSIDE: Draw Fire (2 rounds: the enemy's aimed shots come at you, 25% less); +15% hull.
+      II: +25% hull (Thick Planking) or 10% less from every hit (Hardened). III: +50% hull (Iron
+      Hull) or Draw Fire takes 50% less (Unbreakable).
+    SURGEON (replaces Buccaneer): Field Surgery (heal a crewmate or yourself 30% of their hull;
+      no reviving the sunk, Kong); heals and shields you give 10% stronger (crew orders and
+      Field Surgery). II: 20% (Steady Hands) or Field Surgery also shields 10% (Splint). III:
+      Field Surgery heals every ship (Triage) or 50% (Miracle Worker).
+    HELMSMAN: Full Sail (every ship in the line, yours too, a 50% chance to load a ball);
+      +15% doubloons. II: 75% (Crowd Sail) or +25% (Fat Purse). III: 100% (Gale Force) or +50%
+      (King's Ransom). The coin rides class_effects' doubloonMult as before (raids and dives).
+  The flat damage and hull trades are gone; the hull bonus rides hpMult. Old saves read as a
+  class (Buccaneer becomes Surgeon), each further pick its passive raise. Picks still live in
+  ship_classes (thread, sunken_hand, the_coffers), so the class nodes, the Gauntlet's gate,
+  the refit (first free, then 1,000,000) and Mark of Mastery (any Chapter III upgrade) carry
+  on; the cards are port_rules shipClasses. The extra item mount and crew seat are NOT class
+  picks (Kong): the Expanded Armory and the sixth berth, for everyone. tests/class_check.gd.
+- RAID BALANCE SIM (tests/raid_balance_sim.gd, 2026-10-06): fair captains (crit 10%, hit 50%,
+  pattern-reading, checks answered with the right crew order, the lowest ship healed, the
+  weakest foe focused), each raid's captain tuned so one alone wins Normal about 3 in 4, then
+  lines of 2 and 4 on every tier; --coop= / --coopc= try tier numbers, --revive= a boss's
+  revives, without touching the rules. Findings for Kong to tune by hand (his call): Chapters
+  I to III are a walkover on both co-op tiers; the Quartermaster and the Ghost much harder in
+  co-op; the Throne and the Sunken Hand near unwinnable for the strongest captain built (boss
+  revives +257% and +500%; the Throne at 30% of its revives was ~60 to 80% for that captain).
+  Nothing tuned yet.
 - THE LOOT AUDIT (2026-10-06). Kong's calls on balance: a crew's coin multiplying into the one
   purse is FINE (every captain still buys their own gear and ships); drops stay as they are
   (copies break down into components); the crew chest stays open; repeats (the Sunken Hand's

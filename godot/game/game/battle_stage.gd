@@ -691,13 +691,40 @@ func _paint_actions() -> void:
 				kk.sub = why
 				kk.custom_minimum_size = Vector2(maxf(kk.custom_minimum_size.x, 220.0), 82)
 				top.add_child(kk)
+			# The captain's class order (core/captain_class.gd): once, back at
+			# the rest, a turn spent (Powder Keg with Quick Fuse rides beside an
+			# attack instead).
+			var cf: Dictionary = Js.obj(s.get("cls"))
+			if str(cf.get("order", "")) != "":
+				var why2: String = Battle.order_ok(s)
+				var armed: bool = _plan.get("keg", false) == true
+				var ok_k: BattleLook.ActionKey = _word_key(str(CaptainClass.ORDER_NAME.get(cf["order"], "Order")), "2", why2 == "" and not armed, why2 == "", CaptainClass.order_line(cf), BattleLook.GOLD, _press_order, "special")
+				ok_k.sub = "Armed: your next attack" if armed else (why2 if why2 != "" else ("No turn spent" if cf.get("kegFree", false) and cf["order"] == "powder_keg" else "Takes your turn"))
+				ok_k.custom_minimum_size = Vector2(maxf(ok_k.custom_minimum_size.x, 240.0), 82)
+				top.add_child(ok_k)
 			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu(), "back"))
+		"surgery":
+			# Field Surgery: which ship.
+			for i: int in (b["seats"] as Array).size():
+				var st: Dictionary = b["seats"][i]
+				if not Battle.alive(b).has(st):
+					continue
+				var at: int = i
+				var sk: BattleLook.ActionKey = _word_key("Your ship" if i == me else str(st["name"]), "", true, false, "%d / %d hull" % [int(st["hp"]), int(st["max"])], Color(0.5, 0.95, 0.6), func() -> void:
+					_menu = ""
+					_plan["ally"] = at
+					_choose("order"), "special")
+				sk.custom_minimum_size = Vector2(170, 64)
+				top.add_child(sk)
+			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _open_menu("special"), "back"))
 		_:
 			top.add_child(_word_key("Reload", "R", lg["reload"], false, "+1 ball", BattleLook.CREAM, func() -> void: _choose("reload"), "reload"))
 			var fk: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire, "fire")
 			top.add_child(fk)
 			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Brace for a shot (not twice running)", BattleLook.CREAM, func() -> void: _choose("dodge"), "dodge"))
-			top.add_child(_word_key("Special", "S", not kit.is_empty(), false, str(kit.get("name", "No special aboard")), BattleLook.CREAM, func() -> void: _open_menu("special"), "special"))
+			var ord_name: String = str(CaptainClass.ORDER_NAME.get(str(Js.obj(s.get("cls")).get("order", "")), ""))
+			var sp_sub: String = " and ".join(PackedStringArray([str(kit.get("name", "")), ord_name].filter(func(x: String) -> bool: return x != "")))
+			top.add_child(_word_key("Special", "S", not kit.is_empty() or ord_name != "", false, sp_sub if sp_sub != "" else "No special aboard", BattleLook.CREAM, func() -> void: _open_menu("special"), "special"))
 			var drum: Dictionary = Battle.drum_of(s)
 			if not drum.is_empty():
 				top.add_child(_word_key(str(drum["name"]), "B", not (s.get("drum", false) or (s["used"] as Array).is_empty()), false, str(drum.get("description", "")), BattleLook.GOLD, _beat_drum, "drum"))
@@ -730,7 +757,7 @@ func _pick_fire(act: String) -> void:
 
 
 func _open_menu(m: String) -> void:
-	if m == "special" and Battle.repair_kit(b["seats"][me]).is_empty():
+	if m == "special" and Battle.repair_kit(b["seats"][me]).is_empty() and str(Js.obj(b["seats"][me].get("cls")).get("order", "")) == "":
 		return
 	_menu = m
 	Sound.plip()
@@ -781,6 +808,35 @@ func _order_card(s: Dictionary, c: Dictionary, i: int = 0) -> Control:
 		bt.custom_minimum_size = Vector2(100, 168)
 	bt.pressed.connect(func() -> void: _toggle_order(c))
 	return bt
+
+
+## The class order pressed: Field Surgery asks which ship (in a line of more
+## than one); Powder Keg with no turn spent arms the next attack and leaves
+## the turn to you; the rest spend the turn now.
+func _press_order() -> void:
+	var s: Dictionary = b["seats"][me]
+	if Battle.order_ok(s) != "":
+		return
+	var cf: Dictionary = s["cls"]
+	match str(cf["order"]):
+		"field_surgery":
+			if Battle.alive(b).size() > 1 and not cf.get("surgeryAll", false):
+				_open_menu("surgery")
+				return
+			_menu = ""
+			_plan["ally"] = me
+			_choose("order")
+		"powder_keg":
+			if cf.get("kegFree", false):
+				_plan["keg"] = true
+				Sound.charge()
+				_close_menu()
+				return
+			_menu = ""
+			_choose("order")
+		_:
+			_menu = ""
+			_choose("order")
 
 
 ## A crew hand's order given (or taken back): their card stands up, lit.
@@ -890,7 +946,14 @@ func _unhandled_input(e: InputEvent) -> void:
 					if lg.get("repair", false):
 						_menu = ""
 						_choose("repair")
+				KEY_2:
+					if lg.get("order", false):
+						_press_order()
 				KEY_S, KEY_ESCAPE: _close_menu()
+				_: hit = false
+		"surgery":
+			match kc:
+				KEY_ESCAPE: _open_menu("special")
 				_: hit = false
 		_:
 			match kc:
@@ -1296,6 +1359,27 @@ func _one_play(x: Dictionary) -> void:
 			await _role_move(x)
 		"reaction":
 			await _reaction(x)
+		"order":
+			# A captain's class order (core/captain_class.gd), on the water.
+			var osi: int = int(x["seat"])
+			var gold: Color = Color(1.0, 0.82, 0.45)
+			_num(_seat_at(osi) + Vector2(0, -130), str(x.get("name", "")), gold, true)
+			match str(x.get("order", "")):
+				"powder_keg":
+					_fx.rise(_seat_at(osi), Color(1.0, 0.6, 0.3), 10)
+				"draw_fire":
+					_fx.pulse(_seat_at(osi), Color(0.95, 0.4, 0.3))
+				"field_surgery":
+					for h: Dictionary in Js.list(x.get("healed")):
+						var hsi: int = int(h["seat"])
+						_fx.heal_rain(_seat_at(hsi), Color(0.5, 0.95, 0.6), 10)
+						_num(_seat_at(hsi), "+%d" % int(h["heal"]), Color(0.5, 0.95, 0.6), true)
+						_shown_hp[hsi] = float(b["seats"][hsi]["hp"]) if hsi < (b["seats"] as Array).size() else 0.0
+				"full_sail":
+					for li: Variant in Js.list(x.get("loaded")):
+						_fx.rise(_seat_at(int(li)), Color(0.85, 0.9, 1.0), 6)
+						_num(_seat_at(int(li)) + Vector2(0, -60), "+1 ball", Color(0.85, 0.9, 1.0))
+			await _wait(0.6)
 		"repair":
 			var rsi: int = int(x["seat"])
 			_strip_lit = rsi

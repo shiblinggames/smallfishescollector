@@ -135,6 +135,14 @@ static func view(db: CaptainStore, uid: String) -> Dictionary:
 ## aggregateShipClasses: the class picks' effects, multiplied and summed.
 static func class_effects(picks: Variant) -> Dictionary:
 	var out: Dictionary = { "damageMult": 1.0, "hpMult": 1.0, "speedFlat": 0.0, "doubloonMult": 1.0, "itemSlots": 0.0, "crewSlots": 0.0, "count": 0.0 }
+	# The port's classes (core/captain_class.gd): hull and coin only here; the
+	# order and the rest ride on the seat.
+	if CaptainClass.on():
+		var fx: Dictionary = CaptainClass.effects(picks)
+		out["hpMult"] = 1.0 + float(fx["hp"])
+		out["doubloonMult"] = 1.0 + float(fx["coin"])
+		out["count"] = float(CaptainClass.normalize(picks).size())
+		return out
 	var defs: Dictionary = Rules.data()["shipClasses"]["classes"]
 	for id: Variant in Js.obj(picks).values():
 		var cls: Dictionary = Js.obj(defs.get(id))
@@ -580,6 +588,8 @@ static func claim_scout_debt(db: CaptainStore, uid: String, nid: String) -> Dict
 
 ## offeredShipClassIds: per line, the first mark not yet owned.
 static func offered_classes(picks: Dictionary) -> Array:
+	if CaptainClass.on():
+		return CaptainClass.offered(picks)
 	var owned: Array = picks.values()
 	var out: Array = []
 	for line: Array in Rules.data()["shipClasses"]["lines"]:
@@ -606,10 +616,15 @@ static func pick_class(db: CaptainStore, uid: String, nid: String, class_id: Str
 	if n.get("requiresNode") != null and not cleared.has(n["requiresNode"]):
 		return { "error": "Locked" }
 	var picks: Dictionary = Js.obj(p.get("ship_classes")).duplicate()
+	if CaptainClass.on():
+		picks = CaptainClass.normalize(picks)
 	var ch: String = str(n["classPick"]["chapterId"])
 	if Js.truthy(picks.get(ch)):
 		return { "error": "Class already picked for this chapter" }
-	if n["classPick"].get("options") != null:
+	if CaptainClass.on():
+		if not CaptainClass.offered(picks).has(class_id):
+			return { "error": "That is not on this chapter's menu" }
+	elif n["classPick"].get("options") != null:
 		if not Js.list(n["classPick"]["options"]).has(class_id):
 			return { "error": "That choice is not on this menu" }
 	elif not offered_classes(picks).has(class_id):
@@ -651,7 +666,7 @@ static func refit_classes(db: CaptainStore, uid: String, next: Dictionary) -> Di
 	var p: Dictionary = db.profile(uid, "ship_classes, ship_refits_used, doubloons")
 	if not db.has_cleared(uid, "the_throne"):
 		return { "error": "The don is still sitting on his throne." }
-	var chapters: Array = Js.obj(p.get("ship_classes")).keys()
+	var chapters: Array = (CaptainClass.normalize(p.get("ship_classes")) if CaptainClass.on() else Js.obj(p.get("ship_classes"))).keys()
 	if chapters.is_empty():
 		return { "error": "You have no classes to refit." }
 	var bad: String = validate_class_picks(next, chapters)
