@@ -57,6 +57,26 @@ func _init() -> void:
 	check((c._chest()["log"] as Array).size() == 6, "the chest's log names every move")
 	check(Js.obj(Js.obj(cal.save.get("charter")).get("chest")).get("scrap") == 15.0, "every captain sees the chest")
 
+	# ── The chest's screen: every tab paints, a click moves a copy ──
+	b.store.me(b.uid)["raid_items"] = Js.list(b.profile().get("raid_items")) + ["war_drum", "war_drum"]
+	var cc: CrewChest = CrewChest.new()
+	cc.session = b
+	root.add_child(cc)
+	await process_frame
+	for tab: String in ["items", "rods", "scrap"]:
+		cc._tab = tab
+		cc._paint()
+		await process_frame
+		await process_frame
+	cc._tab = "items"
+	cc._paint()
+	await process_frame
+	var drums0: int = Js.list(b.profile()["raid_items"]).count("war_drum")
+	await cc._move(Button.new(), "put", "item", "war_drum", 2, cc._left)
+	check(Js.list(b.profile()["raid_items"]).count("war_drum") == drums0 - 2, "shift-click puts every spare drum in")
+	check(Js.num(Js.obj(cc._chest.get("items")).get("war_drum")) == 2.0, "the chest screen shows them")
+	cc.close()
+
 	# ── One crew board: bounties and the day's orders ──
 	cal.store.add_clear(cal.uid, "captain_krust", 300000.0)
 	var bs: Dictionary = await c.run(a, "bountyState", [])

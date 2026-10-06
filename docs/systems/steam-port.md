@@ -2043,7 +2043,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     with (last copy), earned rods (the Completionist and its kind stay with their captain),
     the bamboo. TAKING A ROD needs the fishing level the tackle shop asks for it. A raid
     item's temper grade is each captain's own, so a copy taken shows at the taker's grade.
-    At sea: "Crew chest" beside the purse (Menus.chest_sheet).
+    At sea: "Crew chest" beside the purse opens game/crew_chest.gd (redone 2026-10-06 after
+    Kong asked if it was easy and looked good): a light-paper sheet, the chest on the left
+    and your hold on the right, tabs for Raid items, Rods and Scrap. Each thing is its
+    painting frameless on the paper (raid item art, rod thumbs), its name, its rarity in
+    words and its count, rarest first. Click moves one copy (the painting slides across);
+    shift-click moves every copy you can spare. What cannot move is dimmed with the reason
+    on the tile (mounted, in your hand, earned, the Fishing level a rod needs). Scrap moves by
+    a slider and an amount box, or All. The last four moves run along the foot.
   - HARDCORE LIVES: one per captain and one spare, fixed at Set Sail. A life is spent for
     each captain SUNK IN A LOST FIGHT: a lost raid (every sunk ship in the line) or a lost
     dive (every captain in it). A ship sunk in a fight the crew wins (towed home in a dive)

@@ -185,7 +185,14 @@ func _ready() -> void:
 	_chest_btn.focus_mode = Control.FOCUS_NONE
 	_chest_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_chest_btn.visible = session.save.has("charter")
-	_chest_btn.pressed.connect(func() -> void: _open_sheet(Menus.chest_sheet(session)))
+	_chest_btn.pressed.connect(func() -> void:
+		var cc: CrewChest = CrewChest.new()
+		cc.session = session
+		_modal = cc
+		cc.closed.connect(func() -> void:
+			_modal = null
+			refresh())
+		add_child(cc))
 	purse_row.add_child(_chest_btn)
 	session.changed.connect(func() -> void:
 		if is_inside_tree():
