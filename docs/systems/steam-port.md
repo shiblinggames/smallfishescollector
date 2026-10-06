@@ -2109,8 +2109,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the bays. A bay charted to 95% pays a bonus once (120, 150, 180, 220, 220; profile
   charted_waters). About 7,500 XP in all; Chapter I's bay whole about 1,070. Water already
   charted pays nothing (no idling for it); the bays open with their chapters, so it comes as
-  it is needed. The fishing sea's fog pays nothing. At sea a quiet line once 10 XP has
-  gathered ("Charted new water: +14 Nav XP"), and a bay charted whole says so. Stat
+  it is needed. The fishing sea's fog pays nothing. SEEN (Kong: "is it very visually
+  rewarding ... flying into your xp bar?"): as a patch lifts, what it pays rises off that
+  water as a word ("+6", game/chart_gain_fx.gd) and pours into the Navigation bar as motes
+  (FishingHud.nav_gain, the catch's own XP flight, its ticks and the trip tally); the lift
+  brings the next save forward so the bar fills as they land. A bay charted whole: its name
+  across the sky ("Charted whole · +120 Nav XP"), a big pour and a bell. THE CHART (M) shows
+  each open bay's share under its name ("42% charted", "Charted whole") and a bar per bay
+  in the progress panel with the bonus still to come. Stat
   charting_nav_xp. tests/charting_check.gd. THE FISHING SEA'S FOG IS NOW EACH CAPTAIN'S OWN
   in a Charter too (Kong: "fog is not shared by crew"; sea_explored left SHARED_PROFILE).
 - THE NORTHERN CHAPTERS' OWN SEAS (Kong, 2026-10-06: on the web "each area feels very unique

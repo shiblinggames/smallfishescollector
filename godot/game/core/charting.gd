@@ -64,6 +64,11 @@ static func share(bay: String, bits: PackedByteArray) -> float:
 	return float(seen) / float(tot)
 
 
+## "+6", "+2.5": a patch's pay as words.
+static func words(xp: float) -> String:
+	return "+%s" % (str(int(xp)) if is_equal_approx(xp, round(xp)) else "%.1f" % xp)
+
+
 static func bay_name(bay: String) -> String:
 	for b: Dictionary in Js.list(Js.obj(Rules.data().get("campaignWater")).get("bays")):
 		if b["id"] == bay:
@@ -72,7 +77,7 @@ static func bay_name(bay: String) -> String:
 
 
 ## Pay for the patches that are new (already set in `bits`). Returns
-## { xp, done: [the bays charted whole, by name] }.
+## { xp, done: [{ name, bonus } for each bay charted whole] }.
 static func pay(db: CaptainStore, uid: String, fresh: Array, bits: PackedByteArray) -> Dictionary:
 	var xp: float = 0.0
 	var touched: Dictionary = {}
@@ -89,7 +94,7 @@ static func pay(db: CaptainStore, uid: String, fresh: Array, bits: PackedByteArr
 		if share(bay, bits) >= DONE_AT:
 			paid.append(bay)
 			xp += float(BONUS[bay])
-			done.append(bay_name(bay))
+			done.append({ "name": bay_name(bay), "bonus": float(BONUS[bay]) })
 	if not done.is_empty():
 		db.update_profile(uid, { "charted_waters": paid })
 	if xp > 0.0:

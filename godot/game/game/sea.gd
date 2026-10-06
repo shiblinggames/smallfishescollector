@@ -255,6 +255,7 @@ func _ready() -> void:
 	# already earned, queued so the first save carries it.
 	_xfog = ExpFog.new()
 	_xfog.sea = self
+	_xfog.lifted.connect(_on_charted)
 	var xraw: Variant = session.profile().get("sea_explored_exp")
 	_xfog.bits = Explore.xfog_decode(xraw)
 	if xraw == null or str(xraw) == "":
@@ -350,6 +351,8 @@ func _ready() -> void:
 	_hud.course_autopilot.connect(_course.toggle_autopilot)
 	_hud.course_clear.connect(_course.clear)
 	hud_layer.add_child(_hud)
+	_chart_fx = ChartGainFx.new()
+	hud_layer.add_child(_chart_fx)
 	_course_mark = Course.CourseMark.new()
 	hud_layer.add_child(_course_mark)
 	if net != null:
@@ -941,7 +944,30 @@ func _grade(delta: float, at: Vector2, dark: float) -> void:
 	_env.glow_intensity = lerpf(_env.glow_intensity, 0.12 + dark * 0.7 + glow, k)
 
 
-var _charted_xp: float = 0.0
+var _chart_fx: ChartGainFx
+
+
+## The northern fog lifting for the first time: what it pays rises off that
+## water and pours into the Navigation bar (the rules pay it on the next save).
+func _on_charted(cells: Array) -> void:
+	if Rules.web_only or _chart_fx == null:
+		return
+	var xp: float = 0.0
+	var c: Vector2 = Vector2.ZERO
+	var n: int = 0
+	for i: Variant in cells:
+		var r: float = Charting.rate(int(i))
+		if r > 0.0:
+			xp += r
+			c += Explore.xfog_centre(int(i))
+			n += 1
+	if n == 0:
+		return
+	var at: Vector2 = _world.get_global_transform_with_canvas() * (c / float(n))
+	_chart_fx.word(at, Charting.words(xp))
+	_hud.nav_gain(xp, at, clampf(0.25 + xp / 12.0, 0.3, 1.2))
+	# Saved (and paid) in a moment, so the bar rises as the motes land.
+	_save_t = maxf(_save_t, 4.4)
 
 
 ## Where the boat is and what it has seen, saved (before any claim, too: the
@@ -954,19 +980,16 @@ func _flush_position() -> void:
 		_xfog.fresh.clear()
 	var r: Variant = await session.act("saveSeaPosition", [round(_boat.position.x), round(_boat.position.y), seen, seen_exp])
 	session.persist()
-	# Charting new water pays Navigation XP (core/charting.gd): told in a quiet
-	# line once a little has gathered, and at once when a water is charted.
-	if r is Dictionary:
-		_charted_xp += Js.num((r as Dictionary).get("charted"))
-		var done: Array = Js.list((r as Dictionary).get("chartedDone"))
-		if not done.is_empty():
-			_hud.toast("%s charted: +%s Nav XP" % [" and ".join(PackedStringArray(done.map(func(x: Variant) -> String: return str(x)))), Js.thousands(round(_charted_xp))])
-			_charted_xp = 0.0
-			_hud.refresh()
-		elif _charted_xp >= 10.0:
-			_hud.toast("Charted new water: +%s Nav XP" % Js.thousands(round(_charted_xp)))
-			_charted_xp = 0.0
-			_hud.refresh()
+	# Charting paid (core/charting.gd): the bar settles to it; a bay charted
+	# whole is a moment of its own.
+	if r is Dictionary and Js.num((r as Dictionary).get("charted")) > 0.0:
+		for d: Dictionary in Js.list((r as Dictionary).get("chartedDone")):
+			var mid: Vector2 = get_viewport_rect().size / 2.0
+			_hud.side_banner(str(d["name"]), "Charted whole  ·  +%s Nav XP" % Js.thousands(float(d["bonus"])))
+			_hud.nav_gain(float(d["bonus"]), mid, 3.0)
+			_chart_fx.word(mid + Vector2(0, 40), Charting.words(float(d["bonus"])), true)
+			Sound.bell()
+		_hud.refresh()
 
 
 ## The isles, the digs' tells and the bottles: what to draw, and how close.

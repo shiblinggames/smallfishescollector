@@ -390,6 +390,19 @@ func _draw_progress() -> void:
 		Kit.text(xr, "The campaign's water  ·  %d%% sailed" % int(round(xp * 100.0)), "small", ink)
 		var xbar: Kit.Bar = Kit.bar(xr, xp, Color(0.62, 0.45, 0.25), true)
 		xbar.custom_minimum_size.x = 240
+		# Each open bay: how much of it is charted (charting pays Navigation
+		# XP, and a bay charted whole a bonus).
+		for b: Dictionary in Campaign.water()["bays"]:
+			if CampaignWater.shut.has(b) or not Charting.BONUS.has(str(b["id"])):
+				continue
+			var sh: float = Charting.share(str(b["id"]), sea._xfog.bits)
+			var br: VBoxContainer = VBoxContainer.new()
+			br.add_theme_constant_override("separation", 1)
+			_progress.add_child(br)
+			var whole: bool = sh >= Charting.DONE_AT
+			Kit.text(br, "%s  ·  %s" % [b["name"], "charted whole" if whole else "%d%% charted  ·  +%s Nav XP when whole" % [int(floor(sh * 100.0)), Js.thousands(float(Charting.BONUS[str(b["id"])]))]], "small", ink)
+			var bb: Kit.Bar = Kit.bar(br, minf(1.0, sh / Charting.DONE_AT), Color(b["sea"][2]).darkened(0.2), true)
+			bb.custom_minimum_size.x = 240
 
 
 ## A button in the chart's own hand: ink on paper.
@@ -503,6 +516,12 @@ func _draw_bays() -> void:
 		var fs: int = clampi(int(r * 0.14), 12, 30)
 		var tw: float = big.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		_bays.draw_string(big, c + Vector2(-tw / 2.0, -r * 0.62), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.2, 0.15, 0.1, 0.35 if shut else 0.55))
+		# How much of an open bay is charted, under its name.
+		if not shut and sea._xfog != null and Charting.BONUS.has(str(b["id"])) and r > 60.0:
+			var sh2: float = Charting.share(str(b["id"]), sea._xfog.bits)
+			var cl: String = "Charted whole" if sh2 >= Charting.DONE_AT else "%d%% charted" % int(floor(sh2 * 100.0))
+			var cw: float = small.get_string_size(cl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+			_bays.draw_string(small, c + Vector2(-cw / 2.0, -r * 0.62 + 20), cl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.22, 0.16, 0.1, 0.7))
 		if shut and r > 60.0:
 			var line: String = str(b["shutLine"])
 			var lw: float = small.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x

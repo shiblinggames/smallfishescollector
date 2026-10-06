@@ -943,6 +943,12 @@ func finn_arrow(at: Variant, mark: String) -> void:
 	_finn_arrow.mark = mark
 
 
+## Charting the northern water: its XP pours into the Navigation bar from
+## the water that lifted (a bay charted whole pours big).
+func nav_gain(xp: float, from: Vector2, strength: float = 0.4) -> void:
+	_xp.gain(xp, from, strength)
+
+
 ## A job handed back: its XP pours into the level bar from the slip.
 func story_pour(xp: float, from: Vector2) -> void:
 	_xp.gain(xp, from, 3.0)

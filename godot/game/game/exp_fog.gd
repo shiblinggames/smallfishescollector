@@ -16,6 +16,8 @@ var sea: Sea
 var bits: PackedByteArray = PackedByteArray()
 ## Cells newly cleared since the last save.
 var fresh: Array = []
+## Patches lifting for the first time this frame (the charting moment).
+signal lifted(cells: Array)
 var _alpha: PackedFloat32Array = PackedFloat32Array()
 var _img: Image
 var _tex: ImageTexture
@@ -99,6 +101,7 @@ func _process(delta: float) -> void:
 	_mat.set_shader_parameter("u_dark", float(SeaClock.at(Clock.now_ms())["darkness"]))
 	var at: Vector2 = sea._boat.position
 	var changed: bool = false
+	var now_lifted: Array = []
 	if Explore.in_exp_water(at.y):
 		for ci: Variant in Explore.xfog_near(at):
 			var i: int = int(ci)
@@ -109,6 +112,9 @@ func _process(delta: float) -> void:
 			if want <= 0.0 and not Explore.xfog_has(bits, i):
 				Explore.xfog_set(bits, i)
 				fresh.append(i)
+				now_lifted.append(i)
+	if not now_lifted.is_empty():
+		lifted.emit(now_lifted)
 	if _fading:
 		# Only ever down: lifting is the only way anything here may go.
 		var k: float = 1.0 - exp(-2.6 * delta)
