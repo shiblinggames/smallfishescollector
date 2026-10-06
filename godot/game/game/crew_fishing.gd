@@ -122,6 +122,8 @@ func _streak_reel(key: String, perfect: bool) -> void:
 		if _streak >= 2:
 			_send("_streak_state", [_streak, _streak_keys])
 		if _streak > 0 and _streak % 10 == 0:
+			_crew_moment("crew_streak", float(_streak))
+		if _streak > 0 and _streak % 10 == 0:
 			_send("_call", ["Crew streak %d" % _streak, ""])
 		return
 	if _streak >= 2:
@@ -203,12 +205,27 @@ func _derby_finish() -> void:
 	if not charter.data.has("derbies"):
 		charter.data["derbies"] = []
 	(charter.data["derbies"] as Array).append(rec)
+	# Every captain aboard landed a fish: the crew's Derby Day order.
+	var aboard: int = (charter.raids.aboard.call() as Array).size() if charter.raids != null and charter.raids.aboard.is_valid() else 0
+	if aboard >= 2 and (_derby["scores"] as Dictionary).size() >= aboard:
+		_crew_moment("derby_full", float(aboard))
 	if (charter.data["derbies"] as Array).size() > 30:
 		charter.data["derbies"] = (charter.data["derbies"] as Array).slice(-30)
 	charter.write()
 	_derby = {}
 	_derby_push()
 	_send("_call", [line, ""])
+
+
+## A crew moment for the crew's bounty order, written down once (in the
+## founder's record; the board reads the whole crew's).
+func _crew_moment(kind: String, value: float) -> void:
+	var k: String = str(charter.data.get("founder", ""))
+	var s: Session = charter.session_for(k)
+	if s == null:
+		return
+	Bounties.log_event(s.store, s.uid, kind, value)
+	charter.write(k)
 
 
 func _process(_delta: float) -> void:

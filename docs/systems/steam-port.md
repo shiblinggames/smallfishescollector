@@ -2122,7 +2122,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   fourth at a fifth of the hull chance, the Pitch Black Hull from the fifth at a tenth; their
   three forge recipes live again. A SWEEP'S CRATE comes from each captain's own Fishing level
   (Kong: "captains own level"; a crewmate at Fishing 1 had been getting the top captain's
-  Abyss crates). STILL OPEN: co-op tasks on a Charter's bounty board (a list proposed).
+  Abyss crates). THE CREW'S ORDER (Kong: "charter bounties should include specific co-op
+  tasks", then yes to this list; Bounties.CREW_ORDERS): in a Charter every bounty board
+  carries one more order only a crew can do, "With the crew" on the board, paying as a hard
+  order (Down Deep Together as an elite, where the rung has an elite slot), never swapped,
+  and part of finishing the board: Sail as a Fleet (clear a raid on Co-op), Hard Company
+  (Co-op Challenge, once the crew has a Co-op clear), Full Line (four captains in the line,
+  in a crew of four), Down Together (bank a co-op dive at 20; Down Deep Together at 35, once
+  someone has dived), Crossfire (5 crossfires), Crew Streak (a crew perfect streak of 10),
+  Derby Day (a derby where every captain aboard lands a fish). The tables and fishing
+  together write each crew moment once for the crew (bounty_events coop_raid, coop_line,
+  coop_dive, crossfire, crew_streak, derby_full). A co-op raid, which writes a clear for every
+  seat, now counts ONCE for the crew on the plain raid orders.
 - PINGS AND CREWMATE STATUS (Kong, 2026-10-06, picked from a co-op list). PINGS
   (game/crew_pings.gd, CrewNet.send_ping): hold G over the water and four callouts open
   round the pointer (Hotspot here, Over here, Need a hand, Look); slide toward one and let

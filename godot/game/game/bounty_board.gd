@@ -15,8 +15,8 @@ var _flash: String = ""
 
 const GREEN: Color = Color(0.5, 0.86, 0.58)
 const GOLD: Color = Color(0.94, 0.78, 0.4)
-const TIER_NAME: Dictionary = { "easy": "Easy", "medium": "Medium", "hard": "Hard", "elite": "Elite" }
-const TIER_COL: Dictionary = { "easy": Color(0.62, 0.78, 0.86), "medium": Color(0.55, 0.82, 0.6), "hard": Color(0.94, 0.7, 0.4), "elite": Color(0.86, 0.55, 0.9) }
+const TIER_NAME: Dictionary = { "easy": "Easy", "medium": "Medium", "hard": "Hard", "elite": "Elite", "crew": "With the crew" }
+const TIER_COL: Dictionary = { "easy": Color(0.62, 0.78, 0.86), "medium": Color(0.55, 0.82, 0.6), "hard": Color(0.94, 0.7, 0.4), "elite": Color(0.86, 0.55, 0.9), "crew": Color(0.5, 0.86, 0.82) }
 
 
 func _ready() -> void:
@@ -147,7 +147,7 @@ func _row(parent: Control, v: Dictionary, swap_used: bool) -> void:
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		b.pressed.connect(func() -> void: _claim(id))
 		row.add_child(b)
-	elif not swap_used:
+	elif not swap_used and not v.get("crew", false):
 		var sw: Pane.PaneButton = Paper.button("Swap")
 		sw.tooltip_text = "Swap this order for another of the same tier (one swap a board)"
 		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER

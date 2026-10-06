@@ -528,6 +528,9 @@ func _resolve() -> void:
 		plans.append(p)
 	if b["state"] == "plan":
 		ev += Battle.resolve(b, plans)
+	for x: Dictionary in ev:
+		if str(x.get("t", "")) == "crossfire":
+			_crew_moment("crossfire", 1.0)
 	_reactions_found(ev)
 	_tally(ev, plans)
 	match str(b["state"]):
@@ -1514,6 +1517,8 @@ func _descend() -> void:
 func _bank() -> void:
 	var run: Dictionary = _r["run"]
 	var cleared: int = int(run["roll"]["cleared"])
+	if str(run.get("mode", "solo")) == "coop":
+		_crew_moment("coop_dive", float(cleared + int(run["skip"])))
 	var live_offer: Dictionary = Js.obj(Js.obj(run["offer"]).get("live"))
 	var offer: Dictionary = live_offer if not live_offer.is_empty() and int(live_offer["depth"]) == cleared else {}
 	var pays: Dictionary = {}
@@ -1944,6 +1949,20 @@ func _invite_refusal(s: Session) -> String:
 		return "Switch the dive to Co-op to bring the crew."
 	var why: String = shut(s, str(_r["variant"]))
 	return "They have not opened this descent yet." if why != "" else ""
+
+
+## A crew moment for the crew's bounty order, written down ONCE (in the first
+## captain's record; the board reads the whole crew's): in a Charter with more
+## than one captain in the line.
+func _crew_moment(kind: String, value: float) -> void:
+	if charter == null or (_r.get("members", []) as Array).size() < 2:
+		return
+	var k: String = str((_r["members"] as Array)[0]["key"])
+	var s: Session = _session(k)
+	if s == null:
+		return
+	Bounties.log_event(s.store, s.uid, kind, value)
+	charter.write(k)
 
 
 ## A captain back on the line mid-dive (their game dropped and came back):

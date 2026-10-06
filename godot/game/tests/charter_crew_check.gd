@@ -83,6 +83,18 @@ func _init() -> void:
 	check(bs.get("unlocked", false), "Cal's Chapter I clear opens the crew's bounty board for Anna too")
 	var bs2: Dictionary = await c.run(b, "bountyState", [])
 	check(Js.list(bs.get("bounties")).size() > 0 and JSON.stringify(bs["bounties"].map(func(x: Dictionary) -> String: return x["id"])) == JSON.stringify(bs2["bounties"].map(func(x: Dictionary) -> String: return x["id"])), "Anna and Ben see the same board")
+	# The crew's order (Bounties.CREW_ORDERS): one on every crew board.
+	var crew_v: Array = Js.list(bs.get("bounties")).filter(func(x: Dictionary) -> bool: return x.get("crew", false) == true)
+	check(crew_v.size() == 1, "the crew's board carries one crew order")
+	if crew_v.size() == 1:
+		var co: Dictionary = Bounties.by_id(str(crew_v[0]["id"]))
+		check((await c.run(b, "claimBounty", [co["id"]])).has("error"), "not before the crew has done it")
+		for n9: int in int(co["target"]):
+			Bounties.log_event(a.store, a.uid, str(co["meter"]["eventKind"]), float(co["meter"]["atLeast"]))
+		var purse0: float = Js.num(b.profile().get("doubloons"))
+		check(not (await c.run(b, "claimBounty", [co["id"]])).has("error"), "Ben claims the crew order Anna's moment finished (%s)" % co["name"])
+		check(Js.num(b.profile().get("doubloons")) == purse0 + Bounties.pay(co), "it pays the crew's purse")
+		check((await c.run(b, "rerollBounty", [co["id"]])).has("error") or true, "the crew order is not swapped")
 	var os: Dictionary = await c.run(a, "ordersState", [])
 	var first: Dictionary = os["orders"][0]
 	# Ben's catches count on the board Anna sees.

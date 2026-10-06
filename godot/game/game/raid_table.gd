@@ -310,6 +310,11 @@ func _next_fight() -> void:
 	if nx["done"]:
 		var ev: Array = _crates()
 		_r["result"] = "won"
+		# The crew's bounty order: a co-op clear (2 on Co-op Challenge), a line.
+		var rank: float = 2.0 if str(_r.get("tier", "")) == "coopc" else (1.0 if str(_r.get("tier", "")) == "coop" else 0.0)
+		if rank > 0.0:
+			_crew_moment("coop_raid", rank)
+		_crew_moment("coop_line", float((_r["members"] as Array).size()))
 		_step("end", ev)
 		return
 	_step("plan", [{ "t": "nextFight", "rest": nx.get("rest", false), "boss": nx.get("boss", false) }])
@@ -359,6 +364,9 @@ func _resolve() -> void:
 			if ss != null:
 				Bounties.note_raid_hits(ss.store, ss.uid, rev, i)
 				_feat(str(b["seats"][i].get("key", "")), rev, i, int(b["fight"]))
+		for x: Dictionary in rev:
+			if str(x.get("t", "")) == "crossfire":
+				_crew_moment("crossfire", 1.0)
 		ev += rev
 	match str(b["state"]):
 		"won":
@@ -381,6 +389,20 @@ func _lives_lost() -> void:
 	for s: Dictionary in _r["b"]["seats"]:
 		if s.get("sunk", false):
 			charter.spend_life(str(s.get("key", "")), "Sunk at %s" % title)
+
+
+## A crew moment for the crew's bounty order, written down ONCE (in the first
+## captain's record; the board reads the whole crew's): in a Charter with more
+## than one captain in the line.
+func _crew_moment(kind: String, value: float) -> void:
+	if charter == null or (_r.get("members", []) as Array).size() < 2:
+		return
+	var k: String = str((_r["members"] as Array)[0]["key"])
+	var s: Session = _session(k)
+	if s == null:
+		return
+	Bounties.log_event(s.store, s.uid, kind, value)
+	charter.write(k)
 
 
 ## Each captain's feats over the raid (core/raid_feats.gd), by seat key.

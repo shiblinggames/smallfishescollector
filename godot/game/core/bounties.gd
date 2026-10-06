@@ -29,6 +29,64 @@ extends RefCounted
 
 static var _data: Dictionary = {}
 
+## THE CREW'S ORDER (Kong, 2026-10-06: "charter bounties should include
+## specific co-op tasks"): in a Charter every board carries one more order,
+## one only a crew can do, paying as a hard order (an elite one where the rung
+## has an elite slot). Its progress is the crew's moments, written down once
+## for the crew by the tables (bounty_events: coop_raid, coop_line, coop_dive,
+## crossfire) and by fishing together (crew_streak, derby_full).
+const CREW_ORDERS: Array = [
+	{ "id": "crew_fleet", "name": "Sail as a Fleet", "desc": "Clear any raid on Co-op.", "meter": { "kind": "event", "eventKind": "coop_raid", "atLeast": 1 }, "target": 1, "tier": "hard" },
+	{ "id": "crew_hard_company", "name": "Hard Company", "desc": "Clear a raid on Co-op Challenge.", "meter": { "kind": "event", "eventKind": "coop_raid", "atLeast": 2 }, "target": 1, "tier": "hard", "needs": "coopc" },
+	{ "id": "crew_full_line", "name": "Full Line", "desc": "Clear a raid with four captains in the line.", "meter": { "kind": "event", "eventKind": "coop_line", "atLeast": 4 }, "target": 1, "tier": "hard", "needs": "four" },
+	{ "id": "crew_down_together", "name": "Down Together", "desc": "Bank a co-op dive at depth 20 or deeper.", "meter": { "kind": "event", "eventKind": "coop_dive", "atLeast": 20 }, "target": 1, "tier": "hard", "needs": "gauntlet" },
+	{ "id": "crew_down_deep", "name": "Down Deep Together", "desc": "Bank a co-op dive at depth 35 or deeper.", "meter": { "kind": "event", "eventKind": "coop_dive", "atLeast": 35 }, "target": 1, "tier": "elite", "needs": "gauntlet" },
+	{ "id": "crew_crossfire", "name": "Crossfire", "desc": "Land 5 crossfires: two captains landing critical hits in the same round.", "meter": { "kind": "event", "eventKind": "crossfire", "atLeast": 1 }, "target": 5, "tier": "hard" },
+	{ "id": "crew_streak", "name": "Crew Streak", "desc": "Reach a crew perfect streak of 10, fishing together.", "meter": { "kind": "event", "eventKind": "crew_streak", "atLeast": 10 }, "target": 1, "tier": "hard" },
+	{ "id": "crew_derby", "name": "Derby Day", "desc": "Finish a derby with every captain aboard landing a fish.", "meter": { "kind": "event", "eventKind": "derby_full", "atLeast": 2 }, "target": 1, "tier": "hard" },
+]
+
+
+## Is this captain sailing in a crew (a Charter with more than one berth)?
+static func in_crew(db: CaptainStore, uid: String) -> bool:
+	return CrewRules.of(db, uid).size() > 1
+
+
+## The crew's orders this crew can take on now.
+static func crew_pool(db: CaptainStore, uid: String, rung: Dictionary) -> Array:
+	var crew: Array = CrewRules.of(db, uid)
+	var elite: bool = (rung.get("slots", []) as Array).has("elite")
+	var coop_clear: bool = false
+	for m: Array in crew:
+		var cdb: CaptainStore = m[0]
+		for r: Variant in cdb.cleared_raid_ids(str(m[1])):
+			if str(r).ends_with("@coop"):
+				coop_clear = true
+	var out: Array = []
+	for o: Dictionary in CREW_ORDERS:
+		var needs: String = str(o.get("needs", ""))
+		if o["tier"] == "elite" and not elite:
+			continue
+		if needs == "coopc" and not coop_clear:
+			continue
+		if needs == "four" and crew.size() < 4:
+			continue
+		if needs == "gauntlet" and not _crew_ran(db, uid):
+			continue
+		out.append(o)
+	return out
+
+
+## Deal the crew's order onto a board row (a seeded pick, never the last one).
+static func _deal_crew(db: CaptainStore, uid: String, row: Dictionary, rung: Dictionary) -> void:
+	var pool: Array = crew_pool(db, uid, rung).filter(func(o: Dictionary) -> bool: return o["id"] != row.get("lastCrewId", ""))
+	if pool.is_empty():
+		return
+	var rand: Seeded = Seeded.new("%s:crew-%d" % [uid, int(Js.num(row.get("n")))])
+	var o: Dictionary = pool[int(rand.next() * pool.size())]
+	row["crewId"] = o["id"]
+	row["crewClaimed"] = false
+
 
 static func data() -> Dictionary:
 	if _data.is_empty():
@@ -40,6 +98,9 @@ static func by_id(id: String) -> Dictionary:
 	for b: Dictionary in data()["bounties"]:
 		if b["id"] == id:
 			return b
+	for o: Dictionary in CREW_ORDERS:
+		if o["id"] == id:
+			return o
 	return {}
 
 
@@ -203,11 +264,23 @@ static func _signals(db: CaptainStore, uid: String, since_ms: float) -> Dictiona
 		var cdb: CaptainStore = m[0]
 		raids += Js.list(cdb.save.get("raidClears")).filter(func(c: Dictionary) -> bool:
 			return str(c.get("at", "")) >= since and not str(c["raid_id"]).contains("@")).map(func(c: Dictionary) -> Dictionary:
-			return { "raid_id": c["raid_id"], "elapsed_ms": c.get("ms") })
+			return { "raid_id": c["raid_id"], "elapsed_ms": c.get("ms"), "t": Js.parse_ms(c.get("at", "")) })
 		voyages += Js.list(cdb.save.get("voyages")).filter(func(v: Dictionary) -> bool:
 			return v.get("status") == "revealed" and float(v["created_ms"]) >= since_ms)
 		events += Js.list(cdb.save.get("bounty_events")).filter(func(e: Dictionary) -> bool: return float(e["at_ms"]) >= since_ms)
 		profiles.append(cdb.me(str(m[1])))
+	# A co-op raid writes a clear for every captain in its line at once: for
+	# the crew's board it is one clear (the same raid within the same moment).
+	if CrewRules.of(db, uid).size() > 1:
+		var seen: Dictionary = {}
+		var once: Array = []
+		for c2: Dictionary in Js.list(raids):
+			var tag: String = "%s|%d" % [c2["raid_id"], int(Js.num(c2.get("t", 0.0)) / 5000.0)]
+			if seen.has(tag):
+				continue
+			seen[tag] = true
+			once.append(c2)
+		raids = once
 	return { "raids": raids, "voyages": voyages, "events": events, "profile": db.me(uid), "profiles": profiles }
 
 
@@ -285,6 +358,9 @@ static func _deal(db: CaptainStore, uid: String, rung: Dictionary, n: float) -> 
 		"n": n, "ids": picked.map(func(b: Dictionary) -> String: return b["id"]), "baselines": baselines,
 		"claimed": picked.map(func(_b: Dictionary) -> bool: return false), "assigned_ms": Clock.now_ms(), "reroll_used": false,
 	}
+	if in_crew(db, uid):
+		board["lastCrewId"] = str(Js.obj(db.me(uid).get("bounty_board")).get("crewId", ""))
+		_deal_crew(db, uid, board, rung)
 	db.update_profile(uid, { "bounty_board": board })
 	return board
 
@@ -300,8 +376,13 @@ static func board(db: CaptainStore, uid: String) -> Dictionary:
 	if row.is_empty():
 		return _deal(db, uid, rung, 1.0)
 	var claimed: Array = Js.list(row.get("claimed"))
-	if not claimed.is_empty() and claimed.all(func(c: Variant) -> bool: return c == true):
+	var crew_done: bool = not row.has("crewId") or row.get("crewClaimed") == true
+	if not claimed.is_empty() and claimed.all(func(c: Variant) -> bool: return c == true) and crew_done:
 		return _deal(db, uid, rung, float(row["n"]) + 1.0)
+	if in_crew(db, uid) and not row.has("crewId"):
+		_deal_crew(db, uid, row, rung)
+		if row.has("crewId"):
+			db.update_profile(uid, { "bounty_board": row })
 	var tiers: Array = Js.list(row.get("ids")).map(func(id: Variant) -> String: return str(by_id(str(id)).get("tier", "")))
 	tiers.sort()
 	var want: Array = (rung["slots"] as Array).duplicate()
@@ -340,6 +421,14 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 			"target": float(b["target"]), "progress": minf(float(b["target"]), measure(b["meter"], s, Js.num(Js.obj(row.get("baselines")).get(b["id"])))),
 			"claimed": row["claimed"][i] == true,
 		})
+	if row.has("crewId"):
+		var co: Dictionary = by_id(str(row["crewId"]))
+		if not co.is_empty():
+			views.append({
+				"id": co["id"], "name": co["name"], "desc": co["desc"], "tier": "crew", "pay": pay(co), "points": points_for(co),
+				"target": float(co["target"]), "progress": minf(float(co["target"]), measure(co["meter"], s, 0.0)),
+				"claimed": row.get("crewClaimed") == true, "crew": true,
+			})
 	var nx: Dictionary = next_rung(rung)
 	var seen: int = int(Js.num(p.get("bounty_rung_seen")))
 	out.merge({
@@ -358,16 +447,20 @@ static func claim(db: CaptainStore, uid: String, id: String) -> Dictionary:
 		return { "error": "The board is shut." }
 	var ids: Array = row["ids"]
 	var i: int = ids.find(id)
-	if i < 0:
+	var crew_order: bool = i < 0 and str(row.get("crewId", "")) == id
+	if i < 0 and not crew_order:
 		return { "error": "Not on your board." }
-	if row["claimed"][i] == true:
+	if (crew_order and row.get("crewClaimed") == true) or (not crew_order and row["claimed"][i] == true):
 		return { "error": "Already claimed." }
 	var b: Dictionary = by_id(id)
 	var s: Dictionary = _signals(db, uid, float(row["assigned_ms"]))
-	if measure(b["meter"], s, Js.num(Js.obj(row.get("baselines")).get(id))) < float(b["target"]):
+	if measure(b["meter"], s, 0.0 if crew_order else Js.num(Js.obj(row.get("baselines")).get(id))) < float(b["target"]):
 		return { "error": "Not finished yet." }
-	row["claimed"][i] = true
-	var sweep: bool = (row["claimed"] as Array).all(func(c: Variant) -> bool: return c == true)
+	if crew_order:
+		row["crewClaimed"] = true
+	else:
+		row["claimed"][i] = true
+	var sweep: bool = (row["claimed"] as Array).all(func(c: Variant) -> bool: return c == true) and (not row.has("crewId") or row.get("crewClaimed") == true)
 	db.update_profile(uid, { "bounty_board": row })
 	var d: float = pay(b)
 	var pts: float = points_for(b) + (float(data()["sweepPoints"]) if sweep else 0.0)
@@ -398,6 +491,8 @@ static func reroll(db: CaptainStore, uid: String, id: String) -> Dictionary:
 		return { "error": "You have used this board's swap." }
 	var ids: Array = (row["ids"] as Array).duplicate()
 	var i: int = ids.find(id)
+	if i < 0 and str(row.get("crewId", "")) == id:
+		return { "error": "The crew's order stays on the board." }
 	if i < 0:
 		return { "error": "Not on your board." }
 	if row["claimed"][i] == true:
