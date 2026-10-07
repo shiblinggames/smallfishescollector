@@ -68,8 +68,50 @@ static func data() -> Dictionary:
 		_d = JsJson.parse(FileAccess.get_file_as_string("res://content/rules.json"))
 		if not web_only and FileAccess.file_exists("res://content/port_rules.json"):
 			_merge(_d, JsJson.parse(FileAccess.get_file_as_string("res://content/port_rules.json")))
+			_campaign_text(_d)
+			_retire_nodes(_d)
 			SeaScale.apply(_d)
 	return _d
+
+
+## THE CAMPAIGN'S WRITING, EDITED IN THE PORT (Kong, 2026-10-06: the web is
+## frozen and the hand-edit of every expedition node goes on here; the port's
+## text overrides the web's). port_rules campaignText { node id: { flavor,
+## bridge, label, scene, detail: {...} } } is laid over that node. A raid's
+## words go under port_rules raids.<id> (preFightDialogue, bossDefeatedText).
+## NOT content/rules.json: the parity run re-exports that from the web.
+static func _campaign_text(d: Dictionary) -> void:
+	var edits: Dictionary = Js.obj(d.get("campaignText"))
+	if edits.is_empty():
+		return
+	for n: Dictionary in Js.list(Js.obj(d.get("campaign")).get("nodes")):
+		if edits.has(n["id"]):
+			_merge(n, edits[n["id"]])
+
+
+## CAMPAIGN NODES CUT IN THE PORT (port_rules retiredNodes; Kong, 2026-10-06:
+## the campaign rewrite cuts a node by folding it into another). The node and
+## its mark on the water go; whatever needed it needs what IT needed. The
+## web's tables keep it, so the parity replay of the web's campaign still runs.
+static func _retire_nodes(d: Dictionary) -> void:
+	var gone: Array = Js.list(d.get("retiredNodes"))
+	if gone.is_empty():
+		return
+	var camp: Dictionary = Js.obj(d.get("campaign"))
+	var nodes: Array = Js.list(camp.get("nodes"))
+	var parent: Dictionary = {}
+	for n: Dictionary in nodes:
+		if gone.has(n["id"]):
+			parent[n["id"]] = n.get("requiresNode")
+	camp["nodes"] = nodes.filter(func(n: Dictionary) -> bool: return not gone.has(n["id"]))
+	for n2: Dictionary in camp["nodes"]:
+		for key: String in ["requiresNode", "requiresClearedNode"]:
+			while n2.get(key) != null and parent.has(n2[key]):
+				n2[key] = parent[n2[key]]
+	var w: Dictionary = Js.obj(d.get("campaignWater"))
+	for k: Variant in w:
+		if w[k] is Array:
+			w[k] = (w[k] as Array).filter(func(x: Variant) -> bool: return not (x is Dictionary and gone.has((x as Dictionary).get("node"))))
 
 
 ## Lay b over a: dictionaries merge key by key, anything else replaces; keys
