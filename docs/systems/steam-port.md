@@ -2278,6 +2278,17 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- FIGHT FEEDBACK (Kong, 2026-10-09). The rack's loaded balls are lit iron (they were near black
+  on the dark plate) and a ball just loaded pops in (BattleLook.ball pop). Fire is one of the row,
+  not the bigger gold word. A CREW ORDER GIVEN SHOWS AT ONCE (it still goes first in the round,
+  before initiative; Kong asked about firing it on the press, and about putting it into
+  initiative: both were weighed and left, the first breaks the co-op round, the second makes
+  defensive orders land after the hit by chance): a ring breathes on the water under what it
+  will touch (the ship it helps, your own, or the enemy) with its name, and beside the crew "Skwid:
+  Jam Dodge / Goes first this round, with your action" (BattleStage._order_preview); a co-op
+  plate's chip names the order. THE WATER CLEARS FOR A FIGHT (Sea._fight_clear): the anchored
+  campaign ships, the buyers and Finn fade with the cut, wanderers and regulars are put away, and
+  in a fight of your own crewmates nearby fade out; all return as it ends.
 - PLAYTEST PROGRESS STAYS IN THE PLAYTEST (Kong, 2026-10-09: testers' web captains brought in
   for testing, then wiped "once we do the full production release"; everything is wiped, imported
   or not). game/playtest.gd: the build's channel is game/channel (tools/build.mjs writes it into

@@ -460,6 +460,7 @@ func _process(delta: float) -> void:
 		if stage != null:
 			_stage_last = stage
 		_camera.position += (_stage_last["shift"] as Vector2) / _camera.zoom.x * sk
+	_fight_clear()
 
 	var now: float = Clock.now_ms()
 	var clock: Dictionary = SeaClock.at(now)
@@ -1409,6 +1410,39 @@ func _open_finn() -> void:
 ## eases out as she enters the passage (the stone's scale), and under the span
 ## the music closes in to a muffle and opens again beyond.
 var _pass_k: float = 0.0
+## THE WATER CLEARS FOR A FIGHT (Kong, 2026-10-09: other ships and NPCs in the
+## background of the Quartermaster's fight were "weird"): while a fight has the
+## stage, the anchored campaign ships (the enemy sails in as its own hull), the
+## buyers and Finn fade out with the cut, and the wandering traders and
+## regulars are put away; all come back as it ends. Islands and the line's own
+## ships stay.
+var _fight_hid: Array = []
+
+
+func _fight_clear() -> void:
+	var sk: float = _stage_k * _stage_k * (3.0 - 2.0 * _stage_k)
+	var fade: Array = []
+	if _campaign != null:
+		fade += _campaign._ships.values()
+	fade += _buyers
+	if _finn != null:
+		fade.append(_finn)
+	for n: Variant in fade:
+		if is_instance_valid(n):
+			(n as CanvasItem).modulate.a = 1.0 - sk
+	var want: bool = stage != null and _stage_k > 0.5
+	if want:
+		for list: Dictionary in [_regulars, _strangers]:
+			for k: String in list:
+				var w: Node2D = list[k]
+				if is_instance_valid(w) and w.visible:
+					w.visible = false
+					_fight_hid.append(w)
+	elif not _fight_hid.is_empty():
+		for w2: Variant in _fight_hid:
+			if is_instance_valid(w2):
+				(w2 as Node2D).visible = true
+		_fight_hid.clear()
 ## THE CAMERA UNDER WAY (Kong, 2026-10-09): it leads the way she is sailing,
 ## up to LEAD of the screen at full speed, and settles dead centre at anchor,
 ## with the rod out or a panel up (fishing stays locked in); it draws back

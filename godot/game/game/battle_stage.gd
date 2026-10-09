@@ -170,6 +170,10 @@ func _ready() -> void:
 		(sea._mates[k] as Shipmate).face_lock = 1.0 if table != null else 0.0
 		# Their sea nametag gives way to the fight's plate.
 		(sea._mates[k] as Shipmate)._plate.visible = false
+		# A fight of your own: crewmates sailing nearby step out of it (they
+		# come back as it ends, below).
+		if table == null:
+			(sea._mates[k] as Node2D).create_tween().tween_property(sea._mates[k], "modulate:a", 0.0, 0.6)
 	var sail: Tween = create_tween()
 	sail.tween_property(sea._boat, "position", _at + _offset(me), 2.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	sea._hud.visible = false
