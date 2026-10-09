@@ -5,8 +5,8 @@ extends Room
 ##
 ## The landing answers "what can I buy right now" before you touch anything:
 ## how kitted-out you are, a shelf of what is ready to buy, and a tile per
-## category coloured by where it stands (ready, saving up, level locked, maxed,
-## earned by play). Each tile opens its section: bait by the bundle, the hook
+## category saying where it stands (ready, saving up, level locked, maxed,
+## earned by play): words, not colours (no colour coding, M10). Each tile opens its section: bait by the bundle, the hook
 ## and reel ladders (a press on the next rung buys it), the lines (earned by
 ## species, never bought), and the rod wall with its filters, Buy, Equip and
 ## Sell (asked twice), with the Completionist at the bottom. Every purchase is
@@ -22,8 +22,8 @@ const CATS: Array = [
 	["special", "Specials", "#c9a7ff", "autocaster.png"],
 ]
 const PIP: Dictionary = {
-	"ready": ["Ready to buy", "#f0c040"], "saving": ["Saving up", "#9a958c"], "locked": ["Level locked", "#60a5fa"],
-	"maxed": ["Maxed", "#c9a7ff"], "earned": ["Earned by play", "#4ade80"],
+	"ready": ["Ready to buy", Kit.GOLD], "saving": ["Saving up", Kit.DIM], "locked": ["Level locked", Kit.DIM],
+	"maxed": ["Maxed", Kit.INK_2], "earned": ["Earned by play", Kit.HELP],
 }
 const MECHANICS: Array = [
 	["speed", "Faster bites"], ["rare", "Rare bias"], ["double", "Double catch"], ["zone", "Catch zone"],
@@ -121,7 +121,7 @@ static func effect_lines(rod: Dictionary) -> Array[String]:
 	if Js.num(rod.get("rarityBonus")) > 0.0:
 		out.append("+%d%% rare bias" % int(Js.round(float(rod["rarityBonus"]) * 100.0)))
 	if Js.num(rod.get("jackpotChance")) > 0.0:
-		out.append("×%s jackpot · odds rise in shallows" % Js.text(rod.get("jackpotMultiplier")))
+		out.append(("×%s jackpot" + Kit.SEP + "odds rise in shallows") % Js.text(rod.get("jackpotMultiplier")))
 	if float(Js.nz(rod.get("crateChanceMult"), 1.0)) > 1.0:
 		out.append("%s× crate odds" % Js.text(rod["crateChanceMult"]))
 	if float(Js.nz(rod.get("perfectXpMult"), 1.0)) > 1.0:
@@ -167,9 +167,9 @@ func _state_for(next: Dictionary, req: int) -> Array:
 	var state: String = "locked" if not level_ok else ("ready" if afford else "saving")
 	var detail: String
 	if not level_ok:
-		detail = "Fishing Lv %d · %d to go" % [req, req - _lvl()]
+		detail = ("Fishing Lv %d" + Kit.SEP + "%d to go") % [req, req - _lvl()]
 	elif afford:
-		detail = "%s · %s ⟡" % [next["name"], Js.thousands(float(next["cost"]))]
+		detail = ("%s" + Kit.SEP + "%s ⟡") % [next["name"], Js.thousands(float(next["cost"]))]
 	else:
 		detail = "%s ⟡ short" % Js.thousands(float(next["cost"]) - _dbl())
 	return [state, detail]
@@ -283,19 +283,19 @@ func _summaries() -> Dictionary:
 # ── The page ───────────────────────────────────────────────────────────────────
 
 func _badge() -> Control:
-	var p: Pane = Kit.pane(null, { "radius": 10, "fill": [Kit.PAPER.lerp(Color(0.37, 0.92, 0.83), 0.15)], "border": [1, Color(Kit.ink(Color(0.37, 0.92, 0.83)), 0.5)], "shadow": [Color(0, 0, 0, 0.2), 6, Vector2(0, 2)], "pad": [10, 4, 10, 6], "paper": true })
+	var p: Pane = Kit.pane(null, { "radius": Kit.R_SMALL, "fill": [Kit.PAPER.lerp(Kit.TEAL, 0.15)], "border": [1, Color(Kit.ink(Kit.TEAL), 0.5)], "pad": [10, 4, 10, 6], "paper": true })
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 1)
 	p.add_child(v)
-	var a: Label = Room.text(v, "FISHING", 9, Color("#7fd4c4"))
+	var a: Label = Kit.text(v, "Fishing", "eyebrow", Kit.TEAL)
 	a.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var b: Label = Room.text(v, "Lv %d" % _lvl(), 16, Color("#5eead4"), true)
+	var b: Label = Kit.text(v, "Lv %d" % _lvl(), "number", Kit.TEAL)
 	b.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	if _lvl() < Rules.MAX_LEVEL:
 		var table: Array = Rules.data()["xpTable"]
 		var lo: float = float(table[_lvl() - 1])
 		var hi: float = float(table[_lvl()])
-		var bar: Control = Room.bar(v, (Js.num(_p().get("fishing_xp")) - lo) / maxf(1.0, hi - lo), Color("#5eead4"), 3.0)
+		var bar: Control = Room.bar(v, (Js.num(_p().get("fishing_xp")) - lo) / maxf(1.0, hi - lo), Kit.TEAL, 3.0)
 		bar.custom_minimum_size = Vector2(44, 3)
 		bar.size_flags_horizontal = Control.SIZE_SHRINK_END
 	return p
@@ -330,7 +330,7 @@ func _build() -> void:
 		_landing()
 		return
 	if _error != "":
-		Room.text(col, _error, 14, Color("#f87171"), false, true)
+		Kit.text(col, _error, "desc", Kit.HARM, true)
 	match section:
 		"bait": _bait()
 		"hook": _ladder_list("hook")
@@ -350,10 +350,10 @@ func _landing() -> void:
 		total += int(sums[k]["total"])
 	var pulse: HBoxContainer = HBoxContainer.new()
 	col.add_child(pulse)
-	var g: Label = Room.text(pulse, "GEAR  %d / %d" % [owned, total], 13, Color("#b9b2a6"))
+	var g: Label = Kit.text(pulse, "GEAR  %d / %d" % [owned, total], "small", Kit.INK_2)
 	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Room.text(pulse, "%s ⟡" % Js.thousands(_dbl()), 13, Color("#e0b45a"))
-	var pb: Control = Room.bar(col, float(owned) / maxf(1.0, total), Color("#e0b45a"))
+	Kit.text(pulse, "%s ⟡" % Js.thousands(_dbl()), "small", GOLD)
+	var pb: Control = Room.bar(col, float(owned) / maxf(1.0, total), GOLD)
 	pb.custom_minimum_size = Vector2(0, 6)
 
 	var ready: Array = []
@@ -366,7 +366,7 @@ func _landing() -> void:
 		for pair: Array in ready:
 			var c: Array = pair[0]
 			var sm: Dictionary = pair[1]
-			var b: Button = _surface_button(Color(0.94, 0.75, 0.25, 0.1), Color(0.94, 0.75, 0.25, 0.45), 64)
+			var b: Button = _tile(GOLD, "ready", 64)
 			b.pressed.connect(func() -> void: _open(c[0]))
 			col.add_child(b)
 			var h: HBoxContainer = _fill_row(b, 12)
@@ -376,21 +376,20 @@ func _landing() -> void:
 			v.alignment = BoxContainer.ALIGNMENT_CENTER
 			v.add_theme_constant_override("separation", 0)
 			h.add_child(v)
-			Room.text(v, (sm["next"] as Dictionary).get("name", c[1]), 15, INK, true)
-			Room.text(v, c[1], 12, Color(c[2]))
-			Room.text(h, "%s ⟡" % Js.thousands(float((sm["next"] as Dictionary)["cost"])), 15, GOLD, true)
+			Kit.text(v, (sm["next"] as Dictionary).get("name", c[1]), "name", INK)
+			Kit.text(v, c[1], "small", SUB)
+			Kit.text(h, "%s ⟡" % Js.thousands(float((sm["next"] as Dictionary)["cost"])), "name", GOLD)
 			for l: Node in h.get_children():
 				if l is Control:
 					(l as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	Room.heading(col, "All Tackle", Color(0.75, 0.83, 0.89, 0.6), 13)
+	Room.heading(col, "All Tackle")
 	var grid: GridContainer = Room.grid(col, 2, 10)
 	var first: Button = null
 	for c: Array in CATS:
 		var sm: Dictionary = sums[c[0]]
-		var accent: Color = Color(c[2])
 		var is_ready: bool = sm["state"] == "ready" and c[0] != "bait"
-		var b: Button = _tile(accent, "ready" if is_ready else "owned", 150)
+		var b: Button = _tile(GOLD, "ready" if is_ready else "owned", 150)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func() -> void: _open(c[0]))
 		grid.add_child(b)
@@ -406,10 +405,10 @@ func _landing() -> void:
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(v)
 		Room.picture(v, c[3], Vector2(0, 76))
-		var name_l: Label = Room.text(v, c[1], 17, INK, true)
+		var name_l: Label = Kit.text(v, c[1], "heading", INK)
 		name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var pip: Array = PIP[sm["state"]]
-		var d: Label = Room.text(v, "●  %s" % sm["detail"], 12, Color(pip[1]) if sm["state"] != "saving" else Color("#9a958c"))
+		var d: Label = Kit.text(v, str(sm["detail"]), "small", pip[1])
 		d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		for l: Node in v.get_children():
 			(l as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -435,7 +434,7 @@ func _hats() -> void:
 		var crate: bool = h["crateOnly"]
 		var cost: float = float(h["cost"])
 		var can: bool = not have and not crate and _dbl() >= cost
-		var b: Button = _tile(Color("#c8a870"), "owned" if have else ("ready" if can else "locked"), 168)
+		var b: Button = _tile(GOLD, "owned" if have else ("ready" if can else "locked"), 168)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(b)
 		if can:
@@ -451,23 +450,23 @@ func _hats() -> void:
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(v)
 		Room.picture(v, h["restImageUrl"], Vector2(0, 84), not have and crate)
-		var n: Label = Room.text(v, h["name"], 15, INK if have or not crate else Color("#9a958c"), true)
+		var n: Label = Kit.text(v, h["name"], "name", INK if have or not crate else SUB)
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var line: String
 		var tone: Color
 		if have:
 			line = "Owned  ·  wear it in the Locker"
-			tone = Color("#4ade80")
+			tone = Kit.HELP
 		elif crate:
 			line = "Found in fishing crates"
-			tone = Color("#9a958c")
+			tone = SUB
 		elif _busy == "hat-" + id:
 			line = "Buying…"
 			tone = GOLD
 		else:
 			line = ("%s ⟡" % Js.thousands(cost)) if can else ("%s ⟡  ·  %s short" % [Js.thousands(cost), Js.thousands(cost - _dbl())])
-			tone = GOLD if can else Color("#9a958c")
-		var l: Label = Room.text(v, line, 12, tone)
+			tone = GOLD if can else SUB
+		var l: Label = Kit.text(v, line, "small", tone)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		for c: Node in v.get_children():
 			(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -487,7 +486,6 @@ func _specials() -> void:
 			continue
 		var id: String = d["id"]
 		var info: Dictionary = Js.obj(Js.obj(Rules.data().get("specialInfo")).get(id))
-		var accent: Color = Color(str(info.get("color", "#9aa3ad")))
 		var have: bool = p.get(cols[id]) == true
 		var fathoms: bool = d.get("costFathoms") != null
 		var for_sale: bool = Js.truthy(d.get("shopCost")) or fathoms
@@ -500,7 +498,7 @@ func _specials() -> void:
 		var cost: float = float(d["costFathoms"]) if fathoms else Js.num(d.get("shopCost"))
 		var purse: float = Js.num(p.get("gauntlet_fathoms")) if fathoms else _dbl()
 		var can: bool = for_sale and not have and why == "" and purse >= cost
-		var b: Button = _tile(accent, "owned" if have else ("ready" if can else "locked"), 112)
+		var b: Button = _tile(GOLD, "owned" if have else ("ready" if can else "locked"), 112)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.add_child(b)
 		if can:
@@ -517,28 +515,28 @@ func _specials() -> void:
 		var top: HBoxContainer = HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		v.add_child(top)
-		Room.text(top, d["name"], 16, INK if have else Color("#cfcabf"), true)
+		Kit.text(top, d["name"], "heading", INK if have else Kit.INK_2)
 		if have:
-			_status_pill(top, "Owned", Color("#4ade80"))
-		Room.text(v, str(info.get("description", "")), 13, Color("#9a958c"), false, true).custom_minimum_size = Vector2(0, 0)
+			_status_pill(top, "Owned", Kit.HELP)
+		Kit.text(v, str(info.get("description", "")), "small", SUB, true).custom_minimum_size = Vector2(0, 0)
 		var chips: HBoxContainer = HBoxContainer.new()
 		chips.add_theme_constant_override("separation", 6)
 		v.add_child(chips)
-		Room.chip(chips, str(info.get("effect", "")), Color(accent, 0.85), Color(accent, 0.09), Color(accent, 0.22))
+		Kit.chip(chips, str(info.get("effect", "")), Kit.INK_2)
 		if not have:
 			if not for_sale:
-				Room.chip(chips, ("Comes back from %s" % info["obtainedFrom"]) if info.has("obtainedFrom") else "Not sold", Color("#9a958c"), Color(0.06, 0.07, 0.09, 0.9), Color(1, 1, 1, 0.1))
+				Kit.chip(chips, ("Comes back from %s" % info["obtainedFrom"]) if info.has("obtainedFrom") else "Not sold", SUB)
 			elif why != "":
-				Room.chip(chips, why, Color("#e8c98a"), Color(1, 1, 1, 0.07), Color(1, 1, 1, 0.2))
+				Kit.chip(chips, why, Kit.CAUTION)
 			elif _busy == "sp-" + id:
-				Room.chip(chips, "Buying…", GOLD, Color(0.94, 0.75, 0.25, 0.1), Color(0.94, 0.75, 0.25, 0.3))
+				Kit.chip(chips, "Buying…", GOLD)
 			elif not can:
-				Room.chip(chips, "%s %s short" % [Js.thousands(cost - purse), "Fathoms" if fathoms else "⟡"], Color("#9a958c"), Color(0.06, 0.07, 0.09, 0.9), Color(1, 1, 1, 0.1))
+				Kit.chip(chips, "%s %s short" % [Js.thousands(cost - purse), "Fathoms" if fathoms else "⟡"], SUB)
 			if for_sale:
-				Room.text(h, ("%s Fathoms" % Js.thousands(cost)) if fathoms else ("%s ⟡" % Js.thousands(cost)), 15, GOLD if can else Color("#6a6764"), true)
+				Kit.text(h, ("%s Fathoms" % Js.thousands(cost)) if fathoms else ("%s ⟡" % Js.thousands(cost)), "name", GOLD if can else Kit.FAINT)
 		for c: Node in h.get_children():
 			(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
-	Room.text(col, "One special rides with you at a time: choose it in the Locker's Special slot.", 13, Color("#9a958c"), false, true)
+	Kit.text(col, "One special rides with you at a time: choose it in the Locker's Special slot.", "small", SUB, true)
 
 
 # ── Bait ───────────────────────────────────────────────────────────────────────
@@ -546,8 +544,7 @@ func _specials() -> void:
 func _bait() -> void:
 	var grid: GridContainer = Room.grid(col, 2, 10)
 	for b: Dictionary in Rules.data()["baits"]:
-		var accent: Color = Color(b["color"])
-		var p: Pane = Pane.new(Kit.tile(accent, "owned"))
+		var p: Pane = Pane.new(Kit.tile(GOLD, "owned"))
 		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(p)
 		var v: VBoxContainer = VBoxContainer.new()
@@ -561,36 +558,36 @@ func _bait() -> void:
 		names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		names.add_theme_constant_override("separation", 2)
 		top.add_child(names)
-		Room.text(names, b["name"], 15, INK, true)
+		Kit.text(names, b["name"], "name", INK)
 		var held: float = Js.num((session.save["bait"] as Dictionary).get(b["type"]))
-		Room.chip(names, "×%d in hold" % int(held), Color("#d6d0c4"), Color(1, 1, 1, 0.07), Color(1, 1, 1, 0.15))
+		Kit.chip(names, "×%d in hold" % int(held), Kit.INK_2)
 		var chips: HFlowContainer = HFlowContainer.new()
 		chips.add_theme_constant_override("h_separation", 5)
 		v.add_child(chips)
 		var faster: bool = float(b["waitMult"]) < 1.0
 		var zone: bool = float(b["catchZoneBonus"]) > 0.0
 		if faster:
-			Room.chip(chips, "%d%% faster" % int(Js.round((1.0 - float(b["waitMult"])) * 100.0)), Color("#d6d0c4"), Color(1, 1, 1, 0.07), Color(1, 1, 1, 0.15))
+			Kit.chip(chips, "%d%% faster" % int(Js.round((1.0 - float(b["waitMult"])) * 100.0)), Kit.INK_2)
 		if zone:
-			Room.chip(chips, "+%s° zone" % Js.text(b["catchZoneBonus"]), Color("#d6d0c4"), Color(1, 1, 1, 0.07), Color(1, 1, 1, 0.15))
+			Kit.chip(chips, "+%s° zone" % Js.text(b["catchZoneBonus"]), Kit.INK_2)
 		if not faster and not zone:
-			Room.chip(chips, "no penalty", Color(1, 1, 1, 0.3), Color(0.06, 0.07, 0.09, 0.9), Color(1, 1, 1, 0.1))
+			Kit.chip(chips, "no penalty", Kit.FAINT)
 		if b["type"] == "worm":
-			Room.chip(chips, "20 free/day", Color("#4ade80"), Color(0.29, 0.87, 0.5, 0.1), Color(0.29, 0.87, 0.5, 0.25))
+			Kit.chip(chips, "20 free/day", Kit.HELP)
 		if b.get("hint") != null:
-			var hint: Label = Room.text(v, b["hint"], 12, Color("#a0a09a"), false, true)
+			var hint: Label = Kit.text(v, b["hint"], "small", SUB, true)
 			hint.custom_minimum_size = Vector2(0, 0)
 			hint.add_theme_font_override("font", BuyerPanel._italic())
 		var cost: float = float(b["shopCost"])
 		if cost <= 0.0:
 			var how: String = "Voyages, or buy with Fathoms in the Locker" if Js.includes(b["acquisition"], "fathoms") else "Earned from voyages"
-			Room.text(v, how, 12, Color("#9a958c"), false, true).custom_minimum_size = Vector2(0, 0)
+			Kit.text(v, how, "small", SUB, true).custom_minimum_size = Vector2(0, 0)
 			continue
 		# Locked behind a Fishing level (the port's rules).
 		var locked: String = Rules.gate_block("bait", b["type"], Js.num(session.profile().get("fishing_xp")))
 		if locked != "":
 			v.modulate.a = 0.7
-			Room.chip(v, "Locked  ·  %s" % locked, Color("#e8c98a"), Color(1, 1, 1, 0.07), Color(1, 1, 1, 0.2))
+			Kit.chip(v, "Locked" + Kit.SEP + locked, Kit.CAUTION)
 			continue
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
@@ -599,10 +596,10 @@ func _bait() -> void:
 			var price: float = cost * q
 			var can: bool = _dbl() >= price
 			var key: String = "%s-%d" % [b["type"], q]
-			var btn: Button = Room.tinted("…" if _busy == key else "×%d   %s ⟡" % [q, Js.thousands(price)], accent if can else GOLD, 13, 36)
+			# Affordable: the gold wash; not: plain paper (still pressable; the
+			# rules say why not).
+			var btn: Button = Kit.button("…" if _busy == key else "×%d   %s ⟡" % [q, Js.thousands(price)], "accent" if can else "secondary", "small", GOLD)
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			if not can:
-				btn.add_theme_stylebox_override("normal", Room.box(Color(0.05, 0.06, 0.08, 0.95), Color(1, 1, 1, 0.1), 10, 0))
 			btn.pressed.connect(func() -> void: _do(key, "buyBait", [b["type"], float(q)]))
 			row.add_child(btn)
 
@@ -612,7 +609,6 @@ func _bait() -> void:
 func _ladder_list(kind: String) -> void:
 	var list: Array = Rules.data()["hooks" if kind == "hook" else "reels"]
 	var tier: int = _tier("hook_tier" if kind == "hook" else "reel_tier")
-	var accent: Color = Color("#f0c040") if kind == "hook" else Color("#60a5fa")
 	for item: Dictionary in list:
 		var t: int = int(item["tier"])
 		var owned: bool = t <= tier
@@ -622,7 +618,7 @@ func _ladder_list(kind: String) -> void:
 		var req: int = int(item["levelReq"])
 		var level_ok: bool = _lvl() >= req
 		var afford: bool = next and _dbl() >= float(item["cost"])
-		var b: Button = _tile(accent, "active" if active else ("owned" if owned else ("ready" if next and level_ok and afford else "locked")), 92)
+		var b: Button = _tile(GOLD, "active" if active else ("owned" if owned else ("ready" if next and level_ok and afford else "locked")), 92)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.add_child(b)
 		if next:
@@ -641,14 +637,14 @@ func _ladder_list(kind: String) -> void:
 		var top: HBoxContainer = HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		v.add_child(top)
-		Room.text(top, item["name"], 16, INK if owned else Color("#cfcabf"), true)
+		Kit.text(top, item["name"], "heading", INK if owned else Kit.INK_2)
 		if active:
-			_status_pill(top, "Active", Color("#5fd9bd"))
+			_status_pill(top, "Active", Kit.TEAL)
 		elif owned:
-			_status_pill(top, "Owned", Color("#4ade80"))
+			_status_pill(top, "Owned", Kit.HELP)
 		elif locked:
-			_status_pill(top, "Locked", Color("#7a7775"))
-		Room.text(v, item.get("description", ""), 13, Color("#9a958c") if owned else Color("#6a655d"), false, true).custom_minimum_size = Vector2(0, 0)
+			_status_pill(top, "Locked", Kit.FAINT)
+		Kit.text(v, item.get("description", ""), "small", SUB if owned else Kit.FAINT, true).custom_minimum_size = Vector2(0, 0)
 		var chips: HBoxContainer = HBoxContainer.new()
 		chips.add_theme_constant_override("separation", 6)
 		v.add_child(chips)
@@ -662,18 +658,18 @@ func _ladder_list(kind: String) -> void:
 			effect = "Needle %d%% slower" % slower if slower > 0 else "Base speed"
 			good = slower > 0
 		if owned and good:
-			Room.chip(chips, effect, Color(accent, 0.8), Color(accent, 0.09), Color(accent, 0.22))
+			Kit.chip(chips, effect, Kit.INK_2)
 		else:
-			Room.chip(chips, effect, Color("#9a958c") if owned else Color("#5a564e"), Color(0.06, 0.07, 0.09, 0.9), Color(1, 1, 1, 0.1))
+			Kit.chip(chips, effect, SUB if owned else Kit.FAINT)
 		if next:
-			var chip: String = "Upgrading…" if _busy == "tier" else ("Fishing Lv %d · %d to go" % [req, req - _lvl()] if not level_ok else ("Press to upgrade" if afford else "%s ⟡ short" % Js.thousands(float(item["cost"]) - _dbl())))
-			Room.chip(chips, chip.to_upper(), GOLD if afford and level_ok else Color("#9a958c"), Color(0.94, 0.75, 0.25, 0.1) if afford and level_ok else Color(0.06, 0.07, 0.09, 0.9), Color(0.94, 0.75, 0.25, 0.3) if afford and level_ok else Color(1, 1, 1, 0.1), 10)
+			var chip: String = "Upgrading…" if _busy == "tier" else (("Fishing Lv %d" + Kit.SEP + "%d to go") % [req, req - _lvl()] if not level_ok else ("Press to upgrade" if afford else "%s ⟡ short" % Js.thousands(float(item["cost"]) - _dbl())))
+			Kit.chip(chips, chip, GOLD if afford and level_ok else SUB)
 		if not owned:
-			Room.text(h, "%s ⟡" % Js.thousands(float(item["cost"])), 15, GOLD if next else Color("#6a6764"), true)
+			Kit.text(h, "%s ⟡" % Js.thousands(float(item["cost"])), "name", GOLD if next else Kit.FAINT)
 		for c: Node in h.get_children():
 			(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if tier >= list.size() - 1:
-		var done: Label = Room.text(col, "You have the best hook in the sea." if kind == "hook" else "You have the finest reel in the sea.", 14, Color("#c9a7ff"))
+		var done: Label = Kit.text(col, "You have the best hook in the sea." if kind == "hook" else "You have the finest reel in the sea.", "desc", Kit.INK_2)
 		done.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
@@ -684,14 +680,13 @@ func _status_pill(parent: Control, t: String, c: Color) -> void:
 # ── Lines ──────────────────────────────────────────────────────────────────────
 
 func _lines() -> void:
-	var banner: PanelContainer = Room.panel(col, Room.box(Color(0.29, 0.87, 0.5, 0.07), Color(0.29, 0.87, 0.5, 0.25), 12, 12))
-	Room.text(banner, "Lines are earned by catching unique species. No purchase needed.", 14, Color("#bfe8cc"), false, true)
+	var banner: Pane = Kit.pane(col, Kit.inset(12))
+	Kit.text(banner, "Lines are earned by catching unique species. No purchase needed.", "desc", Kit.INK_2, true)
 	var lt: int = _tier("line_tier")
-	var accent: Color = Color("#4ade80")
 	for line: Dictionary in Rules.data()["lines"]:
 		var t: int = int(line["tier"]) if line.has("tier") else (Rules.data()["lines"] as Array).find(line)
 		var owned: bool = t <= lt
-		var p: Pane = Pane.new(Kit.tile(Color(line.get("color", "#4ade80")), "active" if t == lt else ("owned" if owned else "locked")))
+		var p: Pane = Pane.new(Kit.tile(GOLD, "active" if t == lt else ("owned" if owned else "locked")))
 		col.add_child(p)
 		var h: HBoxContainer = HBoxContainer.new()
 		h.add_theme_constant_override("separation", 14)
@@ -704,25 +699,25 @@ func _lines() -> void:
 		var top: HBoxContainer = HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		v.add_child(top)
-		Room.text(top, line["name"], 16, INK if owned else Color("#cfcabf"), true)
+		Kit.text(top, line["name"], "heading", INK if owned else Kit.INK_2)
 		if t == lt:
-			_status_pill(top, "Active", Color("#5fd9bd"))
+			_status_pill(top, "Active", Kit.TEAL)
 		elif owned:
-			_status_pill(top, "Owned", Color("#4ade80"))
+			_status_pill(top, "Owned", Kit.HELP)
 		else:
-			_status_pill(top, "Locked", Color("#7a7775"))
-		Room.text(v, line.get("description", ""), 13, Color("#9a958c") if owned else Color("#6a655d"), false, true).custom_minimum_size = Vector2(0, 0)
+			_status_pill(top, "Locked", Kit.FAINT)
+		Kit.text(v, line.get("description", ""), "small", SUB if owned else Kit.FAINT, true).custom_minimum_size = Vector2(0, 0)
 		var chips: HBoxContainer = HBoxContainer.new()
 		chips.add_theme_constant_override("separation", 6)
 		v.add_child(chips)
 		var smaller: int = int(Js.round((1.0 - float(line["penaltyMultiplier"])) * 100.0))
 		var eff: String = "Snag zones %d%% smaller" % smaller if smaller > 0 else "Standard snag zones"
 		if owned and smaller > 0:
-			Room.chip(chips, eff, Color(accent, 0.8), Color(accent, 0.09), Color(accent, 0.22))
+			Kit.chip(chips, eff, Kit.INK_2)
 		else:
-			Room.chip(chips, eff, Color("#9a958c") if owned else Color("#5a564e"), Color(0.06, 0.07, 0.09, 0.9), Color(1, 1, 1, 0.1))
+			Kit.chip(chips, eff, SUB if owned else Kit.FAINT)
 		if not owned:
-			Room.chip(chips, "%d species to unlock" % int(line["unlockAt"]), Color("#9a958c"), Color(0.06, 0.07, 0.09, 0.9), Color(1, 1, 1, 0.1))
+			Kit.chip(chips, "%d species to unlock" % int(line["unlockAt"]), SUB)
 
 
 # ── Rods ───────────────────────────────────────────────────────────────────────
@@ -733,32 +728,26 @@ func _rods() -> void:
 	rods.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["cost"]) < float(b["cost"]))
 	var n_owned: int = rods.filter(func(r: Dictionary) -> bool: return owned.has(float(r["tier"]))).size()
 
-	var f1: HBoxContainer = HBoxContainer.new()
-	f1.add_theme_constant_override("separation", 6)
-	col.add_child(f1)
-	for o: Array in [["all", "All", rods.size()], ["owned", "Owned", n_owned], ["unowned", "Not owned", rods.size() - n_owned]]:
-		var b: Button = Room.tinted("%s  %d" % [o[1], o[2]], GOLD if _ownership == o[0] else Color("#8a95a0"), 12, 30)
-		b.pressed.connect(func() -> void:
-			_ownership = o[0]
-			rebuild())
-		f1.add_child(b)
+	# The filters: THE room tabs (Kit.tabs), ownership on one row, the
+	# abilities flowing under it (a second press on an ability clears it).
+	Kit.tabs(col, [["all", "All  %d" % rods.size()], ["owned", "Owned  %d" % n_owned], ["unowned", "Not owned  %d" % (rods.size() - n_owned)]], _ownership, accent, func(k: Variant) -> void:
+		_ownership = String(k)
+		rebuild())
 	var f2: HFlowContainer = HFlowContainer.new()
 	f2.add_theme_constant_override("h_separation", 6)
 	f2.add_theme_constant_override("v_separation", 6)
 	col.add_child(f2)
-	var allm: Button = Room.tinted("All abilities", GOLD if _mechanic == "" else Color("#8a95a0"), 12, 28)
-	allm.pressed.connect(func() -> void:
-		_mechanic = ""
-		rebuild())
-	f2.add_child(allm)
+	var opts: Array = [["", "All abilities"]]
 	for m: Array in MECHANICS:
-		if rods.filter(func(r: Dictionary) -> bool: return has_mechanic(r, m[0])).is_empty():
-			continue
-		var b: Button = Room.tinted(m[1], GOLD if _mechanic == m[0] else Color("#8a95a0"), 12, 28)
-		b.pressed.connect(func() -> void:
-			_mechanic = "" if _mechanic == m[0] else m[0]
-			rebuild())
+		if not rods.filter(func(r: Dictionary) -> bool: return has_mechanic(r, m[0])).is_empty():
+			opts.append(m)
+	var mt: HBoxContainer = Kit.tabs(null, opts, _mechanic, accent, func(k: Variant) -> void:
+		_mechanic = "" if _mechanic == String(k) or String(k) == "" else String(k)
+		rebuild())
+	for b: Node in mt.get_children():
+		mt.remove_child(b)
 		f2.add_child(b)
+	mt.free()
 
 	var list: Array = rods.filter(func(r: Dictionary) -> bool:
 		var o: bool = owned.has(float(r["tier"]))
@@ -768,8 +757,8 @@ func _rods() -> void:
 			return false
 		return _mechanic == "" or has_mechanic(r, _mechanic))
 	if list.is_empty():
-		Room.text(col, "No rods match these filters.", 14, SUB)
-		var clear: Button = Room.tinted("Clear filters", Color("#b9c6d0"), 13, 34)
+		Kit.text(col, "No rods match these filters.", "desc", SUB)
+		var clear: Button = Kit.button("Clear filters", "secondary", "small")
 		clear.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		clear.pressed.connect(func() -> void:
 			_ownership = "all"
@@ -784,14 +773,13 @@ func _rods() -> void:
 func _rod_row(rod: Dictionary, owned: bool) -> void:
 	var tier: float = float(rod["tier"])
 	var equipped: bool = float(_tier("rod_tier")) == tier
-	var accent: Color = Color(rod.get("color", "#b8956a"))
-	var p: Pane = Pane.new(Kit.tile(accent, "active" if equipped else ("owned" if owned else "locked"), [1, 1, 14, 1]))
+	var p: Pane = Pane.new(Kit.tile(GOLD, "active" if equipped else ("owned" if owned else "locked"), [1, 1, 14, 1]))
 	col.add_child(p)
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	p.add_child(h)
-	# The art well: a darker pool the rod lies in.
-	var art: Pane = Pane.new({ "radius": 14, "fill": [Color(0.016, 0.024, 0.04, 0.5)], "glow": [Color(accent, 0.12), Vector2(0.5, 0.5), Vector2(0.7, 0.7)], "pad": 6 })
+	# The art, frameless (M4): no well, no glow in the rod's colour.
+	var art: CenterContainer = CenterContainer.new()
 	art.custom_minimum_size = Vector2(104, 0)
 	h.add_child(art)
 	Room.picture(art, "%s_thumb.png" % rod.get("slug", ""), Vector2(92, 92), not owned)
@@ -805,18 +793,17 @@ func _rod_row(rod: Dictionary, owned: bool) -> void:
 	var top: HBoxContainer = HBoxContainer.new()
 	top.add_theme_constant_override("separation", 8)
 	v.add_child(top)
-	Room.text(top, "●", 11, accent).size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	Room.text(top, rod["name"], 16, INK if owned else Color("#cfcabf"), true)
+	Kit.text(top, rod["name"], "heading", INK if owned else Kit.INK_2)
 	if equipped:
-		_status_pill(top, "Equipped", Color("#5fd9bd"))
+		_status_pill(top, "Equipped", Kit.TEAL)
 	elif owned:
-		_status_pill(top, "Owned", Color("#4ade80"))
+		_status_pill(top, "Owned", Kit.HELP)
 	var chips: HFlowContainer = HFlowContainer.new()
 	chips.add_theme_constant_override("h_separation", 5)
 	chips.add_theme_constant_override("v_separation", 5)
 	v.add_child(chips)
 	for e: String in effect_lines(rod):
-		Room.chip(chips, e, Color(accent, 0.85) if owned else Color("#8a857c"), Color(accent, 0.08), Color(accent, 0.22))
+		Kit.chip(chips, e, Kit.INK_2 if owned else Kit.DIM, not owned)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	v.add_child(row)
@@ -825,27 +812,27 @@ func _rod_row(rod: Dictionary, owned: bool) -> void:
 		var req: int = _req(rod)
 		var btn: Button
 		if _lvl() < req:
-			btn = Room.tinted("Fishing Lv %d · %d to go" % [req, req - _lvl()], Color("#60a5fa"), 13, 36)
+			btn = Kit.button(("Fishing Lv %d" + Kit.SEP + "%d to go") % [req, req - _lvl()], "secondary", "small")
 			btn.disabled = true
 		elif _dbl() >= float(rod["cost"]):
-			btn = Room.tinted("…" if busy else "Buy · %s ⟡" % Js.thousands(float(rod["cost"])), GOLD, 13, 36)
+			btn = Kit.button("…" if busy else "Buy" + Kit.SEP + "%s ⟡" % Js.thousands(float(rod["cost"])), "accent", "small", GOLD)
 			btn.pressed.connect(func() -> void:
 				_do("rod%s" % Js.key(tier), "purchaseRod", [tier], ["equipTackleRod", [tier]]))
 		else:
-			btn = Room.tinted("Need %s ⟡" % Js.thousands(float(rod["cost"]) - _dbl()), Color("#9a958c"), 13, 36)
+			btn = Kit.button("Need %s ⟡" % Js.thousands(float(rod["cost"]) - _dbl()), "secondary", "small")
 			btn.disabled = true
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(btn)
 	else:
 		if not equipped:
-			var eq: Button = Room.tinted("…" if busy else "Equip", Color("#f0ede8"), 13, 36)
+			var eq: Button = Kit.button("…" if busy else "Equip", "secondary", "small")
 			eq.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			eq.pressed.connect(func() -> void: _do("rod%s" % Js.key(tier), "equipTackleRod", [tier]))
 			row.add_child(eq)
 		if float(rod["cost"]) > 0.0:
 			var refund: float = floor(float(rod["cost"]) * float(Rules.data()["rodSellRate"]))
 			var confirm: bool = _sell_confirm == tier
-			var sell: Button = Room.tinted("Sure? +%s ⟡" % Js.thousands(refund) if confirm else "Sell", Color("#f87171") if confirm else Color("#b9b2a6"), 13, 36)
+			var sell: Button = Kit.button("Sure? +%s ⟡" % Js.thousands(refund) if confirm else "Sell", "danger" if confirm else "secondary", "small")
 			sell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			sell.pressed.connect(func() -> void:
 				if _sell_confirm != tier:
@@ -876,45 +863,45 @@ func _completionist_card(owned: Dictionary) -> void:
 	v.add_child(top)
 	if have:
 		var active: bool = float(_tier("rod_tier")) == COMPLETIONIST_TIER
-		Room.text(top, rod["name"], 17, Color("#f0ede8"), true)
-		Room.chip(top, "MASTERY", c, Color(c, 0.12), Color(c, 0.25), 9)
+		Kit.text(top, rod["name"], "heading", INK)
+		Kit.chip(top, "Mastery", c)
 		var sp: Control = Control.new()
 		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(sp)
-		Room.text(top, "EQUIPPED" if active else "OWNED", 11, c if active else Color("#4ade80"))
+		Kit.text(top, "Equipped" if active else "Owned", "label", Kit.TEAL if active else Kit.HELP)
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		v.add_child(row)
-		var view: Button = Room.tinted("View Rod", c, 13, 36)
+		var view: Button = Kit.button("View Rod", "secondary", "small")
 		view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		view.pressed.connect(_view_completionist)
 		row.add_child(view)
 		if not active:
-			var eq: Button = Room.tinted("Equip", Color("#f0ede8"), 13, 36)
+			var eq: Button = Kit.button("Equip", "secondary", "small")
 			eq.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			eq.pressed.connect(func() -> void: _do("rod14", "equipTackleRod", [COMPLETIONIST_TIER]))
 			row.add_child(eq)
 		else:
-			var inuse: Label = Room.text(row, "IN USE", 12, Color("#5fd9bd"))
+			var inuse: Label = Kit.text(row, "In use", "label", Kit.TEAL)
 			inuse.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			inuse.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_effect_forge(v, c)
 		return
 	if eligible:
-		Room.text(top, "★", 15, c)
-	Room.text(top, "Ready to Claim" if eligible else "Completionist Rod", 17, Color("#f0ede8") if eligible else Color("#6a6764"), true)
-	Room.chip(top, "MASTERY", c if eligible else Color("#4a4845"), Color(c, 0.1) if eligible else Color(0.06, 0.07, 0.09, 0.9), Color(c, 0.2) if eligible else Color(1, 1, 1, 0.1), 9)
-	Room.text(v, "You've seen it all. Something extraordinary is waiting for you." if eligible else "The sea hides its greatest secret from those who haven't seen everything it holds.", 13, Color("#a0a09a") if eligible else Color("#6a6764"), false, true).custom_minimum_size = Vector2(0, 0)
+		Kit.text(top, "★", "body", c)
+	Kit.text(top, "Ready to Claim" if eligible else "Completionist Rod", "heading", INK if eligible else Kit.FAINT)
+	Kit.chip(top, "Mastery", c if eligible else Kit.FAINT, not eligible)
+	Kit.text(v, "You've seen it all. Something extraordinary is waiting for you." if eligible else "The sea hides its greatest secret from those who haven't seen everything it holds.", "small", SUB if eligible else Kit.FAINT, true).custom_minimum_size = Vector2(0, 0)
 	for r: Dictionary in prog["all"]:
 		var done: bool = r["done"]
 		var lr: HBoxContainer = HBoxContainer.new()
 		v.add_child(lr)
-		var ll: Label = Room.text(lr, String(r["label"]).to_upper(), 11, Color("#4ade80") if done else Color("#6a6764"))
+		var ll: Label = Kit.text(lr, String(r["label"]), "eyebrow", Kit.HELP if done else Kit.FAINT)
 		ll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		Room.text(lr, "%d / %d" % [int(r["have"]), int(r["need"])], 11, Color("#4ade80") if done else Color("#6a6764"))
-		Room.bar(v, float(r["have"]) / maxf(1.0, float(r["need"])), Color("#4ade80") if done else Color(c, 0.5), 3.0)
+		Kit.text(lr, "%d / %d" % [int(r["have"]), int(r["need"])], "small", Kit.HELP if done else Kit.FAINT)
+		Room.bar(v, float(r["have"]) / maxf(1.0, float(r["need"])), Kit.HELP if done else Color(c, 0.5), 3.0)
 	if eligible:
-		var claim: Button = Room.tinted("Claiming…" if _busy == "claim" else "Claim Your Reward", c, 14, 40)
+		var claim: Button = Kit.button("Claiming…" if _busy == "claim" else "Claim Your Reward", "primary")
 		claim.pressed.connect(_claim)
 		v.add_child(claim)
 
@@ -941,7 +928,7 @@ func _effect_forge(v: VBoxContainer, c: Color) -> void:
 			continue
 		any = true
 		var on: bool = Js.includes(pick, t)
-		var b: Button = Room.tinted(("✓  " if on else "") + str(r["name"]) + "  ·  " + _rod_gift(r), c if on else Color("#8a95a0"), 12, 32)
+		var b: Button = Kit.button(("✓  " if on else "") + str(r["name"]) + Kit.SEP + _rod_gift(r), "accent" if on else "secondary", "small", c)
 		b.disabled = not on and pick.size() >= cap
 		b.pressed.connect(func() -> void:
 			if Js.includes(pick, t):
@@ -951,12 +938,12 @@ func _effect_forge(v: VBoxContainer, c: Color) -> void:
 			rebuild())
 		v.add_child(b)
 	if not any:
-		Room.text(v, "Own rods with an effect of their own (a double catch, a jackpot, a wormhole) to forge them in.", 12, SUB, false, true)
+		Kit.text(v, "Own rods with an effect of their own (a double catch, a jackpot, a wormhole) to forge them in.", "small", SUB, true)
 		return
 	var same: bool = pick.size() == current.size() and pick.all(func(x: Variant) -> bool: return Js.includes(current, x))
 	var seen: bool = Js.truthy(_p().get("has_seen_forge_flourish"))
 	var cost: String = "free" if not seen else "%s ⟡" % Js.thousands(float(comp["reforgeCost"]))
-	var fb: Button = Room.tinted("Forging…" if _busy == "compfx" else ("Pick up to %d above" % cap if pick.is_empty() else ("Forged in" if same else "Forge these in  ·  %s" % cost)), c, 13, 38)
+	var fb: Button = Kit.button("Forging…" if _busy == "compfx" else ("Pick up to %d above" % cap if pick.is_empty() else ("Forged in" if same else "Forge these in  ·  %s" % cost)), "primary", "small")
 	fb.disabled = same or pick.is_empty()
 	fb.pressed.connect(func() -> void:
 		_do("compfx", "setCompletionistEffects", [pick.duplicate()])
@@ -1054,7 +1041,9 @@ func _do(key: String, op: String, args: Array, then: Array = []) -> void:
 
 # ── Surfaces ───────────────────────────────────────────────────────────────────
 
-## A tile you press: the kit's tile surface, brighter on hover.
+## A tile you press: the kit's flat tile (no colour of its own, M4/M10; the
+## state is in its line), brighter on hover. The Ready to Buy shelf is the
+## "ready" tile.
 func _tile(c: Color, kind: String, h: float) -> Button:
 	var n: Dictionary = Kit.tile(c, kind, 0)
 	var hot: Dictionary = n.duplicate()
@@ -1065,16 +1054,6 @@ func _tile(c: Color, kind: String, h: float) -> Button:
 	Kit.tap(b)
 	return b
 
-
-## A gold-washed row (the Ready to Buy shelf).
-func _surface_button(bg: Color, border: Color, h: float) -> Button:
-	var n: Dictionary = { "radius": 14, "fill": [Color(bg, bg.a * 1.5), Color(bg, bg.a * 0.5)], "border": [1, border], "sheen": 0.04, "pad": 0 }
-	var hot: Dictionary = n.duplicate()
-	hot["fill"] = [Color(bg, bg.a * 2.4), Color(bg, bg.a)]
-	var b: Pane.PaneButton = Pane.PaneButton.new(n, hot)
-	b.custom_minimum_size = Vector2(0, h)
-	Kit.tap(b)
-	return b
 
 
 ## A row laid over a button, filling it, that lets presses through.

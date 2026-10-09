@@ -13,6 +13,14 @@ signal closed
 var session: Session
 var _body: VBoxContainer
 var _tab: String = "hull"
+## THE shell (Paper.open): scrim, sheet, body.
+var _parts: Dictionary = {}
+## The feedback line under the header (Paper.status_line) and what it says
+## after a repaint: [text, colour].
+var _status: Label = null
+var _say: Array = ["", Color(0, 0, 0, 0)]
+## Where each tab's list was scrolled to (a repaint keeps it).
+var _keep: Dictionary = {}
 ## The Refit's re-walk: the picks made so far, chapter by chapter (null: not
 ## re-walking).
 var _rewalk: Variant = null
@@ -22,87 +30,91 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.55)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -560
-	sheet.offset_right = 560
-	sheet.offset_top = -370
-	sheet.offset_bottom = 370
-	add_child(sheet)
-	Paper.night = true
-	Paper.sheet(sheet, 8.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 28)
-	sheet.add_child(m)
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 10)
-	m.add_child(_body)
-	Paper.night = false
+	# THE shell every sheet shares (Paper.open): the scrim, the night paper
+	# rising in at the wide size, a body column.
+	_parts = Paper.open(self, Paper.SHEET_WIDE, true, close)
+	_body = _parts["body"]
 	_paint()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
+## Escape (or the pad's B) backs out one level, then closes: a Refit
+## half re-walked is set down first.
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()
+		if _rewalk is Dictionary:
+			_rewalk = null
+			_paint()
+			return
 		close()
+
+
+## Say something on the feedback line (it outlasts the repaint that follows).
+func _tell(t: String, col: Color = Color(0, 0, 0, 0)) -> void:
+	_say = [t, col]
+	if _status != null and is_instance_valid(_status):
+		Paper.say(_status, t, col)
+
+
+## A rules call's answer: a refusal goes on the feedback line.
+func _refused(r: Variant) -> bool:
+	if r is Dictionary and (r as Dictionary).has("error"):
+		_tell(str(r["error"]), Paper.NIGHT_RED)
+		return true
+	_say = ["", Color(0, 0, 0, 0)]
+	return false
 
 
 func _paint() -> void:
 	Paper.night = true
+	# A repaint keeps each tab's scroll (the Armory's hold).
+	var was: ScrollContainer = _scroll_in(_body)
+	if was != null:
+		_keep[_tab] = was.scroll_vertical
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
-	_body.add_child(head)
-	var tl: Label = Paper.text(head, "The Gunwharf", "display", Paper.ink())
-	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for t: Array in [["hull", "Hull"], ["crew", "Raid party"], ["armory", "Armory"], ["ultimate", "Ultimate"], ["kit", "Repair kit"], ["yard", "Refits"], ["look", "Look"]]:
-		var tb: Pane.PaneButton = Paper.button(t[1], _tab == t[0])
-		var id: String = t[0]
-		tb.pressed.connect(func() -> void:
-			_tab = id
-			_paint())
-		head.add_child(tb)
-	if _tab == "hull":
-		_hull()
-		Paper.night = false
-		return
-	if _tab == "look":
-		_look()
-		Paper.night = false
-		return
-	if _tab == "armory":
-		_armory()
-		Paper.night = false
-		return
-	if _tab == "yard":
-		_yard()
-		Paper.night = false
-		return
-	if _tab == "ultimate":
-		_ultimate()
-		Paper.night = false
-		return
-	if _tab == "kit":
-		_kits()
-		Paper.night = false
-		return
+	# THE shared header: the title on the left, "Close  Esc" on the right on
+	# every tab, the tabs on their own row, the rule; then the feedback line.
+	Paper.header(_body, "The Gunwharf", "", close, [["hull", "Hull"], ["crew", "Raid party"], ["armory", "Armory"], ["ultimate", "Ultimate"], ["kit", "Repair kit"], ["yard", "Refits"], ["look", "Look"]], _tab, func(id: Variant) -> void:
+		if _tab == String(id):
+			return
+		_tab = String(id)
+		_say = ["", Color(0, 0, 0, 0)]
+		_paint())
+	_status = Paper.status_line(_body)
+	if String(_say[0]) != "":
+		Paper.say(_status, String(_say[0]), _say[1])
+	match _tab:
+		"hull": _hull()
+		"look": _look()
+		"armory": _armory()
+		"yard": _yard()
+		"ultimate": _ultimate()
+		"kit": _kits()
+		_: _party()
+	var now: ScrollContainer = _scroll_in(_body)
+	if now != null and _keep.has(_tab):
+		now.set_deferred("scroll_vertical", _keep[_tab])
+	Paper.night = false
+
+
+func _scroll_in(n: Node) -> ScrollContainer:
+	for c: Node in n.get_children():
+		if c is ScrollContainer:
+			return c
+	return null
+
+
+## The raid party's seats.
+func _party() -> void:
 	var st: Dictionary = RulesApi.run(session.store, session.uid, "getCrewState", [])
 	var prof: Dictionary = session.profile()
 	var slots: int = Crew.party_slots(prof)
@@ -120,11 +132,6 @@ func _paint() -> void:
 		row.add_child(_seat(k, who, roster))
 	Paper.rule(_body)
 	Paper.text(_body, "The campaign's water is out past the Sea Gate, due north. The Sea Gate lets her out once your right hand is seated.", "small", Paper.ink_soft(), true)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_horizontal = Control.SIZE_SHRINK_END
-	x.pressed.connect(close)
-	_body.add_child(x)
-	Paper.night = false
 
 
 func _seat(k: int, who: Dictionary, roster: Array) -> Control:
@@ -156,8 +163,7 @@ func _seat(k: int, who: Dictionary, roster: Array) -> Control:
 		else:
 			r = await session.act("assignToRaid", [ids[i], float(k)])
 		session.persist()
-		if r is Dictionary and (r as Dictionary).has("error"):
-			push_warning(str(r["error"]))
+		_refused(r)
 		_paint())
 	v.add_child(pick)
 	return v
@@ -205,6 +211,7 @@ func _kits() -> void:
 		var id2: String = id
 		if own and not wearing:
 			var eb: Pane.PaneButton = Paper.button("Carry it")
+			eb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			eb.pressed.connect(func() -> void:
 				await session.act("equipRepairKit", [id2])
 				session.persist()
@@ -212,14 +219,15 @@ func _kits() -> void:
 			row.add_child(eb)
 		elif is_next:
 			var gated: bool = nav < int(k["navLevelReq"])
-			var bb: Pane.PaneButton = Paper.button("Needs Navigation %d" % int(k["navLevelReq"]) if gated else "Buy  ·  %s ⟡" % Js.thousands(float(k["cost"])), not gated)
+			# The one thing to do here is the wooden plank (Paper.primary).
+			var bb: Pane.PaneButton = Paper.button("Needs Navigation %d" % int(k["navLevelReq"])) if gated else Paper.primary("Buy  ·  %s ⟡" % Js.thousands(float(k["cost"])), true)
+			bb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			bb.disabled = gated
 			bb.pressed.connect(func() -> void:
 				var r: Variant = await session.act("buyRepairKit", [])
 				session.persist()
-				if r is Dictionary and (r as Dictionary).has("error"):
+				if _refused(r):
 					Sound.slack()
-					push_warning(str(r["error"]))
 				else:
 					Sound.chest(true)
 				_paint())
@@ -269,53 +277,31 @@ func _armory() -> void:
 		Paper.text(grid, "Nothing else in the hold. Raid crates and the caches out on the water fill it.", "small", Paper.ink_faint())
 
 
+## A raid item on the night paper (Paper.Tile): its art on a blot in its
+## rarity's pigment, its name under, a count in the corner, the inked ring
+## round what is mounted; the rarity in words under it. An empty mount is a
+## faint, grey tile that does nothing.
 func _item_tile(id: Variant, mounted: bool, eq: Array, n: int = 1) -> Control:
 	var it: Dictionary = Armory.item(str(id)) if id != null else {}
 	var rar: String = str(it.get("rarity", ""))
-	var col: Color = { "common": Color(0.7, 0.7, 0.68), "uncommon": Color(0.5, 0.82, 0.5), "rare": Color(0.45, 0.68, 0.95), "epic": Color(0.72, 0.5, 0.95), "legendary": Color(1.0, 0.75, 0.3), "ancient": Color(0.4, 0.9, 0.85) }.get(rar, Color(0.6, 0.55, 0.5))
-	var bt: Button = Button.new()
-	bt.flat = true
-	bt.focus_mode = Control.FOCUS_NONE
-	bt.custom_minimum_size = Vector2(150, 176) if mounted else Vector2(124, 150)
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = Color(col, 0.08) if id != null else Color(1, 1, 1, 0.03)
-	sb.border_color = Color(col, 0.55) if id != null else Color(1, 1, 1, 0.15)
-	sb.set_border_width_all(2 if mounted and id != null else 1)
-	sb.set_corner_radius_all(10)
-	var hv: StyleBoxFlat = sb.duplicate()
-	hv.bg_color = Color(col, 0.16)
-	hv.border_color = Color(col, 0.95)
-	bt.add_theme_stylebox_override("normal", sb)
-	bt.add_theme_stylebox_override("hover", hv)
-	bt.add_theme_stylebox_override("pressed", hv)
-	bt.add_theme_stylebox_override("disabled", sb)
-	var v: VBoxContainer = VBoxContainer.new()
-	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	v.offset_left = 8
-	v.offset_right = -8
-	v.offset_top = 8
-	v.offset_bottom = -6
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_theme_constant_override("separation", 2)
-	bt.add_child(v)
+	var box: VBoxContainer = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 0)
+	var bt: Paper.Tile = Paper.Tile.new()
+	bt.custom_minimum_size = Vector2(150, 150) if mounted else Vector2(124, 124)
+	box.add_child(bt)
 	if id == null:
-		var e: Label = Paper.text(v, "An empty mount", "small", Paper.ink_faint(), true)
-		e.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		e.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		e.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		bt.label = "An empty mount"
+		bt.grey = true
 		bt.disabled = true
-		return bt
-	var pic: TextureRect = TextureRect.new()
-	pic.texture = Skipper.tex(str(it.get("image", "")).trim_prefix("/"))
-	pic.custom_minimum_size = Vector2(0, 86 if mounted else 70)
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(pic)
-	var nm: Label = Paper.text(v, str(it.get("name", id)) + (("  x%d" % n) if n > 1 else ""), "small", Paper.ink(), true)
-	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var rl: Label = Paper.text(v, rar.to_upper(), "eyebrow", col)
+		bt.focus_mode = Control.FOCUS_NONE
+		return box
+	bt.on = mounted
+	bt.art = Skipper.tex(str(it.get("image", "")).trim_prefix("/"))
+	bt.label = str(it.get("name", id))
+	bt.pigment = Paper.rarity(rar)
+	if n > 1:
+		bt.corner = "x%d" % n
+	var rl: Label = Paper.text(box, rar, "eyebrow", Paper.ink_faint())
 	rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var clash: Array = Armory.conflicts(str(id), eq) if not mounted else []
@@ -332,11 +318,12 @@ func _item_tile(id: Variant, mounted: bool, eq: Array, n: int = 1) -> Control:
 				next.erase(c)
 			# Onto the hull first; when full, the last mounted comes off.
 			next.push_front(id)
-		await session.act("saveEquippedRaidItems", [next])
+		var r: Variant = await session.act("saveEquippedRaidItems", [next])
 		session.persist()
-		Sound.seal(true)
+		if not _refused(r):
+			Sound.seal(true)
 		_paint())
-	return bt
+	return box
 
 
 # ── Her hull ──────────────────────────────────────────────────────────────────
@@ -393,7 +380,7 @@ func _hull() -> void:
 	rb.pressed.connect(func() -> void:
 		var r: Variant = await session.act("renameShip", [field.text])
 		session.persist()
-		if r is Dictionary and (r as Dictionary).has("error"):
+		if _refused(r):
 			Sound.slack()
 		else:
 			Sound.plip()
@@ -434,18 +421,19 @@ func _hull() -> void:
 		Paper.text(v, str(h["name"]), "body_strong", Paper.ink())
 		Paper.text(v, "%d hull  ·  %d speed  ·  %d crew  ·  %d mount%s  ·  %d least damage" % [int(Js.num(hc.get("durability"))), int(Js.num(hc.get("speed"))), int(Js.num(hc.get("crewSlots"))), mounts, "" if mounts == 1 else "s", int(Js.num(hc.get("minDamage")))], "small", Paper.ink_soft())
 		if t == tier:
-			Paper.text(row, "Sailing her", "body_strong", Color(0.5, 0.86, 0.58))
+			Paper.text(row, "Sailing her", "body_strong", Paper.green())
 		elif t < tier:
 			Paper.text(row, "Outgrown", "small", Paper.ink_faint())
 		elif t == tier + 1:
 			var gated: bool = nav < int(h["navLevelReq"])
 			var cost: float = float(h["cost"])
-			var bb: Pane.PaneButton = Paper.button("Needs Navigation %d" % int(h["navLevelReq"]) if gated else "Buy  ·  %s ⟡" % Js.thousands(cost), not gated)
+			var bb: Pane.PaneButton = Paper.button("Needs Navigation %d" % int(h["navLevelReq"])) if gated else Paper.primary("Buy  ·  %s ⟡" % Js.thousands(cost), true)
+			bb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			bb.disabled = gated or Js.num(p.get("doubloons")) < cost
 			bb.pressed.connect(func() -> void:
 				var r: Variant = await session.act("buyShip", [])
 				session.persist()
-				if r is Dictionary and (r as Dictionary).has("error"):
+				if _refused(r):
 					Sound.slack()
 				else:
 					Sound.chest(true)
@@ -487,7 +475,7 @@ func _look() -> void:
 		v.add_child(pic)
 		Paper.text(v, "Plain hull" if id == null else str(Hulls.skin(str(id)).get("name", id)), "body_strong", Paper.ink())
 		if worn == id:
-			Paper.text(v, "Worn", "small", Color(0.5, 0.86, 0.58))
+			Paper.text(v, "Worn", "small", Paper.green())
 		elif not mow and id != null:
 			Paper.text(v, "Man-o-War only", "small", Paper.ink_faint())
 		else:
@@ -521,10 +509,11 @@ func _yard() -> void:
 		Paper.text(v, r[2], "body_strong", Paper.ink())
 		Paper.text(v, r[3], "small", Paper.ink_soft(), true)
 		if p.get(r[0]) == true:
-			Paper.text(row, "Fitted", "body_strong", Color(0.5, 0.86, 0.58))
+			Paper.text(row, "Fitted", "body_strong", Paper.green())
 			continue
 		var open: bool = session.store.has_cleared(session.uid, r[5])
-		var b: Pane.PaneButton = Paper.button(("%s ⟡" % Js.thousands(float(r[4]))) if open else r[6], open)
+		var b: Pane.PaneButton = Paper.primary("%s ⟡" % Js.thousands(float(r[4])), true) if open else Paper.button(r[6])
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		b.disabled = not open or Js.num(p.get("doubloons")) < float(r[4])
 		var op: String = r[1]
 		b.pressed.connect(func() -> void:
@@ -532,6 +521,8 @@ func _yard() -> void:
 			session.persist()
 			if res is Dictionary and res.get("ok") == true:
 				Sound.chest(true)
+			else:
+				_refused(res)
 			_paint())
 		row.add_child(b)
 	_refit_panel(p)
@@ -564,7 +555,7 @@ func _refit_panel(p: Dictionary) -> void:
 		if c.is_empty():
 			Paper.text(v, "To choose", "body", Paper.ink_faint())
 		else:
-			Paper.text(v, str(c["name"]), "body_strong", Color(str(c.get("color", "#d8b26a"))))
+			Paper.text(v, str(c["name"]), "body_strong", Paper.ink())
 	if not (_rewalk is Dictionary):
 		var b: Pane.PaneButton = Paper.button("Begin a refit" + ("" if cost == 0.0 else "  ·  %s ⟡" % Js.thousands(cost)))
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -596,13 +587,14 @@ func _refit_panel(p: Dictionary) -> void:
 				_paint())
 			acts.add_child(ob)
 	else:
-		var go: Pane.PaneButton = Paper.button("Refit her" + ("" if cost == 0.0 else "  ·  %s ⟡" % Js.thousands(cost)), true)
+		var go: Pane.PaneButton = Paper.primary("Refit her" + ("" if cost == 0.0 else "  ·  %s ⟡" % Js.thousands(cost)), true)
 		go.pressed.connect(func() -> void:
 			var r: Variant = await session.act("refitShipClasses", [walk])
 			session.persist()
 			if r is Dictionary and (r as Dictionary).get("ok") == true:
 				Sound.horn()
 			else:
+				_refused(r)
 				Sound.slack()
 			_rewalk = null
 			_paint())
@@ -636,7 +628,7 @@ func _ultimate() -> void:
 		_body.add_child(req)
 		for r: Array in [["chapter3", "The Quartermaster beaten"], ["manowar", "A Man-o-War"], ["navLevel", "Navigation %d" % int(Armory.aug()["navLevel"])], ["rack", "The Extra Cannonball Rack (the Gauntlet's Locker)"]]:
 			var ok: bool = g[r[0]]
-			Paper.text(req, ("✓  " if ok else "✗  ") + r[1], "small", Color(0.5, 0.86, 0.58) if ok else Paper.red())
+			Paper.text(req, ("✓  " if ok else "✗  ") + r[1], "small", Paper.green() if ok else Paper.red())
 	elif build != null:
 		var left: float = maxf(0.0, Js.parse_ms(build["completesAt"]) - Clock.now_ms())
 		var line: String = str(story["retoolingLine"] if build.get("retool", false) else story["buildingLine"]).replace("{current}", str(Armory.augment(active).get("name", "")))
@@ -647,15 +639,15 @@ func _ultimate() -> void:
 	var gates_met: bool = g["chapter3"] and g["manowar"] and g["navLevel"] and g["rack"]
 	for a: Dictionary in Armory.aug()["list"]:
 		var id: String = a["id"]
-		var col: Color = Color(str(a["color"]))
 		var v: VBoxContainer = VBoxContainer.new()
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_theme_constant_override("separation", 4)
 		row.add_child(v)
 		var mounted: bool = active == id
 		var building: bool = build != null and build["id"] == id
-		Paper.text(v, ("MOUNTED" if mounted else ("BEING BUILT" if building else "")), "eyebrow", col)
-		Paper.text(v, str(a["name"]), "title", col.lightened(0.15))
+		var lit: bool = mounted or building
+		Paper.text(v, ("Mounted" if mounted else ("Being built" if building else "")), "eyebrow", Paper.CHOSEN)
+		Paper.text(v, str(a["name"]), "title", Paper.CHOSEN if lit else Paper.ink())
 		Paper.text(v, _clean(str(a["tagline"])), "small", Paper.ink(), true)
 		Paper.text(v, "x%s  ·  %s" % [str(a["megaMult"]), _clean(str(a["identity"]))], "small", Paper.ink_soft(), true)
 		for perk: Variant in Js.list(a.get("perks")):
@@ -677,13 +669,17 @@ func _ultimate() -> void:
 				op = "startUltimateRetool"
 		if op != "":
 			var locked: bool = op == "startUltimateBuild" and not gates_met
-			var b: Pane.PaneButton = Paper.button(label if not locked else "Not yet", (op == "startUltimateBuild" or op == "switchUltimate") and not locked)
+			var main: bool = (op == "startUltimateBuild" or op == "switchUltimate") and not locked
+			var b: Pane.PaneButton = Paper.primary(label, true) if main else Paper.button(label if not locked else "Not yet")
+			b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			b.disabled = locked
 			b.pressed.connect(func() -> void:
 				var r: Variant = await session.act(op, [id])
 				session.persist()
 				if r is Dictionary and r.get("ok") == true:
 					Sound.horn()
+				else:
+					_refused(r)
 				_paint())
 			v.add_child(b)
 	if active != null and not schem:
@@ -696,9 +692,11 @@ func _ultimate() -> void:
 		Paper.text(t, str(story["schematicsTitle"]), "body_strong", Paper.ink())
 		Paper.text(t, str(story["schematicsBlurb"]), "small", Paper.ink_soft(), true)
 		var sb: Pane.PaneButton = Paper.button("%s ⟡" % Js.thousands(float(Armory.aug()["schematicsCost"])))
+		sb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		sb.pressed.connect(func() -> void:
-			await session.act("buyUltimateSchematics", [])
+			var r: Variant = await session.act("buyUltimateSchematics", [])
 			session.persist()
+			_refused(r)
 			_paint())
 		h.add_child(sb)
 

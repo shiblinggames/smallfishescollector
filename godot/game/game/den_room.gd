@@ -20,7 +20,8 @@ extends Room
 ## each landing with a tick and the stack giving a little under it.
 
 const RED: Color = Color("#d9534f")
-const CHIP_GOLD: Color = Color(0.55, 0.38, 0.04)
+## The chip count is inked as money on the day paper.
+const CHIP_GOLD: Color = Paper.MONEY
 
 var game: String = "slots"
 var _strip: Pane
@@ -77,7 +78,6 @@ func _build() -> void:
 	row.add_child(left)
 	Paper.text(left, "Your chips", "label", Paper.INK_SOFT)
 	_chips_l = Paper.text(left, "", "display", CHIP_GOLD)
-	_chips_l.add_theme_font_size_override("font_size", 34)
 	_left_l = Paper.text(left, "", "note", Paper.INK_SOFT)
 	_buys = HBoxContainer.new()
 	_buys.add_theme_constant_override("separation", 6)
@@ -87,9 +87,8 @@ func _build() -> void:
 	_cash.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_cash.pressed.connect(_cash_out)
 	row.add_child(_cash)
-	# The games.
+	# The games: THE room tabs (Kit.tabs), rebuilt in _open.
 	_tabs = HBoxContainer.new()
-	_tabs.add_theme_constant_override("separation", 8)
 	col.add_child(_tabs)
 	_table = Control.new()
 	_table.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -124,11 +123,10 @@ func paint_purse(chips_override: float = -1.0) -> void:
 func roll_chips(from: float, to: float) -> void:
 	if _chips_l == null:
 		return
-	var tw: Tween = _chips_l.create_tween()
-	tw.tween_method(func(x: float) -> void:
+	var tw: Tween = Motion.count(_chips_l, from, to, func(x: float) -> void:
 		if is_instance_valid(_chips_l):
 			_chips_l.text = Js.thousands(round(x))
-			_paint_stack(x), from, to, 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			_paint_stack(x), false, 0.6)
 	tw.tween_callback(func() -> void: paint_purse())
 
 
@@ -192,7 +190,7 @@ func _paint_stack(chips: float) -> void:
 	_stack.scale = Vector2(sc, sc)
 	if grew:
 		var tw: Tween = _stack.create_tween()
-		tw.tween_property(_stack, "scale", Vector2(sc * 1.18, sc * 1.18), 0.1)
+		tw.tween_property(_stack, "scale", Vector2(sc * 1.18, sc * 1.18), 0.1).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_property(_stack, "scale", Vector2(sc, sc), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
@@ -206,8 +204,8 @@ func _bump_stack() -> void:
 		return
 	var sc: float = float(STACK_H[maxi(1, _stack_tier)]) / 92.0
 	var tw: Tween = _stack.create_tween()
-	tw.tween_property(_stack, "scale", Vector2(sc * 1.06, sc * 0.94), 0.05)
-	tw.tween_property(_stack, "scale", Vector2(sc, sc), 0.12)
+	tw.tween_property(_stack, "scale", Vector2(sc * 1.06, sc * 0.94), 0.05).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_stack, "scale", Vector2(sc, sc), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## CHIPS IN FLIGHT: an amount as painted chips arcing from one point to
@@ -279,15 +277,21 @@ func _cash_out() -> void:
 func _open(which: String) -> void:
 	game = which
 	for c: Node in _tabs.get_children():
+		_tabs.remove_child(c)
 		c.queue_free()
 	var xp: float = Js.num(session.profile().get("fishing_xp"))
+	var opts: Array = []
+	var shut: Array = []
 	for t: Array in [["slots", "Fish Slots", ""], ["roulette", "Fish Roulette", "den_roulette"], ["blackjack", "Blackjack", "den_blackjack"]]:
 		var block: String = Rules.gate_block("feature", t[2], xp) if t[2] != "" else ""
-		var label: String = t[1] if block == "" else "%s  ·  %s" % [t[1], block]
-		var b: Button = Paper.button(label, t[0] == which)
-		b.disabled = block != ""
-		b.pressed.connect(func() -> void: _open(t[0]))
-		_tabs.add_child(b)
+		opts.append([t[0], t[1] if block == "" else t[1] + Kit.SEP + block])
+		shut.append(block != "")
+	var row: HBoxContainer = Kit.tabs(_tabs, opts, which, accent, func(k: Variant) -> void: _open(String(k)))
+	# A game still closed says when, and does not open.
+	for i: int in row.get_child_count():
+		var b: Button = row.get_child(i)
+		b.disabled = shut[i]
+		b.add_theme_color_override("font_disabled_color", Color(Kit.PAPER_INK_SOFT, 0.55))
 	for c: Node in _table.get_children():
 		c.queue_free()
 	var g: Control

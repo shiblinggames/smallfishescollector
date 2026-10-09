@@ -34,7 +34,7 @@ func _ready() -> void:
 	v.add_child(head)
 	var t: Label = Kit.text(head, "Fish Slots", "title", Kit.WOOD_INK)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Kit.text(head, "Three catfish pay %d times your bet" % int(Casino.fixed_jackpot() if Casino.fixed_jackpot() > 0.0 else 0.0), "label", Color(1.0, 0.86, 0.5))
+	Kit.text(head, "Three catfish pay %d times your bet" % int(Casino.fixed_jackpot() if Casino.fixed_jackpot() > 0.0 else 0.0), "label", Kit.SAND)
 	# The windows.
 	var win: HBoxContainer = HBoxContainer.new()
 	win.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -46,7 +46,7 @@ func _ready() -> void:
 		win.add_child(r)
 		_reels.append(r)
 	# What it came to.
-	_says = Kit.text(v, "", "title", Color(1.0, 0.88, 0.55))
+	_says = Kit.text(v, "", "title", Kit.SAND)
 	_says.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_says.custom_minimum_size = Vector2(0, 34)
 	_sub = Kit.text(v, "", "label", Color(Kit.WOOD_INK, 0.8))
@@ -222,10 +222,9 @@ func _light(reels: Array, sym: String) -> void:
 			(_reels[i] as Reel).lit = true
 
 
+## What it came to, said: the words rise in (never a bounce on text).
 func _pop(l: Label) -> void:
-	l.pivot_offset = l.size / 2.0
-	l.scale = Vector2(1.25, 1.25)
-	l.create_tween().tween_property(l, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Motion.rise_word(l)
 
 
 ## Gold coins thrown up out of the windows.
@@ -233,7 +232,7 @@ func _burst(n: int) -> void:
 	var c: Vector2 = (_reels[1] as Reel).get_global_rect().get_center()
 	for i: int in n:
 		var m: TextureRect = TextureRect.new()
-		m.texture = Glow.radial(32, Color(1.0, 0.8, 0.3), false)
+		m.texture = Glow.radial(32, Kit.GOLD, false)
 		m.size = Vector2(18, 18)
 		m.top_level = true
 		m.mouse_filter = Control.MOUSE_FILTER_IGNORE

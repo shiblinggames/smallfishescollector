@@ -38,7 +38,7 @@ func _ready() -> void:
 	v.add_child(head)
 	var t: Label = Kit.text(head, "Blackjack", "title", Kit.WOOD_INK)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Kit.text(head, "Blackjack pays 3 to 2   ·   Dealer hits soft 17", "label", Color(1.0, 0.86, 0.5))
+	Kit.text(head, "Blackjack pays 3 to 2   ·   Dealer hits soft 17", "label", Kit.SAND)
 	# The dealer.
 	var dh: HBoxContainer = HBoxContainer.new()
 	dh.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -51,7 +51,7 @@ func _ready() -> void:
 	_dealer.add_theme_constant_override("separation", -26)
 	_dealer.custom_minimum_size = Vector2(0, 132)
 	v.add_child(_dealer)
-	_says = Kit.text(v, "Place a bet and deal", "title", Color(1.0, 0.88, 0.55))
+	_says = Kit.text(v, "Place a bet and deal", "title", Kit.SAND)
 	_says.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_says.custom_minimum_size = Vector2(0, 36)
 	# Your hands.
@@ -222,7 +222,7 @@ func _render(r: Dictionary, animate: bool) -> void:
 			box.add_child(row)
 			var info: Label = Kit.text(box, "", "label", Kit.WOOD_INK)
 			info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			var word: Label = Kit.text(box, "", "title", Color(1.0, 0.88, 0.55))
+			var word: Label = Kit.text(box, "", "title", Kit.SAND)
 			word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_hand_rows.append([row, info, word])
 			# A split hand keeps the card it came from without dealing it again.
@@ -287,9 +287,8 @@ func _render(r: Dictionary, animate: bool) -> void:
 				w.text = "Push"
 			_:
 				w.text = "Bust" if float(h["total"]) > 21.0 else "Lose"
-		w.pivot_offset = w.size / 2.0
-		w.scale = Vector2(1.3, 1.3)
-		w.create_tween().tween_property(w, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		# The word rises in (never a bounce on text).
+		Motion.rise_word(w)
 	var net: float = float(res["netDelta"])
 	var back: float = 0.0
 	for h: Dictionary in hands:
@@ -353,17 +352,17 @@ class Card:
 		var tw: Tween = create_tween().set_parallel()
 		tw.tween_property(_inner, "position", Vector2.ZERO, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_property(_inner, "rotation", deg_to_rad(randf_range(-3.0, 3.0)), 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		tw.tween_property(_inner, "modulate:a", 1.0, 0.12)
+		tw.tween_property(_inner, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_SINE)
 
 	func flip_to(c: String) -> void:
 		var tw: Tween = create_tween()
-		tw.tween_property(_inner, "scale:x", 0.0, 0.14).set_ease(Tween.EASE_IN)
+		tw.tween_property(_inner, "scale:x", 0.0, 0.14).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 		await tw.finished
 		code = c
 		_inner.queue_redraw()
 		Sound.plip()
 		var tw2: Tween = create_tween()
-		tw2.tween_property(_inner, "scale:x", 1.0, 0.16).set_ease(Tween.EASE_OUT)
+		tw2.tween_property(_inner, "scale:x", 1.0, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		await tw2.finished
 
 	func _paint() -> void:

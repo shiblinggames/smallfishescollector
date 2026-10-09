@@ -11,9 +11,8 @@ extends Room
 ## trade sheet to sell part of it. Every sale is Selling.*, the ported rules.
 ## The Exchange side waits for its own slice.
 
-const UP: Color = Color("#4ade80")
-const DOWN: Color = Color("#f87171")
-const RARITY: Dictionary = { 1: "#9ca3af", 2: "#34d399", 3: "#60a5fa", 4: "#c084fc", 5: "#fb923c" }
+const UP: Color = Kit.UP
+const DOWN: Color = Kit.DOWN
 const HABITAT: Dictionary = {
 	"shallows": ["Shallows", "#38bdf8"], "open_waters": ["Open Waters", "#34d399"],
 	"deep": ["Deep", "#818cf8"], "abyss": ["Abyss", "#f87171"],
@@ -110,7 +109,8 @@ func _entries() -> Array:
 	return out
 
 
-## A water's label and colour; the web lists four and shows the rest plainly.
+## A water's label (and the web's colour, unused: no colour coding); the web
+## lists four and shows the rest plainly.
 static func _hab(e: Dictionary) -> Array:
 	return HABITAT.get(e["habitat"], [String(e["habitat"]).capitalize(), "#9fb4c2"])
 
@@ -150,7 +150,7 @@ func _build() -> void:
 	var adv_block: String = Rules.gate_block("feature", "market_advanced", Js.num(session.profile().get("fishing_xp")))
 	if adv_block != "":
 		_advanced = false
-	var adv: Button = Room.tinted(("Advanced: %s" % ("On" if _advanced else "Off")) if adv_block == "" else "Advanced  ·  %s" % adv_block, Color("#b9c6d0") if not _advanced else GOLD, 12, 30)
+	var adv: Button = Kit.button(("Advanced: %s" % ("On" if _advanced else "Off")) if adv_block == "" else "Advanced" + Kit.SEP + adv_block, "accent" if _advanced else "secondary", "small", GOLD)
 	adv.disabled = adv_block != ""
 	adv.tooltip_text = "The board: the market's mood, the Sea Index, the day's movers, price history and every species you have logged."
 	adv.pressed.connect(func() -> void:
@@ -170,9 +170,9 @@ func _build() -> void:
 	_browse(logged.filter(func(e: Dictionary) -> bool: return e["qty"] <= 0))
 	var w: HBoxContainer = HBoxContainer.new()
 	col.add_child(w)
-	var wl: Label = Room.text(w, "WALLET", 12, Color(0.75, 0.83, 0.89, 0.6))
+	var wl: Label = Kit.text(w, "Wallet", "eyebrow", Color(SUB, Kit.EYEBROW_ALPHA))
 	wl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Room.text(w, "%s ⟡" % Js.thousands(Js.num(session.profile().get("doubloons"))), 18, GOLD, true)
+	Kit.text(w, "%s ⟡" % Js.thousands(Js.num(session.profile().get("doubloons"))), "heading", GOLD)
 
 
 ## The mood, the Sea Index, the next tick, and the colour mode.
@@ -187,7 +187,7 @@ func _ticker(logged: Array) -> void:
 	row.add_theme_constant_override("separation", 18)
 	v.add_child(row)
 	var mc: Color = Color(mood["color"])
-	Room.chip(row, mood["label"], mc, Color(mc, 0.1), Color(mc, 0.25), 13)
+	Kit.chip(row, mood["label"], mc)
 	var idx: float = 0.0
 	var idx_prev: float = 0.0
 	for e: Dictionary in logged:
@@ -199,29 +199,26 @@ func _ticker(logged: Array) -> void:
 	var ipct: float = (idx - idx_prev) / maxf(0.0001, idx_prev) * 100.0 if _mode == "movement" else (idx - 1.0) * 100.0
 	var ib: HBoxContainer = HBoxContainer.new()
 	row.add_child(ib)
-	Room.text(ib, "SEA INDEX", 11, Color(0.75, 0.83, 0.89, 0.6))
-	Room.text(ib, "%.2f×" % idx, 15, INK, true)
-	Room.text(ib, "%s %s" % ["▲" if ipct >= 0.0 else "▼", pct_text(ipct)], 13, UP if ipct >= 0.0 else DOWN)
+	Kit.text(ib, "Sea Index", "eyebrow", Color(SUB, Kit.EYEBROW_ALPHA))
+	Kit.text(ib, "%.2f×" % idx, "name", INK)
+	Kit.text(ib, "%s %s" % ["▲" if ipct >= 0.0 else "▼", pct_text(ipct)], "small", UP if ipct >= 0.0 else DOWN)
 	var sp: Control = Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(sp)
-	Room.text(row, "NEW PRICES AT SUNRISE, IN" if Market.daily() else "NEXT UPDATE", 11, Color(0.75, 0.83, 0.89, 0.6))
-	_countdown = Room.text(row, "", 15, INK, true)
+	Kit.text(row, "New prices at sunrise, in" if Market.daily() else "Next update", "eyebrow", Color(SUB, Kit.EYEBROW_ALPHA))
+	_countdown = Kit.text(row, "", "name", INK)
 	_tick_countdown()
-	Room.text(v, mood["desc"], 13, SUB, false, true)
+	Kit.text(v, mood["desc"], "small", SUB, true)
 	var modes: HBoxContainer = HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 6)
 	v.add_child(modes)
-	var ml: Label = Room.text(modes, "TICKER COLORS  ·  %s" % ("above normal price" if _mode == "normal" else ("up since yesterday" if Market.daily() else "up since last tick")), 11, Color(0.75, 0.83, 0.89, 0.6))
+	var ml: Label = Kit.text(modes, ("TICKER COLORS" + Kit.SEP + "%s") % ("above normal price" if _mode == "normal" else ("up since yesterday" if Market.daily() else "up since last tick")), "small", Color(SUB, Kit.EYEBROW_ALPHA))
 	ml.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for m: Array in [["normal", "vs Normal"], ["movement", "Recent"]]:
-		var on: bool = _mode == m[0]
-		var b: Button = Room.tinted(m[1], GOLD if on else Color("#8a95a0"), 12, 28)
-		b.pressed.connect(func() -> void:
-			_mode = m[0]
-			Prefs.set_value("market_color_mode", _mode)
-			rebuild())
-		modes.add_child(b)
+	# THE room tabs (Kit.tabs).
+	Kit.tabs(modes, [["normal", "vs Normal"], ["movement", "Recent"]], _mode, accent, func(k: Variant) -> void:
+		_mode = String(k)
+		Prefs.set_value("market_color_mode", _mode)
+		rebuild())
 
 
 func _tick_countdown() -> void:
@@ -250,8 +247,8 @@ func _hero(held: Array, total: float, count: float) -> void:
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
-	Room.text(v, "HOLD VALUE", 12, Color(0.85, 0.78, 0.6, 0.75))
-	Room.text(v, "%s ⟡" % Js.thousands(total), 38, GOLD, true)
+	Kit.text(v, "Hold value", "eyebrow", Color(Kit.SAND, Kit.EYEBROW_ALPHA))
+	Kit.text(v, "%s ⟡" % Js.thousands(total), "display", GOLD)
 	if _advanced:
 		var base: float = 0.0
 		for e: Dictionary in held:
@@ -259,7 +256,7 @@ func _hero(held: Array, total: float, count: float) -> void:
 			base += Market.price_each(float(e["value"]), ref) * float(e["qty"])
 		var d: float = total - base
 		var dp: float = d / maxf(1.0, base) * 100.0
-		Room.text(v, "%s%s ⟡ (%s)  %s" % ["+" if d >= 0 else "-", Js.thousands(absf(d)), pct_text(dp), "vs normal value" if _mode == "normal" else ("vs yesterday" if Market.daily() else "vs last tick")], 13, UP if d >= 0 else DOWN)
+		Kit.text(v, "%s%s ⟡ (%s)  %s" % ["+" if d >= 0 else "-", Js.thousands(absf(d)), pct_text(dp), "vs normal value" if _mode == "normal" else ("vs yesterday" if Market.daily() else "vs last tick")], "small", UP if d >= 0 else DOWN)
 		var line: Array = []
 		var n: int = 0
 		for e: Dictionary in held:
@@ -278,7 +275,7 @@ func _hero(held: Array, total: float, count: float) -> void:
 		s.color = UP if d >= 0 else DOWN
 		s.custom_minimum_size = Vector2(0, 56)
 		v.add_child(s)
-	Room.text(v, "%d fish  ·  %d species" % [int(count), held.size()], 13, SUB)
+	Kit.text(v, "%d fish  ·  %d species" % [int(count), held.size()], "small", SUB)
 	if not _confirm_all:
 		var b: Button = Kit.button("Sell all %d fish   ·   %s ⟡" % [int(count), Js.thousands(total)], "primary")
 		b.custom_minimum_size = Vector2(0, 54)
@@ -287,9 +284,9 @@ func _hero(held: Array, total: float, count: float) -> void:
 			_confirm_all = true
 			rebuild())
 		v.add_child(b)
-		Room.text(v, "Full market price, paid straight away.", 12, SUB)
+		Kit.text(v, "Full market price, paid straight away.", "small", SUB)
 	else:
-		Room.text(v, "Sell all %d fish for %s ⟡? This cannot be undone." % [int(count), Js.thousands(total)], 15, INK, false, true)
+		Kit.text(v, "Sell all %d fish for %s ⟡? This cannot be undone." % [int(count), Js.thousands(total)], "body", INK, true)
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		v.add_child(row)
@@ -339,6 +336,14 @@ func _after_sale(r: Dictionary, fallback: String) -> void:
 	rebuild()
 
 
+## THE one "Go fishing" (both boards): back to the water, in the fishing
+## action's colour.
+func _go_fishing() -> Button:
+	var go: Button = Kit.button("Go fishing", "accent", "large", Kit.CAST)
+	go.pressed.connect(close)
+	return go
+
+
 ## What is aboard: a row per species, its worth, and a Sell for the stack.
 func _holdings(held: Array) -> void:
 	Room.heading(col, "Holdings")
@@ -347,13 +352,12 @@ func _holdings(held: Array) -> void:
 		var v: VBoxContainer = VBoxContainer.new()
 		v.alignment = BoxContainer.ALIGNMENT_CENTER
 		p.add_child(v)
-		var a: Label = Room.text(v, "No fish in hold", 18, INK, true)
+		var a: Label = Kit.text(v, "No fish in hold", "heading", INK)
 		a.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		var b: Label = Room.text(v, "Sail out and catch something worth selling.", 14, SUB)
+		var b: Label = Kit.text(v, "Sail out and catch something worth selling.", "desc", SUB)
 		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		var go: Button = Kit.button("Go Fishing", "accent", "large", Color("#67d4e8"))
+		var go: Button = _go_fishing()
 		go.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		go.pressed.connect(close)
 		v.add_child(go)
 		return
 	var g: GridContainer = Room.grid(col, 2 if col.custom_minimum_size.x >= 800.0 else 1, 8)
@@ -366,7 +370,7 @@ func _holding_row(e: Dictionary) -> Control:
 	var stack: float = price * float(e["qty"])
 	var rs: Dictionary = Kit.row(0)
 	var rh: Dictionary = rs.duplicate()
-	rh["border"] = [1, Color(0.94, 0.75, 0.25, 0.35)]
+	rh["border"] = [1, Color(GOLD, 0.35)]
 	var row: Pane.PaneButton = Pane.PaneButton.new(rs, rh)
 	row.custom_minimum_size = Vector2(0, 64)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -378,15 +382,15 @@ func _holding_row(e: Dictionary) -> Control:
 	h.add_theme_constant_override("separation", 10)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(h)
-	var dot: Label = Room.text(h, "●", 12, Color(RARITY.get(int(e["rarity"]), "#9ca3af")))
+	var dot: Label = Kit.text(h, "●", "small", Kit.rarity(int(e["rarity"])))
 	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var names: VBoxContainer = VBoxContainer.new()
 	names.alignment = BoxContainer.ALIGNMENT_CENTER
 	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	names.add_theme_constant_override("separation", 0)
 	h.add_child(names)
-	Room.text(names, e["name"], 15, INK, true).clip_text = true
-	Room.text(names, ("×%d  ·  %s ⟡" % [int(e["qty"]), Js.thousands(stack)]) if _advanced else "%d aboard" % int(e["qty"]), 12, SUB)
+	Kit.text(names, e["name"], "name", INK).clip_text = true
+	Kit.text(names, (("×%d" + Kit.SEP + "%s ⟡") % [int(e["qty"]), Js.thousands(stack)]) if _advanced else "%d aboard" % int(e["qty"]), "small", SUB)
 	if _advanced:
 		var sp: Spark = Spark.new()
 		var pts: Array = (e["history"] as Array).duplicate()
@@ -403,16 +407,16 @@ func _holding_row(e: Dictionary) -> Control:
 	h.add_child(right)
 	if _advanced:
 		var sg: Array = _signal(e)
-		var a: Label = Room.text(right, "%s ⟡" % Js.thousands(price), 15, INK, true)
+		var a: Label = Kit.text(right, "%s ⟡" % Js.thousands(price), "name", INK)
 		a.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		var b: Label = Room.text(right, "%s %s" % ["▲" if sg[0] else "▼", pct_text(sg[1])], 12, UP if sg[0] else DOWN)
+		var b: Label = Kit.text(right, "%s %s" % ["▲" if sg[0] else "▼", pct_text(sg[1])], "small", UP if sg[0] else DOWN)
 		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	else:
-		var a: Label = Room.text(right, "%s ⟡" % Js.thousands(stack), 15, GOLD, true)
+		var a: Label = Kit.text(right, "%s ⟡" % Js.thousands(stack), "name", GOLD)
 		a.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		var b: Label = Room.text(right, "%s each" % Js.thousands(price), 12, SUB)
+		var b: Label = Kit.text(right, "%s each" % Js.thousands(price), "small", SUB)
 		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var sell: Button = Room.tinted("Sell", Color("#7fd49a"), 14, 36)
+	var sell: Button = Kit.button("Sell", "primary", "small")
 	sell.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sell.mouse_filter = Control.MOUSE_FILTER_STOP
 	sell.pressed.connect(func() -> void: _sell(float(e["id"]), float(e["qty"])))
@@ -430,8 +434,8 @@ func _trade(e: Dictionary) -> void:
 		var sg: Array = _signal(e)
 		var pr: HBoxContainer = HBoxContainer.new()
 		sh.body.add_child(pr)
-		Room.text(pr, "%s ⟡" % Js.thousands(each(e)), 26, INK, true)
-		Room.text(pr, "  %s %s  %s" % ["▲" if sg[0] else "▼", pct_text(sg[1]), "vs normal" if _mode == "normal" else ("vs yesterday" if Market.daily() else "vs last tick")], 14, UP if sg[0] else DOWN).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		Kit.text(pr, "%s ⟡" % Js.thousands(each(e)), "display_sm", INK)
+		Kit.text(pr, "  %s %s  %s" % ["▲" if sg[0] else "▼", pct_text(sg[1]), "vs normal" if _mode == "normal" else ("vs yesterday" if Market.daily() else "vs last tick")], "desc", UP if sg[0] else DOWN).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var sp: Spark = Spark.new()
 		var pts: Array = (e["history"] as Array).duplicate()
 		pts.append(e["m"])
@@ -464,7 +468,7 @@ func _trade(e: Dictionary) -> void:
 		var label: Callable = func() -> void:
 			go.text = "Sell %d  ·  %s ⟡" % [int(q.value), Js.thousands(each(e) * q.value)]
 		for c: Array in [["25%", 0.25], ["50%", 0.5], ["All", 1.0]]:
-			var chip: Button = Room.tinted(c[0], Color("#b9c6d0"), 13, 34)
+			var chip: Button = Kit.button(c[0], "secondary", "small")
 			chip.pressed.connect(func() -> void: q.value = maxf(1.0, floor(float(e["qty"]) * float(c[1]))))
 			qrow.add_child(chip)
 		q.value_changed.connect(func(_v: float) -> void: label.call())
@@ -502,9 +506,9 @@ func _movers(logged: Array) -> void:
 		g.add_child(p)
 		var v: VBoxContainer = VBoxContainer.new()
 		p.add_child(v)
-		Room.text(v, (m[0] as String).to_upper(), 11, Color(m[2], 0.8))
-		Room.text(v, e["name"], 16, INK, true)
-		Room.text(v, "%s ⟡   %s" % [Js.thousands(each(e)), pct_text(_signal(e)[1])], 13, m[2])
+		Kit.text(v, String(m[0]), "eyebrow", Color(m[2], 0.8))
+		Kit.text(v, e["name"], "heading", INK)
+		Kit.text(v, "%s ⟡   %s" % [Js.thousands(each(e)), pct_text(_signal(e)[1])], "small", m[2])
 
 
 ## Every species logged and not aboard, sortable and by water.
@@ -513,12 +517,9 @@ func _browse(rows: Array) -> void:
 	var bar: HBoxContainer = HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 6)
 	col.add_child(bar)
-	for s: Array in [["value", "Value"], ["change", "Change"], ["name", "A–Z"]]:
-		var b: Button = Room.tinted(s[1], GOLD if _sort == s[0] else Color("#8a95a0"), 12, 30)
-		b.pressed.connect(func() -> void:
-			_sort = s[0]
-			rebuild())
-		bar.add_child(b)
+	Kit.tabs(bar, [["value", "Value"], ["change", "Change"], ["name", "A–Z"]], _sort, accent, func(k: Variant) -> void:
+		_sort = String(k)
+		rebuild())
 	var sp: Control = Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(sp)
@@ -540,7 +541,7 @@ func _browse(rows: Array) -> void:
 		"name":
 			list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a["name"]) < String(b["name"]))
 	if list.is_empty():
-		Room.text(col, "No species match.", 14, SUB)
+		Kit.text(col, "No species match.", "desc", SUB)
 		return
 	var shown: Array = list if _show_all else list.slice(0, 10)
 	for e: Dictionary in shown:
@@ -548,16 +549,16 @@ func _browse(rows: Array) -> void:
 		var h: HBoxContainer = HBoxContainer.new()
 		h.add_theme_constant_override("separation", 10)
 		r.add_child(h)
-		Room.text(h, "●", 12, Color(RARITY.get(int(e["rarity"]), "#9ca3af")))
-		var n: Label = Room.text(h, e["name"], 14, INK, true)
+		Kit.text(h, "●", "small", Kit.rarity(int(e["rarity"])))
+		var n: Label = Kit.text(h, e["name"], "name", INK)
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var hab: Array = _hab(e)
-		Room.text(h, hab[0], 12, Color(hab[1]))
-		Room.text(h, "%s ⟡" % Js.thousands(floor(float(e["value"]) * float(e["m"]))), 14, INK, true)
+		Kit.text(h, hab[0], "small", SUB)
+		Kit.text(h, "%s ⟡" % Js.thousands(floor(float(e["value"]) * float(e["m"]))), "name", INK)
 		var sg: Array = _signal(e)
-		Room.text(h, "%s %s" % ["▲" if sg[0] else "▼", pct_text(sg[1])], 12, UP if sg[0] else DOWN)
+		Kit.text(h, "%s %s" % ["▲" if sg[0] else "▼", pct_text(sg[1])], "small", UP if sg[0] else DOWN)
 	if list.size() > 10:
-		var more: Button = Room.tinted("Show less" if _show_all else "Show all %d species" % list.size(), Color("#b9c6d0"), 13, 34)
+		var more: Button = Kit.button("Show less" if _show_all else "Show all %d species" % list.size(), "secondary", "small")
 		more.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		more.pressed.connect(func() -> void:
 			_show_all = not _show_all
@@ -626,22 +627,22 @@ func _counter(held: Array, total: float, count: float) -> void:
 	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	Paper.text(top, "Purse", "label", Paper.INK_SOFT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var now_purse: float = Js.num(session.profile().get("doubloons"))
-	_purse_l = Paper.text(top, "%s ⟡" % Js.thousands(now_purse if _purse_from < 0.0 else _purse_from), "display", Color(0.55, 0.38, 0.04))
-	_purse_l.add_theme_font_size_override("font_size", 30)
+	_purse_l = Paper.text(top, "%s ⟡" % Js.thousands(now_purse if _purse_from < 0.0 else _purse_from), "display_sm", Paper.MONEY)
 	if _purse_from >= 0.0 and _purse_from != now_purse:
 		var from: float = _purse_from
 		_purse_from = -1.0
-		var tw: Tween = _purse_l.create_tween()
-		tw.tween_interval(0.35)
-		tw.tween_method(func(x: float) -> void:
-			if is_instance_valid(_purse_l):
-				_purse_l.text = "%s ⟡" % Js.thousands(round(x)), from, now_purse, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		# The count-up waits for the coins to land (Motion.count, CUBIC out).
+		var pl: Label = _purse_l
+		get_tree().create_timer(0.35).timeout.connect(func() -> void:
+			if is_instance_valid(pl):
+				Motion.count(pl, from, now_purse, func(x: float) -> void:
+					if is_instance_valid(pl):
+						pl.text = "%s ⟡" % Js.thousands(round(x))))
 	_purse_from = -1.0
 	if held.is_empty():
 		Paper.text(v, "Sail out and catch something worth selling.", "body", Paper.INK_SOFT)
-		var go: Pane.PaneButton = Paper.button("Go fishing", true)
+		var go: Button = _go_fishing()
 		go.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		go.pressed.connect(close)
 		v.add_child(go)
 		return
 	Paper.text(v, "Press a fish to sell that stack at today's price.", "note", Paper.INK_SOFT)
@@ -672,7 +673,7 @@ func _tile(e: Dictionary) -> Control:
 	var price: float = each(e)
 	var stack: float = price * float(e["qty"])
 	var rar: Color = Paper.rarity(float(e["rarity"]))
-	var n: Dictionary = { "radius": 10, "fill": [Color(1, 1, 1, 0.28)], "border": [1, Color(Kit.PAPER_INK, 0.22)], "pad": 0 }
+	var n: Dictionary = { "radius": Kit.R_LARGE, "fill": [Color(1, 1, 1, 0.28)], "border": [1, Color(Kit.PAPER_INK, 0.22)], "pad": 0 }
 	var h: Dictionary = n.duplicate()
 	h["fill"] = [Color(1, 1, 1, 0.45)]
 	h["border"] = [2, Color(rar, 0.8)]
@@ -704,8 +705,7 @@ func _tile(e: Dictionary) -> Control:
 	nm.clip_text = true
 	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	Paper.text(nr, "×%d" % int(e["qty"]), "label", Paper.INK_SOFT)
-	var pr: Label = Paper.text(v, "%s ⟡" % Js.thousands(stack), "heading", Color(0.55, 0.38, 0.04))
-	pr.add_theme_font_size_override("font_size", 22)
+	Paper.text(v, "%s ⟡" % Js.thousands(stack), "title", Paper.MONEY)
 	b.pressed.connect(func() -> void: _sell_tile(b, e))
 	return b
 
@@ -716,12 +716,22 @@ func _sell_tile(tile: Control, e: Dictionary) -> void:
 		return
 	_purse_from = Js.num(session.profile().get("doubloons"))
 	_coins(tile.get_global_rect().get_center(), clampi(int(float(e["qty"])) + 3, 4, 14))
-	tile.pivot_offset = tile.size / 2.0
-	var tw: Tween = tile.create_tween()
-	tw.tween_property(tile, "scale", Vector2(1.08, 1.08), 0.08)
-	tw.tween_property(tile, "scale", Vector2(0.0, 0.0), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	_sold(tile, 0.0)
 	Sound.seal(false)
 	await _sell(float(e["id"]), float(e["qty"]))
+
+
+## A sold tile going: a small swell (CUBIC out), then it fades and shrinks
+## away (CUBIC in; the law keeps BACK off exits).
+func _sold(tile: Control, delay: float) -> void:
+	tile.pivot_offset = tile.size / 2.0
+	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tw: Tween = tile.create_tween()
+	tw.tween_interval(delay)
+	tw.tween_property(tile, "scale", Vector2(1.05, 1.05), 0.08).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.set_parallel(true)
+	tw.chain().tween_property(tile, "scale", Vector2(0.6, 0.6), Motion.LEAVE).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw.tween_property(tile, "modulate:a", 0.0, Motion.LEAVE).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 
 
 ## The lot: every tile goes, one after another, and the coins with them.
@@ -737,8 +747,7 @@ func _sell_lot(g: GridContainer) -> void:
 			if not is_instance_valid(tile):
 				return
 			_coins(tile.get_global_rect().get_center(), 5)
-			tile.pivot_offset = tile.size / 2.0
-			tile.create_tween().tween_property(tile, "scale", Vector2.ZERO, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN))
+			_sold(tile, 0.0))
 		k += 1
 	Sound.chest(true)
 	await get_tree().create_timer(0.05 * k + 0.2).timeout
@@ -752,7 +761,7 @@ func _coins(from: Vector2, n: int) -> void:
 	var to: Vector2 = _purse_l.get_global_rect().get_center()
 	for i: int in n:
 		var c: TextureRect = TextureRect.new()
-		c.texture = Glow.radial(32, Color(1.0, 0.8, 0.3), false)
+		c.texture = Glow.radial(32, GOLD, false)
 		c.size = Vector2(22, 22)
 		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		c.top_level = true

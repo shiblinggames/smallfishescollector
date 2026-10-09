@@ -40,7 +40,7 @@ func _ready() -> void:
 	v.add_child(head)
 	var t: Label = Kit.text(head, "Blackjack with the crew", "title", Kit.WOOD_INK)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Kit.text(head, "Pays 3 to 2   ·   Dealer hits soft 17", "label", Color(1.0, 0.86, 0.5))
+	Kit.text(head, "Pays 3 to 2   ·   Dealer hits soft 17", "label", Kit.SAND)
 	var dh: HBoxContainer = HBoxContainer.new()
 	dh.alignment = BoxContainer.ALIGNMENT_CENTER
 	dh.add_theme_constant_override("separation", 10)
@@ -52,7 +52,7 @@ func _ready() -> void:
 	_dealer.add_theme_constant_override("separation", -26)
 	_dealer.custom_minimum_size = Vector2(0, 128)
 	v.add_child(_dealer)
-	_says = Kit.text(v, "", "title", Color(1.0, 0.88, 0.55))
+	_says = Kit.text(v, "", "title", Kit.SAND)
 	_says.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_says.custom_minimum_size = Vector2(0, 32)
 	_seats_box = HBoxContainer.new()
@@ -264,7 +264,7 @@ func _layout_seats(st: Dictionary) -> void:
 			box.add_child(cards)
 			var info: Label = Kit.text(box, "", "label", Kit.WOOD_INK)
 			info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			var word: Label = Kit.text(box, "", "label", Color(1.0, 0.88, 0.55))
+			var word: Label = Kit.text(box, "", "label", Kit.SAND)
 			word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			_seat_ui[k] = { "box": box, "name": name_l, "cards": cards, "info": info, "word": word }
 		var ui: Dictionary = _seat_ui[k]

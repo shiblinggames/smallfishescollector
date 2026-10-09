@@ -33,7 +33,7 @@ func _backdrop() -> void:
 
 
 func _paper(parent: Control) -> VBoxContainer:
-	var p: Pane = Kit.pane(parent, { "radius": 10, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.3)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 5)], "pad": [22, 14, 22, 16], "paper": true })
+	var p: Pane = Kit.pane(parent, { "radius": Kit.R_LARGE, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.3)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 5)], "pad": [22, 14, 22, 16], "paper": true })
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	p.add_child(v)
@@ -107,7 +107,7 @@ func _build() -> void:
 				if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 					_papers(ch, key))
 			Kit.text(v, str(b.get("name", "?")), "small", Kit.PAPER_INK)
-			Kit.text(v, "aboard" if here else "ashore", "small", Color(0.3, 0.55, 0.35) if here else Kit.PAPER_INK_SOFT)
+			Kit.text(v, "aboard" if here else "ashore", "small", Paper.GREEN if here else Kit.PAPER_INK_SOFT)
 		Kit.text(cr, "%s  ·  %d of %d aboard now" % [str(ch.data.get("name", "The Charter")), aboard, berths.size()], "small", Kit.PAPER_INK_SOFT)
 	# THE SALT ROAD.
 	var sr: VBoxContainer = _paper(col)
@@ -131,7 +131,8 @@ func _build() -> void:
 			row3.add_child(v2)
 			_avatar(v2, Js.obj(f.get("face")), 60.0)
 			Kit.text(v2, str(f.get("short", f.get("name", ""))), "body_strong", Kit.PAPER_INK)
-			Kit.text(v2, Folk.TIER_NAME[int(r["tier"])], "small", Kit.ink(Color(str(f.get("accent", "#d8b070")))))
+			# Where you stand, in words (no colour per regular).
+			Kit.text(v2, Folk.TIER_NAME[int(r["tier"])], "small", Kit.PAPER_INK_SOFT)
 	Kit.text(sr, "%d of %d know your face  ·  %d trust you" % [known, st.size(), trusted], "small", Kit.PAPER_INK_SOFT)
 
 

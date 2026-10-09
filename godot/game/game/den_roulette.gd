@@ -50,7 +50,7 @@ func _ready() -> void:
 	v.add_child(head)
 	var t: Label = Kit.text(head, "Fish Roulette", "title", Kit.WOOD_INK)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_says = Kit.text(head, "Place your chips on the board", "label", Color(1.0, 0.86, 0.5))
+	_says = Kit.text(head, "Place your chips on the board", "label", Kit.SAND)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 	v.add_child(row)
@@ -426,7 +426,6 @@ class Wheel:
 			var bp: Vector2 = c + Vector2.from_angle(angle + _ball_rel - PI / 2.0) * br
 			draw_circle(bp + Vector2(1.5, 2.5), 7.0, Color(0, 0, 0, 0.35))
 			draw_circle(bp, 7.0, Color(0.97, 0.96, 0.92))
-			draw_circle(bp + Vector2(-2, -2), 2.5, Color(1, 1, 1))
 		# The last numbers, as beads under the wheel.
 		for k: int in mini(recent.size(), 10):
 			var p: Vector2 = Vector2(c.x - 4.5 * 22.0 + k * 22.0, size.y - 2.0)

@@ -9,15 +9,15 @@ extends Room
 ## letters are called. Rules: core/parlor.gd.
 
 const CORAL: Color = Color("#dd8f79")
-const RIGHT: Color = Color(0.25, 0.55, 0.3)
-const WRONG: Color = Color(0.66, 0.2, 0.15)
+const RIGHT: Color = Paper.GREEN
+const WRONG: Color = Paper.RED
 
 var tab: String = "board"
 var _st: Dictionary = {}
 var _tabs: HBoxContainer
 var _body: VBoxContainer
 var _rank_l: Label
-var _pts_bar: Control
+var _pts_bar: Kit.Bar
 var _streak_l: Label
 var _busy: bool = false
 # The card in play.
@@ -52,7 +52,7 @@ func _backdrop() -> void:
 func _build() -> void:
 	_st = Parlor.state(session.store, session.uid)
 	# Where you stand: the rank, the points to the next, the streak.
-	var strip: Pane = Kit.pane(col, { "radius": 10, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.3)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 5)], "pad": [22, 12, 22, 14], "paper": true })
+	var strip: Pane = Kit.pane(col, { "radius": Kit.R_LARGE, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.3)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 5)], "pad": [22, 12, 22, 14], "paper": true })
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	strip.add_child(row)
@@ -61,16 +61,12 @@ func _build() -> void:
 	left.add_theme_constant_override("separation", 2)
 	row.add_child(left)
 	_rank_l = Paper.text(left, "", "heading", Paper.INK)
-	_pts_bar = Control.new()
-	_pts_bar.custom_minimum_size = Vector2(0, 6)
-	_pts_bar.draw.connect(_draw_pts)
-	left.add_child(_pts_bar)
+	_pts_bar = Kit.bar(left, 0.0, Paper.INK)
 	var note: Label = Paper.text(left, "", "note", Paper.INK_SOFT)
 	note.name = "PtsNote"
 	_streak_l = Paper.text(row, "", "title", Paper.RED)
 	_streak_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_tabs = HBoxContainer.new()
-	_tabs.add_theme_constant_override("separation", 8)
 	col.add_child(_tabs)
 	_body = VBoxContainer.new()
 	_body.add_theme_constant_override("separation", 12)
@@ -91,17 +87,12 @@ func _paint_strip() -> void:
 	var cap: String = str(Skins.cfg().get("parlorCapstone", ""))
 	if nxt != null and str(nxt["title"]) == cap:
 		pn.text += "   ·   %s brings a %s" % [cap, Skins.kind_def("captain").get("name", "Captain's Voucher")]
-	_pts_bar.queue_redraw()
-
-
-func _draw_pts() -> void:
-	var rk: Dictionary = _st["rank"]
-	var nxt: Variant = _st.get("nextRank")
 	var f: float = 1.0
 	if nxt != null:
 		f = clampf((float(_st["points"]) - float(rk["at"])) / maxf(1.0, float(nxt["at"]) - float(rk["at"])), 0.0, 1.0)
-	_pts_bar.draw_rect(Rect2(Vector2.ZERO, _pts_bar.size), Color(Paper.INK, 0.12))
-	_pts_bar.draw_rect(Rect2(Vector2.ZERO, Vector2(_pts_bar.size.x * f, _pts_bar.size.y)), Kit.ink(Color(str(rk["color"]))))
+	var bar: Kit.Bar = _pts_bar
+	bar.color = Kit.ink(Color(str(rk["color"])))
+	bar.set_value(f)
 
 
 func _refresh() -> void:
@@ -112,15 +103,21 @@ func _refresh() -> void:
 func _open(which: String) -> void:
 	tab = which
 	for c: Node in _tabs.get_children():
+		_tabs.remove_child(c)
 		c.queue_free()
 	var lock: String = str(_st["king"].get("locked", ""))
+	var opts: Array = []
+	var shut: Array = []
 	for t: Array in [["board", "Captain's Board", ""], ["king", "The Pirate King", lock], ["capstan", "Spin the Capstan", ""]]:
-		var b: Button = Paper.button(t[1] if t[2] == "" else "%s  ·  %s" % [t[1], t[2]], t[0] == which)
-		b.disabled = t[2] != ""
-		b.pressed.connect(func() -> void:
-			if not _busy:
-				_open(t[0]))
-		_tabs.add_child(b)
+		opts.append([t[0], t[1] if t[2] == "" else t[1] + Kit.SEP + t[2]])
+		shut.append(t[2] != "")
+	var row: HBoxContainer = Kit.tabs(_tabs, opts, which, accent, func(k: Variant) -> void:
+		if not _busy:
+			_open(String(k)))
+	for i: int in row.get_child_count():
+		var b: Button = row.get_child(i)
+		b.disabled = shut[i]
+		b.add_theme_color_override("font_disabled_color", Color(Kit.PAPER_INK_SOFT, 0.55))
 	for c: Node in _body.get_children():
 		c.queue_free()
 	_q_card = null
@@ -174,10 +171,7 @@ func _board_view() -> void:
 		hand.add_child(card)
 		card.pivot_offset = Vector2(80, 230)
 		card.rotation = deg_to_rad((i - (cards.size() - 1) / 2.0) * 4.0)
-		card.modulate.a = 0.0
-		var tw: Tween = card.create_tween()
-		tw.tween_interval(0.06 * i)
-		tw.tween_property(card, "modulate:a", 1.0, 0.2)
+		Motion.stagger(card, i)
 		if c.has("question"):
 			# Turned over and not answered: back to it.
 			_play_card.call_deferred(c)
@@ -194,7 +188,7 @@ func _dur(ms: float) -> String:
 func _card_button(c: Dictionary) -> Button:
 	var cat: Dictionary = _cat(str(c["category"]))
 	var colr: Color = Color(str(cat["color"]))
-	var n: Dictionary = { "radius": 10, "fill": [Kit.PAPER], "border": [2, Color(Kit.ink(colr), 0.7)], "shadow": [Color(0, 0, 0, 0.45), 14, Vector2(0, 6)], "pad": 0, "paper": true }
+	var n: Dictionary = { "radius": Kit.R_LARGE, "fill": [Kit.PAPER], "border": [2, Color(Kit.ink(colr), 0.7)], "shadow": [Color(0, 0, 0, 0.45), 14, Vector2(0, 6)], "pad": 0, "paper": true }
 	var h: Dictionary = n.duplicate()
 	h["border"] = [3, Kit.ink(colr)]
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
@@ -214,9 +208,8 @@ func _card_button(c: Dictionary) -> Button:
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var tier: Label = Paper.text(v, "★".repeat(int(c["tier"])), "title", Kit.ink(colr))
 	tier.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var w: Label = Paper.text(v, "%d ⟡" % int(c["value"]), "display", Color(0.55, 0.38, 0.04))
+	var w: Label = Paper.text(v, "%d ⟡" % int(c["value"]), "display_sm", Paper.MONEY)
 	w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	w.add_theme_font_size_override("font_size", 30)
 	b.pressed.connect(func() -> void: _turn(c, b))
 	return b
 
@@ -233,7 +226,7 @@ func _turn(c: Dictionary, from: Control) -> void:
 	session.persist()
 	# The card turns: narrows to an edge, then the question grows from it.
 	var tw: Tween = from.create_tween()
-	tw.tween_property(from, "scale:x", 0.0, 0.14).set_ease(Tween.EASE_IN)
+	tw.tween_property(from, "scale:x", 0.0, 0.14).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	await tw.finished
 	Sound.plip()
 	var mine: Dictionary = (r["hand"] as Array).filter(func(x: Dictionary) -> bool: return x["key"] == c["key"])[0]
@@ -272,9 +265,9 @@ func _play_card(c: Dictionary) -> void:
 	v.add_child(opts)
 	var buttons: Array = []
 	for i: int in 4:
-		var ob: Button = Paper.button(str(c["options"][i]))
+		# An answer is a sentence: the quiet large button (Karla), not capitals.
+		var ob: Button = Kit.button(str(c["options"][i]), "quiet")
 		ob.custom_minimum_size = Vector2(340, 56)
-		ob.add_theme_font_size_override("font_size", 17)
 		opts.add_child(ob)
 		buttons.append(ob)
 	var explain: Label = Paper.text(v, "", "body", Paper.INK_SOFT, true)
@@ -288,12 +281,7 @@ func _play_card(c: Dictionary) -> void:
 	var lim: float = float(Parlor.c()["answerSeconds"])
 	var left: float = maxf(0.0, lim - (Clock.now_ms() - revealed) / 1000.0)
 	_deadline = Time.get_ticks_msec() / 1000.0 + left
-	card.scale = Vector2(0.6, 0.6)
-	card.pivot_offset = Vector2(380, 160)
-	card.modulate.a = 0.0
-	var tw: Tween = card.create_tween().set_parallel()
-	tw.tween_property(card, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(card, "modulate:a", 1.0, 0.18)
+	Motion.arrive(card, "m")
 	var answer: Callable = func(i: int) -> void:
 		if _busy:
 			return
@@ -403,15 +391,15 @@ func _king_view() -> void:
 			var done: bool = i < rung
 			var cur: bool = i == rung and k["status"] == "active"
 			var haven: bool = havens.has(float(i + 1)) or havens.has(i + 1)
-			ladder.draw_line(Vector2(30, y), Vector2(ladder.size.x - 30, y), Kit.WOOD_HI if not cur else Color(1.0, 0.8, 0.3), 5.0 if cur else 3.0)
+			ladder.draw_line(Vector2(30, y), Vector2(ladder.size.x - 30, y), Kit.WOOD_HI if not cur else Kit.GOLD_HI, 5.0 if cur else 3.0)
 			var s: String = "%d ⟡" % int(prizes[i])
-			var col: Color = Color(1.0, 0.85, 0.5) if cur else (Kit.INK if done else Color(Kit.INK, 0.5))
+			var col: Color = Kit.SAND if cur else (Kit.INK if done else Color(Kit.INK, 0.5))
 			var w: float = fnt.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 			ladder.draw_string(fnt, Vector2(ladder.size.x / 2.0 - w / 2.0, y - 6.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, col)
 			if haven:
-				ladder.draw_string(Kit.font("karla", 700), Vector2(ladder.size.x - 26, y - 6.0), "safe", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 0.85, 0.6))
+				ladder.draw_string(Kit.font("karla", 700), Vector2(ladder.size.x - 26, y - 6.0), "safe", HORIZONTAL_ALIGNMENT_LEFT, -1, Kit.role_px("label"), Paper.NIGHT_GREEN)
 			if done:
-				ladder.draw_circle(Vector2(16, y), 6.0, Color(1.0, 0.8, 0.3)))
+				ladder.draw_circle(Vector2(16, y), 6.0, Kit.GOLD_HI))
 	row.add_child(ladder)
 	var right: VBoxContainer = VBoxContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -465,7 +453,7 @@ func _king_rung(host: VBoxContainer) -> void:
 	var q: Dictionary = st["current"]
 	var rung: int = int(_st["king"]["rung"])
 	var cat: Dictionary = _cat(str(q.get("category", "LORE")))
-	var card: Pane = Kit.pane(host, { "radius": 14, "fill": [Kit.PAPER], "border": [2, Color(1.0, 0.8, 0.3)], "shadow": [Color(0, 0, 0, 0.5), 22, Vector2(0, 8)], "pad": [26, 20, 26, 22], "paper": true })
+	var card: Pane = Kit.pane(host, { "radius": 14, "fill": [Kit.PAPER], "border": [2, Kit.ink(Kit.GOLD)], "shadow": [Color(0, 0, 0, 0.5), 22, Vector2(0, 8)], "pad": [26, 20, 26, 22], "paper": true })
 	_q_card = card
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 12)
@@ -486,7 +474,7 @@ func _king_rung(host: VBoxContainer) -> void:
 	v.add_child(opts)
 	var buttons: Array = []
 	for i: int in 4:
-		var ob: Button = Paper.button(str(q["options"][i]))
+		var ob: Button = Kit.button(str(q["options"][i]), "quiet")
 		ob.custom_minimum_size = Vector2(300, 52)
 		ob.disabled = Js.includes(q["removed"], float(i))
 		opts.add_child(ob)
@@ -509,7 +497,7 @@ func _king_rung(host: VBoxContainer) -> void:
 			for i: Variant in r["removed"]:
 				var bb: Button = buttons[int(i)]
 				bb.disabled = true
-				bb.create_tween().tween_property(bb, "modulate:a", 0.35, 0.25))
+				bb.create_tween().tween_property(bb, "modulate:a", 0.35, 0.25).set_trans(Tween.TRANS_SINE))
 		tools.add_child(fifty)
 	var go_on: Button = Kit.button("Onward", "primary")
 	go_on.visible = false
@@ -550,17 +538,13 @@ func _capstan_view() -> void:
 		Kit.text(_body, "The capstan is being rigged. Come back soon.", "label", Kit.INK)
 		return
 	_cap_i = clampi(_cap_i, 0, puzzles.size() - 1)
-	var pick: HBoxContainer = HBoxContainer.new()
-	pick.add_theme_constant_override("separation", 8)
-	_body.add_child(pick)
+	var opts: Array = []
 	for i: int in puzzles.size():
-		var p: Dictionary = puzzles[i]
-		var mark: String = {"solved": "  ✓", "failed": "  ✗"}.get(p["status"], "")
-		var b: Button = Paper.button("Puzzle %d%s" % [i + 1, mark], i == _cap_i)
-		b.pressed.connect(func() -> void:
-			_cap_i = i
-			_open("capstan"))
-		pick.add_child(b)
+		var mark: String = {"solved": "  ✓", "failed": "  ✗"}.get((puzzles[i] as Dictionary)["status"], "")
+		opts.append([i, "Puzzle %d%s" % [i + 1, mark]])
+	Kit.tabs(_body, opts, _cap_i, accent, func(k: Variant) -> void:
+		_cap_i = int(k)
+		_open("capstan"))
 	var p: Dictionary = puzzles[_cap_i]
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 20)
@@ -577,7 +561,7 @@ func _capstan_view() -> void:
 	right.add_child(head)
 	var cat: Label = Kit.text(head, str(p["category"]), "title", Kit.INK)
 	cat.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Kit.text(head, "Bank %d ⟡   ·   strikes %d of %d" % [int(p["bank"]), int(p["strikes"]), int(Parlor.c()["capstanMaxStrikes"])], "label", Color(1.0, 0.86, 0.5))
+	Kit.text(head, "Bank %d ⟡   ·   strikes %d of %d" % [int(p["bank"]), int(p["strikes"]), int(Parlor.c()["capstanMaxStrikes"])], "label", Kit.SAND)
 	# The board of tiles.
 	var tiles: HFlowContainer = HFlowContainer.new()
 	tiles.add_theme_constant_override("h_separation", 18)
@@ -594,7 +578,7 @@ func _capstan_view() -> void:
 			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var msg: Label = Kit.text(right, "", "label", Color(1.0, 0.88, 0.55))
+	var msg: Label = Kit.text(right, "", "label", Kit.SAND)
 	if p["status"] != "active":
 		msg.text = ("Solved: %s  ·  +%d ⟡" % [p["phrase"], int(p["earned"])]) if p["status"] == "solved" else "Out of strikes. It was: %s" % p["phrase"]
 		return
@@ -737,7 +721,7 @@ class CapWheel:
 			for k: int in 7:
 				pts.append(c + Vector2.from_angle(lerpf(a0, a1, k / 6.0)) * (R - 8.0))
 			var w: Variant = wedges[i]
-			var col: Color = Color(0.62, 0.2, 0.15) if w is String else (Kit.PAPER if i % 2 == 0 else Kit.PAPER.darkened(0.12))
+			var col: Color = Paper.RED if w is String else (Kit.PAPER if i % 2 == 0 else Kit.PAPER.darkened(0.12))
 			draw_colored_polygon(pts, col)
 			draw_line(c, c + Vector2.from_angle(a0) * (R - 8.0), Color(0.3, 0.2, 0.1, 0.6), 1.5, true)
 			var label: String = ("OVER" if w == "overboard" else "LOSE") if w is String else str(int(w))
@@ -749,4 +733,4 @@ class CapWheel:
 		draw_circle(c, R * 0.16, Color(0.75, 0.58, 0.28))
 		draw_circle(c, R * 0.1, Kit.WOOD_LO)
 		# The pointer at the top.
-		draw_colored_polygon(PackedVector2Array([c + Vector2(-12, -R - 6), c + Vector2(12, -R - 6), c + Vector2(0, -R + 18)]), Color(0.62, 0.2, 0.15))
+		draw_colored_polygon(PackedVector2Array([c + Vector2(-12, -R - 6), c + Vector2(12, -R - 6), c + Vector2(0, -R + 18)]), Paper.RED)

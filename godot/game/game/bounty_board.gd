@@ -11,51 +11,34 @@ signal closed
 
 var session: Session
 var _body: VBoxContainer
+## THE shell (Paper.open): scrim, sheet, body.
+var _parts: Dictionary = {}
+## What the feedback line says after an action (it survives the repaint).
 var _flash: String = ""
+var _flash_bad: bool = false
 
-const GREEN: Color = Color(0.5, 0.86, 0.58)
-const GOLD: Color = Color(0.94, 0.78, 0.4)
+const GREEN: Color = Paper.NIGHT_GREEN
+const GOLD: Color = Paper.NIGHT_GOLD
+## The tiers in words (no colour per tier: the words carry it).
 const TIER_NAME: Dictionary = { "easy": "Easy", "medium": "Medium", "hard": "Hard", "elite": "Elite", "crew": "With the crew" }
-const TIER_COL: Dictionary = { "easy": Color(0.62, 0.78, 0.86), "medium": Color(0.55, 0.82, 0.6), "hard": Color(0.94, 0.7, 0.4), "elite": Color(0.86, 0.55, 0.9), "crew": Color(0.5, 0.86, 0.82) }
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.55)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -560
-	sheet.offset_right = 560
-	sheet.offset_top = -380
-	sheet.offset_bottom = 380
-	add_child(sheet)
-	Paper.night = true
-	Paper.sheet(sheet, 8.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 28)
-	sheet.add_child(m)
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 10)
-	m.add_child(_body)
-	Paper.night = false
+	# THE shell every sheet shares (Paper.open): the scrim, the night paper
+	# rising in at the wide size, a body column.
+	_parts = Paper.open(self, Paper.SHEET_WIDE, true, close)
+	_body = _parts["body"]
 	_paint()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -67,20 +50,16 @@ func _unhandled_input(event: InputEvent) -> void:
 func _paint() -> void:
 	Paper.night = true
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
 	var st: Dictionary = RulesApi.run(session.store, session.uid, "bountyState", [])
-	var head: HBoxContainer = HBoxContainer.new()
-	_body.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.add_theme_constant_override("separation", 0)
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(titles)
-	Paper.text(titles, "THE POSTING HOUSE", "eyebrow", Paper.ink_soft())
-	Paper.text(titles, "Bounties", "display", Paper.ink())
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
+	# THE shared header (eyebrow and title on the left, "Close  Esc" on the
+	# right, the rule), then the feedback line: a claim's word fades in there
+	# instead of pushing the board down.
+	Paper.header(_body, "Bounties", "The Posting House", close)
+	var status: Label = Paper.status_line(_body)
+	if _flash != "":
+		Paper.say(status, _flash, Paper.NIGHT_RED if _flash_bad else GREEN)
 	if not st["unlocked"]:
 		Paper.text(_body, str(st["lockReason"]), "body", Paper.ink_soft(), true)
 		Paper.text(_body, "Bounties are orders to go and do something out past the Sea Gate: sink a named captain, beat a raid under the clock, take the Gauntlet deep, land a big voyage. Each pays doubloons and bounty points.", "small", Paper.ink_soft(), true)
@@ -92,8 +71,6 @@ func _paint() -> void:
 		Paper.text(_body, nl, "body_strong", GOLD, true)
 		RulesApi.run(session.store, session.uid, "markBountyRungSeen", [float(news["chapter"])])
 		session.persist()
-	if _flash != "":
-		Paper.text(_body, _flash, "body_strong", GREEN, true)
 	var cols: HBoxContainer = HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 30)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -128,15 +105,11 @@ func _row(parent: Control, v: Dictionary, swap_used: bool) -> void:
 	top.add_theme_constant_override("separation", 8)
 	c.add_child(top)
 	Paper.text(top, str(v["name"]), "body_strong", Paper.ink() if not claimed else Paper.ink_faint())
-	Paper.text(top, TIER_NAME[v["tier"]].to_upper(), "eyebrow", TIER_COL[v["tier"]])
+	Paper.text(top, TIER_NAME[v["tier"]], "eyebrow", Paper.ink_soft())
 	Paper.text(c, str(v["desc"]), "small", Paper.ink_soft(), true)
-	var bar: Control = Control.new()
-	bar.custom_minimum_size = Vector2(0, 5)
+	# THE progress bar (Kit.bar), night-aware on this paper.
 	var frac: float = clampf(float(v["progress"]) / maxf(1.0, float(v["target"])), 0.0, 1.0)
-	bar.draw.connect(func() -> void:
-		bar.draw_rect(Rect2(Vector2.ZERO, bar.size), Color(Paper.NIGHT_INK, 0.12))
-		bar.draw_rect(Rect2(Vector2.ZERO, Vector2(bar.size.x * frac, bar.size.y)), GREEN if frac >= 1.0 else Color(Paper.NIGHT_INK, 0.45)))
-	c.add_child(bar)
+	Kit.bar(c, frac, GREEN if frac >= 1.0 else Color(Paper.NIGHT_INK, 0.45))
 	Paper.text(c, "%d of %d  ·  %s ⟡ and %d point%s" % [int(v["progress"]), int(v["target"]), Js.thousands(float(v["pay"])), int(v["points"]), "" if int(v["points"]) == 1 else "s"], "small", Paper.ink_soft())
 	var id: String = v["id"]
 	if claimed:
@@ -154,11 +127,14 @@ func _row(parent: Control, v: Dictionary, swap_used: bool) -> void:
 		sw.pressed.connect(func() -> void:
 			var r: Variant = await session.act("rerollBounty", [id])
 			session.persist()
+			_flash = ""
+			_flash_bad = false
 			if r is Dictionary and (r as Dictionary).has("error"):
 				Sound.slack()
+				_flash = str(r["error"])
+				_flash_bad = true
 			else:
 				Sound.plip()
-			_flash = ""
 			_paint())
 		row.add_child(sw)
 
@@ -166,6 +142,7 @@ func _row(parent: Control, v: Dictionary, swap_used: bool) -> void:
 func _claim(id: String) -> void:
 	var r: Variant = await session.act("claimBounty", [id])
 	session.persist()
+	_flash_bad = false
 	if r is Dictionary and (r as Dictionary).get("ok") == true:
 		Sound.chest(true)
 		var d: Dictionary = r
@@ -176,6 +153,9 @@ func _claim(id: String) -> void:
 			_flash += " You are a %s now." % d["rankGained"]["title"]
 	else:
 		Sound.slack()
+		if r is Dictionary and (r as Dictionary).has("error"):
+			_flash = str(r["error"])
+			_flash_bad = true
 	_paint()
 
 
@@ -207,7 +187,8 @@ func _ladder(parent: Control, st: Dictionary) -> void:
 	if rank.is_empty():
 		Paper.text(rv, "No rank yet", "body_strong", Paper.ink_faint())
 	else:
-		Paper.text(rv, str(rank["title"]), "heading", Color(str(rank["accent"])))
+		# The rank in words and its medallion (no colour per rank).
+		Paper.text(rv, str(rank["title"]), "heading", Paper.ink())
 		Paper.text(rv, str(rank["blurb"]), "small", Paper.ink_soft(), true)
 	var nr: Dictionary = st["nextRank"]
 	if not nr.is_empty():
@@ -219,15 +200,10 @@ func _ladder(parent: Control, st: Dictionary) -> void:
 		return
 	Paper.text(v, "NEXT MILESTONE  ·  %s POINTS" % Js.thousands(float(m["points"])), "eyebrow", Paper.ink_soft())
 	Paper.text(v, str(m["label"]), "body_strong", GOLD)
-	var bar: Control = Control.new()
-	bar.custom_minimum_size = Vector2(0, 6)
-	var frac: float = clampf(pts / maxf(1.0, float(m["points"])), 0.0, 1.0)
-	bar.draw.connect(func() -> void:
-		bar.draw_rect(Rect2(Vector2.ZERO, bar.size), Color(Paper.NIGHT_INK, 0.12))
-		bar.draw_rect(Rect2(Vector2.ZERO, Vector2(bar.size.x * frac, bar.size.y)), GOLD))
-	v.add_child(bar)
+	Kit.bar(v, clampf(pts / maxf(1.0, float(m["points"])), 0.0, 1.0), GOLD)
 	if int(st["milestonesReady"]) > 0:
-		var b: Pane.PaneButton = Paper.button("Collect", true)
+		# The one thing to do here: the wooden plank.
+		var b: Pane.PaneButton = Paper.primary("Collect", true)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		b.pressed.connect(func() -> void:
 			var r: Variant = await session.act("claimBountyMilestone", [])
@@ -235,6 +211,7 @@ func _ladder(parent: Control, st: Dictionary) -> void:
 			if r is Dictionary and (r as Dictionary).get("ok") == true:
 				Sound.chest(true)
 				_flash = "Collected: %s." % r["label"]
+				_flash_bad = false
 			else:
 				Sound.slack()
 			_paint())
