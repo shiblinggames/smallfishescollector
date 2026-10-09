@@ -18,11 +18,10 @@ const INK: Color = Color("#f4ecd8")
 const INK_2: Color = Color("#d8d2c6")
 const DIM: Color = Color("#9a9488")
 const FAINT: Color = Color("#6a6764")
-const GHOST: Color = Color("#4a4845")
 
+## Doubloons (⟡) and good-news toasts ONLY. On paper, money is Paper.MONEY.
 const GOLD: Color = Color("#f0c040")
 const GOLD_HI: Color = Color("#f5cf6a")
-const GOLD_LO: Color = Color("#e0a82e")
 const GOLD_INK: Color = Color("#1a1508")
 const SAND: Color = Color("#ffce8a")
 const BRONZE: Color = Color("#c4a96a")
@@ -36,6 +35,59 @@ const WARN: Color = Color("#e8c98a")
 const UP: Color = Color("#4ade80")
 const DOWN: Color = Color("#f87171")
 const DANGER_INK: Color = Color("#f0a0a0")
+
+## Meaning, in dark contexts (their paper twins come through Kit.ink()).
+const HELP: Color = Color("#7fd6a0")
+const HARM: Color = Color("#f2826e")
+const CAUTION: Color = Color("#f0c56a")
+## XP is the sky; a cast (the fishing action) is its own cyan.
+const XP: Color = SKY
+const CAST: Color = Color("#67d4e8")
+
+## LETTERING ON THE WATER (the compass, story line, XP bar, level-up, chart
+## gain, crew calls, side banner, Sea Gate sign, isle names): one cream, one
+## gold, always with Kit.lift (a Label) or Kit.sea_string (drawn).
+const SEA_INK: Color = Color(0.97, 0.94, 0.86)
+const SEA_GOLD: Color = Color(1.0, 0.82, 0.45)
+## The shade under lettering on the water.
+const SEA_SHADE: Color = Color(0.02, 0.04, 0.06, 0.75)
+
+## WORLD LIGHT, in GDScript and the shaders alike (water.gdshader mirrors
+## these as GLOW_TEAL and LAMP).
+const GLOW_TEAL: Color = TEAL
+const LAMP: Color = Color(1.0, 0.76, 0.46)
+
+## Battle outcome colours (BattleLook aliases these; never hand-type them).
+const HEAL: Color = Color(0.5, 0.95, 0.6)
+const SHIELD: Color = Color("#8ccfff")
+const ICE: Color = Color(0.75, 0.88, 1.0)
+const FIRE: Color = Color(1.0, 0.52, 0.24)
+const DMG_TAKEN: Color = Color(1.0, 0.45, 0.35)
+
+## THE SCRIM: one tinted base (never pure black) at three weights.
+const SCRIM_BASE: Color = Color(0.008, 0.024, 0.04)
+## The fishing focus and celebrations.
+const SCRIM_FOCUS: float = 0.42
+## Every sheet, room popup and entry screen.
+const SCRIM_SHEET: float = 0.55
+## Reveals (a hero moment that blocks).
+const SCRIM_HERO: float = 0.8
+
+# ── Spacing and shape ──────────────────────────────────────────────────────────
+
+## Radii: large buttons, rows and panels; small buttons and plates; chips and
+## pills; sheets and modals.
+const R_LARGE: int = 12
+const R_SMALL: int = 9
+const R_PILL: int = 999
+const R_SHEET: int = 18
+## The separator between short facts on one line.
+const SEP: String = "  ·  "
+## Eyebrows sit at this alpha over their ink.
+const EYEBROW_ALPHA: float = 0.72
+## Small-caps tracking (em): eyebrows, and buttons/chips/tags. Two values only.
+const TRACK_EYEBROW: float = 0.16
+const TRACK_SMALL: float = 0.08
 
 ## The base every panel stands on (opaque: panels sit over art).
 const BASE: Color = Color("#0a1016")
@@ -125,12 +177,35 @@ static func _settle(l: Label) -> void:
 	l.add_theme_color_override("font_color", night_ink(raw) if on_night(l) else (ink(raw) if on_paper(l) else raw))
 
 
-## Rarity 1-5 (the catch card's palette; the market's near-copy is retired).
-const RARITY: Array[Color] = [Color("#94a3b8"), Color("#4ade80"), Color("#60a5fa"), Color("#c084fc"), Color("#f59e0b")]
+## THE RARITY TABLE (one for the game: fish, crew, skins, raid items and the
+## gauntlet key into it by name; numbers 1-5 are the first five). Paper's
+## pigments are derived from it (Paper.rarity).
+const RARITY: Dictionary = {
+	"common": Color("#94a3b8"),
+	"uncommon": Color("#4ade80"),
+	"rare": Color("#60a5fa"),
+	"epic": Color("#c084fc"),
+	"legendary": Color("#f59e0b"),
+	"chase": Color("#ff7a59"),
+	"ancient": Color("#66e6d9"),
+}
+const RARITY_ORDER: Array[String] = ["common", "uncommon", "rare", "epic", "legendary"]
 
 
-static func rarity(r: float) -> Color:
-	return RARITY[clampi(int(r) - 1, 0, 4)]
+## The rarity key for a number (1-5) or a name (any case). Unknown: "".
+static func rarity_key(r: Variant) -> String:
+	if r is String or r is StringName:
+		var k: String = String(r).to_lower()
+		return k if RARITY.has(k) else ""
+	if r is int or r is float:
+		return RARITY_ORDER[clampi(int(r) - 1, 0, 4)]
+	return ""
+
+
+## A rarity's colour, by number (1-5) or name. Unknown: DIM.
+static func rarity(r: Variant) -> Color:
+	var k: String = rarity_key(r)
+	return RARITY[k] if k != "" else DIM
 
 
 static func a(c: Color, alpha: float) -> Color:
@@ -142,23 +217,33 @@ static func a(c: Color, alpha: float) -> Color:
 # Role: [family, weight, px, tracking (em), upper]. Cinzel for names, titles
 # and numbers that matter; Karla for everything read.
 
+## Small-caps tracking has two values: .16 for eyebrows, .08 for buttons,
+## chips and tags. The floor is 10px. Toasts and sentences are Karla
+## (body_strong or value); Cinzel is for names, titles and headline words.
 const ROLES: Dictionary = {
+	"hero": ["cinzel", 800, 48, 0.0, false],
 	"display": ["cinzel", 800, 34, 0.0, false],
+	"display_sm": ["cinzel", 800, 28, 0.0, false],
 	"title": ["cinzel", 700, 22, 0.02, false],
+	"figure": ["cinzel", 700, 24, 0.0, false],
 	"heading": ["cinzel", 700, 17, 0.02, false],
 	"name": ["cinzel", 700, 15, 0.0, false],
+	"name_strong": ["karla", 800, 15, 0.0, false],
 	"number": ["cinzel", 800, 17, 0.0, false],
 	"eyebrow": ["karla", 700, 11, 0.16, true],
-	"eyebrow_hero": ["karla", 700, 11, 0.24, true],
-	"label": ["karla", 600, 11, 0.10, true],
+	"eyebrow_hero": ["karla", 700, 11, 0.16, true],
+	"label": ["karla", 600, 11, 0.08, true],
 	"body": ["karla", 400, 15, 0.0, false],
 	"body_strong": ["karla", 600, 15, 0.0, false],
+	"desc": ["karla", 500, 14, 0.0, false],
 	"small": ["karla", 600, 13, 0.0, false],
 	"note": ["karla", 400, 13, 0.0, false],
 	"value": ["karla", 700, 14, 0.0, false],
 	"button": ["cinzel", 700, 16, 0.0, false],
+	"button_quiet": ["karla", 700, 15, 0.0, false],
 	"button_small": ["karla", 700, 11, 0.08, true],
-	"chip": ["karla", 700, 10, 0.10, true],
+	"chip": ["karla", 700, 10, 0.08, true],
+	"tag": ["karla", 800, 10, 0.08, true],
 }
 
 static var _files: Dictionary = {}
@@ -171,6 +256,53 @@ static func font(family: String, weight: int) -> Font:
 		var path: String = "res://art/fonts/%s-latin-%d-normal.woff2" % [family, weight]
 		_files[key] = load(path) if ResourceLoader.exists(path) else ThemeDB.fallback_font
 	return _files[key]
+
+
+## A role's font (tracked), for draw_string and anything that is not a Label.
+static func role_font(role: String) -> Font:
+	var r: Array = ROLES[role]
+	return tracked(r[0], r[1], r[2], r[3])
+
+
+## A role's size in px.
+static func role_px(role: String) -> int:
+	return int(ROLES[role][2])
+
+
+## Whether a role is set in capitals (draw_string callers upper-case the text).
+static func role_caps(role: String) -> bool:
+	return bool(ROLES[role][4])
+
+
+## The role nearest a hand-picked pixel size (for screens that size type by
+## hand: Sheet.text and Room.text). caps: a short upper-case line (an eyebrow
+## or a tag); title: a Cinzel title.
+static func role_for_px(px: int, title: bool = false, caps: bool = false) -> String:
+	if caps:
+		return "tag" if px <= 10 else "eyebrow"
+	if title:
+		if px >= 44:
+			return "hero"
+		if px >= 31:
+			return "display"
+		if px >= 26:
+			return "display_sm"
+		if px >= 23:
+			return "figure"
+		if px >= 20:
+			return "title"
+		if px >= 16:
+			return "heading"
+		return "name"
+	if px >= 20:
+		return "figure"
+	if px >= 16:
+		return "body_strong"
+	if px >= 15:
+		return "body"
+	if px >= 14:
+		return "desc"
+	return "small"
 
 
 ## A font with letter-spacing (tracking in em at this size).
@@ -220,7 +352,7 @@ static func face(l: Label, px: int, title: bool) -> Label:
 	var t: String = l.text
 	var upper: bool = t.length() > 2 and t == t.to_upper() and t != t.to_lower()
 	if upper:
-		l.add_theme_font_override("font", tracked("karla", 700, px, 0.18))
+		l.add_theme_font_override("font", tracked("karla", 700, px, TRACK_EYEBROW))
 	elif title:
 		l.add_theme_font_override("font", font("cinzel", 800 if px >= 22 else 700))
 	else:
@@ -237,18 +369,33 @@ static func glow(l: Label, c: Color) -> Label:
 	return l
 
 
-## Words over art: a dark shadow so they read on anything.
+## Words over art or the water: the one shade recipe (SEA_SHADE, an outline of
+## 6px at 16px and under, 8px above) so they read on anything.
 static func lift(l: Label) -> Label:
 	# Lettering on the water is not lit by the sun or the lanterns.
 	l.light_mask = 0
 	l.set_meta("lifted", true)
 	if l.has_meta("raw_ink"):
 		l.add_theme_color_override("font_color", l.get_meta("raw_ink"))
-	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
+	var px: int = l.get_theme_font_size("font_size") if l.has_theme_font_size_override("font_size") or l.is_inside_tree() else 16
+	l.add_theme_color_override("font_shadow_color", SEA_SHADE)
 	l.add_theme_constant_override("shadow_offset_x", 0)
 	l.add_theme_constant_override("shadow_offset_y", 1)
-	l.add_theme_constant_override("shadow_outline_size", 4)
+	l.add_theme_constant_override("shadow_outline_size", sea_outline(px))
 	return l
+
+
+## The shade outline lettering on the water takes at this size.
+static func sea_outline(px: int) -> int:
+	return 6 if px <= 16 else 8
+
+
+## Lettering on the water, DRAWN (for _draw code): the shade outline, then the
+## words. align and width as draw_string's; alpha fades both together.
+static func sea_string(ci: CanvasItem, f: Font, pos: Vector2, t: String, px: int, col: Color = SEA_INK, align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT, width: float = -1.0, alpha: float = 1.0) -> void:
+	var shade: Color = Color(SEA_SHADE, SEA_SHADE.a * col.a * alpha)
+	ci.draw_string_outline(f, pos + Vector2(0, 1), t, align, width, px, sea_outline(px), shade)
+	ci.draw_string(f, pos, t, align, width, px, Color(col, col.a * alpha))
 
 
 # ── Surfaces ───────────────────────────────────────────────────────────────────
@@ -270,25 +417,27 @@ static func inset(pad: Variant = 12) -> Dictionary:
 	return { "radius": 12, "fill": [Color(1, 1, 1, 0.04)], "border": [1, Color(1, 1, 1, 0.08)], "pad": pad }
 
 
-## A tile (tileSurface): a neutral body, its state on the top rim, a sheen.
-## state: "active" (full colour), "owned", "ready" (gold), "locked" (flat).
-static func tile(c: Color, state: String = "owned", pad: Variant = 14) -> Dictionary:
-	var rim: Color = c if state == "active" else (Color(c, 0.67) if state == "owned" else (Color(GOLD, 0.85) if state == "ready" else Color(1, 1, 1, 0.08)))
-	var s: Dictionary = {
-		"radius": 15, "fill": [Color(0.075, 0.082, 0.106, 0.96), Color(0.043, 0.051, 0.07, 0.97)],
-		"top": [2, rim], "sheen": 0.0 if state == "locked" else 0.06, "border": [1, Color(1, 1, 1, 0.06)],
-		"shadow": [Color(0, 0, 0, 0.5), 14, Vector2(0, 3)], "pad": pad,
-	}
-	if state == "ready":
-		s["border"] = [1, Color(GOLD, 0.45)]
-	if state == "active":
-		s["fill"] = [Color(c, 0.10), Color(0.043, 0.051, 0.07, 0.97)]
-	return s
+## A tile: one flat ground (paper, once painted), no coloured rim, accent bar,
+## gradient or shadow (M4, 2026-10-09). Its state is in the line round it:
+## "active" (in hand) an inked ring in Paper's red, "ready" (gold) a gold-ink
+## hairline, "owned" a hairline, "locked" a fainter one. The colour argument
+## is kept for old callers and no longer tints anything (no colour coding).
+static func tile(_c: Color, state: String = "owned", pad: Variant = 14) -> Dictionary:
+	var line: Array = [1, Color(1, 1, 1, 0.08)]
+	match state:
+		"active":
+			line = [2, Color(Paper.RED, 0.8)]
+		"ready":
+			line = [1, Color(ink(GOLD), 0.7)]
+		"locked":
+			line = [1, Color(1, 1, 1, 0.05)]
+	return { "radius": R_LARGE, "fill": [Color(0.06, 0.066, 0.088, 0.97)], "border": line, "pad": pad }
 
 
-## A door or feature card: the accent fading down into a solid dark floor.
-static func door(c: Color, pad: Variant = 12) -> Dictionary:
-	return { "radius": 16, "fill": [[Color(c, 0.14), 0.0], [Color(0.016, 0.04, 0.07, 0.72), 0.48], [Color(0.012, 0.03, 0.055, 0.94), 1.0]], "border": [1, Color(c, 0.36)], "shadow": [Color(c, 0.08), 22], "pad": pad }
+## A door or feature card: one flat ground and a hairline (the accent wash
+## and its glow are gone, M4). The colour argument is kept for old callers.
+static func door(_c: Color, pad: Variant = 12) -> Dictionary:
+	return { "radius": R_LARGE, "fill": [Color(0.016, 0.04, 0.07, 0.94)], "border": [1, Color(1, 1, 1, 0.1)], "pad": pad }
 
 
 ## A row in a list.
@@ -303,21 +452,42 @@ static func pane(parent: Node, spec: Dictionary) -> Pane:
 	return p
 
 
-## The dim behind a modal: one alpha (0.7), or 0.9 for a moment that blocks.
-static func scrim(parent: Node, heavy: bool = false) -> ColorRect:
+## THE dim behind a modal: the tinted base at a weight, SCRIM_SHEET (every
+## sheet, room popup and entry screen, the default), SCRIM_FOCUS (the fishing
+## focus, celebrations) or SCRIM_HERO (reveals). Old callers' `true` is HERO.
+## It fades in (Motion.SCRIM_IN) unless fade = false; Motion.scrim_out (or
+## Motion.dismiss) takes it away.
+static func scrim(parent: Node, weight: Variant = SCRIM_SHEET, fade: bool = true) -> ColorRect:
+	var w: float = SCRIM_SHEET
+	if weight is bool:
+		w = SCRIM_HERO if weight else SCRIM_SHEET
+	elif weight is float or weight is int:
+		w = float(weight)
 	var r: ColorRect = ColorRect.new()
-	r.color = Color(0.008, 0.024, 0.04, 0.9 if heavy else 0.7)
+	r.color = Color(SCRIM_BASE, w)
 	r.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if parent != null:
 		parent.add_child(r)
+	if fade:
+		Motion.scrim_in(r)
 	return r
+
+
+## The pill a word sits in on the water (the HUD's clock, Auto, chips): one
+## recipe instead of five copies. hot: the hovered or stronger face.
+static func water_pill(pad: Variant = [10, 3, 10, 4], hot: bool = false) -> Dictionary:
+	return { "radius": R_PILL, "fill": [Color(0.016, 0.04, 0.07, 0.86 if hot else 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.45 if hot else 0.22)], "pad": pad }
 
 
 # ── Buttons ────────────────────────────────────────────────────────────────────
 #
-# kind: "primary" (solid gold, the one thing to do), "accent" (a wash of the
-# room's colour), "secondary" (quiet), "danger". size: "large" (radius 12) or
-# "small" (radius 9, the in-row actions). Two radii, was six.
+# kind: "primary" (a plank of stained wood, the one thing to do), "accent" (a
+# wash of the room's colour), "secondary" (paper), "danger", or "quiet" (a
+# secondary in Karla, button_quiet, for a deliberately quiet large action).
+# size: "large" (radius 12) or "small" (radius 9, the in-row actions).
+# THE TYPEFACE RULE (M3): every large button is Cinzel (the button role) so a
+# footer's buttons side by side match; only "quiet" is Karla. Small buttons
+# are button_small (Karla capitals).
 
 static func button(t: String, kind: String = "secondary", size: String = "large", accent: Color = GOLD) -> Pane.PaneButton:
 	var big: bool = size == "large"
@@ -355,8 +525,8 @@ static func button(t: String, kind: String = "secondary", size: String = "large"
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
 	b.text = t
 	var role: Array = ROLES["button" if big else "button_small"]
-	if kind == "secondary" and big:
-		role = ["karla", 700, 15, 0.0, false]
+	if kind == "quiet" and big:
+		role = ROLES["button_quiet"]
 	b.add_theme_font_override("font", tracked(role[0], role[1], role[2], role[3]))
 	b.add_theme_font_size_override("font_size", role[2])
 	if role[4]:
@@ -369,48 +539,73 @@ static func button(t: String, kind: String = "secondary", size: String = "large"
 	return b
 
 
-## Press feedback: a small squeeze, as the web's whileTap.
+## Press feedback: a small squeeze, as the web's whileTap (Motion.press and
+## Motion.release).
 static func tap(c: Control) -> void:
 	c.resized.connect(func() -> void: c.pivot_offset = c.size / 2.0)
 	if c is BaseButton:
 		var b: BaseButton = c
 		b.button_down.connect(func() -> void:
 			if not b.disabled:
-				c.create_tween().tween_property(c, "scale", Vector2.ONE * 0.96, 0.06))
-		b.button_up.connect(func() -> void: c.create_tween().tween_property(c, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
+				Motion.press(c))
+		b.button_up.connect(func() -> void: Motion.release(c))
 
 
-## THE close button: a 30px circle with a drawn X (was five sizes).
-static func close_button() -> Pane.PaneButton:
-	var n: Dictionary = { "radius": 15, "fill": [PAPER], "border": [1, Color(PAPER_INK, 0.45)], "shadow": [Color(0, 0, 0, 0.16), 5, Vector2(0, 2)], "pad": 0, "paper": true }
-	var h: Dictionary = { "radius": 15, "fill": [PAPER.lightened(0.1)], "border": [1, Color(PAPER_INK, 0.8)], "pad": 0, "paper": true }
-	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
+## THE close button: a 30px circle with a drawn X (was five sizes). night: the
+## expedition side's night paper (it also turns night by itself when it lands
+## under a night root).
+static func close_button(night: bool = false) -> Pane.PaneButton:
+	var specs: Array = _close_specs(night)
+	var b: Pane.PaneButton = Pane.PaneButton.new(specs[0], specs[1])
 	b.custom_minimum_size = Vector2(30, 30)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
 	b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	b.tooltip_text = "Close"
 	var x: Glyph = Glyph.new()
 	x.kind = "x"
-	x.color = PAPER_INK
+	x.color = Paper.NIGHT_INK if night else PAPER_INK
 	x.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	x.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(x)
+	b.tree_entered.connect(func() -> void:
+		var nt: bool = night or Pane.night_root(b)
+		if nt and b.normal.get("keep", false) != true:
+			var ns: Array = _close_specs(true)
+			b.restyle(ns[0], ns[1])
+		x.color = Paper.NIGHT_INK if nt else PAPER_INK
+		x.queue_redraw())
 	tap(b)
 	return b
 
 
-## THE back pill: bronze leather, a gold chevron, the place it goes back to.
-static func back_pill(label: String) -> Pane.PaneButton:
-	var n: Dictionary = { "radius": 999, "fill": [WOOD_HI, WOOD_LO], "border": [1, Color(0.25, 0.15, 0.08, 0.8)], "shadow": [Color(0, 0, 0, 0.35), 9, Vector2(0, 2)], "pad": [26, 6, 13, 6], "keep": true, "grain": true }
+static func _close_specs(night: bool) -> Array:
+	if night:
+		var nn: Dictionary = { "radius": 15, "fill": [Paper.NIGHT_PAPER_HI], "border": [1, Color(Paper.NIGHT_INK_FAINT, 0.6)], "shadow": [Color(0, 0, 0, 0.3), 5, Vector2(0, 2)], "pad": 0, "keep": true, "night": true }
+		var nh: Dictionary = nn.duplicate()
+		nh["fill"] = [Paper.NIGHT_PAPER_HI.lightened(0.08)]
+		nh["border"] = [1, Color(Paper.NIGHT_INK, 0.7)]
+		return [nn, nh]
+	var n: Dictionary = { "radius": 15, "fill": [PAPER], "border": [1, Color(PAPER_INK, 0.45)], "shadow": [Color(0, 0, 0, 0.16), 5, Vector2(0, 2)], "pad": 0, "paper": true }
 	var h: Dictionary = n.duplicate()
+	h["fill"] = [PAPER.lightened(0.1)]
+	h["border"] = [1, Color(PAPER_INK, 0.8)]
+	return [n, h]
+
+
+## THE back pill: stained wood, a chevron, the place it goes back to. Hover
+## lightens the wood as the primary button's does.
+static func back_pill(label: String) -> Pane.PaneButton:
+	var n: Dictionary = { "radius": R_PILL, "fill": [WOOD_HI, WOOD_LO], "border": [1, Color(0.25, 0.15, 0.08, 0.8)], "shadow": [Color(0, 0, 0, 0.35), 9, Vector2(0, 2)], "pad": [26, 6, 13, 6], "keep": true, "grain": true }
+	var h: Dictionary = n.duplicate()
+	h["fill"] = [WOOD_HI.lightened(0.1), WOOD_LO.lightened(0.08)]
 	h["border"] = [1, Color(BRONZE, 0.8)]
 	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
 	b.text = label.to_upper()
 	b.tooltip_text = "Back to %s" % label
-	var r: Array = ["karla", 700, 11, 0.1]
+	var r: Array = ROLES["button_small"]
 	b.add_theme_font_override("font", tracked(r[0], r[1], r[2], r[3]))
 	b.add_theme_font_size_override("font_size", r[2])
-	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		b.add_theme_color_override(st, WOOD_INK)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -446,8 +641,9 @@ static func status(parent: Node, kind: String, label: String = "") -> Pane:
 	return chip(parent, t, c)
 
 
-## THE progress bar: 7 tall (3 for the mini), a faint track, the colour
-## brightening along its length, easing to its value.
+## THE progress bar: 7 tall (3 for the mini), a faint track and a flat fill
+## easing to its value (Motion.COUNT, QUART out). Night-aware: on the night
+## paper its track is a cream hairline.
 static func bar(parent: Node, frac: float, c: Color, mini: bool = false) -> Bar:
 	var b: Bar = Bar.new()
 	b.color = c
@@ -473,27 +669,26 @@ static func stat_row(parent: Node, label: String, value: String, tone: String = 
 	var r: Label = text(h, value, "value", col)
 	r.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if rule:
+		# The rule is inked for whichever paper it lands on.
 		var line: ColorRect = ColorRect.new()
-		line.color = Color(PAPER_INK, 0.12)
+		line.color = Color(Paper.ink(), 0.15)
 		line.custom_minimum_size = Vector2(0, 1)
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.tree_entered.connect(func() -> void: line.color = Color(Paper.ink(line), 0.15))
 		v.add_child(line)
 	return h
 
 
-## A section: a Cinzel heading, an optional note under it.
-static func section(parent: Node, title: String, note: String = "", accent: Color = Color(0, 0, 0, 0)) -> VBoxContainer:
+## A section: a Cinzel heading, an optional note under it. (The coloured
+## accent bar before the heading is gone, M4; the argument is kept for old
+## callers.)
+static func section(parent: Node, title: String, note: String = "", _accent: Color = Color(0, 0, 0, 0)) -> VBoxContainer:
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
 	parent.add_child(v)
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	v.add_child(h)
-	if accent.a > 0.0:
-		var mark: ColorRect = ColorRect.new()
-		mark.color = accent
-		mark.custom_minimum_size = Vector2(3, 15)
-		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		h.add_child(mark)
 	text(h, title, "heading", INK)
 	if note != "":
 		var n: Label = text(v, note, "note", DIM, true)
@@ -528,8 +723,10 @@ static func money(parent: Node, n: float, role: String = "price", gems: bool = f
 	return h
 
 
-## Art standing on its own: a halo of colour behind it and a floor shadow
-## under it (the Almanac's shelf). silhouette: not caught yet.
+## Art standing on its own: a halo of colour behind it (the Almanac's shelf).
+## No floor shadow under it (M5, 2026-10-09: art stands flat, as the crew
+## cards do). silhouette: not discovered yet (a dark silhouette); for known
+## but not owned, use the greyed shader (Kit.grey).
 static func art(parent: Node, url: Variant, box: Vector2, halo: Color, silhouette: bool = false) -> Control:
 	var holder: Control = Control.new()
 	holder.custom_minimum_size = box
@@ -550,16 +747,6 @@ static func art(parent: Node, url: Variant, box: Vector2, halo: Color, silhouett
 	h.offset_bottom = hr
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(h)
-	var floor_shadow: TextureRect = TextureRect.new()
-	floor_shadow.texture = Glow.radial(64, Color(0, 0, 0))
-	floor_shadow.modulate.a = 0.0 if silhouette else 0.55
-	floor_shadow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	floor_shadow.anchor_left = 0.2
-	floor_shadow.anchor_right = 0.8
-	floor_shadow.anchor_top = 0.86
-	floor_shadow.anchor_bottom = 0.98
-	floor_shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(floor_shadow)
 	var pic: TextureRect = TextureRect.new()
 	pic.texture = Skipper.tex(url)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -576,6 +763,20 @@ static func art(parent: Node, url: Variant, box: Vector2, halo: Color, silhouett
 	if parent != null:
 		parent.add_child(holder)
 	return holder
+
+
+static var _grey_shader: Shader = null
+
+
+## Known but not owned: the art in grey pencil (fx/greyed.gdshader), the one
+## look every screen uses for it.
+static func grey(c: CanvasItem) -> CanvasItem:
+	if _grey_shader == null:
+		_grey_shader = load("res://game/fx/greyed.gdshader")
+	var m: ShaderMaterial = ShaderMaterial.new()
+	m.shader = _grey_shader
+	c.material = m
+	return c
 
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
@@ -599,7 +800,7 @@ static func tabs(parent: Node, options: Array, current: Variant, accent: Color, 
 		b.add_theme_font_size_override("font_size", role[2])
 		b.text = b.text.to_upper()
 		var tab_ink: Color = ink(accent).darkened(0.15) if on else PAPER_INK_SOFT
-		for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 			b.add_theme_color_override(st, tab_ink)
 		b.pressed.connect(func() -> void: on_pick.call(o[0]))
 		tap(b)
@@ -611,36 +812,22 @@ static func tabs(parent: Node, options: Array, current: Variant, accent: Color, 
 
 # ── Motion ─────────────────────────────────────────────────────────────────────
 #
-# Three moves (was a dozen springs): a modal rising in, art popping in, and a
-# stagger for tiles.
+# Thin wrappers over Motion (game/motion.gd), kept for the screens that call
+# them. New code calls Motion directly.
 
+## A modal rising in: Motion.panel_in (SINE fade, CUBIC rise, no BACK).
 static func modal_in(c: Control) -> void:
-	c.modulate.a = 0.0
-	var goal: Vector2 = c.position
-	c.position = goal + Vector2(0, 20)
-	c.pivot_offset = c.size / 2.0
-	c.scale = Vector2.ONE * 0.97
-	var tw: Tween = c.create_tween().set_parallel(true)
-	tw.tween_property(c, "modulate:a", 1.0, 0.18)
-	tw.tween_property(c, "position", goal, 0.34).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(c, "scale", Vector2.ONE, 0.34).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Motion.panel_in(c)
 
 
+## Art popping in: Motion.arrive at the instrument size. Never on text (words
+## use Motion.rise_word).
 static func pop(c: Control, delay: float = 0.0) -> void:
-	c.pivot_offset = c.size / 2.0
-	c.scale = Vector2.ONE * 0.62
-	c.modulate.a = 0.0
-	var tw: Tween = c.create_tween().set_parallel(true)
-	tw.tween_property(c, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(delay)
-	tw.tween_property(c, "modulate:a", 1.0, 0.15).set_delay(delay)
+	Motion.arrive(c, "m", delay)
 
 
 static func stagger(c: Control, i: int) -> void:
-	var goal: float = c.modulate.a
-	c.modulate.a = 0.0
-	var tw: Tween = c.create_tween()
-	tw.tween_interval(minf(0.3, 0.03 * i))
-	tw.tween_property(c, "modulate:a", goal, 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	Motion.stagger(c, i)
 
 
 # ── Drawn bits ─────────────────────────────────────────────────────────────────
@@ -708,18 +895,19 @@ class Bar:
 			frac = goal
 			queue_redraw()
 			return
-		create_tween().tween_method(func(v: float) -> void:
+		Motion.count(self, frac, goal, func(v: float) -> void:
 			frac = v
-			queue_redraw(), frac, goal, 0.7).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+			queue_redraw(), true)
 
 	func _draw() -> void:
-		var r: float = size.y / 2.0
-		var track: Color = Color(PAPER_INK, 0.12) if Kit.on_paper(self) else Color(1, 1, 1, 0.07)
+		var track: Color = Color(1, 1, 1, 0.07)
+		if Paper.is_night(self):
+			track = Paper.NIGHT_HAIR
+		elif Kit.on_paper(self):
+			track = Color(PAPER_INK, 0.12)
 		_pill(Rect2(Vector2.ZERO, size), track, track)
 		if frac > 0.0:
-			_pill(Rect2(Vector2.ZERO, Vector2(maxf(size.y, size.x * frac), size.y)), Color(color, 0.53), color)
-		if size.y >= 6.0 and frac > 0.0:
-			draw_rect(Rect2(Vector2(r, 1), Vector2(maxf(0.0, size.x * frac - r * 2.0), 1)), Color(1, 1, 1, 0.18))
+			_pill(Rect2(Vector2.ZERO, Vector2(maxf(size.y, size.x * frac), size.y)), color, color)
 
 	func _pill(rect: Rect2, from: Color, to: Color) -> void:
 		var r: float = rect.size.y / 2.0

@@ -6,7 +6,7 @@ extends Control
 ##
 ## Set like a page, not a dashboard. LEFT, the art, large: the enemy's painting
 ## (or a captain's ship, their avatar set into its corner) standing on a flat
-## disc of its colour with a shadow under it. RIGHT, a quiet lead-in line, the
+## disc of its colour (no shadow under it, M5). RIGHT, a quiet lead-in line, the
 ## name, the hull as one wide bar, the numbers as a row of figures over small
 ## words with hairlines between, and then plain sections: a sentence-case
 ## heading, entries as a name and a line of description, no boxes, no strips,
@@ -18,22 +18,24 @@ signal closed
 
 const W: float = 920.0
 const ART_W: float = 360.0
-const FILL: Color = Color(0.112, 0.093, 0.08)
-const ART_FILL: Color = Color(0.15, 0.124, 0.104)
-const INK: Color = Color(0.94, 0.88, 0.77)
-const SOFT: Color = Color(0.72, 0.66, 0.57)
-const FAINT: Color = Color(0.5, 0.46, 0.4)
-const HAIR: Color = Color(1, 1, 1, 0.08)
-const HARM: Color = Color("#f2826e")
-const HELP: Color = Color("#7fd6a0")
-const WARN: Color = Color("#f0c56a")
+## The night paper's tokens (aliases, so the dossier cannot drift).
+const FILL: Color = Paper.NIGHT_PAPER_DEEP
+const ART_FILL: Color = Paper.NIGHT_PAPER
+const INK: Color = Paper.NIGHT_INK
+const SOFT: Color = Paper.NIGHT_INK_SOFT
+const FAINT: Color = Paper.NIGHT_INK_FAINT
+const HAIR: Color = Paper.NIGHT_HAIR
+const HARM: Color = Kit.HARM
+const HELP: Color = Kit.HELP
+const WARN: Color = Kit.CAUTION
 
 ## The art and its ground.
 var art: Texture2D
 var disc: Color = Color(0.3, 0.4, 0.45)
 ## A captain's avatar, set into the art's corner (null for an enemy).
 var badge: Texture2D
-## A shadow under the art (a figure standing; not a ship's padded plate).
+## Was: a shadow under a standing figure. Art has no floor shadow now (M5);
+## kept so the cards that set it still compile.
 var ground: bool = true
 var lead: String = ""
 var title: String = ""
@@ -46,23 +48,22 @@ var figures: Array = []
 
 var _list: VBoxContainer
 var _card: Panel
+var _scrim: ColorRect
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var scrim: ColorRect = ColorRect.new()
-	scrim.color = Color(0, 0, 0, 0.8)
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	# The room dims in rather than going dark at once (Kong, 2026-10-05: the
-	# card "pops up too quickly").
-	scrim.modulate.a = 0.0
-	create_tween().tween_property(scrim, "modulate:a", 1.0, 0.3).set_trans(Tween.TRANS_SINE)
-	scrim.gui_input.connect(func(ev: InputEvent) -> void:
+	# THE scrim (Kit's tinted base at the sheet weight). It dims in at Kong's
+	# slower pace rather than going dark at once (2026-10-05: the card "pops
+	# up too quickly").
+	_scrim = Kit.scrim(self, Kit.SCRIM_SHEET, false)
+	_scrim.modulate.a = 0.0
+	Motion.ease_fade(create_tween(), _scrim, "modulate:a", 1.0, 0.3)
+	_scrim.gui_input.connect(func(ev: InputEvent) -> void:
 		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed:
 			_close())
-	add_child(scrim)
 	var vp: Vector2 = get_viewport_rect().size
 	var h: float = minf(vp.y - 80.0, 620.0)
 	_card = Panel.new()
@@ -86,9 +87,9 @@ func _ready() -> void:
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 0)
 	page.add_child(col)
-	_text(col, lead, "karla", 600, 14, SOFT)
+	_role(col, lead, "desc", SOFT)
 	_gap(col, 2)
-	_text(col, title, "cinzel", 700, 32, INK)
+	_role(col, title, "display_sm", INK)
 	_gap(col, 16)
 	var hb: HullBar = HullBar.new()
 	hb.d = self
@@ -114,9 +115,11 @@ func _ready() -> void:
 	sc.add_child(_list)
 	_content()
 	_gap(_list, 8)
-	var x: CloseX = CloseX.new()
-	x.position = Vector2(W - 44, 14)
-	x.size = Vector2(28, 28)
+	# THE close button, on the night paper.
+	var x: Pane.PaneButton = Kit.close_button(true)
+	x.position = Vector2(W - 46, 14)
+	x.size = Vector2(30, 30)
+	x.focus_mode = Control.FOCUS_NONE
 	x.pressed.connect(_close)
 	_card.add_child(x)
 	_card.modulate.a = 0.0
@@ -128,14 +131,9 @@ func _ready() -> void:
 	pane.size.y = h
 	page.size.y = h
 	_card.position = (vp - _card.size) / 2.0
-	_card.pivot_offset = _card.size / 2.0
-	_card.scale = Vector2(0.96, 0.96)
-	var y0: float = _card.position.y
-	_card.position.y = y0 + 14.0
-	var tw: Tween = create_tween().set_parallel()
-	tw.tween_property(_card, "modulate:a", 1.0, 0.32).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(_card, "position:y", y0, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	# THE panel move (Motion.panel_in: SINE fade, CUBIC rise, no BACK), at
+	# Kong's slower pace for this card.
+	Motion.panel_in(_card, true, 1.25)
 
 
 ## Filled by the card: sections on the page.
@@ -143,16 +141,18 @@ func _content() -> void:
 	pass
 
 
+## Escape or the pad's B closes it; other keys pass on.
 func _unhandled_input(ev: InputEvent) -> void:
-	if ev is InputEventKey and (ev as InputEventKey).pressed:
+	if ev.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()
-		if (ev as InputEventKey).keycode == KEY_ESCAPE:
-			_close()
+		_close()
 
 
 func _close() -> void:
+	if Motion.closing(self):
+		return
 	closed.emit()
-	queue_free()
+	Motion.dismiss(self, _card, _scrim)
 
 
 # ── The page's pieces ─────────────────────────────────────────────────────────
@@ -172,6 +172,16 @@ func _text(parent: Control, s: String, family: String, weight: int, fs: int, c: 
 	return l
 
 
+## A label in one of the kit's roles (Kit.ROLES), on the dossier's ink.
+func _role(parent: Control, s: String, role: String, c: Color, wrap: bool = false) -> Label:
+	var l: Label = Kit.text(null, s, role, c, wrap)
+	l.add_theme_constant_override("line_spacing", 2)
+	if wrap:
+		l.custom_minimum_size.x = 120
+	parent.add_child(l)
+	return l
+
+
 func _gap(parent: Control, px: float) -> void:
 	var g: Control = Control.new()
 	g.custom_minimum_size = Vector2(0, px)
@@ -184,9 +194,9 @@ func heading(s: String, aside: String = "") -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	_list.add_child(row)
-	_text(row, s, "cinzel", 700, 17, INK)
+	_role(row, s, "heading", INK)
 	if aside != "":
-		var a: Label = _text(row, aside, "karla", 600, 13, FAINT)
+		var a: Label = _role(row, aside, "small", FAINT)
 		a.size_flags_vertical = Control.SIZE_SHRINK_END
 	_gap(_list, 8)
 
@@ -202,33 +212,25 @@ func entry(name: String, kind: String, desc: String, dot: Color = Color(0, 0, 0,
 		m.col = dot
 		m.custom_minimum_size = Vector2(8, 20)
 		row.add_child(m)
-	_text(row, name, "karla", 800, 15, INK)
+	_role(row, name, "name_strong", INK)
 	if kind != "":
-		var k: Label = _text(row, kind, "karla", 600, 13, FAINT)
+		var k: Label = _role(row, kind, "small", FAINT)
 		k.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if desc != "":
-		var d: Label = _text(_list, desc, "karla", 500, 14, SOFT, true)
+		var d: Label = _role(_list, desc, "desc", SOFT, true)
 		if dot.a > 0.0:
 			d.add_theme_constant_override("line_spacing", 2)
 	_gap(_list, 12)
 
 
-## A line of short, flat chips (class bonuses, tides).
+## A line of short chips (class bonuses, tides): THE chip (Kit.chip).
 func chips(items: Array) -> void:
 	var flow: HFlowContainer = HFlowContainer.new()
 	flow.add_theme_constant_override("h_separation", 8)
 	flow.add_theme_constant_override("v_separation", 8)
 	_list.add_child(flow)
 	for it: Array in items:
-		var p: PanelContainer = PanelContainer.new()
-		var sb: StyleBoxFlat = BattleLook.box(Color(1, 1, 1, 0.05), Color(0, 0, 0, 0), 0, 8).duplicate()
-		sb.content_margin_left = 10
-		sb.content_margin_right = 10
-		sb.content_margin_top = 4
-		sb.content_margin_bottom = 5
-		p.add_theme_stylebox_override("panel", sb)
-		_text(p, str(it[0]), "karla", 700, 13, it[1])
-		flow.add_child(p)
+		Kit.chip(flow, str(it[0]), it[1])
 	_gap(_list, 12)
 
 
@@ -254,9 +256,9 @@ func timeline(steps: Array) -> void:
 		var top: HBoxContainer = HBoxContainer.new()
 		top.add_theme_constant_override("separation", 10)
 		v.add_child(top)
-		_text(top, str(st["title"]), "karla", 800, 15, INK)
+		_role(top, str(st["title"]), "name_strong", INK)
 		if str(st.get("aside", "")) != "":
-			_text(top, str(st["aside"]), "karla", 600, 13, FAINT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			_role(top, str(st["aside"]), "small", FAINT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		for ln: Array in Js.list(st.get("lines")):
 			_text(v, str(ln[0]), "karla", int(ln[2]) if ln.size() > 2 else 500, 14, ln[1], true)
 		_gap(v, 14)
@@ -288,8 +290,6 @@ class ArtPane:
 		var rad: float = minf(r.size.x * 0.42, maxf(ar.size.x, ar.size.y) * 0.5)
 		draw_circle(c, rad, Color(d.disc, 0.2))
 		draw_circle(c, rad * 0.7, Color(d.disc, 0.14))
-		if d.ground and d.art != null:
-			_ellipse(Vector2(c.x, ar.end.y - 4.0), Vector2(ar.size.x * 0.36, 10.0), Color(0, 0, 0, 0.35))
 		if d.art != null:
 			draw_texture_rect(d.art, ar, false)
 		if d.badge != null:
@@ -298,26 +298,20 @@ class ArtPane:
 			BattleLook.medallion(self, bc, 36.0, d.badge, Dossier.HELP, "", 1.0, Vector2(0.5, 0.5), 0.5)
 		draw_line(Vector2(r.size.x - 0.5, 0), Vector2(r.size.x - 0.5, r.size.y), Dossier.HAIR, 1.0)
 
-	func _ellipse(c: Vector2, rr: Vector2, col: Color) -> void:
-		var pts: PackedVector2Array = PackedVector2Array()
-		for k: int in 32:
-			var a: float = TAU * k / 32.0
-			pts.append(c + Vector2(cos(a) * rr.x, sin(a) * rr.y))
-		draw_colored_polygon(pts, col)
-
 
 class HullBar:
 	extends Control
 	var d: Dossier
 
 	func _draw() -> void:
-		var f: Font = Kit.font("karla", 700)
-		draw_string(f, Vector2(0, 14), "Hull", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Dossier.SOFT)
+		var f: Font = Kit.role_font("small")
+		var px: int = Kit.role_px("small")
+		draw_string(f, Vector2(0, 14), "Hull", HORIZONTAL_ALIGNMENT_LEFT, -1, px, Dossier.SOFT)
 		var v: String = "%d / %d" % [int(d.hull), int(d.hull_max)]
 		if d.shield > 0.0:
 			v += "   +%d shield" % int(d.shield)
-		var vw: float = f.get_string_size(v, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
-		draw_string(f, Vector2(size.x - vw, 14), v, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Dossier.INK)
+		var vw: float = f.get_string_size(v, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+		draw_string(f, Vector2(size.x - vw, 14), v, HORIZONTAL_ALIGNMENT_LEFT, -1, px, Dossier.INK)
 		var r: Rect2 = Rect2(0, 24, size.x, 10)
 		BattleLook.draw_box(self, r, BattleLook.box(Color(0, 0, 0, 0.4), Color(0, 0, 0, 0), 0, 5))
 		var fr: float = clampf(d.hull / maxf(1.0, d.hull_max), 0.0, 1.0)
@@ -337,15 +331,15 @@ class Figures:
 			return
 		var n: int = items.size()
 		var cw: float = size.x / float(n)
-		var big: Font = Kit.font("cinzel", 700)
-		var small: Font = Kit.font("karla", 600)
+		var big: Font = Kit.role_font("figure")
+		var small: Font = Kit.role_font("small")
 		for i: int in n:
 			var x: float = cw * i
 			if i > 0:
 				draw_line(Vector2(x, 6), Vector2(x, size.y - 4), Dossier.HAIR, 1.0)
 			var pad: float = 0.0 if i == 0 else 16.0
-			draw_string(big, Vector2(x + pad, 26), str(items[i][0]), HORIZONTAL_ALIGNMENT_LEFT, cw - pad - 4, 24, Dossier.INK)
-			draw_string(small, Vector2(x + pad, 46), str(items[i][1]), HORIZONTAL_ALIGNMENT_LEFT, cw - pad - 4, 12, Dossier.SOFT)
+			draw_string(big, Vector2(x + pad, 26), str(items[i][0]), HORIZONTAL_ALIGNMENT_LEFT, cw - pad - 4, Kit.role_px("figure"), Dossier.INK)
+			draw_string(small, Vector2(x + pad, 46), str(items[i][1]), HORIZONTAL_ALIGNMENT_LEFT, cw - pad - 4, Kit.role_px("small"), Dossier.SOFT)
 
 
 class Dot:
@@ -367,23 +361,3 @@ class Rail:
 		draw_line(Vector2(x, 0.0 if not first else 10.0), Vector2(x, size.y if not last else 10.0), Dossier.HAIR, 1.5)
 		draw_circle(Vector2(x, 10), 5.0, Dossier.FILL)
 		draw_circle(Vector2(x, 10), 4.0, col)
-
-
-class CloseX:
-	extends Button
-	func _init() -> void:
-		flat = true
-		focus_mode = Control.FOCUS_NONE
-		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-
-	func _process(_d: float) -> void:
-		queue_redraw()
-
-	func _draw() -> void:
-		var c: Vector2 = size / 2.0
-		if is_hovered():
-			draw_circle(c, size.x / 2.0, Color(1, 1, 1, 0.08))
-		var s: float = size.x * 0.22
-		var col: Color = Dossier.INK if is_hovered() else Dossier.SOFT
-		draw_line(c + Vector2(-s, -s), c + Vector2(s, s), col, 1.8, true)
-		draw_line(c + Vector2(s, -s), c + Vector2(-s, s), col, 1.8, true)

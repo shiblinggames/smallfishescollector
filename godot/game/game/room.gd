@@ -3,29 +3,34 @@ extends Control
 ## A ROOM ASHORE (Godot port of the shell the web's rooms share: RoomHeader,
 ## BackPill and the page column, docking). The Market and the Tackle Shop are
 ## rooms: full screen over the chart, a backdrop, a centred column that
-## scrolls, and a header with the back pill on the left ("The Sea"), the title
-## in the middle and a badge on the right. Escape or the pad's B is the back
-## pill. Subclasses build into `col` in `_build()` and may rebuild with
-## `rebuild()` after anything changes.
+## scrolls, and THE shared menu header (M1, Paper.header) on a strip of paper:
+## an eyebrow and the title on the left, a badge and the back pill ("The Sea")
+## on the right. Escape or the pad's B is the back pill. Subclasses build into
+## `col` in `_build()` and may rebuild with `rebuild()` after anything
+## changes. A room fades in and out (Motion).
 
 signal closed
 
-const INK: Color = Color("#f4ecd8")
-const SUB: Color = Color("#9a958c")
-const GOLD: Color = Color("#f0c040")
+const INK: Color = Kit.INK
+const SUB: Color = Kit.DIM
+const GOLD: Color = Kit.GOLD
 const COL_W: float = 980.0
 
 var session: Session
 var title: String = ""
+## A small line over the title (optional).
+var eyebrow: String = ""
 var back_label: String = "The Sea"
-## The room's colour: the title's glow, its eyebrows and selections.
+## The room's colour: its eyebrows and selections.
 var accent: Color = Kit.GOLD
 var col: VBoxContainer
 var header_badge: Control = null
 var _scroll: ScrollContainer
 var _toast: Pane
 var _toast_l: Label
-var _toast_t: float = 0.0
+## Toasts waiting their turn: [text, colour].
+var _toasts: Array = []
+var _toasting: bool = false
 
 
 func _ready() -> void:
@@ -33,6 +38,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
 	set_meta("paper_room", true)
+	modulate.a = 0.0
+	Motion.ease_fade(create_tween(), self, "modulate:a", 1.0, Motion.PANEL_FADE)
 	_backdrop()
 	_scroll = ScrollContainer.new()
 	_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -51,24 +58,31 @@ func _ready() -> void:
 	col.add_theme_constant_override("separation", 10)
 	margin.add_child(col)
 
-	_toast = Pane.new({ "radius": 999, "fill": [Color("#1c2030")], "border": [1, Color(1, 1, 1, 0.1)], "shadow": [Color(0, 0, 0, 0.5), 16, Vector2(0, 4)], "pad": [18, 8, 18, 9] })
-	_toast_l = Kit.text(_toast, "", "value", GOLD)
+	# The toast: a slip of paper with inked words (Room.toast).
+	_toast = Pane.new({ "radius": Kit.R_SMALL, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.3), 14, Vector2(0, 4)], "pad": [18, 8, 18, 9], "paper": true })
+	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_toast_l = Kit.text(_toast, "", "body_strong", Kit.PAPER_INK)
+	_toast_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_toast_l.custom_minimum_size = Vector2(0, 0)
+	_toast_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.anchor_left = 0.5
 	_toast.anchor_right = 0.5
 	_toast.anchor_top = 1.0
 	_toast.anchor_bottom = 1.0
 	_toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_toast.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_toast.offset_top = -80
 	_toast.offset_bottom = -40
 	_toast.visible = false
 	add_child(_toast)
 	rebuild()
+	Motion.panel_in(_scroll)
 
 
 ## What stands behind the column. Rooms override it with their own picture.
 func _backdrop() -> void:
 	var bg: ColorRect = ColorRect.new()
-	bg.color = Color("#0a0c10")
+	bg.color = Kit.BASE
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
@@ -87,29 +101,16 @@ func rebuild() -> void:
 	_scroll.set_deferred("scroll_vertical", keep)
 
 
+## THE shared header (M1): a strip of paper with Paper.header on it, the back
+## pill on the far right.
 func _header() -> void:
-	var row: HBoxContainer = HBoxContainer.new()
-	row.custom_minimum_size = Vector2(0, 40)
-	col.add_child(row)
-	var left: HBoxContainer = HBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(left)
-	var pill: Button = Kit.back_pill(back_label)
-	pill.pressed.connect(_back)
-	left.add_child(pill)
-	var t: Label = Kit.text(row, title, "title", INK)
-	Kit.glow(t, accent)
-	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var right: HBoxContainer = HBoxContainer.new()
-	right.alignment = BoxContainer.ALIGNMENT_END
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(right)
+	var strip: Pane = Kit.pane(col, { "radius": Kit.R_LARGE, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.3)], "shadow": [Color(0, 0, 0, 0.25), 12, Vector2(0, 3)], "pad": [22, 12, 14, 8], "paper": true })
+	var h: Dictionary = Paper.header(strip, title, eyebrow, _back, [], null, Callable(), back_label, "")
 	var badge: Control = _badge()
 	if badge != null:
-		right.add_child(badge)
+		(h["right"] as HBoxContainer).add_child(badge)
 	var gap: Control = Control.new()
-	gap.custom_minimum_size = Vector2(0, 8)
+	gap.custom_minimum_size = Vector2(0, 4)
 	col.add_child(gap)
 
 
@@ -123,24 +124,52 @@ func _back() -> void:
 
 
 func close() -> void:
+	if Motion.closing(self):
+		return
 	closed.emit()
-	queue_free()
+	Motion.ease_exit(create_tween(), self, "modulate:a", 0.0, Motion.PANEL_OUT)
+	Motion.dismiss(self, _scroll)
 
 
+## A word to the player: a paper slip at the foot of the room, inked (fg is
+## the colour it would be on the dark, inked for the paper). Toasts queue; the
+## same words twice in a row are dropped.
 func toast(text: String, fg: Color = GOLD) -> void:
-	_toast_l.text = text
-	_toast_l.add_theme_color_override("font_color", fg)
+	if text == "":
+		return
+	if (_toasting and _toast_l.text == text) or _toasts.any(func(q: Array) -> bool: return q[0] == text):
+		return
+	_toasts.append([text, fg])
+	if not _toasting:
+		_next_toast()
+
+
+func _next_toast() -> void:
+	if _toasts.is_empty() or not is_inside_tree():
+		_toasting = false
+		return
+	_toasting = true
+	var q: Array = _toasts.pop_front()
+	_toast_l.text = q[0]
+	Kit.style(_toast_l, "body_strong", q[1])
+	_toast_l.custom_minimum_size = Vector2(minf(560.0, _toast_l.get_theme_font("font").get_string_size(q[0], HORIZONTAL_ALIGNMENT_LEFT, -1, Kit.role_px("body_strong")).x + 4.0), 0)
+	_toast.reset_size()
 	_toast.visible = true
-	_toast.modulate.a = 1.0
-	_toast_t = 2.5
+	await Motion.note_in(_toast)
+	if not is_inside_tree():
+		return
+	await get_tree().create_timer(Motion.NOTE_IN + Motion.NOTE_HOLD).timeout
+	if not is_inside_tree():
+		return
+	var tw: Tween = Motion.note_out(_toast, false)
+	if tw != null:
+		await tw.finished
+	if is_inside_tree():
+		_next_toast()
 
 
-func _process(delta: float) -> void:
-	if _toast_t > 0.0:
-		_toast_t -= delta
-		_toast.modulate.a = clampf(_toast_t / 0.4, 0.0, 1.0)
-		if _toast_t <= 0.0:
-			_toast.visible = false
+func _process(_delta: float) -> void:
+	pass
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -189,7 +218,7 @@ static func chip(parent: Control, t: String, fg: Color, bg: Color, _border: Colo
 
 
 ## A small upper-case heading: the kit's eyebrow.
-static func heading(parent: Control, t: String, c: Color = Color(0.75, 0.83, 0.89, 0.6), _px: int = 12) -> Label:
+static func heading(parent: Control, t: String, c: Color = Color(Kit.DIM, Kit.EYEBROW_ALPHA), _px: int = 12) -> Label:
 	return Kit.text(parent, t, "eyebrow", c)
 
 
@@ -207,7 +236,8 @@ static func picture(parent: Control, url: Variant, size_px: Vector2, grey: bool 
 	r.custom_minimum_size = size_px
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if grey:
-		r.modulate = Color(0.55, 0.55, 0.55, 0.8)
+		# Known but not owned: the grey pencil every screen uses (Kit.grey).
+		Kit.grey(r)
 	parent.add_child(r)
 	return r
 

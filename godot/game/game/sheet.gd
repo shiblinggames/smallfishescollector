@@ -4,10 +4,12 @@ extends Control
 ## app/(app)/sea/FishingHere.tsx, on the style kit).
 ##
 ## One shell so the menus cannot drift into slightly different modals: the
-## kit's scrim, the kit's modal pane rising in (from the bottom, or centred
-## when wide), an eyebrow, the title and blurb, THE close button, and a body
-## that scrolls. Escape, the pad's B, a press on the scrim or the close button
-## all close it.
+## kit's scrim, the kit's modal pane rising in (Motion.panel_in; from the
+## bottom, or centred when wide), THE shared header (Paper.header: eyebrow and
+## title on the left, "Close  Esc" on the right, the rule), the blurb, and a
+## body that scrolls. Escape, the pad's B, a press on the scrim or Close all
+## close it (Motion.dismiss: it fades out). Focus goes to the first thing in
+## the body only once a pad or the arrow keys are used.
 
 signal closed
 
@@ -18,14 +20,16 @@ var accent: Color = Kit.SAND
 var wide: bool = false
 var body: VBoxContainer
 var _panel: Pane
+var _shade: ColorRect
+var _pad_focus: bool = false
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = Kit.scrim(self)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
+	_shade = Kit.scrim(self)
+	_shade.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			close())
 	_panel = Kit.pane(self, Kit.modal(accent, 18))
@@ -43,43 +47,27 @@ func _ready() -> void:
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
 	_panel.add_child(col)
-	var head: HBoxContainer = HBoxContainer.new()
-	col.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	titles.add_theme_constant_override("separation", 2)
-	head.add_child(titles)
-	if eyebrow != "":
-		Kit.text(titles, eyebrow, "eyebrow", Kit.a(accent, 0.75))
-	Kit.text(titles, title, "title")
+	var head: Dictionary = Paper.header(col, title, eyebrow, close)
 	if blurb != "":
-		Kit.text(titles, blurb, "note", Kit.DIM, true)
-	var x: Button = Kit.close_button()
-	x.pressed.connect(close)
-	head.add_child(x)
+		Kit.text(head["titles"] as VBoxContainer, blurb, "note", Kit.DIM, true)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(scroll)
+	if Paper.is_night(self):
+		UiTheme.night_scroll(scroll)
 	body = VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 6)
 	scroll.add_child(body)
-	_panel.pivot_offset = Vector2(w / 2.0, h / 2.0)
-	_panel.modulate.a = 0.0
-	var y0: float = _panel.offset_top
-	_panel.offset_top += 22.0
-	_panel.offset_bottom += 22.0
-	var tw: Tween = create_tween().set_parallel(true)
-	tw.tween_property(_panel, "modulate:a", 1.0, 0.16)
-	tw.tween_property(_panel, "offset_top", y0, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(_panel, "offset_bottom", y0 + h, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	x.grab_focus.call_deferred()
+	Motion.panel_in(_panel)
 
 
 func close() -> void:
+	if Motion.closing(self):
+		return
 	closed.emit()
-	queue_free()
+	Motion.dismiss(self, _panel, _shade)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -88,14 +76,55 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 
 
-## A plain label, for screens not yet on the kit's roles: Cinzel 700 when
-## title_font, else Karla 400.
+## The first arrow key or pad press puts focus on the body's first control
+## (a mouse never sees a ring).
+func _input(event: InputEvent) -> void:
+	if _pad_focus or Motion.closing(self):
+		return
+	var nav: bool = false
+	for a: String in ["ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next"]:
+		if event.is_action_pressed(a):
+			nav = true
+	if not nav:
+		return
+	_pad_focus = true
+	var f: Control = get_viewport().gui_get_focus_owner()
+	if f != null and is_ancestor_of(f):
+		return
+	var first: Control = Sheet.first_focus(body)
+	if first == null:
+		first = Sheet.first_focus(_panel)
+	if first != null:
+		first.grab_focus()
+		get_viewport().set_input_as_handled()
+
+
+## The first visible control under `root` that takes focus (depth first).
+static func first_focus(root: Node) -> Control:
+	if root == null:
+		return null
+	for c: Node in root.get_children():
+		if c is Control and not (c as Control).is_visible_in_tree():
+			continue
+		if c is Control and (c as Control).focus_mode != Control.FOCUS_NONE and not (c is BaseButton and (c as BaseButton).disabled):
+			return c
+		var deeper: Control = first_focus(c)
+		if deeper != null:
+			return deeper
+	return null
+
+
+## A plain label, for screens not yet on the kit's roles: the pixel size goes
+## to the nearest role (Kit.role_for_px), its face and tracking; a size well
+## off the role's keeps its own px (the floor is 10).
 static func text(parent: Control, t: String, px: int, col: Color, title_font: bool = false, wrap: bool = false) -> Label:
 	var l: Label = Label.new()
 	l.text = t
-	l.add_theme_font_size_override("font_size", px)
-	l.add_theme_color_override("font_color", col)
-	Kit.face(l, px, title_font)
+	var caps: bool = t.length() > 2 and t == t.to_upper() and t != t.to_lower()
+	var role: String = Kit.role_for_px(px, title_font, caps)
+	Kit.style(l, role, col)
+	if absi(Kit.role_px(role) - px) > 1:
+		l.add_theme_font_size_override("font_size", maxi(10, px))
 	if wrap:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(300, 0)
@@ -110,7 +139,7 @@ func section(t: String) -> void:
 	pad.custom_minimum_size = Vector2(0, 8)
 	body.add_child(pad)
 	if t != "":
-		Kit.text(body, t, "eyebrow", Kit.a(accent, 0.7))
+		Kit.text(body, t, "eyebrow", Kit.a(accent, Kit.EYEBROW_ALPHA))
 
 
 ## A key on the left, its value on the right ('good' green, 'warn' amber).

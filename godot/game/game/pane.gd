@@ -228,12 +228,42 @@ static func apply(m: ShaderMaterial, s: Dictionary) -> void:
 	m.set_shader_parameter("shadow_offset", (sh[2] if (sh as Array).size() > 2 else Vector2.ZERO) if sh != null else Vector2.ZERO)
 
 
+## Two painted specs mixed at t (0 a, 1 b), for a hover blend: colours and
+## numbers that match in shape are lerped; anything else is taken from b.
+static func mix(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
+	var out: Dictionary = b.duplicate(true)
+	for key: Variant in b.keys():
+		if a.has(key):
+			out[key] = _mix_v(a[key], b[key], t)
+	return out
+
+
+static func _mix_v(x: Variant, y: Variant, t: float) -> Variant:
+	if x is Color and y is Color:
+		return (x as Color).lerp(y, t)
+	if (x is float or x is int) and (y is float or y is int) and not (x is int and y is int):
+		return lerpf(float(x), float(y), t)
+	if x is Vector2 and y is Vector2:
+		return (x as Vector2).lerp(y, t)
+	if x is Array and y is Array and (x as Array).size() == (y as Array).size():
+		var o: Array = []
+		for i: int in (y as Array).size():
+			o.append(_mix_v(x[i], y[i], t))
+		return o
+	return y
+
+
 ## A button with a pane behind its text, and a second spec for hover and press.
+## Hover blends over ~0.12s (Motion.HOVER_RATE); a disabled button does not
+## light up and wears a quieter face.
 class PaneButton:
 	extends Button
 	var normal: Dictionary = {}
 	var hot: Dictionary = {}
 	var _bg: Pane
+	var _lit: bool = false
+	var _blend: Tween
+	var _ring: StyleBoxFlat
 
 	func _init(n: Dictionary, h: Dictionary = {}) -> void:
 		normal = n
@@ -256,21 +286,58 @@ class PaneButton:
 			add_theme_stylebox_override(st, empty)
 		# The focus ring follows the button's own shape, so a controller always
 		# shows where it is without a pill drawn round a square.
-		var ring: StyleBoxFlat = StyleBoxFlat.new()
-		ring.draw_center = false
-		ring.border_color = Color("#f0c040")
-		ring.set_border_width_all(2)
-		ring.set_corner_radius_all(int(minf(float(n.get("radius", 12)), 999.0)) + 3)
-		ring.set_expand_margin_all(3)
-		add_theme_stylebox_override("focus", ring)
+		# Its colour is the token for where it lands (see _ring_ink).
+		_ring = StyleBoxFlat.new()
+		_ring.draw_center = false
+		_ring.border_color = Kit.GOLD
+		_ring.set_border_width_all(2)
+		_ring.set_corner_radius_all(int(minf(float(n.get("radius", 12)), 999.0)) + 3)
+		_ring.set_expand_margin_all(3)
+		add_theme_stylebox_override("focus", _ring)
 		if _bg.has_meta("paper"):
 			set_meta("paper", _bg.get_meta("paper"))
-		mouse_entered.connect(func() -> void: _bg.set_spec(hot))
-		mouse_exited.connect(func() -> void: _bg.set_spec(normal))
-		focus_entered.connect(func() -> void: _bg.set_spec(hot))
-		focus_exited.connect(func() -> void: _bg.set_spec(normal))
+		mouse_entered.connect(func() -> void: _light(true))
+		mouse_exited.connect(func() -> void: _light(false))
+		focus_entered.connect(func() -> void: _light(true))
+		focus_exited.connect(func() -> void: _light(false))
+
+	## Lit (hover or focus) or not: the face blends to its spec.
+	func _light(on: bool) -> void:
+		on = on and not disabled
+		if on == _lit:
+			return
+		_lit = on
+		if _blend != null and _blend.is_valid():
+			_blend.kill()
+		var from: Dictionary = _bg.spec
+		_bg.set_spec(hot if on else normal)
+		var to: Dictionary = _bg.spec
+		if not is_inside_tree() or from.get("paper", false) != to.get("paper", false) or from.get("night", false) != to.get("night", false):
+			return
+		Pane.apply(_bg._mat, Pane.mix(from, to, 0.0))
+		_blend = create_tween()
+		_blend.tween_method(func(t: float) -> void:
+			if is_instance_valid(_bg):
+				Pane.apply(_bg._mat, Pane.mix(from, to, t)), 0.0, 1.0, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+	## The focus ring's ink: CHOSEN on the night paper, inked gold on the day
+	## paper, the bright gold over the water.
+	func _ring_ink() -> void:
+		if Pane.night_root(self) or Kit.on_night(self) or has_meta("night") and get_meta("night") == true:
+			_ring.border_color = Paper.CHOSEN
+		elif Kit.on_paper(self) or has_meta("paper") and get_meta("paper") == true:
+			_ring.border_color = Kit.ink(Kit.GOLD)
+		else:
+			_ring.border_color = Kit.GOLD
 
 	func _notification(what: int) -> void:
+		if what == NOTIFICATION_DRAW and _bg != null:
+			# A disabled button wears a quieter face and is never lit.
+			_bg.self_modulate.a = 0.55 if disabled else 1.0
+			if disabled and _lit:
+				_light(false)
+		if what == NOTIFICATION_ENTER_TREE and _ring != null:
+			_ring_ink.call_deferred()
 		if what == NOTIFICATION_ENTER_TREE and Pane.night_root(self) and normal.get("night", false) != true:
 			var nm: Dictionary = normal.duplicate()
 			var ht: Dictionary = hot.duplicate()
@@ -287,7 +354,9 @@ class PaneButton:
 	func restyle(n: Dictionary, h: Dictionary = {}) -> void:
 		normal = n
 		hot = h if not h.is_empty() else n
-		_bg.set_spec(normal)
+		if _blend != null and _blend.is_valid():
+			_blend.kill()
+		_bg.set_spec(hot if _lit else normal)
 
 
 

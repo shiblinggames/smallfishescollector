@@ -11,22 +11,30 @@ extends RefCounted
 ## the orders carry drawn icons (no emoji). Everything draws onto a CanvasItem
 ## so the plates on the water, the deck and the turn track share one hand.
 
-const LACQUER: Color = Color(0.135, 0.11, 0.095)
-const LACQUER_HI: Color = Color(0.2, 0.165, 0.14)
-const LACQUER_LO: Color = Color(0.09, 0.075, 0.065)
-const HAIR: Color = Color(1, 1, 1, 0.09)
-## The accent words (labels, a chosen thing).
-const BRASS: Color = Color("#c4a96a")
-const BRASS_HI: Color = Color("#f5cf6a")
-const BRASS_LO: Color = Color(1, 1, 1, 0.09)
-const CREAM: Color = Color(0.94, 0.88, 0.77)
-const MUTED: Color = Color(0.72, 0.66, 0.57)
-const ALLY: Color = Color("#6fd394")
-const ALLY_LO: Color = Color("#2f8a58")
-const FOE: Color = Color("#f2705c")
-const FOE_LO: Color = Color("#a3291f")
-const SHIELD: Color = Color("#8ccfff")
-const GOLD: Color = Color("#f0c040")
+## EVERY battle colour is an alias of a Kit or Paper token (2026-10-09): no
+## hand-typed colours here.
+const LACQUER: Color = Paper.NIGHT_PAPER_DEEP
+const LACQUER_HI: Color = Paper.NIGHT_PAPER_HI
+const LACQUER_LO: Color = Paper.NIGHT_PAPER_LO
+const HAIR: Color = Paper.NIGHT_HAIR
+## The chosen accent (a chosen thing), Paper.CHOSEN; the name is kept for
+## callers, nothing on screen is "brass".
+const BRASS: Color = Paper.CHOSEN
+const CREAM: Color = Paper.NIGHT_INK
+const MUTED: Color = Paper.NIGHT_INK_SOFT
+const ALLY: Color = Kit.HELP
+const ALLY_LO: Color = Paper.GREEN
+const FOE: Color = Kit.HARM
+const FOE_LO: Color = Paper.RED
+const SHIELD: Color = Kit.SHIELD
+const GOLD: Color = Kit.GOLD
+## Outcomes: a heal, ice, fire, a critical, damage you take, and a plain word.
+const HEAL: Color = Kit.HEAL
+const ICE: Color = Kit.ICE
+const FIRE: Color = Kit.FIRE
+const CRIT: Color = Kit.GOLD
+const DMG_TAKEN: Color = Kit.DMG_TAKEN
+const WORD: Color = Paper.NIGHT_INK
 
 static var _boxes: Dictionary = {}
 
@@ -182,13 +190,24 @@ static func say(ci: CanvasItem, f: Font, x: float, y: float, s: String, fs: int,
 	return w
 
 
-## A small flat pill of words (a tag, a status).
+## A small flat pill of words (a tag, a status), in the tag role: Karla 800
+## at 10px, capitals tracked .08 (the floor; nothing is drawn at 9px).
 static func pill(ci: CanvasItem, left: Vector2, s: String, tone: Color, alpha: float = 1.0) -> float:
-	var f: Font = Kit.font("karla", 800)
-	var w: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x + 12.0
-	draw_box(ci, Rect2(left, Vector2(w, 15)), box(Color(tone, 0.2 * alpha), Color(0, 0, 0, 0), 0, 7.5))
-	ci.draw_string(f, left + Vector2(6, 11), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(tone.lightened(0.3), alpha))
+	var t: String = s.to_upper()
+	var w: float = pill_w(t)
+	draw_box(ci, Rect2(left, Vector2(w, 17)), box(Color(tone, 0.2 * alpha), Color(0, 0, 0, 0), 0, 8.5))
+	ci.draw_string(tag_font(), left + Vector2(6, 12.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, Kit.role_px("tag"), Color(tone.lightened(0.3), alpha))
 	return w
+
+
+## The tag role's font (battle pills and plate tags).
+static func tag_font() -> Font:
+	return Kit.role_font("tag")
+
+
+## A pill's width for these words.
+static func pill_w(s: String) -> float:
+	return tag_font().get_string_size(s.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, Kit.role_px("tag")).x + 12.0
 
 
 ## A dot on the fight track.
@@ -227,7 +246,7 @@ static func keycap(ci: CanvasItem, c: Vector2, key: String, a: float = 1.0) -> f
 	var w: float = maxf(19.0, f.get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 10.0)
 	var r: Rect2 = Rect2(c - Vector2(w * 0.5, 10.0), Vector2(w, 19.0))
 	draw_box(ci, Rect2(r.position + Vector2(0, 2), r.size), box(Color(0, 0, 0, 0.45 * a), Color(0, 0, 0, 0), 0, 5))
-	draw_box(ci, r, box(Color(0.1, 0.1, 0.12, 0.85 * a), Color(CREAM, 0.55 * a), 1, 5))
+	draw_box(ci, r, box(Color(LACQUER_LO, 0.85 * a), Color(CREAM, 0.55 * a), 1, 5))
 	say(ci, f, c.x, r.end.y - 5.0, key, 11, Color(CREAM, a))
 	return w
 
@@ -259,7 +278,9 @@ class ActionKey:
 	func _process(delta: float) -> void:
 		var want: float = 1.0 if is_hovered() and not disabled else 0.0
 		if _hover != want:
-			_hover = move_toward(_hover, want, delta * 8.0)
+			_hover = lerpf(_hover, want, Motion.hover_k(delta))
+			if absf(_hover - want) < 0.01:
+				_hover = want
 			queue_redraw()
 
 	func _draw() -> void:
@@ -335,44 +356,6 @@ class ActionKey:
 			BattleLook.keycap(self, Vector2(cx, y2 + 6.0), key_hint, 0.9 * a)
 
 
-## A crew hand's order on the deck: their portrait in a ring of their class's
-## colour, their name, and the order's state; tinted in that colour when
-## ordered.
-class OrderCard:
-	extends Button
-	var tex: Texture2D
-	var hand: String = ""
-	var state: String = ""
-	var col: Color = Color.WHITE
-	var chosen: bool = false
-	var _hover: float = 0.0
-
-	func _init() -> void:
-		flat = true
-		focus_mode = Control.FOCUS_NONE
-		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-
-	func _process(delta: float) -> void:
-		var want: float = 1.0 if is_hovered() and not disabled else 0.0
-		if _hover != want:
-			_hover = move_toward(_hover, want, delta * 8.0)
-			queue_redraw()
-
-	func _draw() -> void:
-		var a: float = 0.4 if disabled else 1.0
-		var r: Rect2 = Rect2(Vector2.ZERO, size)
-		var bg: Color = BattleLook.LACQUER_HI.lerp(BattleLook.LACQUER_HI.lightened(0.12), _hover)
-		if chosen:
-			bg = bg.lerp(col.darkened(0.5), 0.45)
-		BattleLook.draw_box(self, r, BattleLook.box(Color(bg, a), Color(col, 0.95) if chosen else Color(1, 1, 1, (0.08 + 0.1 * _hover) * a), 2 if chosen else 1, 10))
-		var mr: float = r.size.y * 0.5 - 8.0
-		BattleLook.medallion(self, Vector2(r.position.x + mr + 9, r.get_center().y), mr, tex, col, hand.substr(0, 1), a, Vector2(0.5, 0.36), 0.36)
-		var tx: float = r.position.x + mr * 2.0 + 18.0
-		var avail: float = r.end.x - tx - 6.0
-		draw_string(Kit.font("karla", 800), Vector2(tx, r.get_center().y - 2), hand, HORIZONTAL_ALIGNMENT_LEFT, avail, 13, Color(BattleLook.CREAM, a))
-		draw_string(Kit.font("karla", 700), Vector2(tx, r.get_center().y + 13), state, HORIZONTAL_ALIGNMENT_LEFT, avail, 10, Color(col.lightened(0.3) if not disabled else BattleLook.MUTED, a))
-
-
 ## A CREW HAND STANDING UP OUT OF THE DECK (Kong, 2026-10-05: the orders were
 ## "too blended into the bar"; then no boxes, no class colours). Frameless:
 ## their art stands on a soft halo of warm light (no shadow under them),
@@ -390,8 +373,6 @@ class CrewCard:
 	## spent, why).
 	var title: String = ""
 	var desc: String = ""
-	## Kept for callers; not drawn (Kong: no class colours on the cards).
-	var col: Color = Color.WHITE
 	var chosen: bool = false
 	var _hover: float = 0.0
 	var _lift: float = 0.0
@@ -416,9 +397,9 @@ class CrewCard:
 
 	func _process(delta: float) -> void:
 		_t += delta
-		_hover = move_toward(_hover, 1.0 if is_hovered() and not disabled else 0.0, delta * 8.0)
+		_hover = lerpf(_hover, 1.0 if is_hovered() and not disabled else 0.0, Motion.hover_k(delta))
 		var want: float = 18.0 if chosen else (-6.0 if disabled else 6.0 * _hover)
-		_lift = lerpf(_lift, want, 1.0 - exp(-delta * 12.0))
+		_lift = lerpf(_lift, want, Motion.hover_k(delta))
 		_on = lerpf(_on, 1.0 if chosen else 0.0, 1.0 - exp(-delta * 10.0))
 		_cap = move_toward(_cap, 1.0 if is_hovered() or pin_caption else 0.0, delta * 9.0)
 		if gain != "":
@@ -432,7 +413,7 @@ class CrewCard:
 		var grey: bool = disabled
 		var floor_y: float = size.y - 40.0
 		var g: Texture2D = FxSheet.glow()
-		var breath: float = 0.5 + 0.5 * sin(_t * 2.0)
+		var breath: float = Motion.pulse(_t, Motion.PULSE_BREATH)
 		# The light behind them (none when spent).
 		if not grey:
 			var ga: float = lerpf(0.16 + 0.08 * breath + 0.14 * _hover, 0.62, _on)
@@ -475,7 +456,7 @@ class CrewCard:
 		var u: float = clampf(_gt / 1.4, 0.0, 1.0)
 		var a: float = minf(1.0, _gt * 4.0) * (1.0 - smoothstep(0.75, 1.0, u)) if level_up == "" else minf(1.0, _gt * 4.0)
 		var y: float = floor_y - 150.0 - _lift - 34.0 * u
-		BattleLook.say(self, f, cx, y, gain, 24, Color(Color("#9be7ff"), a), 6)
+		BattleLook.say(self, f, cx, y, gain, 24, Color(Kit.XP, a), 6)
 		if level_up != "":
 			var la: float = clampf((_gt - 0.6) * 3.0, 0.0, 1.0)
 			if la > 0.0:
@@ -509,11 +490,3 @@ class CrewCard:
 			var pw: float = Kit.font("karla", 800).get_string_size("Press", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 			BattleLook.say(self, Kit.font("karla", 800), cx - 12.0 - pw * 0.5 + 6.0, y + 8.0, "Press", 11, Color(BattleLook.MUTED, a), 3)
 			BattleLook.keycap(self, Vector2(cx + 18.0, y + 4.0), key_hint, a)
-
-
-## Kept for the deck's layering: it draws nothing now (the deck is the night
-## paper alone).
-class DeckPanel:
-	extends Control
-	var title: String = ""
-	var body: bool = false
