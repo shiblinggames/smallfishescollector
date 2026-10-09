@@ -562,6 +562,52 @@ func _keel(hull: Sprite2D) -> float:
 	return k
 
 
+## WHERE A SHIP'S KEEL SITS in a picture, as a fraction of its height: the
+## lowest painted row down each column across the middle 60% of the painted
+## width, taken at the 75th percentile (that reproduces every base hull's
+## hand-set seaKeel to within 0.003; a skin's padded plate has its own).
+## Measured once.
+static var _keels: Dictionary = {}
+
+
+static func keel_frac(t: Texture2D) -> float:
+	var key: String = t.resource_path
+	if _keels.has(key):
+		return _keels[key]
+	var out: float = 0.75
+	var img: Image = t.get_image()
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		var r: Rect2i = img.get_used_rect()
+		var lows: Array = []
+		for x: int in range(r.position.x + int(r.size.x * 0.2), r.position.x + int(r.size.x * 0.8), 3):
+			for y: int in range(r.end.y - 1, r.position.y, -1):
+				if img.get_pixel(x, y).a > 0.5:
+					lows.append(float(y) / img.get_height())
+					break
+		if not lows.is_empty():
+			lows.sort()
+			out = lows[int(lows.size() * 0.75)]
+	_keels[key] = out
+	return out
+
+
+## How much of a picture's width is painted (a skin's plate is padded).
+static func paint_width(t: Texture2D) -> float:
+	var key: String = t.resource_path + "#w"
+	if _keels.has(key):
+		return _keels[key]
+	var out: float = 1.0
+	var img: Image = t.get_image()
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		out = float(img.get_used_rect().size.x) / maxf(1.0, float(img.get_width()))
+	_keels[key] = out
+	return out
+
+
 ## The painted rows of a picture, as a fraction of its height (top, bottom),
 ## measured once.
 static func _band(t: Texture2D) -> Vector2:

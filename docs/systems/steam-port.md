@@ -2304,7 +2304,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   waterline), slower and steadier by heft (the hull's tier: Sloop 0 to Man-o-War 1), rolled as a
   true rotation on the screen; the sailor sets rough and lean_deg (the heel into a turn and the
   bow's lift, less the bigger she is). A turn about narrows the hull through its beam and out over
-  0.32s. The wake starts at the ship's own cutwater (HullRig.wake_contact), and the full-sail
+  0.32s (REPLACED the same day, Kong: "it makes it feel like its 2d paper": she now heels 7
+  degrees into the turn and dips 6px over 0.36s, the picture turning at the peak in spray off the
+  bow and foam at the stern, and a ship only comes about once plainly sailing the other way for
+  0.12s; HullRig.turn). A SKIN'S KEEL is measured from its picture (Skipper.keel_frac: the 75th
+  percentile of the lowest painted rows, which reproduces every base hull's seaKeel to 0.003), and
+  a hull sinks by its painted width, not its padded plate (the Pitch Black hull sat a third too
+  deep). The wake starts at the ship's own cutwater (HullRig.wake_contact), and the full-sail
   streaks spread to her size. DEPARTURE, HANDLING: a ship picks up slower (x0.8 to x0.5), carries
   her way longer (x0.7 to x0.4 easing off), comes round wider (x0.85 to x0.6, and less spin from a
   standstill), drifts more (grip x0.8 to x0.55) and starts slowing for a click sooner (SLOW x1.3 to

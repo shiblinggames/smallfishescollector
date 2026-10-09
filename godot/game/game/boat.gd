@@ -135,6 +135,7 @@ var on_ship: bool = false
 ## aside, its reflection, and how it sits in the swell).
 var _ship_rig: HullRig
 var _ship_phase: float = randf() * 6.28
+var _about_t: float = 0.0
 
 
 ## THE CHANGE OF BOAT (North): past the sign in the arch, the ship you own
@@ -197,6 +198,7 @@ func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float
 	rig.box = 340.0 * wide
 	rig.phase = _ship_phase
 	rig.face = -_facing
+	rig.field = field
 	add_child(rig)
 	_ship_rig = rig
 	_rush_size(rig.box / SPRITE_W)
@@ -382,8 +384,17 @@ func steer(input: Vector2, delta: float) -> void:
 	lantern.texture_scale = 2.4 + 4.0 * lantern_glow
 	# Pointed the way the bow points.
 	lantern.rotation = heading
-	if speed > 20.0 and absf(velocity.x) > 8.0:
-		_facing = 1.0 if velocity.x > 0.0 else -1.0
+	# A ship comes about only once she is plainly sailing the other way (no
+	# flicking on a wobble); the fishing boat turns as it always has.
+	var face_to_x: float = (1.0 if velocity.x > 0.0 else -1.0) if (speed > 20.0 and absf(velocity.x) > 8.0) else _facing
+	if _ship_rig != null and face_to_x != _facing:
+		_about_t = _about_t + delta if absf(velocity.x) > maxf(40.0, speed * 0.3) else 0.0
+		if _about_t < 0.12:
+			face_to_x = _facing
+	else:
+		_about_t = 0.0
+	if face_to_x != _facing:
+		_facing = face_to_x
 		skipper.scale.x = -_facing
 	if _ship_rig != null:
 		# The ship sits in the swell as the fishing boat does (HullRig), the
