@@ -19,58 +19,23 @@ signal closed
 var session: Session
 var tab: String = "story"
 var _body: VBoxContainer
-var _sheet: Control
 var _tabs: HBoxContainer
+## The shared paper shell (Paper.open): the scrim, the sheet, its body.
+var _parts: Dictionary = {}
+const TABS: Array = [["story", "Story"], ["people", "People"]]
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.45)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	_sheet = Control.new()
-	_sheet.anchor_left = 0.5
-	_sheet.anchor_right = 0.5
-	_sheet.anchor_bottom = 1.0
-	_sheet.offset_left = -380.0
-	_sheet.offset_right = 380.0
-	_sheet.offset_top = 64.0
-	_sheet.offset_bottom = -24.0
-	add_child(_sheet)
-	Paper.sheet(_sheet, 8.0)
-	var margin: MarginContainer = MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 34)
-	margin.add_theme_constant_override("margin_top", 26)
-	margin.add_theme_constant_override("margin_bottom", 24)
-	_sheet.add_child(margin)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	margin.add_child(col)
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 6)
-	col.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	titles.add_theme_constant_override("separation", 0)
-	head.add_child(titles)
-	Paper.text(titles, "The Journal", "display", Paper.INK)
-	_tabs = HBoxContainer.new()
-	_tabs.add_theme_constant_override("separation", 6)
-	_tabs.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	head.add_child(_tabs)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
-	Paper.rule(col)
+	# THE ONE SHELL a sheet over the sea has (the sheet scrim, the panel's
+	# rise in and its fade out) and THE ONE HEADER (title left, Close Esc
+	# right, the tabs on their own row, the rule).
+	_parts = Paper.open(self, Paper.SHEET_NARROW, false, close, 30)
+	var col: VBoxContainer = _parts["body"]
+	var hd: Dictionary = Paper.header(col, "The Journal", "", close, TABS, tab, _pick)
+	_tabs = hd["tabs"]
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -79,23 +44,29 @@ func _ready() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 12)
 	scroll.add_child(_body)
-	_sheet.modulate.a = 0.0
-	_sheet.position.y += 16.0
-	var tw: Tween = create_tween().set_parallel()
-	tw.tween_property(_sheet, "modulate:a", 1.0, 0.2)
-	tw.tween_property(_sheet, "position:y", _sheet.position.y - 16.0, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_rebuild()
 
 
-func _rebuild() -> void:
+## A tab pressed: the row relit, the body crossfaded to it.
+func _pick(key: Variant) -> void:
+	if str(key) == tab:
+		return
+	tab = str(key)
+	_paint_tabs()
+	Motion.swap(_body, _rebuild)
+
+
+func _paint_tabs() -> void:
 	for c: Node in _tabs.get_children():
 		c.queue_free()
-	for o: Array in [["story", "Story"], ["people", "People"]]:
-		var b: Pane.PaneButton = Paper.button(o[1], o[0] == tab)
-		b.pressed.connect(func() -> void:
-			tab = o[0]
-			_rebuild())
+	for o: Array in TABS:
+		var key: String = o[0]
+		var b: Pane.PaneButton = Paper.tab(String(o[1]), key == tab, false)
+		b.pressed.connect(func() -> void: _pick(key))
 		_tabs.add_child(b)
+
+
+func _rebuild() -> void:
 	for c: Node in _body.get_children():
 		c.queue_free()
 	if tab == "people":
@@ -105,13 +76,15 @@ func _rebuild() -> void:
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if Motion.closing(self):
+		return
 	if event.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()
 		close()
@@ -169,11 +142,12 @@ func _story() -> void:
 	var t0: float = Time.get_ticks_msec() / 1000.0
 	road.draw.connect(func() -> void: _draw_road(road, views, cur, t0))
 	_body.add_child(road)
-	var tick: Timer = Timer.new()
-	tick.wait_time = 0.05
-	tick.autostart = true
-	tick.timeout.connect(road.queue_redraw)
-	road.add_child(tick)
+	# The breathing medallion is redrawn every frame (a 20fps timer stepped).
+	var tick: Callable = road.queue_redraw
+	get_tree().process_frame.connect(tick)
+	road.tree_exiting.connect(func() -> void:
+		if get_tree() != null and get_tree().process_frame.is_connected(tick):
+			get_tree().process_frame.disconnect(tick))
 
 	# The job in hand, or what is next.
 	var q: Variant = s.get("quest")
@@ -262,7 +236,7 @@ func _draw_road(road: Control, views: Array, cur: Dictionary, t0: float) -> void
 			road.draw_circle(c, 24.0, Paper.INK)
 			col = Kit.PAPER
 		elif is_cur:
-			var pulse: float = 0.5 + 0.5 * sin(t * 2.6)
+			var pulse: float = Motion.pulse(t)
 			road.draw_circle(c, 30.0 + pulse * 4.0, Color(Paper.RED, 0.12 * (1.0 - pulse) + 0.05))
 			road.draw_circle(c, 24.0, Color(1, 1, 1, 0.35))
 			road.draw_arc(c, 24.0, 0.0, TAU, 40, Paper.RED, 3.0, true)

@@ -19,66 +19,30 @@ var own: bool = true
 var view: String = "captain"
 var _group: int = 0
 var _body: VBoxContainer
-var _sheet: Control
+var _tabs: HBoxContainer
+## The shared paper shell (Paper.open): the scrim, the sheet, its body.
+var _parts: Dictionary = {}
 
-const KIND_COLOR: Dictionary = { "story": Color("#3f8a45"), "combat": Color("#b8562a"), "milestone": Color("#a07a24"), "shop": Color("#7a55b8") }
+## The kinds of stop are told apart by their words (no colour coding): one
+## soft ink for all.
+const KIND_COLOR: Dictionary = { "story": Paper.INK_SOFT, "combat": Paper.INK_SOFT, "milestone": Paper.INK_SOFT, "shop": Paper.INK_SOFT }
 const KIND_LABEL: Dictionary = { "story": "Story", "combat": "Battle", "milestone": "Milestone", "shop": "Port of call" }
+const VIEWS: Array = [["captain", "Captain"], ["story", "Story"], ["journey", "Journey"]]
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.45)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	_sheet = Control.new()
-	_sheet.anchor_left = 0.5
-	_sheet.anchor_right = 0.5
-	_sheet.anchor_bottom = 1.0
-	_sheet.offset_left = -380.0
-	_sheet.offset_right = 380.0
-	_sheet.offset_top = 64.0
-	_sheet.offset_bottom = -24.0
-	add_child(_sheet)
-	Paper.sheet(_sheet, 8.0)
-	var margin: MarginContainer = MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 34)
-	margin.add_theme_constant_override("margin_top", 26)
-	margin.add_theme_constant_override("margin_bottom", 24)
-	_sheet.add_child(margin)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	margin.add_child(col)
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 6)
-	col.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	titles.add_theme_constant_override("separation", 0)
-	head.add_child(titles)
+	# THE ONE SHELL a sheet over the sea has, and THE ONE HEADER (title and
+	# its line on the left, Close Esc on the right, the tabs on their own
+	# row, the rule).
+	_parts = Paper.open(self, Paper.SHEET_NARROW, false, close, 30)
+	var col: VBoxContainer = _parts["body"]
 	var who: String = str(Js.nz(store.me(uid).get("username"), "Captain"))
-	Paper.text(titles, "The Captain's Log" if own else "%s's papers" % who, "display", Paper.INK)
-	Paper.text(titles, "Who you are, what has happened, and what is left to do." if own else "A crewmate's record, as their log has it.", "note", Paper.INK_SOFT)
-	if own:
-		for o: Array in [["captain", "Captain"], ["story", "Story"], ["journey", "Journey"]]:
-			var b: Pane.PaneButton = Paper.button(o[1], o[0] == view)
-			b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			b.pressed.connect(func() -> void:
-				view = o[0]
-				_rebuild())
-			head.add_child(b)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
-	Paper.rule(col)
+	var hd: Dictionary = Paper.header(col, "The Captain's Log" if own else "%s's papers" % who, "", close, VIEWS if own else [], view, _pick)
+	_tabs = hd["tabs"]
+	Paper.text(hd["titles"], "Who you are, what has happened, and what is left to do." if own else "A crewmate's record, as their log has it.", "note", Paper.INK_SOFT)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -87,12 +51,22 @@ func _ready() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 10)
 	scroll.add_child(_body)
-	_sheet.modulate.a = 0.0
-	_sheet.position.y += 16.0
-	var tw: Tween = create_tween().set_parallel()
-	tw.tween_property(_sheet, "modulate:a", 1.0, 0.2)
-	tw.tween_property(_sheet, "position:y", _sheet.position.y - 16.0, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_rebuild()
+
+
+## A tab pressed: the row relit, the body crossfaded to it.
+func _pick(key: Variant) -> void:
+	if str(key) == view:
+		return
+	view = str(key)
+	for c: Node in _tabs.get_children():
+		c.queue_free()
+	for o: Array in VIEWS:
+		var k: String = o[0]
+		var b: Pane.PaneButton = Paper.tab(String(o[1]), k == view, false)
+		b.pressed.connect(func() -> void: _pick(k))
+		_tabs.add_child(b)
+	Motion.swap(_body, _rebuild)
 
 
 ## The log of a crewmate's captain, read from their berth (never adopted as a
@@ -117,13 +91,15 @@ static func for_berth(ch: Charter, key: String) -> CaptainsLog:
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if Motion.closing(self):
+		return
 	if event.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()
 		close()
@@ -331,7 +307,7 @@ func _build_journey() -> void:
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var right: String = "Earned" if g["done"] else ("%s / %s" % [Js.thousands(g["current"]), Js.thousands(g["target"])] if float(g["target"]) > 0.0 else "")
 		if right != "":
-			Paper.text(h, right, "small", Color("#3f7a45") if g["done"] else Paper.INK_SOFT)
+			Paper.text(h, right, "small", Paper.GREEN if g["done"] else Paper.INK_SOFT)
 		Paper.text(v, "%s  ·  %s, %d pt" % [g["desc"], str(g["difficulty"]).capitalize(), int(g["points"])], "note", Paper.INK_SOFT, true)
 		if not g["done"] and float(g["target"]) > 0.0:
 			var bar: Kit.Bar = Kit.bar(v, _frac(g), Kit.ink(Color(str(gr["accent"]))), true)

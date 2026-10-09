@@ -16,6 +16,9 @@ extends Control
 
 ## Pressed: the Fishing guide (every level and what it brings).
 signal pressed
+## A level crossing has played out (the line ran to full and flashed): the
+## level card may come now.
+signal crossing_done
 
 var skill: String = "fishing"
 var level: int = 1
@@ -61,17 +64,22 @@ func set_values(lvl: int, frac: float, left: float, reward: String, is_milestone
 	if _swap != null and _swap.is_valid():
 		_swap.kill()
 	_swap = create_tween()
-	_swap.tween_property(self, "modulate:a", 0.0, 0.2)
+	Motion.ease_fade(_swap, self, "modulate:a", 0.0, 0.2)
 	_swap.tween_callback(func() -> void:
 		skill = _want
 		_shown_level = 0
 		var v: Array = _pending
 		_apply(v[0], v[1], v[2], v[3], v[4], v[5]))
-	_swap.tween_property(self, "modulate:a", 1.0, 0.3)
+	Motion.ease_fade(_swap, self, "modulate:a", 1.0, 0.3)
 
 
 var _want: String = "fishing"
 var _pending: Array = []
+
+
+## Whether a level crossing is still to play out on the line.
+func crossing() -> bool:
+	return _crossing > 0
 
 
 func _apply(lvl: int, frac: float, left: float, reward: String, is_milestone: bool, run: int) -> void:
@@ -146,7 +154,10 @@ func _process(delta: float) -> void:
 				_crossing = 0
 				_shown = 0.0
 				_flash = 1.0
-				Sound.streak(clampi(level % 10 + 3, 1, 10))
+				# The bar's own tick, a touch louder (the streak's ladder is
+				# the perfects'; the level card's chest follows).
+				Sound.xp_tick()
+				crossing_done.emit()
 		elif absf(_shown - fill) > 0.001:
 			_shown = lerpf(_shown, fill, 1.0 - exp(-delta * 6.0))
 	queue_redraw()
@@ -155,8 +166,8 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var top: bool = level >= 100
 	var nav: bool = skill == "nav"
-	var cream: Color = Color(0.97, 0.93, 0.85)
-	var shade: Color = Color(0, 0, 0, 0.55)
+	var cream: Color = Kit.SEA_INK
+	var shade: Color = Kit.SEA_SHADE
 	var glass: Color = Color(1.0, 0.82, 0.42) if top else (Color(0.98, 0.78, 0.5) if nav else Color(0.56, 0.9, 0.84))
 	var title: Font = Kit.font("cinzel", 800)
 	var body: Font = Kit.font("karla", 700)
@@ -190,7 +201,7 @@ func _draw() -> void:
 		ls = str(level_from)
 	if _flash > 0.0:
 		draw_circle(Vector2(x + w_num / 2.0, cy), 26.0 * (1.0 + (1.0 - _flash) * 0.6), Color(glass, 0.35 * _flash))
-	_ink(title, Vector2(x, cy + 10), ls, 28, cream.lerp(Color(1, 0.9, 0.6), _flash), shade)
+	_ink(title, Vector2(x, cy + 10), ls, 28, cream.lerp(Kit.SEA_GOLD, _flash), shade)
 	x += w_num + 12.0
 	# A thin line of light: the way to the next level.
 	var track: Rect2 = Rect2(x, cy - 2.0, bar_w, 4.0)
@@ -199,9 +210,9 @@ func _draw() -> void:
 	var f: float = 1.0 if top else clampf(_shown, 0.0, 1.0)
 	# Close to a level it warms, and the bead quickens.
 	var near: float = smoothstep(0.88, 1.0, f) if not top else 0.0
-	var line_c: Color = glass.lerp(Color(1.0, 0.85, 0.45), near * 0.7)
+	var line_c: Color = glass.lerp(Kit.SEA_GOLD, near * 0.7)
 	if _flash > 0.0:
-		_pill(track.grow(3.0 + 4.0 * _flash), Color(1.0, 0.9, 0.6, 0.35 * _flash))
+		_pill(track.grow(3.0 + 4.0 * _flash), Color(Kit.SEA_GOLD, 0.35 * _flash))
 	_bead = Vector2(x + maxf(4.0, bar_w * f), cy)
 	if f > 0.0:
 		var fw: float = maxf(4.0, bar_w * f)
@@ -224,18 +235,19 @@ func _draw() -> void:
 		var p: Vector2 = a0.lerp(mid, e).lerp(mid.lerp(_bead, e), e)
 		draw_circle(p, float(m[3]) * 2.2, Color(line_c, 0.18))
 		draw_circle(p, float(m[3]), Color(1, 1, 0.92, 0.9))
-	# The XP earned this trip, quietly, under the bar.
+	# The XP earned this trip, quietly, under the line and INSIDE the bar's
+	# own rect (it overprinted the compass under it before).
 	var since: float = _t - _trip_t
 	if _trip > 0.0 and since < 8.0:
 		var ta: float = 1.0 - smoothstep(5.0, 8.0, since)
 		var tt: String = "+%s XP this trip" % Js.thousands(_trip)
 		var ttw: float = body.get_string_size(tt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-		_ink(body, Vector2(size.x / 2.0 - ttw / 2.0, cy + 26), tt, 11, Color(line_c.lerp(cream, 0.4), 0.85 * ta), Color(0, 0, 0, 0.5 * ta))
+		Kit.sea_string(self, body, Vector2(track.position.x + bar_w / 2.0 - ttw / 2.0, size.y - 3.0), tt, 11, Color(line_c.lerp(cream, 0.4), 0.85), HORIZONTAL_ALIGNMENT_LEFT, -1.0, ta)
 	x += bar_w + 14.0
-	_ink(body, Vector2(x, cy + 5), togo, 13, Color(1.0, 0.84, 0.5) if top else cream, shade)
+	_ink(body, Vector2(x, cy + 5), togo, 13, Kit.SEA_GOLD if top else cream, shade)
 	x += w_togo + 14.0
 	if rw != "":
-		_ink(body, Vector2(x, cy + 5), rw, 12, Color(1.0, 0.84, 0.5) if milestone else Color(cream, 0.85), shade, 240)
+		_ink(body, Vector2(x, cy + 5), rw, 12, Kit.SEA_GOLD if milestone else Color(cream, 0.85), shade, 240)
 		x += w_rw + 16.0
 	# The streak, by its flame (fishing only).
 	if streak >= 0:
@@ -272,14 +284,13 @@ func _flame(base: Vector2, h: float, lit: bool) -> void:
 	else:
 		var o: PackedVector2Array = shape.call(1.0)
 		o.append(o[0])
-		draw_polyline(o, Color(0.97, 0.93, 0.85, 0.35), 1.2, true)
+		draw_polyline(o, Color(Kit.SEA_INK, 0.35), 1.2, true)
 
 
-## Lettering on the water: the words over their own soft shadow.
-func _ink(f: Font, at: Vector2, t: String, px: int, col: Color, shade: Color, max_w: float = -1.0) -> void:
-	for o: Vector2 in [Vector2(0, 1.5), Vector2(1, 1), Vector2(-1, 1)]:
-		draw_string(f, at + o, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, px, Color(shade, shade.a * 0.6))
-	draw_string(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, max_w, px, col)
+## Lettering on the water, in the one recipe (Kit.sea_string: the shade
+## outline, then the words). shade's alpha scales the outline.
+func _ink(f: Font, at: Vector2, t: String, px: int, col: Color, _shade: Color, max_w: float = -1.0) -> void:
+	Kit.sea_string(self, f, at, t, px, col, HORIZONTAL_ALIGNMENT_LEFT, max_w)
 
 
 func _pill(r: Rect2, c: Color) -> void:

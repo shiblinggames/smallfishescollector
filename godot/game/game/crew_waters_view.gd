@@ -2,9 +2,11 @@ class_name CrewWatersView
 extends Control
 ## FISHING TOGETHER, ON THIS GAME'S SCREEN (game/crew_fishing.gd runs it on
 ## the founder's): a crewmate's catch popping over their ship, words on the
-## water; the crew's callouts in a line under the top of the screen; the crew
-## streak as motes rising round every hull in it, with its count; and a derby's
-## standings and clock at the right. Flat words, no boxes, no icons.
+## water; the crew's callouts in the HUD's toast lane (queued with the other
+## toasts, held while the dial is up); the crew streak as motes rising round
+## every hull in it, with its count; and a derby's standings and clock at the
+## right, under the top-right column and its notes. Flat words, no boxes, no
+## icons.
 
 var sea: Sea
 var fishing: CrewFishing
@@ -12,7 +14,7 @@ var my_key: String = ""
 
 var _pops: Array = []
 var _calls: Array = []
-var _call_l: Label
+## A beat between callouts handed to the toast lane.
 var _call_t: float = 0.0
 var _streak_l: Label
 var _derby_box: VBoxContainer
@@ -24,15 +26,7 @@ var _t: float = 0.0
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_call_l = _label(22, BattleLook.CREAM)
-	_call_l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_call_l.offset_left = -520
-	_call_l.offset_right = 520
-	_call_l.offset_top = 362
-	_call_l.offset_bottom = 396
-	_call_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_call_l.modulate.a = 0.0
-	_streak_l = _label(18, Color(1.0, 0.84, 0.42))
+	_streak_l = _label(18, Kit.SEA_GOLD)
 	_streak_l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_streak_l.offset_left = -200
 	_streak_l.offset_right = 200
@@ -49,9 +43,9 @@ func _ready() -> void:
 	_derby_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_derby_box.add_theme_constant_override("separation", 2)
 	add_child(_derby_box)
-	_derby_title = _label(17, Color(1.0, 0.84, 0.42), _derby_box)
+	_derby_title = _label(17, Kit.SEA_GOLD, _derby_box)
 	_derby_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_derby_rows = _label(15, Color(0.94, 0.9, 0.82), _derby_box)
+	_derby_rows = _label(15, Kit.SEA_INK, _derby_box)
 	_derby_rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_derby_box.visible = false
 	fishing.popped.connect(_on_pop)
@@ -67,10 +61,10 @@ func _label(px: int, col: Color, parent: Node = self) -> Label:
 	l.add_theme_font_override("font", Kit.font("cinzel", 700))
 	l.add_theme_font_size_override("font_size", px)
 	l.add_theme_color_override("font_color", col)
-	l.add_theme_color_override("font_outline_color", Color(0.02, 0.04, 0.06, 0.85))
-	l.add_theme_constant_override("outline_size", 8)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)
+	# Lettering on the water, in the one recipe.
+	Kit.lift(l)
 	return l
 
 
@@ -120,17 +114,27 @@ func _node_of(key: String) -> Node2D:
 	return sea._mates.get(key)
 
 
+func _hud() -> FishingHud:
+	return sea._hud if sea != null else null
+
+
 func _process(delta: float) -> void:
 	_t += delta
-	# The callouts, one at a time.
-	if _call_t > 0.0:
-		_call_t -= delta
-		_call_l.modulate.a = clampf(minf(_call_t, 3.6 - _call_t) / 0.35, 0.0, 1.0)
-	elif not _calls.is_empty():
-		_call_l.text = str(_calls.pop_front())
-		_call_t = 3.6
-	else:
-		_call_l.modulate.a = 0.0
+	var hud: FishingHud = _hud()
+	var dial_up: bool = hud != null and hud._dial != null and hud._dial.visible
+	# The callouts go to the toast lane, a beat apart, and wait while the
+	# dial is up (the fight has the screen).
+	_call_t = maxf(0.0, _call_t - delta)
+	if _call_t <= 0.0 and not _calls.is_empty() and not dial_up and hud != null:
+		hud.toast(str(_calls.pop_front()))
+		_call_t = 1.2
+	# The streak's count steps aside while the dial is up (it sat on the ring).
+	_streak_l.modulate.a = move_toward(_streak_l.modulate.a, 0.0 if dial_up else 1.0, delta * Motion.NEAR_RATE)
+	# The derby sits under the top-right column and any note there.
+	if hud != null:
+		var y: float = hud.notes_bottom()
+		_derby_box.offset_top = lerpf(_derby_box.offset_top, y, Motion.hover_k(delta))
+		_derby_box.offset_bottom = _derby_box.offset_top + 210.0
 	if _derby_box.visible:
 		var left: float = maxf(0.0, Js.num(fishing.derby.get("left")) - float(Time.get_ticks_msec() - fishing.derby_got_ms) / 1000.0)
 		_derby_title.text = "Derby: %s   %d:%02d" % [fishing.derby.get("title", ""), int(left) / 60, int(left) % 60]
@@ -149,10 +153,9 @@ func _draw() -> void:
 		var t: float = float(p["t"])
 		var at: Vector2 = n.get_global_transform_with_canvas().origin + Vector2(0, -150.0 - 40.0 * t)
 		var a: float = clampf(minf(t / 0.2, (2.6 - t) / 0.5), 0.0, 1.0)
-		var col: Color = Color(1.0, 0.82, 0.3, a) if p["golden"] else Color(0.97, 0.94, 0.86, a)
+		var col: Color = Kit.SEA_GOLD if p["golden"] else Kit.SEA_INK
 		var w: float = font.get_string_size(str(p["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
-		draw_string_outline(font, at - Vector2(w / 2.0, 0), str(p["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, 7, Color(0.02, 0.04, 0.06, 0.8 * a))
-		draw_string(font, at - Vector2(w / 2.0, 0), str(p["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, col)
+		Kit.sea_string(self, font, at - Vector2(w / 2.0, 0), str(p["text"]), 20, col, HORIZONTAL_ALIGNMENT_LEFT, -1.0, a)
 	# The crew streak: motes rising off the water round every hull in it, more
 	# as it climbs.
 	var n2: int = fishing.streak
@@ -168,4 +171,4 @@ func _draw() -> void:
 				var x: float = fmod(abs(sin(seed) * 43758.5453), 1.0)
 				var life: float = fmod(_t * (0.35 + 0.25 * x) + x * 3.0, 1.0)
 				var pos: Vector2 = c + Vector2((x - 0.5) * 220.0, 30.0 - life * 150.0)
-				draw_circle(pos, 1.6 + 2.2 * x, Color(1.0, 0.84, 0.42, (1.0 - life) * 0.75 * sin(life * PI)))
+				draw_circle(pos, 1.6 + 2.2 * x, Color(Kit.SEA_GOLD, (1.0 - life) * 0.75 * sin(life * PI)))

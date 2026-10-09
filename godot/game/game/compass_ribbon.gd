@@ -33,9 +33,10 @@ const SLOTS: int = 5
 const CARDINAL: Array = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 const ARRIVE: float = 420.0
 
-const INK: Color = Color(0.97, 0.94, 0.86)
+## Lettering on the water: the one cream and the one gold (spec 1.3).
+const INK: Color = Kit.SEA_INK
 const SOFT: Color = Color(0.8, 0.76, 0.68)
-const GOLD: Color = Color(1.0, 0.82, 0.48)
+const GOLD: Color = Kit.SEA_GOLD
 const AMBER: Color = Color(1.0, 0.68, 0.32)
 const TEAL: Color = Color(0.5, 0.9, 0.86)
 const DIM: Color = Color(0.62, 0.66, 0.7)
@@ -240,8 +241,11 @@ func _on_screen(p: Vector2) -> bool:
 func _process(delta: float) -> void:
 	_folk_rows(delta)
 	var hide: bool = sea.stage != null or OS.get_environment("FILM_QUIET") != "" or (sea._hud != null and sea._hud._modal != null)
-	# Dims to almost nothing while the line is out (the dial has the screen).
-	var want: float = 0.0 if hide else (0.14 if sea._hud != null and sea._hud.phase != "idle" else 1.0)
+	# Dims with the HUD's focus while the dial is up (the dial has the
+	# screen), to the weight the focus dim leaves everything else at; it sits
+	# above the HUD, so the dim itself never covers it.
+	var dial_up: bool = sea._hud != null and sea._hud._dial != null and sea._hud._dial.visible
+	var want: float = 0.0 if hide else ((1.0 - Kit.SCRIM_FOCUS / 0.6) if dial_up else 1.0)
 	_alpha = move_toward(_alpha, want, delta * 3.0)
 	visible = _alpha > 0.01
 	_marks = _gather() if visible else []
@@ -342,9 +346,9 @@ func _draw() -> void:
 		_hits.append([Rect2(c + Vector2(bx - 6, y - 2), Vector2(bw + 12, 38)), m2["id"]])
 
 
+## Lettering on the water, in the one recipe (Kit.sea_string).
 func _text(f: Font, at: Vector2, t: String, px: int, col: Color) -> void:
-	draw_string_outline(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, px, 6, Color(0.02, 0.04, 0.06, 0.7 * col.a))
-	draw_string(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, px, col)
+	Kit.sea_string(self, f, at, t, px, col)
 
 
 ## The pinned road: dots on the water from the bow toward the mark.

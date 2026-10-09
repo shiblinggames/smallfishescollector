@@ -38,10 +38,19 @@ signal expedition_wanted(what: String)
 const HOLD_S: float = 0.62
 ## A perfect holds longer than a catch so the leap lands before the card.
 const HOLD_PERFECT_S: float = 1.15
-const INK: Color = Color("#f0ede8")
-const DIM: Color = Color("#a0a09a")
-const GOLD: Color = Color("#f0c040")
-const TEAL: Color = Color("#67d4e8")
+const INK: Color = Kit.INK
+const DIM: Color = Kit.DIM
+const GOLD: Color = Kit.GOLD
+## The cast and fishing action's cyan.
+const TEAL: Color = Kit.CAST
+## The top-centre stack (spec 1.6): the level bar at 12-52, the compass under
+## it, the story line, then ONE lane for the cues, the hotspot and the course,
+## with the toasts stacked under whatever it holds.
+const LANE_Y: float = 216.0
+const LANE_W: float = 760.0
+const TOAST_W: float = 600.0
+## At most this many toasts read at once; an older one leaves early.
+const TOAST_MAX: int = 3
 
 var session: Session
 var boat: Boat
@@ -76,7 +85,8 @@ var _xp: XpBar
 var _next_for: int = -1
 var _next_text: String = ""
 var _purse: Label
-var _spot_badge: Pane
+## The hotspot, lettered on the water in the lane (M6: no box, no discs).
+var _spot_badge: VBoxContainer
 var _spot_family: Label
 var _spot_name: Label
 var _spot_left: Label
@@ -113,8 +123,24 @@ var _timer: Label
 var _tide: Button
 var _dial: Dial
 var _card: Control
+## The newest toast (its words are what was last said).
 var _toast: Label
-var _toast_t: float = 0.0
+## Where the toasts stack: under the lane, or over the dial while it is up.
+var _toasts: VBoxContainer
+## Toasts held back while a side banner has the sky.
+var _toast_wait: Array = []
+var _now: float = 0.0
+## The top-centre lane (cues, hotspot, course) and the corners' columns.
+var _lane: VBoxContainer
+var _tl: VBoxContainer
+var _tr: VBoxContainer
+## The hold's count held at what it was until the fish lands in it (-1: live).
+var _hold_shown: int = -1
+var _fly_pending: bool = false
+## The waiting words have faded in for this cast.
+var _wait_shown: bool = false
+var _dial_tw: Tween
+var _wait_tw: Tween
 var _modal: Control
 var _level_seen: int = 0
 ## An action is out with the rules (in a Charter, with the founder's game).
@@ -141,6 +167,7 @@ func _ready() -> void:
 
 	var tl: VBoxContainer = _box(Vector2(20, 14), false, 580)
 	tl.add_theme_constant_override("separation", 6)
+	_tl = tl
 	_name = Kit.lift(Kit.text(tl, "", "title", INK))
 	# Your name opens the Captain's Log (game/captains_log.gd).
 	_name.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -199,7 +226,7 @@ func _ready() -> void:
 	session.changed.connect(func() -> void:
 		if is_inside_tree():
 			refresh())
-	_auto = Pane.PaneButton.new({ "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.22)], "pad": [10, 4, 12, 4] }, { "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.86)], "border": [1, Color(0.7, 0.83, 0.89, 0.45)], "pad": [10, 4, 12, 4] })
+	_auto = Pane.PaneButton.new(Kit.water_pill([10, 4, 12, 4]), Kit.water_pill([10, 4, 12, 4], true))
 	_auto.custom_minimum_size = Vector2(0, 28)
 	_auto.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_auto.add_theme_font_override("font", Kit.tracked("karla", 700, 11, 0.12))
@@ -213,10 +240,11 @@ func _ready() -> void:
 
 	var tr: VBoxContainer = _box(Vector2(-20, 16), true, 360)
 	tr.add_theme_constant_override("separation", 4)
+	_tr = tr
 	_where = Kit.lift(Kit.text(tr, "", "title", INK))
 	_blurb = Kit.lift(Kit.text(tr, "", "small", Kit.INK_2))
 	# What is biting best here now (core/fish_bias.gd).
-	_stir = Kit.lift(Kit.text(tr, "", "small", Color(0.98, 0.84, 0.55)))
+	_stir = Kit.lift(Kit.text(tr, "", "small", Kit.SEA_GOLD))
 	_stir.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stir.custom_minimum_size = Vector2(360, 0)
 	for l: Label in [_where, _blurb, _stir]:
@@ -241,7 +269,7 @@ func _ready() -> void:
 	chart.pressed.connect(func() -> void: chart_pressed.emit())
 	clock_row.add_child(chart)
 	clock_row.move_child(chart, 0)
-	var clock_pill: Pane = Kit.pane(clock_row, { "radius": 999, "fill": [Color(0.016, 0.04, 0.07, 0.72)], "border": [1, Color(0.7, 0.83, 0.89, 0.22)], "pad": [10, 3, 10, 4] })
+	var clock_pill: Pane = Kit.pane(clock_row, Kit.water_pill())
 	clock_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var clock_in: HBoxContainer = HBoxContainer.new()
 	clock_in.add_theme_constant_override("separation", 6)
@@ -298,17 +326,9 @@ func _ready() -> void:
 	_m_log = gv[0]
 	_log_val = gv[1]
 	_log_val.text = "Catches"
-	_log_dot_c = Control.new()
-	_log_dot_c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_log_dot_c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_log_dot_c.draw.connect(func() -> void:
-		if _log_dot:
-			var p: Vector2 = Vector2(_log_dot_c.size.x - 14.0, 12.0)
-			var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 260.0)
-			_log_dot_c.draw_circle(p, 7.0 + pulse * 2.0, Color(0.85, 0.3, 0.2, 0.25))
-			_log_dot_c.draw_circle(p, 5.0, Color(0.85, 0.3, 0.2)))
-	_m_log.add_child(_log_dot_c)
+	_log_dot_c = _new_dot(_m_log)
 	_log_dot = int(AlmanacData.build(session.store, session.uid).get("newCount", 0)) > 0
+	_log_dot_c.set_meta("on", _log_dot)
 	var hv: Array = _menu(bottom, "Hold", _open_hold)
 	_m_hold = hv[0]
 	_hold = hv[1]
@@ -316,21 +336,22 @@ func _ready() -> void:
 	_orders_val = ov[1]
 	_bottom_fish = bottom
 	_build_expedition_row()
-	_blocked = Kit.lift(Kit.text(self, "", "small", Color("#f8a2a2")))
+	_blocked = Kit.lift(Kit.text(self, "", "small", Kit.DANGER_INK))
 	_blocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_blocked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_place(_blocked, Vector2(0.5, 0.5), Vector2(-300, 178), Vector2(600, 28))
+	# Under the Cast lettering (150 to 202), not across it.
+	_place(_blocked, Vector2(0.5, 0.5), Vector2(-300, 208), Vector2(600, 28))
 
 	_status = Kit.lift(Kit.text(self, "", "heading", INK))
 	_status.add_theme_font_size_override("font_size", 21)
+	Kit.lift(_status)
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_place(_status, Vector2(0.5, 0.5), Vector2(-300, 110), Vector2(600, 32))
-	_dots = Kit.lift(Kit.text(self, "", "heading", Color(0.78, 0.86, 0.91, 0.9)))
+	_dots = Kit.lift(Kit.text(self, "", "heading", Color(Kit.SEA_INK, 0.9)))
 	_dots.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_place(_dots, Vector2(0.5, 0.5), Vector2(-150, 80), Vector2(300, 30))
-	_timer = Kit.lift(Kit.text(self, "", "small", Color(0.75, 0.83, 0.89, 0.6)))
+	_timer = Kit.lift(Kit.text(self, "", "small", Color(Kit.SEA_INK, 0.6)))
 	_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_place(_timer, Vector2(0.5, 0.5), Vector2(-150, 146), Vector2(300, 22))
+	_readouts(false)
 
 	_dial = Dial.new()
 	# The dial sits beside where the line goes in (placed each frame in
@@ -344,37 +365,38 @@ func _ready() -> void:
 	_dial.struck.connect(_on_struck)
 	add_child(_dial)
 	_tide = Kit.button("Tide Turner", "accent", "small", Color("#c9a7ff"))
-	_place(_tide, Vector2(0.5, 0.5), Vector2(150, 150), Vector2(280, 44))
+	# Clear of the Reel In lettering (-220 to 220), at its right.
+	_place(_tide, Vector2(0.5, 0.5), Vector2(236, 154), Vector2(230, 44))
 	_tide.visible = false
 	_tide.pressed.connect(_skip)
 	add_child(_tide)
 
+	# THE LANE (spec 1.6): one owner for the top-centre stack under the story
+	# line, so each pushes the next down: the cues, the hotspot, the course.
+	_lane = VBoxContainer.new()
+	_lane.add_theme_constant_override("separation", 6)
+	_lane.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_place(_lane, Vector2(0.5, 0.0), Vector2(-LANE_W / 2.0, LANE_Y), Vector2(LANE_W, 0))
+	add_child(_lane)
 	_cues = HBoxContainer.new()
 	_cues.alignment = BoxContainer.ALIGNMENT_CENTER
 	_cues.add_theme_constant_override("separation", 8)
 	_cues.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_cues.anchor_left = 0.0
-	_cues.anchor_right = 1.0
-	_cues.offset_top = 216.0
-	_cues.offset_bottom = 246.0
-	add_child(_cues)
+	_cues.custom_minimum_size = Vector2(0, 0)
+	_lane.add_child(_cues)
+	_build_spot()
 	_course = HBoxContainer.new()
 	_course.alignment = BoxContainer.ALIGNMENT_CENTER
 	_course.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_course.anchor_left = 0.0
-	_course.anchor_right = 1.0
-	_course.offset_top = 250.0
-	_course.offset_bottom = 288.0
-	add_child(_course)
-	_reach_btn = Pane.PaneButton.new(
-		{ "radius": 999, "fill": [Color(0.04, 0.078, 0.11, 0.88)], "border": [1, Color(0.7, 0.84, 0.91, 0.45)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 4)], "pad": 0 },
-		{ "radius": 999, "fill": [Color(0.06, 0.1, 0.14, 0.92)], "border": [1, Color(1.0, 0.85, 0.53, 0.8)], "shadow": [Color(1.0, 0.8, 0.45, 0.18), 18, Vector2(0, 4)], "pad": 0 })
+	_course.visible = false
+	_lane.add_child(_course)
+	_reach_btn = Pane.PaneButton.new(Kit.water_pill(0), Kit.water_pill(0, true))
 	_reach_btn.focus_mode = Control.FOCUS_NONE
 	_reach_btn.visible = false
 	_reach_btn.pressed.connect(_press_reach)
 	add_child(_reach_btn)
 	_reach_l = Label.new()
-	Kit.style(_reach_l, "heading", Color("#f2ead8"))
+	Kit.style(_reach_l, "heading", Kit.SEA_INK)
 	_reach_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reach_btn.add_child(_reach_l)
 	var key: Label = Label.new()
@@ -393,28 +415,16 @@ func _ready() -> void:
 	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reach_btn.add_child(key)
 
-	_spot_badge = Pane.new({ "radius": 14, "fill": [Color(0.016, 0.04, 0.07, 0.86)], "border": [1, Color(1, 1, 1, 0.14)], "shadow": [Color(0, 0, 0, 0.45), 16, Vector2(0, 4)], "pad": [14, 9, 14, 10] })
-	_spot_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_place(_spot_badge, Vector2(0.5, 0.0), Vector2(-180, 216), Vector2(360, 0))
-	_spot_badge.visible = false
-	add_child(_spot_badge)
-	var sv: VBoxContainer = VBoxContainer.new()
-	sv.add_theme_constant_override("separation", 2)
-	sv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_spot_badge.add_child(sv)
-	_spot_family = Kit.text(sv, "", "eyebrow", GOLD)
-	var sh: HBoxContainer = HBoxContainer.new()
-	sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sv.add_child(sh)
-	_spot_name = Kit.text(sh, "", "heading", INK)
-	_spot_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_spot_left = Kit.text(sh, "", "small", DIM)
-	_spot_left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_spot_effect = Kit.text(sv, "", "small", Kit.INK_2, true)
-
-	_toast = Kit.lift(Kit.text(self, "", "heading", GOLD))
-	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 292), Vector2(600, 30))
+	# THE TOASTS: notes stacked under the lane (placed each frame), each in,
+	# held and out on the NOTE moves; nothing overwrites another.
+	_toasts = VBoxContainer.new()
+	_toasts.add_theme_constant_override("separation", 2)
+	_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_place(_toasts, Vector2(0.5, 0.0), Vector2(-TOAST_W / 2.0, LANE_Y), Vector2(TOAST_W, 0))
+	add_child(_toasts)
+	_toast = Label.new()
+	_toast.visible = false
+	_toasts.add_child(_toast)
 	_level_seen = session.level()
 	refresh()
 	# What the sea owes on opening: levels not yet celebrated, then a golden
@@ -476,16 +486,7 @@ func _build_expedition_row() -> void:
 	_crew_val = cv[1]
 	var rv: Array = _menu(_bottom_exp, "Recruits", func() -> void: expedition_wanted.emit("recruits"), true)
 	_recruit_val = rv[1]
-	_recruit_dot = Control.new()
-	_recruit_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_recruit_dot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_recruit_dot.draw.connect(func() -> void:
-		if _recruit_dot.get_meta("on", false):
-			var p: Vector2 = Vector2(_recruit_dot.size.x - 14.0, 12.0)
-			var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 260.0)
-			_recruit_dot.draw_circle(p, 7.0 + pulse * 2.0, Color(0.95, 0.72, 0.3, 0.25))
-			_recruit_dot.draw_circle(p, 5.0, Color(0.95, 0.72, 0.3)))
-	(rv[0] as Control).add_child(_recruit_dot)
+	_recruit_dot = _new_dot(rv[0] as Control)
 	var sv: Array = _menu(_bottom_exp, "Ship", func() -> void: expedition_wanted.emit("ship"), true)
 	_ship_val = sv[1]
 	_bottom_exp.visible = false
@@ -517,8 +518,8 @@ func set_side(on_expedition: bool, animate: bool = false) -> void:
 	var home_y: float = coming.position.y
 	_side_tw = create_tween()
 	_side_tw.set_parallel()
-	_side_tw.tween_property(going, "modulate:a", 0.0, 0.22)
-	_side_tw.tween_property(going, "position:y", going.position.y + 26.0, 0.22).set_ease(Tween.EASE_IN)
+	Motion.ease_exit(_side_tw, going, "modulate:a", 0.0, 0.22)
+	Motion.ease_exit(_side_tw, going, "position:y", going.position.y + 26.0, 0.22)
 	_side_tw.chain().tween_callback(func() -> void:
 		going.visible = false
 		going.modulate.a = 1.0
@@ -527,10 +528,10 @@ func set_side(on_expedition: bool, animate: bool = false) -> void:
 		coming.position.y = home_y + 26.0
 		for b: Node in coming.get_children():
 			(b as Control).modulate.a = 0.0)
-	_side_tw.chain().tween_property(coming, "position:y", home_y, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_side_tw.chain().tween_property(coming, "position:y", home_y, 0.38).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	var k: int = 0
 	for b: Node in coming.get_children():
-		_side_tw.parallel().tween_property(b, "modulate:a", 1.0, 0.25).set_delay(0.07 * k)
+		_side_tw.parallel().tween_property(b, "modulate:a", 1.0, 0.25).set_delay(0.07 * k).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		k += 1
 
 
@@ -542,7 +543,7 @@ var _side_banner: Control = null
 func side_banner(title: String, line: String) -> void:
 	# One at a time: a newer one takes the sky.
 	if is_instance_valid(_side_banner):
-		_side_banner.queue_free()
+		Motion.leave(_side_banner, true, false)
 	var v: VBoxContainer = VBoxContainer.new()
 	_side_banner = v
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -550,10 +551,7 @@ func side_banner(title: String, line: String) -> void:
 	v.add_theme_constant_override("separation", 2)
 	_place(v, Vector2(0.5, 0.5), Vector2(-400, -260), Vector2(800, 110))
 	add_child(v)
-	var t: Label = Kit.lift(Kit.text(v, title, "display", Color(0.98, 0.94, 0.85)))
-	t.add_theme_font_size_override("font_size", 48)
-	t.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	t.add_theme_constant_override("shadow_outline_size", 14)
+	var t: Label = Kit.lift(Kit.text(v, title, "hero", Kit.SEA_INK))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# The letters draw together from wide apart as it arrives.
 	var fv: FontVariation = FontVariation.new()
@@ -565,23 +563,26 @@ func side_banner(title: String, line: String) -> void:
 	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(mid)
 	var rule: ColorRect = ColorRect.new()
-	rule.color = Color(0.98, 0.84, 0.55, 0.85)
+	rule.color = Color(Kit.SEA_GOLD, 0.85)
 	rule.custom_minimum_size = Vector2(0, 2)
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mid.add_child(rule)
-	var l: Label = Kit.lift(Kit.text(v, line, "eyebrow", Color(0.98, 0.84, 0.55)))
+	var l: Label = Kit.text(v, line, "eyebrow", Kit.SEA_GOLD)
 	l.add_theme_font_size_override("font_size", 14)
+	Kit.lift(l)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.modulate.a = 0.0
 	v.position.y += 14.0
 	var tw: Tween = v.create_tween()
+	# Its own move, so a newer banner's Motion.leave replaces it.
+	v.set_meta("_motion", tw)
 	tw.set_parallel()
-	tw.tween_property(v, "modulate:a", 1.0, 0.45).set_delay(0.2)
+	tw.tween_property(v, "modulate:a", 1.0, 0.45).set_delay(0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_property(v, "position:y", v.position.y - 14.0, 0.6).set_delay(0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_method(func(g: float) -> void: fv.spacing_glyph = int(round(g)), 16.0, 1.0, 1.1).set_delay(0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(rule, "custom_minimum_size:x", 300.0, 0.8).set_delay(0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.chain().tween_interval(1.6)
-	tw.chain().tween_property(v, "modulate:a", 0.0, 0.7)
+	tw.chain().tween_property(v, "modulate:a", 0.0, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.chain().tween_callback(v.queue_free)
 
 
@@ -612,6 +613,62 @@ func _box(at: Vector2, right: bool, w: float) -> VBoxContainer:
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(b)
 	return b
+
+
+## THE "SOMETHING NEW" DOT on a bottom-row button (the Log, the Recruits): one
+## amber, breathing while its meta "on" is set. Nothing is wrong, so not red.
+func _new_dot(b: Control) -> Control:
+	var d: Control = Control.new()
+	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	d.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	d.draw.connect(func() -> void:
+		if d.get_meta("on", false):
+			var col: Color = Kit.CAUTION if Paper.is_night(d) else Kit.ink(Kit.CAUTION)
+			var p: Vector2 = Vector2(d.size.x - 14.0, 12.0)
+			var k: float = Motion.pulse(Time.get_ticks_msec() / 1000.0)
+			d.draw_circle(p, 7.0 + k * 2.0, Color(col, 0.25))
+			d.draw_circle(p, 5.0, col))
+	b.add_child(d)
+	return d
+
+
+## THE HOTSPOT, LETTERED ON THE WATER (M6): its family and tier as an eyebrow,
+## its name, the time left, and what it does, as words in the lane. No box,
+## no discs. It fades in when she sails into one and out when it goes.
+func _build_spot() -> void:
+	_spot_badge = VBoxContainer.new()
+	_spot_badge.add_theme_constant_override("separation", 0)
+	_spot_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spot_badge.visible = false
+	_lane.add_child(_spot_badge)
+	_spot_family = Kit.lift(Kit.text(_spot_badge, "", "eyebrow", Kit.SEA_GOLD))
+	_spot_family.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var sh: HBoxContainer = HBoxContainer.new()
+	sh.alignment = BoxContainer.ALIGNMENT_CENTER
+	sh.add_theme_constant_override("separation", 10)
+	sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spot_badge.add_child(sh)
+	_spot_name = Kit.lift(Kit.text(sh, "", "heading", Kit.SEA_INK))
+	_spot_left = Kit.lift(Kit.text(sh, "", "small", Kit.INK_2))
+	_spot_left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_spot_effect = Kit.lift(Kit.text(_spot_badge, "", "small", Kit.INK_2))
+	_spot_effect.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_spot_effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_spot_effect.custom_minimum_size = Vector2(LANE_W - 160.0, 0)
+	_spot_effect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+
+## Where the waiting words sit: under the boat while she waits (fight =
+## false), or in a fight ABOVE the dial and over the dim (stage first, then
+## its pips), so the stage is never behind the ring.
+func _readouts(fight: bool) -> void:
+	if not fight:
+		_place(_status, Vector2(0.5, 0.5), Vector2(-300, 110), Vector2(600, 32))
+		_place(_dots, Vector2(0.5, 0.5), Vector2(-150, 80), Vector2(300, 30))
+		return
+	var top: float = _dial.position.y
+	_place(_status, Vector2(0.5, 0.0), Vector2(-300, top - 72.0), Vector2(600, 32))
+	_place(_dots, Vector2(0.5, 0.0), Vector2(-150, top - 38.0), Vector2(300, 30))
 
 
 func _label(parent: Control, text: String, px: int, col: Color, title: bool = false) -> Label:
@@ -699,13 +756,19 @@ func refresh() -> void:
 		_bait_val.text = "%s  %d" % [held[0][1], int(held[0][2])]
 	elif held.is_empty():
 		_bait_val.text = "None"
-	var cap: int = int(Rules.fish_hold(Js.num(p.get("fish_hold_tier")))["capacity"])
-	var count: int = int(session.store.hold_count(session.uid))
-	_hold.text = "%d/%d" % [count, cap]
-	_hold.add_theme_color_override("font_color", Color(0.7, 0.2, 0.15) if count >= cap else Kit.PAPER_INK)
+	_paint_hold()
 	_loadout_val.text = "Your loadout"
 	_update_auto()
 	_update_action()
+
+
+## The hold's count. While a fish is in the air to it (_hold_shown >= 0) it
+## reads what it was, and changes when the fish lands.
+func _paint_hold() -> void:
+	var cap: int = int(Rules.fish_hold(Js.num(session.profile().get("fish_hold_tier")))["capacity"])
+	var count: int = _hold_shown if _hold_shown >= 0 else int(session.store.hold_count(session.uid))
+	_hold.text = "%d/%d" % [count, cap]
+	_hold.add_theme_color_override("font_color", Paper.RED if count >= cap else Kit.PAPER_INK)
 
 
 ## What is stirring in this water now ("Night: ... are feeding."), or "".
@@ -713,7 +776,7 @@ func set_stir(text: String) -> void:
 	if _stir != null and _stir.text != text:
 		_stir.text = text
 		if text != "":
-			Kit.pop(_stir)
+			Motion.rise_word(_stir)
 
 
 func set_water(w: Dictionary) -> void:
@@ -723,86 +786,151 @@ func set_water(w: Dictionary) -> void:
 	_where.text = w.get("name", "Harbor approach")
 	_blurb.text = w.get("blurb", "Sail south to fish")
 	if not w.is_empty():
-		toast(w["name"])
+		toast(w["name"], "name")
 	_update_action()
 	# The level bar follows the side of the reef she is on.
 	refresh()
 
 
-## The hotspot the boat is in ({} for none): its badge, with its countdown.
+const _ROMAN: Array = ["I", "II", "III"]
+
+
+## The hotspot the boat is in ({} for none): lettered in the lane, with its
+## countdown. Its arrival IS the announcement (no toast as well).
 func set_spot(h: Dictionary) -> void:
 	if h.get("key") != _spot.get("key"):
 		_spot = h
 		if not h.is_empty():
 			var def: Dictionary = Hotspots.DEFS[h["kind"]]
-			var c: Color = Color(def["color"])
-			var tier: int = int(h["tier"])
-			_spot_family.text = "%s  ·  %s" % [def["family"], "●".repeat(tier) + "○".repeat(3 - tier)]
-			_spot_family.add_theme_color_override("font_color", c)
+			var tier: int = clampi(int(h["tier"]), 1, 3)
+			# The family in its own colour (the ring on the water wears it);
+			# the tier in words, not discs.
+			_spot_family.text = "%s  ·  TIER %s" % [str(def["family"]).to_upper(), _ROMAN[tier - 1]]
+			_spot_family.add_theme_color_override("font_color", Color(def["color"]).lerp(Kit.SEA_INK, 0.25))
 			_spot_name.text = def["tiers"][tier - 1][0]
 			_spot_effect.text = def["tiers"][tier - 1][1]
-			var s: Dictionary = (_spot_badge.spec as Dictionary).duplicate()
-			s["border"] = [1, Color(c, 0.45)]
-			_spot_badge.set_spec(s)
-			toast(_spot_name.text)
-	_spot_badge.visible = not h.is_empty()
+			_spot_badge.visible = true
+			Motion.rise_word(_spot_badge)
+		elif _spot_badge.visible and not _spot_badge.has_meta("_going"):
+			_spot_badge.set_meta("_going", true)
+			var tw: Tween = Motion.note_out(_spot_badge, false)
+			if tw != null:
+				tw.tween_callback(func() -> void: _spot_badge.remove_meta("_going"))
+			else:
+				_spot_badge.visible = false
+				_spot_badge.remove_meta("_going")
 	if not h.is_empty():
+		if _spot_badge.has_meta("_going"):
+			_spot_badge.remove_meta("_going")
 		var left: int = maxi(0, int((float(h["endsAt"]) - Clock.now_ms()) / 1000.0))
 		_spot_left.text = ("%dm left" % ceili(left / 60.0)) if left >= 60 else ("%ds" % left)
 
 
-## The course chip: {label, eta, autopilot}, or {} for none.
+## THE COURSE CHIP: {label, eta, autopilot}, or {} for none. Built once and
+## then only updated (the sea calls this twice a second), so its buttons
+## keep their hover and a press never lands on a freed button.
+var _course_words: Label
+var _course_ap: Button
+var _course_auto: bool = false
+
+
 func set_course(info: Dictionary) -> void:
-	for n: Node in _course.get_children():
-		n.queue_free()
 	if info.is_empty():
+		if _course.visible:
+			_course.visible = false
 		return
-	var gold: Color = Color(1.0, 0.92, 0.72)
-	var p: Pane = Kit.pane(_course, { "radius": 999, "fill": [Color(0.024, 0.047, 0.07, 0.8)], "border": [1, Kit.a(gold, 0.4)], "shadow": [Kit.a(gold, 0.12), 14], "pad": [14, 4, 6, 4] })
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	p.add_child(row)
-	var words: Label = Kit.lift(Kit.text(row, "COURSE  ·  %s  ·  %s" % [info["label"], info["eta"]], "chip", gold))
-	words.add_theme_font_size_override("font_size", 11)
-	words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var ap: Button = Kit.button("Autopilot on" if info.get("autopilot", false) else "Autopilot", "accent" if info.get("autopilot", false) else "secondary", "small", gold)
-	ap.focus_mode = Control.FOCUS_NONE
-	ap.pressed.connect(func() -> void: course_autopilot.emit())
-	row.add_child(ap)
-	var x: Button = Kit.button("Clear", "secondary", "small")
-	x.focus_mode = Control.FOCUS_NONE
-	x.pressed.connect(func() -> void: course_clear.emit())
-	row.add_child(x)
+	if _course_words == null:
+		var p: Pane = Kit.pane(_course, Kit.water_pill([14, 4, 6, 4]))
+		var row: HBoxContainer = HBoxContainer.new()
+		row.name = "Row"
+		row.add_theme_constant_override("separation", 10)
+		p.add_child(row)
+		# Inked: the pill is paper on the water, so its words are not lifted.
+		_course_words = Kit.text(row, "", "chip", Kit.GOLD)
+		_course_words.add_theme_font_size_override("font_size", 11)
+		_course_words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var x: Button = Kit.button("Clear", "secondary", "small")
+		x.focus_mode = Control.FOCUS_NONE
+		x.pressed.connect(func() -> void: course_clear.emit())
+		row.add_child(x)
+		_course_auto = not info.get("autopilot", false)
+	var on: bool = info.get("autopilot", false)
+	if on != _course_auto or _course_ap == null:
+		_course_auto = on
+		var row2: Node = _course_words.get_parent()
+		if _course_ap != null:
+			_course_ap.queue_free()
+		_course_ap = Kit.button("Autopilot on" if on else "Autopilot", "accent" if on else "secondary", "small", Kit.GOLD)
+		_course_ap.focus_mode = Control.FOCUS_NONE
+		_course_ap.pressed.connect(func() -> void: course_autopilot.emit())
+		row2.add_child(_course_ap)
+		row2.move_child(_course_ap, 1)
+	_course_words.text = "COURSE  ·  %s  ·  %s" % [info["label"], info["eta"]]
+	if not _course.visible:
+		_course.visible = true
+		Motion.rise_word(_course)
+
+
+## The cues, diffed by their words: a cue that stays does not bounce again,
+## one that goes fades away, a new one rises in.
+var _cue_labels: Dictionary = {}
 
 
 func set_cues(c: Dictionary) -> void:
-	for n: Node in _cues.get_children():
-		n.queue_free()
+	var want: Array = []
 	var cur: String = c.get("current", "")
 	if cur != "":
-		_cue_chip("Riding the current" if cur == "with" else ("Against the current" if cur == "against" else "Crossing a current"),
-			Color("#8fe0f0") if cur == "with" else (Color("#f0a58f") if cur == "against" else Color("#c9d6e0")))
+		want.append(["Riding the current" if cur == "with" else ("Against the current" if cur == "against" else "Crossing a current"),
+			Color("#8fe0f0") if cur == "with" else (Color("#f0a58f") if cur == "against" else Color("#c9d6e0"))])
 	if c.get("full", false):
-		_cue_chip("Full sail", Color("#f0d58a"))
+		want.append(["Full sail", Color("#f0d58a")])
 	if c.get("kelp", false):
-		_cue_chip("In the kelp", Color("#a8c483"))
+		want.append(["In the kelp", Color("#a8c483")])
 	var w: String = str(c.get("weather", ""))
 	if w != "":
-		_cue_chip(w, Color("#bcd0e8") if not w.begins_with("Fair wind") else Color("#d8f0c8"))
+		want.append([w, Color("#bcd0e8") if not w.begins_with("Fair wind") else Color("#d8f0c8")])
+	var keep: Dictionary = {}
+	for x: Array in want:
+		keep[x[0]] = true
+	# Those that left fade away; the separators are laid again below.
+	for t: Variant in _cue_labels.keys():
+		if not keep.has(t):
+			var gone: Label = _cue_labels[t]
+			_cue_labels.erase(t)
+			if is_instance_valid(gone):
+				Motion.leave(gone, true, false)
+	for n: Node in _cues.get_children():
+		if n.has_meta("cue_sep"):
+			n.queue_free()
+	var at: int = 0
+	for i: int in want.size():
+		if i > 0:
+			var dot: Label = Kit.text(null, "·", "eyebrow", Color(Kit.SEA_INK, 0.45))
+			dot.set_meta("cue_sep", true)
+			dot.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			_cues.add_child(dot)
+			Kit.lift(dot)
+			_cues.move_child(dot, at)
+			at += 1
+		var text: String = want[i][0]
+		var l: Label = _cue_labels.get(text)
+		if l == null or not is_instance_valid(l):
+			l = _cue_chip(text, want[i][1])
+			_cue_labels[text] = l
+		else:
+			l.add_theme_color_override("font_color", want[i][1])
+		_cues.move_child(l, at)
+		at += 1
 
 
 ## A cue is lettering on the water, not a panel (Kong, 2026-10-01): the words
-## in their tint over a soft shadow, a small diamond between them.
-func _cue_chip(text: String, col: Color) -> void:
-	if _cues.get_child_count() > 0:
-		var dot: Label = Kit.lift(Kit.text(_cues, "◆", "chip", Color(0.95, 0.92, 0.84, 0.45)))
-		dot.add_theme_font_size_override("font_size", 8)
-		dot.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var l: Label = Kit.lift(Kit.text(_cues, text, "eyebrow", col))
+## in their tint, in the one recipe for lettering on the water.
+func _cue_chip(text: String, col: Color) -> Label:
+	var l: Label = Kit.text(_cues, text, "eyebrow", col)
 	l.add_theme_font_size_override("font_size", 12)
-	l.add_theme_constant_override("shadow_outline_size", 6)
-	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	l.ready.connect(func() -> void: Kit.pop(l))
+	Kit.lift(l)
+	Motion.rise_word(l)
+	return l
 
 
 func set_clock(label: String, sky: Dictionary = {}) -> void:
@@ -816,8 +944,9 @@ func set_clock(label: String, sky: Dictionary = {}) -> void:
 var _sky_arc: SkyArc
 
 
-## THE SKY IN THE CLOCK: a small arc from east to west with the sun (gold) or
-## the moon (pale) where it stands in it now.
+## THE SKY IN THE CLOCK: a small arc from east to west with the sun or the
+## moon where it stands in it now. Drawn in the ink of the paper the clock's
+## pill is (the day's or the night's), the moon a stroked crescent.
 class SkyArc:
 	extends Control
 	var u: float = 0.5
@@ -828,18 +957,17 @@ class SkyArc:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
+		var ink: Color = Paper.ink(self)
 		var c: Vector2 = Vector2(size.x / 2.0, size.y - 2.0)
 		var r: float = minf(size.x / 2.0 - 2.0, size.y - 4.0)
-		draw_line(Vector2(0, c.y), Vector2(size.x, c.y), Color(0.82, 0.88, 0.93, 0.35), 1.0, true)
-		draw_arc(c, r, PI, TAU, 24, Color(0.82, 0.88, 0.93, 0.3), 1.0, true)
+		draw_line(Vector2(0, c.y), Vector2(size.x, c.y), Color(ink, 0.35), 1.0, true)
+		draw_arc(c, r, PI, TAU, 24, Color(ink, 0.3), 1.0, true)
 		# East is on the right: it rises there and sets on the left.
 		var at: Vector2 = c + Vector2.from_angle(-PI * u) * r
 		if moon:
-			draw_circle(at, 3.6, Color(0.85, 0.9, 1.0))
-			draw_circle(at + Vector2(1.6, -0.8), 3.0, Color(0.1, 0.14, 0.2))
+			draw_arc(at, 3.2, PI * 0.35, PI * 1.65, 14, Paper.ink_soft(self), 1.8, true)
 		else:
-			draw_circle(at, 6.0, Color(1.0, 0.75, 0.3, 0.25))
-			draw_circle(at, 3.6, Color(1.0, 0.82, 0.38))
+			draw_circle(at, 3.6, Paper.gold(self))
 
 
 ## The recall's state: ready (0), or the milliseconds until it is.
@@ -877,12 +1005,12 @@ func _update_action() -> void:
 				elif session.store.hold_count(session.uid) >= float(Rules.fish_hold(Js.num(p.get("fish_hold_tier")))["capacity"]):
 					_action.disabled = true
 					_action.text = "Hold Full"
-					_blocked.add_theme_color_override("font_color", Color("#f8a2a2"))
+					_blocked.add_theme_color_override("font_color", Kit.DANGER_INK)
 					_blocked.text = "Your hold is full. Sell it to the buyer in this water, or sail it home to the market."
 				elif session.baits().is_empty():
 					_action.disabled = true
 					_action.text = "No Bait"
-					_blocked.add_theme_color_override("font_color", Color("#e8c98a"))
+					_blocked.add_theme_color_override("font_color", Kit.WARN)
 					_blocked.text = "Out of bait. There are peddlers out here, and the shop ashore."
 	_action.text = _action.text.to_upper()
 	_action.accent = TEAL if teal else GOLD
@@ -915,11 +1043,7 @@ func set_reach(text: String, act: Callable) -> void:
 	key.position = Vector2(22 + w + 10, 10)
 	key.size = Vector2(26, 24)
 	_reach_btn.pivot_offset = Vector2(full / 2.0, 22)
-	_reach_btn.modulate.a = 0.0
-	_reach_btn.scale = Vector2.ONE * 0.94
-	var tw: Tween = create_tween().set_parallel(true)
-	tw.tween_property(_reach_btn, "modulate:a", 1.0, 0.16)
-	tw.tween_property(_reach_btn, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Motion.arrive(_reach_btn, "s")
 
 
 func _press_reach() -> void:
@@ -960,7 +1084,7 @@ func story_pour(xp: float, from: Vector2) -> void:
 ## After Finn's scene: a level crossed by a job's XP gets the level card.
 func after_story() -> void:
 	if session.level() > _level_seen:
-		_after_catch(true)
+		_after_catch(true, false, true)
 
 
 ## A panel or room from the sea (ashore, a buyer, the Market) holds the HUD
@@ -968,11 +1092,24 @@ func after_story() -> void:
 func hold_for(c: Control) -> void:
 	_modal = c
 	_reach_btn.visible = false
-	c.tree_exited.connect(func() -> void:
+	# Released once: when it says closed, or when it leaves the tree.
+	var gone: Array = [false]
+	var free_it: Callable = func() -> void:
+		if gone[0]:
+			return
+		gone[0] = true
 		if _modal == c:
 			_modal = null
 		_reach_text = ""
-		refresh())
+		refresh()
+	c.tree_exited.connect(free_it)
+	# A menu now fades out after it closes (Motion.dismiss): the sea is hers
+	# again the moment it says closed, not when its fade has finished.
+	for sg: Dictionary in c.get_signal_list():
+		if sg["name"] == "closed" and (sg["args"] as Array).is_empty():
+			c.connect("closed", func() -> void:
+				if _modal == c:
+					free_it.call(), CONNECT_ONE_SHOT)
 
 
 ## Whether anything is open over the sea, so the boat holds still.
@@ -1054,7 +1191,7 @@ func _paint_orders() -> void:
 	var ready: int = Orders.ready_count(session.store, session.uid)
 	if ready > 0:
 		_orders_val.text = "%d to claim" % ready
-		_orders_val.add_theme_color_override("font_color", Color("#9a6a12"))
+		_orders_val.add_theme_color_override("font_color", Paper.MONEY)
 		return
 	var st: Dictionary = RulesApi.run(session.store, session.uid, "ordersState", [])
 	var done: int = 0
@@ -1082,8 +1219,7 @@ var _picker: Control
 ## press one to put it on. Press the button again, or anywhere else, to close.
 func _toggle_bait_picker() -> void:
 	if _picker != null and is_instance_valid(_picker):
-		_picker.queue_free()
-		_picker = null
+		_close_picker()
 		return
 	if phase != "idle" and phase != "result":
 		toast("Bait goes on before the cast")
@@ -1097,8 +1233,7 @@ func _toggle_bait_picker() -> void:
 	_picker.mouse_filter = Control.MOUSE_FILTER_STOP
 	_picker.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and _picker != null:
-			_picker.queue_free()
-			_picker = null)
+			_close_picker())
 	add_child(_picker)
 	var card: Pane = Kit.pane(_picker, { "radius": 14, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.4), 16, Vector2(0, 5)], "pad": [14, 12, 14, 12], "paper": true })
 	var row: HBoxContainer = HBoxContainer.new()
@@ -1119,21 +1254,49 @@ func _toggle_bait_picker() -> void:
 		t.pressed.connect(func() -> void:
 			set_bait(b[0])
 			Rumble.tap(8)
-			toast("%s on the line" % b[1])
+			# Said where it happened: the bait pops on the Bait button.
+			_pop_bait()
 			if _picker != null:
-				_picker.queue_free()
-				_picker = null)
+				_close_picker())
 		row.add_child(t)
+	# Unseen until it is measured and placed.
+	card.name = "Card"
+	card.modulate.a = 0.0
 	await get_tree().process_frame
 	if _picker == null or not is_instance_valid(_picker):
 		return
 	var r: Rect2 = _m_bait.get_global_rect()
 	card.position = Vector2(clampf(r.position.x + r.size.x / 2.0 - card.size.x / 2.0, 12.0, size.x - card.size.x - 12.0), r.position.y - card.size.y - 10.0)
-	card.modulate.a = 0.0
 	card.position.y += 10.0
 	var tw: Tween = card.create_tween().set_parallel()
-	tw.tween_property(card, "modulate:a", 1.0, 0.15)
-	tw.tween_property(card, "position:y", card.position.y - 10.0, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	Motion.ease_fade(tw, card, "modulate:a", 1.0, 0.15)
+	Motion.ease_rise(tw, card, "position:y", card.position.y - 10.0, 0.18)
+
+
+## The picker goes: input stops at once, it fades and drops 6px, then is freed.
+func _close_picker() -> void:
+	var pk: Control = _picker
+	_picker = null
+	if pk == null or not is_instance_valid(pk):
+		return
+	pk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var card: Control = pk.get_node_or_null("Card")
+	if card == null or not pk.is_inside_tree():
+		pk.queue_free()
+		return
+	var tw: Tween = pk.create_tween().set_parallel()
+	Motion.ease_exit(tw, card, "modulate:a", 0.0, 0.12)
+	Motion.ease_exit(tw, card, "position:y", card.position.y + 6.0, 0.12)
+	tw.chain().tween_callback(pk.queue_free)
+
+
+## The bait just put on pops on the Bait button.
+func _pop_bait() -> void:
+	if _bait_icon == null or not _bait_icon.is_inside_tree():
+		return
+	_bait_icon.pivot_offset = _bait_icon.size / 2.0
+	_bait_icon.scale = Vector2.ONE * 1.16
+	Motion.ease_pop(_bait_icon.create_tween(), _bait_icon, "scale", Vector2.ONE, 0.22)
 
 
 ## Put on the next bait held.
@@ -1152,7 +1315,7 @@ func _cycle_bait() -> void:
 	var nxt: Array = held[(i + 1) % held.size()]
 	set_bait(nxt[0])
 	Rumble.tap(8)
-	toast("%s on the line" % nxt[1])
+	_pop_bait()
 
 
 ## The bait on the line (the Locker's Bait slot).
@@ -1177,6 +1340,7 @@ var _log_dot: bool = false
 
 func _paint_log_dot() -> void:
 	if _log_dot_c != null:
+		_log_dot_c.set_meta("on", _log_dot)
 		_log_dot_c.queue_redraw()
 
 
@@ -1221,8 +1385,13 @@ func _update_auto() -> void:
 	var tier: int = _auto_tier()
 	_auto.visible = tier > 0
 	_auto.text = "%s · %s" % ["AUTO CATCHER" if tier == 2 else "AUTO CASTER", "ON" if _auto_on else "OFF"]
-	_auto.modulate = Color.WHITE if _auto_on else Color(1, 1, 1, 0.55)
-	_auto.add_theme_color_override("font_color", Color("#f0ede8") if _auto_on else Color("#9a9488"))
+	# The pill is paper on the water: its words are inked, and OFF is said in
+	# the words (softer ink), not by fading the whole pill.
+	var day: Color = Kit.PAPER_INK if _auto_on else Kit.PAPER_INK_SOFT
+	var col: Color = Kit.night_ink(day) if Paper.is_night(self) else day
+	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		_auto.add_theme_color_override(st, col)
+	_auto.set_meta("day_font", day)
 
 
 func _toggle_auto() -> void:
@@ -1241,8 +1410,9 @@ var _zoom_t: float = 0.0
 
 func show_zoom(z: float) -> void:
 	if _zoom_l == null:
-		_zoom_l = Kit.lift(Kit.text(self, "", "value", Color(0.97, 0.93, 0.85)))
+		_zoom_l = Kit.text(self, "", "value", Kit.SEA_INK)
 		_zoom_l.add_theme_font_size_override("font_size", 15)
+		Kit.lift(_zoom_l)
 		_zoom_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_place(_zoom_l, Vector2(1.0, 1.0), Vector2(-340, -110), Vector2(320, 26))
 	var pct: int = int(round(z / Sea.ZOOM_DEFAULT * 100.0))
@@ -1268,11 +1438,14 @@ func _paint_clues() -> void:
 		return
 	_clues_sig = sig
 	if _clues_box == null:
+		# In the top-left column, under whatever is above it (the purse, the
+		# Charter's buttons, the Auto pill), never pinned over them.
 		_clues_box = VBoxContainer.new()
 		_clues_box.add_theme_constant_override("separation", 8)
 		_clues_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_place(_clues_box, Vector2(0.0, 0.0), Vector2(20, 104), Vector2(330, 0))
-		add_child(_clues_box)
+		_clues_box.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_clues_box.custom_minimum_size = Vector2(330, 0)
+		_tl.add_child(_clues_box)
 	for c: Node in _clues_box.get_children():
 		c.queue_free()
 	for th: Array in hunts:
@@ -1282,13 +1455,12 @@ func _paint_clues() -> void:
 		v.add_theme_constant_override("separation", 1)
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_clues_box.add_child(v)
-		var e: Label = Kit.lift(Kit.text(v, "%s  ·  STEP %d OF %d" % [str(Clues.TIER_NAME[th[0]]).to_upper(), int(h["step"]) + 1, (h["steps"] as Array).size()], "eyebrow", Color(0.98, 0.84, 0.55)))
-		e.add_theme_font_size_override("font_size", 11)
-		var t: Label = Kit.lift(Kit.text(v, str(s["text"]), "small", Color(0.97, 0.93, 0.85), true))
+		var e: Label = Kit.lift(Kit.text(v, "%s  ·  STEP %d OF %d" % [str(Clues.TIER_NAME[th[0]]).to_upper(), int(h["step"]) + 1, (h["steps"] as Array).size()], "eyebrow", Kit.SEA_GOLD))
+		var t: Label = Kit.lift(Kit.text(v, str(s["text"]), "small", Kit.SEA_INK, true))
 		t.custom_minimum_size = Vector2(330, 0)
 		if s.get("kind") == "trivia":
 			var tier: String = th[0]
-			var ab: Button = Kit.button("Answer the note", "accent", "small", Color(0.98, 0.84, 0.55))
+			var ab: Button = Kit.button("Answer the note", "accent", "small", Kit.SEA_GOLD)
 			ab.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			ab.mouse_filter = Control.MOUSE_FILTER_STOP
 			ab.pressed.connect(func() -> void: _clue_question(tier, str(s["qid"])))
@@ -1307,12 +1479,13 @@ func _clue_question(tier: String, qid: String) -> void:
 	shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(shade)
 	_modal = shade
-	Kit.scrim(shade)
+	var dim: ColorRect = Kit.scrim(shade)
 	var cc: CenterContainer = CenterContainer.new()
 	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.add_child(cc)
 	var card: Pane = Kit.pane(cc, { "radius": 10, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.4)], "shadow": [Color(0, 0, 0, 0.5), 20, Vector2(0, 6)], "pad": [26, 20, 26, 22], "paper": true })
 	card.custom_minimum_size = Vector2(620, 0)
+	Motion.panel_in(card)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 12)
 	card.add_child(v)
@@ -1320,7 +1493,7 @@ func _clue_question(tier: String, qid: String) -> void:
 	Paper.text(v, str(q["question"]), "title", Paper.INK, true)
 	var close: Callable = func() -> void:
 		_modal = null
-		shade.queue_free()
+		Motion.dismiss(shade, card, dim)
 		_clues_sig = ""
 		refresh()
 	for i: int in 4:
@@ -1407,9 +1580,11 @@ func _badge_step(delta: float) -> void:
 	var n: Array = _badge_q.pop_front()
 	_badge_t = 3.2
 	if _badge_note != null and is_instance_valid(_badge_note):
-		_badge_note.queue_free()
-	var note: Pane = Kit.pane(self, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(0.55, 0.42, 0.1, 0.6)], "shadow": [Color(0, 0, 0, 0.35), 14, Vector2(0, 4)], "pad": [12, 8, 16, 8], "paper": true })
+		Motion.leave(_badge_note)
+	var note: Pane = Kit.pane(self, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.35), 14, Vector2(0, 4)], "pad": [12, 8, 16, 8], "paper": true })
 	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Unseen until it is measured and placed.
+	note.modulate.a = 0.0
 	_badge_note = note
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -1428,7 +1603,7 @@ func _badge_step(delta: float) -> void:
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(col)
-	Kit.text(col, n[0], "eyebrow", Color(0.55, 0.42, 0.1))
+	Kit.text(col, n[0], "eyebrow", Paper.EYEBROW)
 	Kit.text(col, n[1], "name", Kit.PAPER_INK).add_theme_font_size_override("font_size", 16)
 	var line: Label = Kit.text(col, n[2], "note", Kit.PAPER_INK_SOFT)
 	line.custom_minimum_size = Vector2(300, 0)
@@ -1437,25 +1612,118 @@ func _badge_step(delta: float) -> void:
 	await get_tree().process_frame
 	if not is_instance_valid(note):
 		return
-	note.position = Vector2(size.x - note.size.x - 24.0, 150.0)
-	note.modulate.a = 0.0
+	# Under the top-right column as it measures now (the water's name, its
+	# blurb, a stir line that may wrap, the clock row, the back pill).
+	note.position = Vector2(size.x - note.size.x - 24.0, _tr_bottom() + 12.0)
 	var tw: Tween = note.create_tween()
-	tw.tween_property(note, "modulate:a", 1.0, 0.25)
+	note.set_meta("_motion", tw)
+	Motion.ease_fade(tw, note, "modulate:a", 1.0, 0.25)
 	tw.parallel().tween_property(note, "position:x", note.position.x, 0.3).from(note.position.x + 40.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_interval(2.5)
-	tw.tween_property(note, "modulate:a", 0.0, 0.4)
+	tw.tween_interval(Motion.NOTE_HOLD)
+	Motion.ease_fade(tw, note, "modulate:a", 0.0, Motion.NOTE_OUT)
 	tw.tween_callback(note.queue_free)
 
 
-func toast(text: String) -> void:
-	# Under the boat while the dial is up (it sits where toasts go).
+## The bottom of the top-right column, in this HUD's coordinates.
+func _tr_bottom() -> float:
+	if _tr == null:
+		return 150.0
+	return _tr.position.y + _tr.get_combined_minimum_size().y
+
+
+## Where the top-right lane is free from (the derby sits here): under the
+## column, and under a corner note while one is up.
+func notes_bottom() -> float:
+	var y: float = _tr_bottom() + 12.0
+	if _badge_note != null and is_instance_valid(_badge_note) and _badge_note.modulate.a > 0.01:
+		y = maxf(y, _badge_note.position.y + _badge_note.size.y + 12.0)
+	return y
+
+
+## THE TOASTS (spec 1.6 and 1.2): each a note on the water in the toast lane,
+## in on NOTE_IN, held NOTE_HOLD, out on NOTE_OUT; a newer one stacks under
+## the last instead of overwriting it, a repeat only holds the one showing a
+## little longer, and while a side banner has the sky they wait for it.
+## tone: "" plain words, "good" good news (the gold), "name" a place or a
+## headline word (Cinzel), "danger" a warning, "dim" quiet.
+func toast(text: String, tone: String = "") -> void:
+	if text == "":
+		return
+	if _toasts == null:
+		return
+	if is_instance_valid(_side_banner) and not _side_banner.is_queued_for_deletion():
+		# A place's name is the banner's to say; anything else waits for it.
+		if tone != "name":
+			_toast_wait.append([text, tone])
+		return
+	var live: Array = []
+	for n: Node in _toasts.get_children():
+		if n is Label and n != _toast_stub() and n.visible and not n.has_meta("gone"):
+			live.append(n)
+			if (n as Label).text == text:
+				n.set_meta("until", _now + Motion.NOTE_HOLD)
+				_toast = n
+				return
+	var l: Label
+	match tone:
+		"name":
+			l = Kit.text(_toasts, text, "heading", Kit.SEA_INK)
+		"good":
+			l = Kit.text(_toasts, text, "body_strong", Kit.SEA_GOLD)
+		"danger":
+			l = Kit.text(_toasts, text, "body_strong", Kit.DANGER_INK)
+		"dim":
+			l = Kit.text(_toasts, text, "body_strong", Kit.DIM)
+		_:
+			l = Kit.text(_toasts, text, "body_strong", Kit.SEA_INK)
+	Kit.lift(l)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.set_meta("until", _now + Motion.NOTE_IN + Motion.NOTE_HOLD)
+	Motion.note_in(l)
+	_toast = l
+	# Too many at once: the oldest leaves early.
+	if live.size() >= TOAST_MAX:
+		_toast_out(live[0] as Label)
+
+
+## The first child of the lane: an empty, hidden label that stands for "no
+## toast yet" (so _toast is never null).
+func _toast_stub() -> Node:
+	return _toasts.get_child(0) if _toasts != null and _toasts.get_child_count() > 0 else null
+
+
+func _toast_out(l: Label) -> void:
+	if l.has_meta("gone"):
+		return
+	l.set_meta("gone", true)
+	Motion.note_out(l)
+
+
+## Each frame: toasts whose time is up leave; held ones go once the banner
+## has gone; the lane sits under the top stack, or over the dial while it
+## is up (over the dim, above the fight's readouts).
+func _toast_step(delta: float) -> void:
+	_now += delta
+	if not _toast_wait.is_empty() and not is_instance_valid(_side_banner):
+		var held: Array = _toast_wait.duplicate()
+		_toast_wait.clear()
+		for w: Array in held:
+			toast(w[0], w[1])
+	for n: Node in _toasts.get_children():
+		if n is Label and n != _toast_stub() and not n.has_meta("gone") and _now >= float(n.get_meta("until", 0.0)):
+			_toast_out(n as Label)
 	if _dial != null and _dial.visible:
-		_place(_toast, Vector2(0.5, 0.5), Vector2(-300, 66), Vector2(600, 30))
+		var bottom: float = _dial.position.y - (80.0 if _status.text != "" else 10.0)
+		_toasts.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		_toasts.offset_top = bottom
+		_toasts.offset_bottom = bottom
 	else:
-		_place(_toast, Vector2(0.5, 0.0), Vector2(-300, 292), Vector2(600, 30))
-	_toast.text = text
-	_toast.modulate.a = 1.0
-	_toast_t = 2.4
+		var y: float = _lane.position.y + _lane.get_combined_minimum_size().y + (6.0 if _lane.get_combined_minimum_size().y > 0.0 else 0.0)
+		_toasts.grow_vertical = Control.GROW_DIRECTION_END
+		_toasts.offset_top = y
+		_toasts.offset_bottom = y
 
 
 func _set_phase(p: String) -> void:
@@ -1476,6 +1744,7 @@ func _act() -> void:
 
 func cast() -> void:
 	_nibbles = 0
+	_wait_shown = false
 	if _modal != null or _asking or (phase != "idle" and phase != "result") or _action.disabled:
 		return
 	_close_card()
@@ -1496,16 +1765,18 @@ func cast() -> void:
 	_wait_left = maxf(float(res["waitMs"]), 760.0) / 1000.0 + 0.05
 	if res.get("instantBite") == true:
 		_wait_left = 0.82
-		Fx.pill(self, "Instant Bite", Vector2(size.x / 2.0, 90.0), Color.WHITE, Color(1.0, 0.23, 0.28, 0.32), Color(1.0, 0.35, 0.39, 0.7), 1.1)
+		# Good news, said at the hook, in the cast's teal.
+		Fx.pill(self, "Instant Bite", _hook_screen() + Vector2(0, -60.0), Kit.INK, Kit.a(Kit.CAST, 0.22), Kit.a(Kit.CAST, 0.6), 1.1)
 	_since_cast = 0.0
 	_set_phase("waiting")
 	Rumble.tap(12)
 	Sound.cast()
 	boat.set_pose("cast")
-	get_tree().create_timer(0.6).timeout.connect(func() -> void:
+	# ONE CLOCK for the line landing: the plop and the wait pose together,
+	# when the rope's flight ends (Motion.CAST_LAND_S).
+	get_tree().create_timer(Motion.CAST_LAND_S).timeout.connect(func() -> void:
 		if gen == _gen and phase != "idle":
-			Sound.line_in())
-	get_tree().create_timer(0.65).timeout.connect(func() -> void:
+			Sound.line_in()
 		if gen == _gen and phase == "waiting":
 			boat.set_pose("wait"))
 	refresh()
@@ -1577,13 +1848,13 @@ func _fight_hud() -> void:
 	_status.text = ("Rank %s  ·  " % ["", "I", "II", "III", "IV", "V"][int(rank)] if rank != null else "") + "Stage %d/%d" % [int(_boss["stage"]), n]
 	_dots.text = pips.strip_edges()
 	_timer.text = ""
+	_readouts(true)
+	for l: Label in [_status, _dots]:
+		l.modulate.a = 1.0
 
 
 func _bite() -> void:
 	_focus_on(true)
-	# Clear the top line for the dial.
-	_toast_t = 0.0
-	_toast.modulate.a = 0.0
 	var diff: float = float(_shot["catchDifficulty"])
 	_start_fight()
 	var zones: Array = _zones()
@@ -1598,22 +1869,27 @@ func _bite() -> void:
 	_dial.stage = 1
 	_boss_sweep = sweep
 	_dial.begin(zones, sweep)
-	# In its place before its first frame (it showed in the corner for one).
+	# In its place before its first frame (it showed in the corner for one),
+	# then in on the instrument's arrival (its pivot is its centre).
+	if _dial_tw != null and _dial_tw.is_valid():
+		_dial_tw.kill()
 	_place_dial()
 	_dial.visible = true
-	_dial.modulate.a = 0.0
-	_dial.pivot_offset = Vector2(150, 150)
-	_dial.scale = Vector2(0.92, 0.92)
-	var tw: Tween = create_tween().set_parallel(true)
-	tw.tween_property(_dial, "modulate:a", 1.0, 0.18)
-	tw.tween_property(_dial, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_dots.text = ""
-	_timer.text = ""
-	_status.text = ""
-	if not _boss.is_empty():
-		toast("Ancient Encounter  ·  %d stages required" % int(_boss["cfg"]["phases"]))
+	_dial.scale = Vector2.ONE
+	_dial.mouse_filter = Control.MOUSE_FILTER_STOP
+	Motion.arrive(_dial, "m")
+	if _boss.is_empty():
+		# The waiting words go as the dial comes.
+		_fade_wait_out()
+	else:
+		if _wait_tw != null and _wait_tw.is_valid():
+			_wait_tw.kill()
+		_timer.text = ""
+		# One message, in the toast lane over the dial: the encounter, then
+		# the warning under it.
+		toast("Ancient Encounter  ·  %d stages required" % int(_boss["cfg"]["phases"]), "name")
+		toast("Miss once and it escapes. Stay sharp.", "danger")
 		_fight_hud()
-		Fx.pill(self, "Miss once and it escapes. Stay sharp.", Vector2(size.x / 2.0, 170.0), Color("#fca5a5"), Color(0.08, 0.016, 0.016, 0.92), Color(0.94, 0.27, 0.27, 0.6), 2.2)
 	var skips: int = _skips_left()
 	_tide.visible = skips > 0
 	_tide.text = ("Tide Turner · Skip · %d left" % skips).to_upper()
@@ -1687,7 +1963,7 @@ func _on_struck(raw: String, _angle: float) -> void:
 	var landed: bool = result == "perfect" or result == "catch"
 	if not landed and float(_mods["retry"]) > 0.0 and randf() < float(_mods["retry"]):
 		Rumble.buzz(Rumble.SECOND_WIND)
-		Fx.pill(self, "Second Wind", _dial.position + Vector2(_dial.size.x / 2.0, -24.0), Color("#99f6e4"), Color(0.08, 0.3, 0.3, 0.8), Color(0.37, 0.92, 0.83, 0.7), 1.2)
+		Fx.pill(self, "Second Wind", _dial.position + Vector2(_dial.size.x / 2.0, -24.0), Kit.INK, Kit.a(Kit.TEAL, 0.22), Kit.a(Kit.TEAL, 0.6), 1.2)
 		_dial.respin()
 		return
 	if not _boss.is_empty() and landed and int(_boss["stage"]) < int(_boss["cfg"]["phases"]):
@@ -1696,6 +1972,7 @@ func _on_struck(raw: String, _angle: float) -> void:
 	if not _boss.is_empty():
 		_status.text = ""
 		_dots.text = ""
+		_readouts(false)
 	_boss = {}
 	_dial.mechanic = ""
 	_dial.ancient_aura = false
@@ -1709,10 +1986,9 @@ func _on_struck(raw: String, _angle: float) -> void:
 		var pf: Fx.PerfectFlash = Fx.PerfectFlash.new()
 		pf.at = _dial.position + _dial.size / 2.0
 		add_child(pf)
-	elif landed:
-		Sound.line_in()
-		Rumble.tap(6)
 	else:
+		# (The plop is the cast's; the catch is heard in the reel and the
+		# splash of the fight.)
 		Rumble.tap(6)
 	# THE FIGHT: the fish played in on the water through the hold, in place
 	# of a still pause (game/reel_fight.gd). A miss and a snag speak too.
@@ -1732,12 +2008,21 @@ func _on_struck(raw: String, _angle: float) -> void:
 	boat.get_parent().add_child(fight)
 	# The dial has had its moment (the strike, the perfect's burst): it fades
 	# so the fight plays in the open, and the focus lifts with it.
-	var dtw: Tween = _dial.create_tween()
-	dtw.tween_interval(0.22)
-	dtw.tween_property(_dial, "modulate:a", 0.0, 0.2)
-	dtw.tween_callback(func() -> void:
+	# It leaves as it came, mirrored (a fade and a slight shrink, CUBIC in);
+	# on a perfect it holds until the burst ring on it has finished.
+	if _dial_tw != null and _dial_tw.is_valid():
+		_dial_tw.kill()
+	_dial.pivot_offset = _dial.size / 2.0
+	_dial_tw = _dial.create_tween()
+	_dial_tw.tween_interval(0.45 if result == "perfect" else 0.22)
+	_dial_tw.tween_callback(func() -> void: _dial.mouse_filter = Control.MOUSE_FILTER_IGNORE)
+	Motion.ease_exit(_dial_tw, _dial, "modulate:a", 0.0, Motion.LEAVE)
+	_dial_tw.parallel().tween_property(_dial, "scale", Vector2.ONE * Motion.LEAVE_SCALE, Motion.LEAVE).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	_dial_tw.tween_callback(func() -> void:
 		_dial.visible = false
-		_dial.modulate.a = 1.0)
+		_dial.modulate.a = 1.0
+		_dial.scale = Vector2.ONE
+		_dial.mouse_filter = Control.MOUSE_FILTER_STOP)
 	_set_phase("reeling")
 	await get_tree().create_timer(hold).timeout
 	# The fight is over: the line comes in.
@@ -1745,6 +2030,10 @@ func _on_struck(raw: String, _angle: float) -> void:
 	var before_level: int = session.level()
 	var crate: bool = float(_shot["fishId"]) == FishingRules.CRATE_FISH_ID
 	var r: Dictionary = {}
+	# The hold reads what it held until the fish lands in it.
+	_fly_pending = false
+	if not crate:
+		_hold_shown = int(session.store.hold_count(session.uid))
 	if crate and landed:
 		r = await session.act("stowCrate", [result])
 	elif not crate:
@@ -1762,14 +2051,23 @@ func _on_struck(raw: String, _angle: float) -> void:
 	elif r.get("caught") == true:
 		_fish_card(r, result == "perfect")
 	else:
-		toast("Snagged. The line fouled and took a bait." if result == "penalty" else "It got away. Cast again.")
+		# Said where it happened: over her, where a catch's note would rise.
+		var at: Vector2 = _boat_screen() + Vector2(0, -150.0)
+		if result == "penalty":
+			Fx.rise(self, "Snagged, bait lost", at, Kit.DANGER_INK, 16, 30.0, 1.6)
+		else:
+			Fx.rise(self, "Got away", at, Kit.DIM, 16, 30.0, 1.6)
+	if not _fly_pending:
+		_hold_shown = -1
 	refresh()
 	_auto_t = (3.3 if crate else 1.7) if (_auto_on and _auto_tier() > 0) else -1.0
 	var giant: bool = r.get("caught") == true and (r["fish"] as Dictionary)["habitat"] == "ancient_deep" and Js.num((r["fish"] as Dictionary).get("sell_value")) == 0.0
 	if giant:
 		await _ceremony(r)
 	if session.level() > before_level or r.get("isShiny") == true:
-		_after_catch(true)
+		# One thing at a time: the bar crosses (the XP poured, the line run
+		# to full and flashed) before the level card comes.
+		_after_catch(true, r.get("isShiny") == true, true)
 
 
 # ── The card, and what follows it ──────────────────────────────────────────────
@@ -1817,7 +2115,7 @@ func _fish_card(r: Dictionary, perfect: bool) -> void:
 			_badge_q.append(["%s  ·  STEP %d OF %d" % [str(Clues.TIER_NAME[sd["tier"]]).to_upper(), int(sd["stepNo"]), int(sd["of"])], "That is the fish", str(sd["next"]["text"]), Skipper.tex("sea/sea-bottle.png")])
 	# An order this catch finished.
 	for lbl: Variant in Js.list(r.get("ordersDone")):
-		toast("Order done: %s. Claim it under Orders." % str(lbl))
+		toast("Order done: %s. Claim it under Orders." % str(lbl), "good")
 	# The Log has something new to show.
 	if r.get("isNewSpecies") == true or r.get("isPB") == true or str(r.get("sizeTier", "")) == "trophy" or r.get("isShiny") == true:
 		_log_dot = true
@@ -1827,13 +2125,15 @@ func _fish_card(r: Dictionary, perfect: bool) -> void:
 	# What made it: the streak's multiplier, shown when it is working.
 	var sm: float = Rules.streak_mult(float(_streak()), float(session.level()))
 	var why: String = ("  ×%.2f streak" % sm) if sm > 1.001 else ""
-	Fx.rise(self, "+%s XP%s%s" % [_thousands(float(r["xpGained"])), "  PERFECT" if perfect else "", why], mid, GOLD if perfect else Color("#4ade80"), 20)
+	# (The perfect is announced once, by its flash over the dial; the gold
+	# here says it again quietly.)
+	Fx.rise(self, "+%s XP%s" % [_thousands(float(r["xpGained"])), why], mid, GOLD if perfect else Kit.UP, 20)
 	# The XP flies from where the fish came up into the bar.
 	var rar: float = float(Js.nz((r["fish"] as Dictionary).get("bite_rarity"), 1.0))
 	var src: Vector2 = boat.get_parent().get_global_transform_with_canvas() * boat.hook_at()
 	_xp.gain(float(r["xpGained"]), src, 0.6 + rar * 0.35 + (0.8 if perfect else 0.0) + minf(1.0, float(_streak()) * 0.1))
 	if float(r.get("catchQty", 0.0)) > 0.0 and r.get("isShiny") != true:
-		_fly_to_hold(r["fish"], float(r["catchQty"]))
+		_fly_pending = _fly_to_hold(r["fish"], float(r["catchQty"]))
 
 
 func _crate_card(loot: Dictionary) -> void:
@@ -1870,13 +2170,13 @@ func _catch_note(r: Dictionary, perfect: bool) -> void:
 	var rar: int = clampi(int(Js.num(fish.get("bite_rarity"))), 1, 5)
 	var news: Array = []
 	if r.get("isShiny") == true:
-		news.append(["Golden", Color(0.75, 0.55, 0.1)])
+		news.append(["Golden", Paper.MONEY])
 	if r.get("isNewSpecies") == true:
 		news.append(["New species", Kit.ink(Kit.SKY)])
 	if r.get("isPB") == true and r.get("previousBest") != null:
-		news.append(["Personal best", Color(0.55, 0.3, 0.6)])
+		news.append(["Personal best", Kit.ink(Kit.TEAL)])
 	if str(r.get("sizeTier", "")) == "trophy":
-		news.append(["Trophy", Color(0.66, 0.2, 0.15)])
+		news.append(["Trophy", Paper.RED])
 	var note: Pane = Kit.pane(self, { "radius": 12, "fill": [Kit.PAPER], "border": [1, Color(Paper.rarity(rar), 0.7)], "shadow": [Color(0, 0, 0, 0.35), 12, Vector2(0, 4)], "pad": [10, 6, 14, 6], "paper": true })
 	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Unseen until it is measured and placed (it flashed in the corner for a
@@ -1906,7 +2206,7 @@ func _catch_note(r: Dictionary, perfect: bool) -> void:
 	name_l.add_theme_font_size_override("font_size", 16)
 	var bits: Array = [Almanac.RARITY_NAMES[rar - 1]]
 	if float(r.get("sizeIn", 0.0)) > 0.0:
-		bits.append("%.1f in" % float(r["sizeIn"]))
+		bits.append(length_text(float(r["sizeIn"])))
 	if float(r.get("catchQty", 1.0)) > 1.0:
 		bits.append("×%d" % int(r["catchQty"]))
 	if perfect:
@@ -1920,7 +2220,7 @@ func _catch_note(r: Dictionary, perfect: bool) -> void:
 	# holding still, never a slow crawl (a control creeping a pixel every few
 	# frames is what stuttered: they snap to whole pixels).
 	note.pivot_offset = note.size / 2.0
-	note.scale = Vector2(0.86, 0.86)
+	note.scale = Vector2.ONE * float(Motion.ARRIVE_S[1])
 	note.modulate.a = 0.0
 	var hold: float = 2.0 + 0.8 * news.size()
 	var rise: Array = [0.0]
@@ -1934,13 +2234,13 @@ func _catch_note(r: Dictionary, perfect: bool) -> void:
 	note.tree_exiting.connect(func() -> void: get_tree().process_frame.disconnect(place))
 	var tw: Tween = note.create_tween()
 	tw.set_parallel()
-	tw.tween_property(note, "modulate:a", 1.0, 0.18)
-	tw.tween_property(note, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Motion.ease_fade(tw, note, "modulate:a", 1.0, Motion.NOTE_IN)
+	Motion.ease_pop(tw, note, "scale", Vector2.ONE, float(Motion.ARRIVE_S[2]))
 	tw.tween_method(func(v: float) -> void: rise[0] = v, -14.0, 0.0, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.chain().tween_interval(hold)
 	tw.chain().set_parallel()
-	tw.tween_property(note, "modulate:a", 0.0, 0.45)
-	tw.tween_method(func(v: float) -> void: rise[0] = v, 0.0, 22.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	Motion.ease_fade(tw, note, "modulate:a", 0.0, Motion.NOTE_OUT)
+	tw.tween_method(func(v: float) -> void: rise[0] = v, 0.0, 22.0, Motion.NOTE_OUT).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	tw.chain().tween_callback(note.queue_free)
 
 
@@ -1951,12 +2251,13 @@ func _note_card(title: String, body: String) -> void:
 	_wire(card)
 
 
-## HoldFlight: the fish, as a dark shape, thrown from the water to the hold;
-## the count there changes only when it lands.
-func _fly_to_hold(fish: Dictionary, qty: float) -> void:
+## HoldFlight: the fish, as a dark shape, thrown from where it came up to
+## the hold; the count there changes only when it lands. False when there is
+## no art to throw (the count then changes at once).
+func _fly_to_hold(fish: Dictionary, qty: float) -> bool:
 	var path: String = ResultCard.fish_art_path(fish["name"])
 	if not ResourceLoader.exists(path):
-		return
+		return false
 	var t: TextureRect = TextureRect.new()
 	t.texture = load(path)
 	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -1967,7 +2268,7 @@ func _fly_to_hold(fish: Dictionary, qty: float) -> void:
 	t.custom_minimum_size = Vector2(64, 40)
 	t.size = Vector2(64, 40)
 	t.pivot_offset = Vector2(32, 20)
-	var from: Vector2 = Vector2(size.x / 2.0, size.y * 0.42) - t.size / 2.0
+	var from: Vector2 = _hook_screen() - t.size / 2.0
 	var to: Vector2 = _hold.get_global_rect().get_center() - global_position - t.size / 2.0
 	t.position = from
 	if qty > 1.0:
@@ -1985,10 +2286,44 @@ func _fly_to_hold(fish: Dictionary, qty: float) -> void:
 	tw.tween_callback(func() -> void:
 		t.queue_free()
 		Rumble.tap(8)
+		# It has landed: now the count changes, with a thump.
+		_hold_shown = -1
+		_paint_hold()
 		_hold.pivot_offset = _hold.size / 2.0
 		var knock: Tween = create_tween()
-		knock.tween_property(_hold, "scale", Vector2(1.14, 1.14), 0.12).set_trans(Tween.TRANS_BACK)
-		knock.tween_property(_hold, "scale", Vector2.ONE, 0.22))
+		knock.tween_property(_hold, "scale", Vector2(1.14, 1.14), 0.08).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		Motion.ease_pop(knock, _hold, "scale", Vector2.ONE, 0.22))
+	return true
+
+
+## Where the hook is on the screen now (this HUD's coordinates).
+func _hook_screen() -> Vector2:
+	if boat == null or not is_instance_valid(boat) or boat.get_parent() == null:
+		return Vector2(size.x / 2.0, size.y * 0.42)
+	return (boat.get_parent() as CanvasItem).get_global_transform_with_canvas() * boat.hook_at() - global_position
+
+
+## Where the boat is on the screen now (this HUD's coordinates).
+func _boat_screen() -> Vector2:
+	if boat == null or not is_instance_valid(boat) or boat.get_parent() == null:
+		return Vector2(size.x / 2.0, size.y / 2.0)
+	return (boat.get_parent() as CanvasItem).get_global_transform_with_canvas() * boat.position - global_position
+
+
+## Wait (at most a moment) for the level bar's crossing to play out: the XP
+## pours, the line runs to full and flashes. Then the level card may come.
+func _await_crossing() -> void:
+	if _xp == null or not _xp.crossing():
+		return
+	var done: Array = [false]
+	var on_done: Callable = func() -> void: done[0] = true
+	_xp.crossing_done.connect(on_done, CONNECT_ONE_SHOT)
+	var waited: float = 0.0
+	while not done[0] and waited < 1.2 and is_inside_tree():
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	if _xp.crossing_done.is_connected(on_done):
+		_xp.crossing_done.disconnect(on_done)
 
 
 ## A giant landed: the first time, the slain cinematic and then Finn's words;
@@ -2022,15 +2357,19 @@ func _ceremony(r: Dictionary) -> void:
 
 
 ## After a catch (and on opening the sea): celebrate levels crossed, then ask
-## about any golden still waiting. One at a time.
-func _after_catch(from_catch: bool) -> void:
+## about any golden still waiting. One at a time. shiny: this catch was the
+## golden, so its note holds a beat before the choice comes. wait_bar: the
+## level card waits for the level bar's crossing to play out first. While a
+## card waits its turn it is already the modal (the boat holds, no cast),
+## and it is put on the screen when its moment comes.
+func _after_catch(from_catch: bool, shiny: bool = false, wait_bar: bool = false) -> void:
 	if session.level() > _level_seen or not from_catch:
 		var claim: Dictionary = await session.act("claimFishingLevelRewards")
 		# Navigation levels raise the ship's upgrades for free (port rules).
 		var floors: Variant = await session.act("levelFloors")
 		if floors is Array and not (floors as Array).is_empty():
 			for f: Array in floors:
-				toast("Fishing %d: %s upgraded for free" % [int(f[2]), { "hull_speed_tier": "Hull", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig" }.get(f[0], f[0])])
+				toast("Fishing %d: %s upgraded for free" % [int(f[2]), { "hull_speed_tier": "Hull", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig" }.get(f[0], f[0])], "good")
 		session.persist()
 		_level_seen = session.level()
 		if float(claim["to"]) > float(claim["from"]):
@@ -2039,18 +2378,38 @@ func _after_catch(from_catch: bool) -> void:
 			_modal = lu
 			# The cast lettering steps aside while the level is shown.
 			_action.visible = false
+			if wait_bar:
+				await _await_crossing()
 			add_child(lu)
 			await lu.closed
 			_modal = null
 			refresh()
 	var held: Variant = await session.act("heldGolden")
+	var first: bool = true
 	while held != null:
 		var g: GoldenChoice = GoldenChoice.new()
 		g.session = session
 		g.golden = held
 		_modal = g
-		add_child(g)
-		await g.answered
+		var said: Array = [false]
+		g.answered.connect(func() -> void: said[0] = true)
+		var beat: bool = first and shiny and from_catch
+		if beat:
+			# The golden's own beat: its note is read first, then the choice
+			# arrives with the chest and the golden rumble.
+			await get_tree().create_timer(Motion.GOLDEN_HOLD).timeout
+		first = false
+		if said[0]:
+			# Answered before it was shown (a script did it): it never shows.
+			if is_instance_valid(g) and not g.is_queued_for_deletion():
+				g.queue_free()
+		else:
+			if beat:
+				Sound.chest(true)
+				Rumble.buzz(Rumble.GOLDEN)
+			add_child(g)
+			while not said[0] and is_instance_valid(g):
+				await get_tree().process_frame
 		_modal = null
 		refresh()
 		held = await session.act("heldGolden")
@@ -2080,22 +2439,37 @@ var _focus: ColorRect
 func _focus_on(on: bool) -> void:
 	if _focus == null:
 		_focus = ColorRect.new()
-		_focus.color = Color(0.01, 0.03, 0.05, 0.0)
+		_focus.color = Color(Kit.SCRIM_BASE, 0.0)
 		_focus.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_focus.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		add_child(_focus)
 	if on:
-		# Over everything but the dial and the Reel In lettering.
+		# THE FIGHT'S LAYERS (spec 1.6): the dim, then the dial, then what the
+		# fight says (its stage and pips, the toasts over the dial), then the
+		# Reel In lettering, then the Tide Turner. Nothing that matters is
+		# left under the dim.
 		move_child(_focus, -1)
 		move_child(_dial, -1)
+		move_child(_status, -1)
+		move_child(_dots, -1)
+		move_child(_toasts, -1)
 		move_child(_action, -1)
+		move_child(_tide, -1)
 
 
 func _process(delta: float) -> void:
 	_badge_step(delta)
+	_toast_step(delta)
 	if _focus != null:
-		var want: float = 0.42 if _dial.visible else 0.0
+		var want: float = Kit.SCRIM_FOCUS if _dial.visible else 0.0
 		_focus.color.a = lerpf(_focus.color.a, want, 1.0 - exp(-delta * (10.0 if want > 0.0 else 6.0)))
+	# One headline at a time: the story line and the lane step back while a
+	# side banner has the sky, and the story line while a fight's stage is
+	# lettered over the dial where it sits.
+	var banner: bool = is_instance_valid(_side_banner)
+	var k: float = Motion.hover_k(delta)
+	_lane.modulate.a = lerpf(_lane.modulate.a, 0.0 if banner else 1.0, k)
+	_story.modulate.a = lerpf(_story.modulate.a, 0.0 if banner or (_dial.visible and _status.text != "") else 1.0, k)
 	if _log_dot and _log_dot_c != null:
 		_log_dot_c.queue_redraw()
 	if _recruit_dot != null and _recruit_dot.get_meta("on", false):
@@ -2114,6 +2488,15 @@ func _process(delta: float) -> void:
 			elif _nibbles == 1 and _wait_left < 0.5:
 				_nibble()
 		if _since_cast >= 1.5:
+			if not _wait_shown:
+				# The waiting words fade in, once a cast.
+				_wait_shown = true
+				if _wait_tw != null and _wait_tw.is_valid():
+					_wait_tw.kill()
+				_wait_tw = create_tween().set_parallel(true)
+				for l: Label in [_status, _dots, _timer]:
+					l.modulate.a = 0.0
+					Motion.ease_fade(_wait_tw, l, "modulate:a", 1.0, 0.25)
 			var n: int = int(_since_cast / 0.22) % 3
 			_dots.text = ["●  ·  ·", "·  ●  ·", "·  ·  ●"][n]
 			_status.text = "Waiting on a bite"
@@ -2132,9 +2515,27 @@ func _process(delta: float) -> void:
 		_auto_t -= delta
 		if _auto_t < 0.0 and phase == "result" and _modal == null and _auto_on and not _action.disabled:
 			cast()
-	if _toast_t > 0.0:
-		_toast_t -= delta
-		_toast.modulate.a = clampf(_toast_t / 0.6, 0.0, 1.0)
+
+
+## The waiting words go as the dial comes: a quick fade, then cleared.
+func _fade_wait_out() -> void:
+	if _wait_tw != null and _wait_tw.is_valid():
+		_wait_tw.kill()
+	_wait_shown = false
+	if _status.text == "" and _dots.text == "" and _timer.text == "":
+		return
+	_wait_tw = create_tween().set_parallel(true)
+	for l: Label in [_status, _dots, _timer]:
+		Motion.ease_fade(_wait_tw, l, "modulate:a", 0.0, 0.12)
+	_wait_tw.chain().tween_callback(func() -> void:
+		if phase == "waiting":
+			return
+		if _boss.is_empty():
+			_status.text = ""
+			_dots.text = ""
+		_timer.text = ""
+		for l: Label in [_status, _dots, _timer]:
+			l.modulate.a = 1.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -2156,11 +2557,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("fish_back"):
 		if phase == "waiting" or phase == "hooked":
+			if _wait_tw != null and _wait_tw.is_valid():
+				_wait_tw.kill()
+			if _dial_tw != null and _dial_tw.is_valid():
+				_dial_tw.kill()
 			_dial.visible = false
+			_dial.modulate.a = 1.0
+			_dial.scale = Vector2.ONE
 			_tide.visible = false
 			_status.text = ""
 			_dots.text = ""
 			_timer.text = ""
+			_wait_shown = false
+			_readouts(false)
+			for l: Label in [_status, _dots, _timer]:
+				l.modulate.a = 1.0
 			Sound.dial_stop()
 			boat.set_pose("rest")
 			_boss = {}

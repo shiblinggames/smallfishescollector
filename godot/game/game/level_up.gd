@@ -22,9 +22,10 @@ var _slip: Control
 var _hint: Label
 var _motes: Array = []
 
-const CREAM: Color = Color(0.98, 0.94, 0.85)
-## Learned is a skill: free and for good.
-const SECTION_INK: Dictionary = { "Learned": Color(0.42, 0.27, 0.58), "Stronger": Color(0.55, 0.3, 0.15), "Unlocked": Color(0.2, 0.42, 0.4), "Earned": Color(0.55, 0.42, 0.1) }
+const CREAM: Color = Kit.SEA_INK
+## Learned is a skill: free and for good. The sections are told apart by
+## their words, in the one eyebrow ink (no colour coding).
+const SECTION_INK: Dictionary = { "Learned": Paper.EYEBROW, "Stronger": Paper.EYEBROW, "Unlocked": Paper.EYEBROW, "Earned": Paper.EYEBROW }
 const WARM: Color = Color(1.0, 0.78, 0.38)
 
 
@@ -78,8 +79,8 @@ func _ready() -> void:
 	eb.modulate.a = 0.0
 	var tw: Tween = create_tween()
 	tw.set_parallel()
-	tw.tween_property(eb, "modulate:a", 1.0, 0.35).set_delay(0.1)
-	tw.tween_property(_num, "modulate:a", 1.0, 0.4).set_delay(0.15)
+	Motion.ease_fade(tw, eb, "modulate:a", 1.0, 0.35).set_delay(0.1)
+	Motion.ease_fade(tw, _num, "modulate:a", 1.0, 0.4).set_delay(0.15)
 	tw.chain().tween_interval(0.05)
 	var steps: int = maxi(1, to - from)
 	var per: float = clampf(0.9 / steps, 0.13, 0.42)
@@ -88,15 +89,16 @@ func _ready() -> void:
 			_num.text = str(n)
 			_num.pivot_offset = _num.size / 2.0
 			_num.scale = Vector2(1.14, 1.14)
-			Sound.plip())
+			# A stepped tick that climbs (plip is the bobber's nibble).
+			Sound.job_tick(n - from))
 		tw.chain().tween_property(_num, "scale", Vector2.ONE, per).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if _slip != null:
 		_slip.modulate.a = 0.0
 		_slip.position.y += 24.0
 		var sl: Tween = create_tween().set_parallel()
-		sl.tween_property(_slip, "modulate:a", 1.0, 0.4).set_delay(0.55)
+		Motion.ease_fade(sl, _slip, "modulate:a", 1.0, 0.4).set_delay(0.55)
 		sl.tween_property(_slip, "position:y", _slip.position.y - 24.0, 0.5).set_delay(0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	create_tween().tween_property(_hint, "modulate:a", 1.0, 0.5).set_delay(1.1)
+	Motion.ease_fade(create_tween(), _hint, "modulate:a", 1.0, 0.5).set_delay(1.1)
 	for i: int in 14:
 		_motes.append([randf_range(-180.0, 180.0), randf_range(0.0, 1.0), randf_range(0.5, 1.2), randf_range(1.2, 2.6)])
 
@@ -322,19 +324,17 @@ static func reward_label(r: Dictionary) -> String:
 	return ", ".join(parts.slice(0, parts.size() - 1)) + " and " + parts[parts.size() - 1]
 
 
-## Lettering over the sea: the words over their own soft shadow.
+## Lettering over the sea, in the one recipe (Kit.lift).
 func _letter(parent: Control, text: String, px: int, col: Color, title: bool) -> Label:
 	var l: Label = Label.new()
 	l.text = text
 	l.add_theme_font_override("font", Kit.font("cinzel", 800) if title else Kit.font("karla", 600))
 	l.add_theme_font_size_override("font_size", px)
 	l.add_theme_color_override("font_color", col)
-	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
-	l.add_theme_constant_override("shadow_outline_size", 8)
-	l.add_theme_constant_override("shadow_offset_y", 2)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)
+	Kit.lift(l)
 	return l
 
 
@@ -344,9 +344,9 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	# The sea stays: a light dim, deeper at the edges.
+	# The sea stays: the light focus dim (the celebration's weight).
 	var a: float = clampf(_t / 0.3, 0.0, 1.0)
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.04, 0.06, 0.42 * a))
+	draw_rect(Rect2(Vector2.ZERO, size), Color(Kit.SCRIM_BASE, Kit.SCRIM_FOCUS * a))
 	if _num == null:
 		return
 	var c: Vector2 = _num.global_position - global_position + _num.size / 2.0
@@ -380,8 +380,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		_close()
 
 
+## It leaves as gently as it came: input stops, `closed` goes first (the
+## sea takes over at once), then it fades out (Motion.LEAVE, a touch longer)
+## while the slip slips down 12px, and is freed.
 func _close() -> void:
-	if _t < 0.6:
+	if _t < 0.6 or has_meta("_closing"):
 		return
+	set_meta("_closing", true)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_process_unhandled_input(false)
 	closed.emit()
-	queue_free()
+	var tw: Tween = create_tween().set_parallel(true)
+	Motion.ease_exit(tw, self, "modulate:a", 0.0, 0.25)
+	if _slip != null and is_instance_valid(_slip):
+		Motion.ease_exit(tw, _slip, "position:y", _slip.position.y + 12.0, 0.25)
+	tw.chain().tween_callback(queue_free)

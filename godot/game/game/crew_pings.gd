@@ -7,15 +7,17 @@ extends Control
 ## and a ring opening, and on their compass while it lasts. Only in a Charter.
 
 const KINDS: Array = [
-	["hotspot", "Hotspot here", Color(1.0, 0.82, 0.42)],
+	["hotspot", "Hotspot here", Kit.SEA_GOLD],
 	["here", "Over here", Color(0.6, 0.92, 0.88)],
 	["help", "Need a hand", Color(1.0, 0.58, 0.42)],
-	["look", "Look", Color(0.96, 0.94, 0.88)],
+	["look", "Look", Kit.SEA_INK],
 ]
 const LIFE: float = 12.0
 const GROUND: float = 0.58
 ## Where each of the four sits on the wheel (up, right, down, left).
 const DIRS: Array = [Vector2(0, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0)]
+## The wheel opens and closes over this long.
+const WHEEL_S: float = 0.12
 
 var sea: Sea
 ## Live pings: { key, name, kind, at (world), t }.
@@ -26,6 +28,10 @@ var _centre: Vector2 = Vector2.ZERO
 var _pick: int = -1
 var _last_sent: float = -9.0
 var _t: float = 0.0
+## How open the wheel is (0 shut, 1 open), and each option's size (1 at
+## rest, larger when it is the one picked), eased rather than switched.
+var _open_k: float = 0.0
+var _opt_k: Array = [0.0, 0.0, 0.0, 0.0]
 
 
 func _ready() -> void:
@@ -75,6 +81,9 @@ func _send(kind: String, screen: Vector2) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	_open_k = move_toward(_open_k, 1.0 if _open else 0.0, delta / WHEEL_S)
+	for i: int in _opt_k.size():
+		_opt_k[i] = move_toward(float(_opt_k[i]), 1.0 if (_open and i == _pick) else 0.0, delta * 18.0 / 3.0)
 	if _open:
 		_held += delta
 		var off: Vector2 = get_local_mouse_position() - _centre
@@ -115,20 +124,24 @@ func _draw() -> void:
 		_text(f_big, at + Vector2(-tw / 2.0, -34), title, 20, Color(col, a))
 		var who: String = str(p["name"])
 		var ww: float = f_small.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
-		_text(f_small, at + Vector2(-ww / 2.0, -16), who, 13, Color(0.9, 0.86, 0.78, a))
-	# The wheel while G is held.
-	if _open:
-		draw_circle(_centre, 4.0, Color(1, 1, 1, 0.8))
+		_text(f_small, at + Vector2(-ww / 2.0, -16), who, 13, Color(Kit.INK_2, a))
+	# The wheel while G is held: it opens out over WHEEL_S and closes the
+	# same way; the option picked grows to it and lights, rather than jumping.
+	if _open_k > 0.0:
+		var ok: float = _open_k * _open_k * (3.0 - 2.0 * _open_k)
+		draw_circle(_centre, 4.0, Color(Kit.SEA_INK, 0.8 * ok))
 		for i2: int in KINDS.size():
 			var k2: Array = KINDS[i2]
-			var on: bool = i2 == _pick
-			var pos: Vector2 = _centre + (DIRS[i2] as Vector2) * 74.0
+			var pk: float = float(_opt_k[i2])
+			var pos: Vector2 = _centre + (DIRS[i2] as Vector2) * 74.0 * lerpf(0.8, 1.0, ok)
 			var s: String = str(k2[1])
-			var px: int = 19 if on else 16
-			var sw: float = f_big.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
-			_text(f_big, pos + Vector2(-sw / 2.0, 6), s, px, Color(k2[2], 1.0 if on else 0.6))
+			var sc: float = lerpf(1.0, 19.0 / 16.0, pk)
+			var sw: float = f_big.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+			draw_set_transform(pos, 0.0, Vector2.ONE * sc)
+			_text(f_big, Vector2(-sw / 2.0, 6), s, 16, Color(k2[2], lerpf(0.6, 1.0, pk) * ok))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
+## Lettering on the water, in the one recipe (Kit.sea_string).
 func _text(f: Font, at: Vector2, t: String, px: int, col: Color) -> void:
-	draw_string_outline(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, px, 7, Color(0.02, 0.04, 0.06, 0.8 * col.a))
-	draw_string(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, px, col)
+	Kit.sea_string(self, f, at, t, px, col)

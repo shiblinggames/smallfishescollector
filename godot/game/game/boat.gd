@@ -607,7 +607,7 @@ func splash(perfect: bool, world_at: Variant = null) -> void:
 	m.scale_max = 0.5
 	m.lifetime_randomness = 0.45
 	var g: Gradient = Gradient.new()
-	g.set_color(0, Color("#fde68a") if perfect else Color(0.9, 0.97, 1.0))
+	g.set_color(0, Dial.GOLD if perfect else Color(0.9, 0.97, 1.0))
 	g.set_color(1, Color(0.9, 0.97, 1.0, 0.0))
 	var ramp: GradientTexture1D = GradientTexture1D.new()
 	ramp.gradient = g
@@ -624,6 +624,8 @@ func splash(perfect: bool, world_at: Variant = null) -> void:
 	ring.life = 0.7 if perfect else 0.52
 	add_child(ring)
 	get_tree().create_timer(1.2).timeout.connect(p.queue_free)
+	# Every splash is heard where it lands (the catch, the perfect's leap).
+	Sound.splash()
 
 
 ## A ring spreading on the water (drawn on the squashed plane, so an ellipse).

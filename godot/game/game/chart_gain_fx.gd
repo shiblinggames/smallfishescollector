@@ -38,5 +38,5 @@ func _draw() -> void:
 		var s: String = str(w["text"])
 		var sz: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 		var at: Vector2 = (w["at"] as Vector2) + Vector2(-sz / 2.0, -rise)
-		draw_string_outline(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, 7, Color(0.03, 0.05, 0.07, 0.75 * a))
-		draw_string(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(0.98, 0.8, 0.5, a * (1.0 if w["big"] else 0.85)))
+		# Lettering on the water, in the one recipe and the one gold.
+		Kit.sea_string(self, font, at, s, px, Color(Kit.SEA_GOLD, 1.0 if w["big"] else 0.85), HORIZONTAL_ALIGNMENT_LEFT, -1.0, a)
