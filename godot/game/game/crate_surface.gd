@@ -25,6 +25,10 @@ var loot: Dictionary = {}
 var boat: Boat
 ## Which side of her it comes up on (-1 left, 1 right; 0 = ahead of her).
 var side: float = 0.0
+## Where it comes up, in the world, when the caller knows (a crate just
+## reeled in surfaces where the fight drew it, so it does not jump). INF:
+## placed by `side`.
+var at: Vector2 = Vector2.INF
 
 const SPRAY: Dictionary = {
 	# colour, amount, speed, gravity (up is negative), life, size
@@ -51,6 +55,8 @@ func _ready() -> void:
 	# Ahead of her and a little toward the viewer when opened from the
 	# Locker (side -1: the camera has her on the left of the screen).
 	position = boat.position + (Vector2(-120.0, 110.0) if side < 0.0 else Vector2(f * 200.0, 36.0))
+	if at != Vector2.INF:
+		position = at
 	_body = Node2D.new()
 	_body.scale = Vector2(1.0, 1.0 / Chart.GROUND)
 	add_child(_body)
@@ -114,6 +120,8 @@ func _stow() -> void:
 	tw2.tween_property(_body, "scale", _body.scale * 0.35, 0.45)
 	tw2.tween_property(_body, "modulate:a", 0.0, 0.45)
 	await tw2.finished
+	# It lands aboard.
+	Sound.clunk()
 	Rumble.tap(8)
 	_finish()
 
@@ -150,6 +158,9 @@ func _finish() -> void:
 
 ## Spray thrown up as it breaks the surface, and the ring across the water.
 func _splash(k: float) -> void:
+	# Heard as it breaks the surface (the haul's drip, a smaller splash, is not).
+	if k >= 0.8:
+		Sound.splash()
 	if boat.field != null:
 		boat.field.ring(position, 150.0 * k, 1.5, 0.8 * k)
 	var p: GPUParticles2D = _particles(Color(0.88, 0.95, 1.0), int(18 * k), 220.0 * k, 520.0, 0.8, 0.35)
@@ -192,6 +203,7 @@ func _burst() -> void:
 	if open_tex != null:
 		_spr.texture = open_tex
 	Rumble.tap(int(10 + float(STRAIN.get(tier, STRAIN["wooden"])[1]) * 3.0))
+	Sound.chest(tier in ["diamond", "ancient"])
 	var bloom: Sprite2D = Sprite2D.new()
 	bloom.texture = Glow.radial(128, Color(t[6]))
 	var add: CanvasItemMaterial = CanvasItemMaterial.new()
@@ -264,12 +276,12 @@ func _tag() -> void:
 	tag.scale = Vector2(0.4, 0.4)
 	tag.modulate.a = 0.0
 	var tw: Tween = create_tween().set_parallel()
-	tw.tween_property(tag, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(tag, "modulate:a", 1.0, 0.25)
+	Motion.ease_pop(tw, tag, "scale", Vector2.ONE, 0.45)
+	Motion.ease_fade(tw, tag, "modulate:a", 1.0, 0.25)
 	tw.tween_property(holder, "position:y", -86.0, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await get_tree().create_timer(2.8).timeout
 	var out: Tween = create_tween()
-	out.tween_property(tag, "modulate:a", 0.0, 0.4)
+	Motion.ease_fade(out, tag, "modulate:a", 0.0, Motion.NOTE_OUT)
 	await out.finished
 	holder.queue_free()
 
@@ -285,14 +297,13 @@ func _rare_reveal() -> void:
 	layer.theme = UiTheme.make()
 	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	top.add_child(layer)
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.008, 0.016, 0.03, 0.78)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	layer.add_child(shade)
+	# The dim fades in (a reveal's weight), the turning light with it.
+	Kit.scrim(layer, Kit.SCRIM_HERO)
 	var rays: CrateMoment.Rays = CrateMoment.Rays.new()
 	rays.tint = Color(v["tint"])
 	rays.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(rays)
+	Motion.scrim_in(rays)
 	var center: CenterContainer = CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(center)
@@ -310,8 +321,7 @@ func _rare_reveal() -> void:
 	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	col.add_child(img)
-	var ti: Label = Kit.text(col, str(v["title"]), "title", Kit.PAPER_INK)
-	ti.add_theme_font_size_override("font_size", 28)
+	var ti: Label = Kit.text(col, str(v["title"]), "display_sm", Kit.PAPER_INK)
 	ti.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var why: Label = Kit.text(col, str(v.get("why", "")), "body", Kit.PAPER_INK_SOFT, true)
 	why.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -320,8 +330,13 @@ func _rare_reveal() -> void:
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	col.add_child(ok)
 	ok.grab_focus.call_deferred()
-	card.pivot_offset = Vector2(200, 200)
-	card.scale = Vector2(0.6, 0.6)
-	create_tween().tween_property(card, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# A hero reveal: unseen on its first frame, pivot taken after layout.
+	Motion.arrive(card, "l")
+	Sound.chest(true)
 	await ok.pressed
+	# It fades away (it vanished in one frame before), then is gone.
+	ok.disabled = true
+	var out: Tween = Motion.leave(layer, false, false)
+	if out != null:
+		await out.finished
 	top.queue_free()

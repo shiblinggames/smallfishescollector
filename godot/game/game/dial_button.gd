@@ -9,7 +9,7 @@ extends Button
 ## when it cannot be pressed. The whole lettering is the thing you press, and
 ## Space or the pad's A press it too.
 
-var accent: Color = Color("#67d4e8"):
+var accent: Color = Kit.CAST:
 	set(c):
 		accent = c
 		_restyle()
@@ -31,7 +31,7 @@ func _init(_diameter: float = 0.0) -> void:
 	add_theme_constant_override("outline_size", 0)
 	add_theme_constant_override("shadow_outline_size", 8)
 	add_theme_constant_override("shadow_offset_x", 0)
-	add_theme_constant_override("shadow_offset_y", 2)
+	add_theme_constant_override("shadow_offset_y", 1)
 	alignment = HORIZONTAL_ALIGNMENT_CENTER
 	focus_mode = Control.FOCUS_NONE
 	button_down.connect(func() -> void: _since = 0.0)
@@ -64,7 +64,8 @@ func _restyle() -> void:
 	var ink: Color = _ink()
 	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color", "font_disabled_color"]:
 		add_theme_color_override(st, ink)
-	add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	# The one recipe for lettering on the water (Kit.lift): its shade.
+	add_theme_color_override("font_shadow_color", Kit.SEA_SHADE)
 	add_theme_font_size_override("font_size", 26 if text.length() <= 12 else 18)
 	queue_redraw()
 

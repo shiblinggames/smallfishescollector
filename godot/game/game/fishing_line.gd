@@ -77,7 +77,8 @@ func _ends() -> Dictionary:
 		"cast":
 			var water: Vector2 = to_global(skipper.sheet_point("wait", PTS["wait"][1]))
 			var start: Vector2 = skipper.line_from if skipper.line_from != null else tip
-			var u: float = clampf(t / 0.55, 0.0, 1.0)
+			# One clock for the cast landing (Motion.CAST_LAND_S): line, plop and ring.
+			var u: float = clampf(t / Motion.CAST_LAND_S, 0.0, 1.0)
 			var e: float = 1.0 - pow(1.0 - u, 2.2)
 			var high: Vector2 = tip + Vector2((water.x - tip.x) * 0.9, -95.0 * absf(global_scale.y))
 			var at: Vector2 = start.lerp(high, e).lerp(high.lerp(water, e), e)

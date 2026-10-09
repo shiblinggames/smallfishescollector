@@ -8,6 +8,11 @@ extends Control
 ## It comes up after a golden is landed and whenever the sea opens with one
 ## still waiting, oldest first; after an answer the next one in line follows.
 ## No price is shown, as on the web.
+##
+## A SLIP OF THE DAY PAPER (M7, 2026-10-09): the fishing side's menus are
+## light paper, so the choice is too. No glow and no gold shadow: the golden
+## shader on the fish is the only gold light. It arrives as a panel
+## (Motion.panel_in) and leaves as one (Motion.dismiss) once answered.
 
 signal answered
 
@@ -15,22 +20,25 @@ var session: Session
 var golden: Dictionary = {}
 var _error: Label
 var _busy: bool = false
+var _scrim: ColorRect
+var _card: Pane
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	Kit.scrim(self, true)
+	# The dim fades in (Kit.scrim does by itself) at a sheet's weight.
+	_scrim = Kit.scrim(self, Kit.SCRIM_SHEET)
 	var center: CenterContainer = CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
-	var card: Pane = Pane.new({ "radius": 18, "fill": [Color("#0b0a06")], "border": [1, Kit.a(Kit.GOLD, 0.53)], "shadow": [Kit.a(Kit.GOLD, 0.16), 40], "glow": [Kit.a(Kit.GOLD, 0.10), Vector2(0.5, 0.25), Vector2(0.7, 0.5)], "pad": 24 })
-	card.custom_minimum_size = Vector2(420, 0)
-	center.add_child(card)
+	_card = Pane.new({ "radius": Kit.R_SHEET, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.4)], "shadow": [Color(0, 0, 0, 0.35), 18, Vector2(0, 6)], "pad": 24, "paper": true })
+	_card.custom_minimum_size = Vector2(420, 0)
+	center.add_child(_card)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
-	card.add_child(col)
-	_text(col, "A GOLDEN ONE", 12, Color("#f0c040"), true)
+	_card.add_child(col)
+	_text(col, "A golden one", "eyebrow", Kit.ink(Kit.GOLD))
 	var art: String = ResultCard.fish_art_path(golden.get("name", ""))
 	if ResourceLoader.exists(art):
 		var t: TextureRect = TextureRect.new()
@@ -42,51 +50,41 @@ func _ready() -> void:
 		m.shader = load("res://game/golden.gdshader")
 		t.material = m
 		col.add_child(t)
-	_text(col, golden.get("name", "A golden fish"), 26, Color("#f6ecd4"), true)
+	_text(col, golden.get("name", "A golden fish"), "display_sm", Kit.PAPER_INK)
 	var mounted: bool = golden.get("alreadyMounted", false)
-	_text(col, "You have one of these on the wall already. This one can only be sold." if mounted else "Sell it, or mount it in your Captain's Log. One of each species only.", 15, Color(0.84, 0.78, 0.65, 0.75), false)
-	_error = _text(col, "", 14, Color("#f0a890"), false)
+	_text(col, "You have one of these on the wall already. This one can only be sold." if mounted else "Sell it, or mount it in your Captain's Log. One of each species only.", "body", Kit.PAPER_INK_SOFT, true)
+	_error = _text(col, "", "small", Paper.RED, true)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	col.add_child(row)
 	var sell: Button = Kit.button("Sell", "secondary")
 	sell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sell.custom_minimum_size = Vector2(0, 48)
+	sell.custom_minimum_size = Vector2(0, 46)
 	sell.pressed.connect(func() -> void: _answer("sell"))
 	row.add_child(sell)
 	if not mounted:
-		var mount: Button = Kit.button("Mount it", "primary")
+		var mount: Button = Paper.primary("Mount it", false)
 		mount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mount.size_flags_stretch_ratio = 1.25
-		mount.custom_minimum_size = Vector2(0, 48)
 		mount.pressed.connect(func() -> void: _answer("mount"))
 		row.add_child(mount)
 		mount.grab_focus.call_deferred()
 	else:
 		sell.grab_focus.call_deferred()
-	_text(col, "It waits here until you decide. Nothing is lost either way.", 12, Color(1, 1, 1, 0.4), false)
-	card.pivot_offset = Vector2(210, 200)
-	card.scale = Vector2(0.9, 0.9)
-	card.modulate.a = 0.0
-	var tw: Tween = create_tween().set_parallel(true)
-	tw.tween_property(card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(card, "modulate:a", 1.0, 0.2)
+	_text(col, "It waits here until you decide. Nothing is lost either way.", "note", Paper.INK_FAINT, true)
+	Motion.panel_in(_card)
 
 
-func _text(parent: Control, text: String, px: int, col: Color, title: bool) -> Label:
-	var l: Label = Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", px)
-	l.add_theme_color_override("font_color", col)
-	Kit.face(l, px, title)
+func _text(parent: Control, text: String, role: String, col: Color, wrap: bool = false) -> Label:
+	var l: Label = Kit.text(parent, text, role, col, wrap)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	parent.add_child(l)
+	if not wrap:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
 
 func _answer(how: String) -> void:
-	if _busy:
+	if _busy or Motion.closing(self):
 		return
 	_busy = true
 	Rumble.buzz(Rumble.GOLDEN)
@@ -98,7 +96,7 @@ func _answer(how: String) -> void:
 		_error.text = r["error"]
 		return
 	answered.emit()
-	queue_free()
+	Motion.dismiss(self, _card, _scrim)
 
 
 ## Block other input while it is up: the choice has to be made.

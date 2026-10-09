@@ -3,8 +3,10 @@ extends Pane
 ## THE CATCH CARD (Godot port of components/CatchResultCard.tsx, on the style
 ## kit).
 ##
-## One lit surface: flat and opaque (it sits on moving water), a single
-## hairline in the catch's own colour, and only the fish glows. Stacked and
+## A SLIP OF THE DAY PAPER (M7, 2026-10-09): it matches the catch note (the
+## same paper, a hairline in the catch's rarity pigment, inked words), since
+## the fishing side's menus are light paper. No glow behind the fish; on a
+## golden the golden shader is the only gold light. Stacked and
 ## centred: the fish on its halo, NEW SPECIES when it is, the name, the rarity
 ## (and the size tier), the length counting up and landing; then the tally in
 ## a strip of cells divided by hairlines, each figure counting from nothing in
@@ -20,9 +22,20 @@ signal closed
 signal wormhole
 
 const RARITY_NAMES: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
-const HAIR: Color = Color(1, 1, 1, 0.07)
+const HAIR: Color = Color(Kit.PAPER_INK, 0.15)
+## THE NEWS INKS on the day paper (the catch note's, so a personal best or a
+## golden reads the same on both surfaces).
+const NEWS: Dictionary = {
+	"golden": Color(0.75, 0.55, 0.1),
+	"new": Color(0.07, 0.4, 0.52),
+	"pb": Color(0.55, 0.3, 0.6),
+	"trophy": Paper.RED,
+}
 
-var _accent: Color = Color("#60a5fa")
+## The hairline's pigment (on the paper) and the shockwave's colour (out over
+## the water, where the bright kit colour reads).
+var _accent: Color = Paper.rarity(3)
+var _wave: Color = Kit.rarity(3)
 var _punch: float = 0.0
 var _beats: Array[Control] = []
 var _note: Label
@@ -31,7 +44,7 @@ var _col: VBoxContainer
 
 
 func _init() -> void:
-	super(Kit.card(Color("#60a5fa"), 0))
+	super({ "radius": Kit.R_LARGE, "fill": [Kit.PAPER], "border": [1, Color(Paper.rarity(3), 0.7)], "shadow": [Color(0, 0, 0, 0.35), 14, Vector2(0, 5)], "pad": 0, "paper": true })
 	custom_minimum_size = Vector2(440, 0)
 	_col = VBoxContainer.new()
 	_col.add_theme_constant_override("separation", 0)
@@ -81,13 +94,16 @@ func show_fish(r: Dictionary, perfect: bool, shot: Dictionary) -> void:
 	var golden: bool = r.get("isShiny") == true
 	var rarity: int = clampi(int(Js.num(fish.get("bite_rarity"))), 1, 5)
 	var label: String = RARITY_NAMES[rarity - 1]
-	_accent = Kit.rarity(rarity)
+	_accent = Paper.rarity(rarity)
+	_wave = Kit.rarity(rarity)
 	if golden:
 		label = "Golden"
-		_accent = Color("#fbcc4a")
+		_accent = NEWS["golden"]
+		_wave = Kit.GOLD
 	elif ancient:
 		label = "Ancient"
-		_accent = Color("#e11d48")
+		_accent = Paper.rarity("ancient")
+		_wave = Kit.rarity("ancient")
 	_punch = 0.0
 	if golden or ancient:
 		_punch = 1.0
@@ -109,27 +125,32 @@ func show_fish(r: Dictionary, perfect: bool, shot: Dictionary) -> void:
 	head.add_theme_constant_override("separation", 3)
 	var art_path: String = fish_art_path(fish["name"])
 	if ResourceLoader.exists(art_path):
-		var holder: Control = Kit.art(head, art_path.trim_prefix("res://art/"), Vector2(0, 130), Color("#7dd3fc") if fresh else _accent)
-		var pic: TextureRect = holder.get_child(holder.get_child_count() - 1)
+		# The fish on the paper, flat: no halo and no floor shadow.
+		var pic: TextureRect = TextureRect.new()
+		pic.texture = Skipper.tex(art_path.trim_prefix("res://art/"))
+		pic.custom_minimum_size = Vector2(0, 130)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if golden:
 			var m: ShaderMaterial = ShaderMaterial.new()
 			m.shader = load("res://game/golden.gdshader")
 			pic.material = m
-		holder.ready.connect(func() -> void: Kit.pop(holder))
+		head.add_child(pic)
+		Motion.arrive(pic, "m")
 	if fresh:
 		var row: HBoxContainer = HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		head.add_child(row)
-		var pill: Pane = Kit.chip(row, "★ New species", Kit.SKY)
-		pill.modulate.a = 0.0
-		create_tween().tween_property(pill, "modulate:a", 1.0, 0.25).set_delay(0.18)
-	var name_l: Label = _centred(head, fish["name"], "title", Color("#f2ece0"))
+		var pill: Pane = Kit.chip(row, "★ New species", NEWS["new"])
+		Motion.arrive(pill, "s", 0.18)
+	var name_l: Label = _centred(head, fish["name"], "title", Kit.PAPER_INK)
 	name_l.add_theme_font_override("font", Kit.font("cinzel", 800))
 	_beats.append(name_l)
 	var tier: String = ""
 	if r.get("sizeTier") != null and String(r["sizeTier"]) in ["trophy", "large"]:
 		tier = String(r["sizeTier"]).capitalize()
-	_beats.append(_centred(head, label + (("   ·   " + tier) if tier != "" else ""), "eyebrow", _accent))
+	_beats.append(_centred(head, label + ((Kit.SEP + tier) if tier != "" else ""), "eyebrow", _accent))
 
 	# The length counts up, then lands a little large.
 	var size_in: float = float(r.get("sizeIn", 0.0))
@@ -138,37 +159,33 @@ func show_fish(r: Dictionary, perfect: bool, shot: Dictionary) -> void:
 		line.alignment = BoxContainer.ALIGNMENT_CENTER
 		line.add_theme_constant_override("separation", 8)
 		head.add_child(line)
-		var sz: Label = Kit.text(line, "", "number", Color("#f0ede8"))
+		var sz: Label = Kit.text(line, "", "number", Kit.PAPER_INK)
 		sz.add_theme_font_size_override("font_size", 22)
 		var count: Callable = func(v: float) -> void: sz.text = FishingHud.length_text(v)
 		create_tween().tween_method(count, 0.0, size_in, 0.55).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		if r.get("isPB") == true and not ancient:
-			var best: Label = Kit.text(line, "Best" + ((" · +%.1f in" % (size_in - float(r["previousBest"]))) if r.get("previousBest") != null else ""), "eyebrow", Kit.TEAL)
+			var best: Label = Kit.text(line, "Best" + ((" · +%.1f in" % (size_in - float(r["previousBest"]))) if r.get("previousBest") != null else ""), "eyebrow", NEWS["pb"])
 			best.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		line.ready.connect(func() -> void:
-			line.pivot_offset = line.size / 2.0
-			line.scale = Vector2.ONE * 1.18
-			line.modulate.a = 0.0
-			var tw: Tween = line.create_tween().set_parallel(true)
-			tw.tween_property(line, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.25)
-			tw.tween_property(line, "modulate:a", 1.0, 0.15).set_delay(0.25))
+		# Unseen from its first frame; its pivot is taken once it is laid out.
+		line.modulate.a = 0.0
+		_land(line)
 
 	# The tally, left to right.
 	var tally: Array = []
 	if not ancient:
-		tally.append([Js.num(fish.get("sell_value")), "", "Sell ⟡", Kit.GOLD])
-	tally.append([float(r.get("xpCatch", r.get("xpGained", 0.0))), "+", "XP", Color("#86efac")])
+		tally.append([Js.num(fish.get("sell_value")), "", "Sell ⟡", Paper.MONEY])
+	tally.append([float(r.get("xpCatch", r.get("xpGained", 0.0))), "+", "XP", Paper.GREEN])
 	if shot.get("doubleCatch") == true and jackpot <= 1.0:
-		tally.append(["×2", "", "Double", Color("#fbbf24")])
+		tally.append(["×2", "", "Double", Paper.MONEY])
 	elif float(shot.get("catchQty", 1.0)) > 1.0 and jackpot <= 1.0:
-		tally.append(["×%d" % int(float(r.get("catchQty", 1.0))), "", "Haul", Kit.GOLD])
+		tally.append(["×%d" % int(float(r.get("catchQty", 1.0))), "", "Haul", Paper.MONEY])
 	if jackpot > 1.0:
-		tally.append(["×%d" % int(jackpot), "", "Jackpot", Color("#fb923c")])
+		tally.append(["×%d" % int(jackpot), "", "Jackpot", Paper.MONEY])
 	if r.has("perfectBonusXP") and float(r["perfectBonusXP"]) > 0.0:
-		tally.append([float(r["perfectBonusXP"]), "+", "Perfect", Kit.GOLD])
+		tally.append([float(r["perfectBonusXP"]), "+", "Perfect", Paper.GREEN])
 	if float(r.get("xpStreak", 0.0)) > 0.0:
 		var s: int = int(r.get("perfectStreak", 1.0))
-		tally.append([float(r["xpStreak"]), "+", "Streak ×%d" % s if s > 1 else "Streak", Color("#fbbf24")])
+		tally.append([float(r["xpStreak"]), "+", "Streak ×%d" % s if s > 1 else "Streak", Paper.GREEN])
 	_hairline()
 	var strip: HBoxContainer = HBoxContainer.new()
 	strip.add_theme_constant_override("separation", 0)
@@ -189,7 +206,7 @@ func show_fish(r: Dictionary, perfect: bool, shot: Dictionary) -> void:
 		var t: Array = tally[n]
 		var v: Label = _centred(cell, "", "number", t[3])
 		v.add_theme_font_size_override("font_size", 16)
-		_centred(cell, t[2], "chip", Color(1, 1, 1, 0.34))
+		_centred(cell, t[2], "chip", Paper.INK_FAINT)
 		var pad_bot: Control = Control.new()
 		pad_bot.custom_minimum_size = Vector2(0, 6)
 		cell.add_child(pad_bot)
@@ -206,27 +223,27 @@ func show_fish(r: Dictionary, perfect: bool, shot: Dictionary) -> void:
 		cell.modulate.a = 0.0
 		var ct: Tween = create_tween()
 		ct.tween_interval(delay)
-		ct.tween_property(cell, "modulate:a", 1.0, 0.22)
+		Motion.ease_fade(ct, cell, "modulate:a", 1.0, 0.22)
 
 	# The notes.
 	var notes: Array = []
 	if golden:
 		var msgs: Array = Rules.data()["shinyMessages"]
-		notes.append([String(msgs[randi() % msgs.size()]).replace("{fish}", fish["name"]), Kit.GOLD])
+		notes.append([String(msgs[randi() % msgs.size()]).replace("{fish}", fish["name"]), NEWS["golden"]])
 	elif r.get("isNewSpecies") == true:
-		notes.append(["New species. Logged.", Kit.SKY])
+		notes.append(["New species. Logged.", NEWS["new"]])
 	if r.get("baitSaved") == true:
-		notes.append(["The bait survived.", Kit.GOOD])
+		notes.append(["The bait survived.", Paper.GREEN])
 	if ancient and r.get("isNewSpecies") == true:
-		notes.append(["Ancient %d of 6 revealed." % int(r.get("ancientCount", 0)), Color("#f0a0b0")])
+		notes.append(["Ancient %d of 6 revealed." % int(r.get("ancientCount", 0)), Paper.rarity("ancient")])
 	if r.get("vigilRankUp") != null:
 		var up: Dictionary = r["vigilRankUp"]
-		notes.append(["Vigil %s. Rank %d to %d." % [["", "I", "II", "III", "IV", "V"][int(up["to"])], int(up["from"]), int(up["to"])], Color("#c9a7ff")])
+		notes.append(["Vigil %s. Rank %d to %d." % [["", "I", "II", "III", "IV", "V"][int(up["to"])], int(up["from"]), int(up["to"])], Kit.PAPER_INK_SOFT])
 	if r.has("waitingOn"):
 		var names: Array[String] = []
 		for w: Dictionary in r["waitingOn"]:
 			names.append(w["short"])
-		notes.append(["%s %s waiting on this one. Sail it over." % [" and ".join(names), "is" if names.size() == 1 else "are"], Kit.GOLD])
+		notes.append(["%s %s waiting on this one. Sail it over." % [" and ".join(names), "is" if names.size() == 1 else "are"], Paper.MONEY])
 	if not notes.is_empty():
 		_hairline()
 		var nb: VBoxContainer = _section([16, 8, 16, 8])
@@ -239,11 +256,12 @@ func show_fish(r: Dictionary, perfect: bool, shot: Dictionary) -> void:
 
 ## A crate's loot, or a miss, told plainly.
 func show_note(title: String, body: String) -> void:
-	_accent = Color("#d9b7b7")
+	_accent = Paper.INK_SOFT
+	_wave = Kit.DIM
 	var v: VBoxContainer = _section([18, 16, 18, 8])
 	v.add_theme_constant_override("separation", 6)
-	_beats.append(_centred(v, title, "title", Color("#e8d6d6")))
-	_beats.append(_centred(v, body, "body", Kit.INK_2, true))
+	_beats.append(_centred(v, title, "title", Kit.PAPER_INK))
+	_beats.append(_centred(v, body, "body", Kit.PAPER_INK_SOFT, true))
 	_buttons(false)
 	_arrive(false)
 
@@ -259,18 +277,19 @@ func set_note(text: String) -> void:
 func _buttons(show_worm: bool) -> void:
 	_hairline()
 	var v: VBoxContainer = _section([14, 10, 14, 12])
-	_note = Kit.text(v, "", "small", Kit.GOOD, true)
+	_note = Kit.text(v, "", "small", Paper.GREEN, true)
 	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_note.visible = false
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	v.add_child(row)
-	var again: Button = Kit.button("Cast Again", "accent", "large", Color("#67d4e8"))
+	# One family of buttons on the paper: the one thing to do is the plank.
+	var again: Button = Paper.primary("Cast Again", false)
 	again.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	again.pressed.connect(func() -> void: cast_again.emit())
 	row.add_child(again)
 	if show_worm:
-		_worm = Kit.button("Wormhole", "accent", "large", Color("#c9a7ff"))
+		_worm = Kit.button("Wormhole", "secondary")
 		_worm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_worm.tooltip_text = "Reroll this catch into another fish"
 		_worm.pressed.connect(func() -> void: wormhole.emit())
@@ -288,36 +307,62 @@ func _edge(c: Color) -> void:
 	set_spec(s)
 
 
+## The length line lands a little large (a reward pop), once laid out.
+func _land(line: Control) -> void:
+	if not line.is_inside_tree():
+		await line.tree_entered
+	await line.get_tree().process_frame
+	if not is_instance_valid(line):
+		return
+	line.pivot_offset = line.size / 2.0
+	line.scale = Vector2.ONE * 1.18
+	var tw: Tween = line.create_tween().set_parallel(true)
+	Motion.ease_pop(tw, line, "scale", Vector2.ONE, 0.35).set_delay(0.25)
+	Motion.ease_fade(tw, line, "modulate:a", 1.0, 0.15).set_delay(0.25)
+
+
 func _arrive(perfect: bool) -> void:
-	_edge(Kit.a(_accent, 0.4))
+	var edge: Color = Kit.a(_accent, 0.7)
+	_edge(edge)
 	if perfect:
+		# The hairline flashes gold ink once.
+		var gold: Color = Kit.ink(Kit.GOLD)
 		var flash: Tween = create_tween()
 		flash.tween_interval(0.15)
-		flash.tween_method(func(k: float) -> void: _edge(Kit.a(_accent, 0.4).lerp(Kit.GOLD, k)), 0.0, 1.0, 0.15)
+		flash.tween_method(func(k: float) -> void: _edge(edge.lerp(gold, k)), 0.0, 1.0, 0.15)
 		flash.tween_interval(0.25)
-		flash.tween_method(func(k: float) -> void: _edge(Kit.GOLD.lerp(Kit.a(_accent, 0.4), k)), 0.0, 1.0, 0.5)
-	pivot_offset = Vector2(220, 180)
+		flash.tween_method(func(k: float) -> void: _edge(gold.lerp(edge, k)), 0.0, 1.0, 0.5)
+	# Unseen from its first frame; the arrival starts once the card is laid
+	# out, so it scales from its own centre (the pivot was hard-coded).
 	modulate.a = 0.0
+	for b: Control in _beats:
+		b.modulate.a = 0.0
+	if not is_inside_tree():
+		await tree_entered
+	await get_tree().process_frame
+	if not is_instance_valid(self) or is_queued_for_deletion():
+		return
+	pivot_offset = size / 2.0
 	scale = Vector2.ONE * (1.0 - 0.07 * _punch)
 	var drop: float = 16.0 + 14.0 * _punch
 	offset_top += drop
 	offset_bottom += drop
 	var tw: Tween = create_tween().set_parallel(true)
-	tw.tween_property(self, "modulate:a", 1.0, 0.18)
+	Motion.ease_fade(tw, self, "modulate:a", 1.0, 0.18)
+	# A rarer catch lands harder (a reward pop, so BACK); a plain one rises.
 	var trans: int = Tween.TRANS_BACK if _punch > 0.0 else Tween.TRANS_CUBIC
 	tw.tween_property(self, "offset_top", offset_top - drop, 0.35).set_trans(trans).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "offset_bottom", offset_bottom - drop, 0.35).set_trans(trans).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "scale", Vector2.ONE, 0.35).set_trans(trans).set_ease(Tween.EASE_OUT)
 	for i: int in _beats.size():
-		_beats[i].modulate.a = 0.0
 		var bt: Tween = create_tween()
 		bt.tween_interval(0.08 + 0.07 * i)
-		bt.tween_property(_beats[i], "modulate:a", 1.0, 0.22)
+		Motion.ease_fade(bt, _beats[i], "modulate:a", 1.0, 0.22)
 	if _punch > 0.0:
 		# The shockwave, on its own layer: what the card draws itself goes
-		# through its pane shader.
+		# through its pane shader. Out over the water, in the bright colour.
 		var ring: Ring = Ring.new()
-		ring.color = _accent
+		ring.color = _wave
 		ring.punch = _punch
 		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(ring)
@@ -346,5 +391,5 @@ class Ring:
 		sb.draw_center = false
 		sb.border_color = Color(color, 0.5 * punch * (1.0 - u))
 		sb.set_border_width_all(3)
-		sb.set_corner_radius_all(22)
+		sb.set_corner_radius_all(Kit.R_LARGE + 6)
 		draw_style_box(sb, box.grow(6))

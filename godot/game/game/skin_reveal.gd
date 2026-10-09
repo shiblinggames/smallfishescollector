@@ -10,8 +10,10 @@ extends Control
 
 signal done
 
+## The tiers' colours, from THE rarity table (Kit.RARITY), so a tier looks
+## the same here as everywhere else.
 const TIER_COLORS: Dictionary = {
-	"rare": Color("#3b8ef0"), "epic": Color("#a78bfa"), "legendary": Color("#f0c040"), "chase": Color("#ff7a59"),
+	"rare": Kit.RARITY["rare"], "epic": Kit.RARITY["epic"], "legendary": Kit.RARITY["legendary"], "chase": Kit.RARITY["chase"],
 }
 const TIER_NAMES: Dictionary = { "rare": "Rare", "epic": "Epic", "legendary": "Legendary", "chase": "Chase" }
 const CARD: Vector2 = Vector2(340, 390)
@@ -44,13 +46,9 @@ func _ready() -> void:
 	z_index = 50
 	var tier: String = str(result.get("tier", "rare"))
 	_col = TIER_COLORS.get(tier, Color.WHITE)
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.01, 0.02, 0.03, 0.82)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# A reveal's dim, fading in; clicks pass to the reveal ("press anywhere").
+	var shade: ColorRect = Kit.scrim(self, Kit.SCRIM_HERO)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(shade)
-	shade.modulate.a = 0.0
-	create_tween().tween_property(shade, "modulate:a", 1.0, 0.25)
 	_fx = Control.new()
 	_fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -98,11 +96,8 @@ func _ready() -> void:
 	_words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_words.modulate.a = 0.0
 	add_child(_words)
-	_card.scale = Vector2(0.4, 0.4)
-	_card.modulate.a = 0.0
-	var tw: Tween = create_tween().set_parallel()
-	tw.tween_property(_card, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(_card, "modulate:a", 1.0, 0.3)
+	# A hero reveal (Motion ARRIVE_L): unseen on its first frame.
+	Motion.arrive(_card, "l")
 	Sound.bell()
 
 
@@ -130,11 +125,11 @@ func _process(delta: float) -> void:
 		_flipped = true
 		_card.rotation = 0.0
 		var tw: Tween = create_tween()
-		tw.tween_property(_card, "scale", Vector2(0.0, 1.08), 0.14).set_ease(Tween.EASE_IN)
+		tw.tween_property(_card, "scale", Vector2(0.0, 1.08), 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 		tw.tween_callback(func() -> void:
 			_face.visible = true
 			_land(big))
-		tw.tween_property(_card, "scale", Vector2(1.06, 1.06), 0.16).set_ease(Tween.EASE_OUT)
+		tw.tween_property(_card, "scale", Vector2(1.06, 1.06), 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tw.tween_property(_card, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_SINE)
 	_back.queue_redraw()
 	_fx.queue_redraw()
@@ -168,7 +163,7 @@ func _land(big: bool) -> void:
 	w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var p: Label = Kit.text(_words, "Press anywhere", "small", Color(0.85, 0.8, 0.7, 0.55))
 	p.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	create_tween().tween_property(_words, "modulate:a", 1.0, 0.4).set_delay(0.2)
+	Motion.ease_fade(create_tween(), _words, "modulate:a", 1.0, 0.4).set_delay(0.2)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -187,15 +182,18 @@ func _close() -> void:
 	if is_queued_for_deletion():
 		return
 	set_process(false)
+	set_process_unhandled_input(false)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tw: Tween = create_tween()
-	tw.tween_property(self, "modulate:a", 0.0, 0.2)
+	Motion.ease_exit(tw, self, "modulate:a", 0.0, Motion.LEAVE)
 	tw.tween_callback(func() -> void:
 		done.emit()
 		queue_free())
 
 
-## The sealed card: dark board, a brass border, the voucher's painting in the
-## middle, and the glow of the tier it is climbing through.
+## The sealed card: a night-paper board with one hairline in the tier's
+## colour (no brass frame), the voucher's painting in the middle, and the
+## glow of the tier it is climbing through.
 func _draw_back() -> void:
 	var g: Color = _col if _flipped and _face.visible else _glow_now()
 	var r: Rect2 = Rect2(Vector2.ZERO, CARD)
@@ -203,17 +201,11 @@ func _draw_back() -> void:
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
 	sb.shadow_color = Color(g, 0.45 + 0.25 * pulse)
 	sb.shadow_size = 26
-	sb.bg_color = Color("#1d1712")
-	sb.border_color = Color(0.78, 0.62, 0.36)
-	sb.set_border_width_all(3)
-	sb.set_corner_radius_all(14)
+	sb.bg_color = Paper.NIGHT_PAPER_DEEP
+	sb.border_color = Color(g, 0.6)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(Kit.R_LARGE)
 	_back.draw_style_box(sb, r)
-	var inner: StyleBoxFlat = StyleBoxFlat.new()
-	inner.bg_color = Color(0, 0, 0, 0)
-	inner.border_color = Color(g, 0.55)
-	inner.set_border_width_all(2)
-	inner.set_corner_radius_all(10)
-	_back.draw_style_box(inner, r.grow(-12.0))
 	if _face.visible:
 		return
 	var c: Vector2 = CARD / 2.0

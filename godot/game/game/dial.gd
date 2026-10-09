@@ -56,11 +56,11 @@ var _snap: float = 0.0
 var _burst: float = 0.0
 var _embers: GPUParticles2D
 var _burst_fx: GPUParticles2D
-## Godot over the web baseline (2026-10-01): the instrument itself is drawn by
-## fx/dial.gdshader (brass bezel, bevelled track, glass face, the needle's
-## trail) on _face; the fire and the giant's aura behind it on _back; the
-## needle, hub and glyphs by _draw on top.
-var _face: ColorRect
+## Godot over the web baseline (2026-10-01): the instrument is DRAWN (the
+## Locker's gauge is the model; the old brass-bezel shader face is gone): a
+## cream face with ink rim, ticks and zone bands (_draw_face), the needle, hub
+## and glyphs over it (_draw); the streak's fire and the giant's aura behind
+## it on _back.
 var _back: Control
 
 
@@ -111,17 +111,6 @@ func _ready() -> void:
 	_embers = _make_embers()
 	_burst_fx = _make_burst()
 	add_child(_embers)
-	_face = ColorRect.new()
-	_face.show_behind_parent = true
-	_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_face.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var m: ShaderMaterial = ShaderMaterial.new()
-	m.shader = load("res://game/fx/dial.gdshader")
-	_face.material = m
-	add_child(_face)
-	# The face is drawn (_draw_face), like the Locker's gauge (Kong: the
-	# watercolour face looked fake).
-	_face.visible = false
 	add_child(_burst_fx)
 	resized.connect(_place_fx)
 	_place_fx()
@@ -311,39 +300,8 @@ func _process(delta: float) -> void:
 	var rate: float = pow(i, 1.5) * 95.0
 	_embers.amount_ratio = clampf(rate * _embers.lifetime / float(_embers.amount), 0.0, 1.0)
 	_embers.emitting = i > 0.0 and visible
-	_feed_face()
 	queue_redraw()
 	_back.queue_redraw()
-
-
-## What the face shader needs, each frame.
-func _feed_face() -> void:
-	var m: ShaderMaterial = _face.material
-	m.set_shader_parameter("u_size", size)
-	m.set_shader_parameter("u_rot", zone_rot)
-	m.set_shader_parameter("u_angle", angle)
-	var under_i: int = _under_index()
-	var zs: Array[Vector4] = []
-	var cs: Array[Vector4] = []
-	for n: int in mini(16, zones.size()):
-		var z: Array = zones[n]
-		var kind: float = { "miss": 0.0, "catch": 1.0, "perfect": 2.0, "penalty": 3.0 }.get(z[2], 0.0)
-		zs.append(Vector4(float(z[0]), float(z[1]), kind, 1.0 if n == under_i else 0.0))
-		if z.size() > 3:
-			var c: Color = Color(z[3])
-			cs.append(Vector4(c.r, c.g, c.b, 1.0))
-		else:
-			cs.append(Vector4(0, 0, 0, 0))
-	while zs.size() < 16:
-		zs.append(Vector4(0, 0, 0, 0))
-		cs.append(Vector4(0, 0, 0, 0))
-	m.set_shader_parameter("u_zones", zs)
-	m.set_shader_parameter("u_cols", cs)
-	m.set_shader_parameter("u_n", mini(16, zones.size()))
-	m.set_shader_parameter("u_trail", clampf(sweep * 0.11, 8.0, 70.0) if spinning else 0.0)
-	m.set_shader_parameter("u_needle_col", _needle_color(under_i))
-	m.set_shader_parameter("u_burst", _burst)
-	m.set_shader_parameter("u_dark", clampf(_dark * 2.0, 0.0, 1.0))
 
 
 func _under_index() -> int:
@@ -483,17 +441,21 @@ func _draw() -> void:
 	if needle == GOLD or _burst > 0.0:
 		draw_circle(tip, 9.0 * k, Color(GOLD, 0.18))
 
-	# THE HUB: a domed brass cap, and its snap and ripple on a strike.
+	# THE HUB: a flat ink disc with a cream centre, and its snap and ripple on
+	# a strike (the ripple in face ink, tinted by what the needle froze on, so
+	# the press reads as a catch or a miss).
 	var snap_t: float = 1.0 - _snap
 	var hub_scale: float = 1.0
 	if _snap > 0.0:
 		if snap_t < 0.46:
 			hub_scale = _keys([1.0, 1.8, 0.7, 1.15, 1.0], snap_t / 0.46)
-		draw_arc(c, (10.0 + 30.0 * snap_t) * k, 0.0, TAU, 48, Color(1, 1, 1, 0.22 * _snap), 1.6 * k, true)
+		var face_ink: Color = Color(0.2, 0.16, 0.13)
+		var ripple: Color = face_ink.lerp(FACE_COL[frozen_on], 0.6) if FACE_COL.has(frozen_on) else face_ink
+		draw_arc(c, (10.0 + 30.0 * snap_t) * k, 0.0, TAU, 48, Color(ripple, 0.35 * _snap), 1.6 * k, true)
 	var hr: float = 7.5 * k * hub_scale
 	draw_circle(c + Vector2(1.2, 2.0) * k, hr, Color(0.02, 0.03, 0.05, 0.3))
-	draw_circle(c, hr, Color(0.47, 0.33, 0.19))
-	draw_circle(c - Vector2(0.8, 0.8) * k, hr * 0.74, Color(0.82, 0.64, 0.38))
+	draw_circle(c, hr, Color(0.2, 0.16, 0.13))
+	draw_circle(c, hr * 0.3, Color(0.96, 0.93, 0.86))
 	if _dark > 0.0:
 		draw_circle(c, 110.0 * k, Color(0.01, 0.01, 0.02, 0.85))
 
