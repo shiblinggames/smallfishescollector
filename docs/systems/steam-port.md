@@ -2278,6 +2278,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- THE COMPASS GOES NORTH-UP, AND THE TOP RIGHT ROW (Kong, 2026-10-09: the heading-up ribbon "is a
+  bit nauseating"; the top right "sits on a different plane" from the Auto Catcher; the Captains
+  pill "is weird"). The ribbon no longer scrolls: north fixed in the middle, the whole round
+  across it (south at both ends), marks at their true bearing, a notch on the line for the bow
+  (eased). The top right is one row level with the captain's name, all water pills as the top
+  left's (FishingHud._water_button): Chart, Recall home, the clock, and a drawn settings cog that
+  opens the Esc menu (Main._open_menu; Captains and Leave the Charter live there). The Captains
+  pill is gone.
 - A WEB CAPTAIN INTO THE PORT (Kong, 2026-10-09: his kingkong, "a maxed out character to test
   with"). From web/: `npx tsx scripts/player-save.mts export <username> --out <name>.json` (a
   read-only snapshot into git-ignored web/saves/), then `npx tsx

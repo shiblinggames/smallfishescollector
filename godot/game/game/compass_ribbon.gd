@@ -2,10 +2,13 @@ class_name CompassRibbon
 extends Control
 ## THE COMPASS, AS A HEADING RIBBON (Kong, 2026-10-06: "a visual overhaul and
 ## improvement of the compass system in Godot"; he chose the ribbon, pinning,
-## and fading while fishing). A thin strip under the level bar, centred on
-## where the bow points: the bearings slide along it as she turns, every mark
-## sits at its true bearing with its name and its sailing time under it, and
-## anything behind her waits at the ribbon's end with an arrow. Nothing is
+## and fading while fishing). A thin strip under the level bar, NORTH-UP
+## (Kong, 2026-10-09: the heading-up strip, sliding with every swing of the bow
+## over a sea that never turns, was "a bit nauseating"): north fixed in the
+## middle and the whole round across it, south at both ends, as the map is
+## drawn. Every mark sits at its true bearing from her with its name and its
+## sailing time under it, drifting only as she sails; a small notch on the
+## line shows where her bow points. Nothing is
 ## drawn on the edges of the sea any more (it replaces the buyer's "!", the
 ## crew's edge marks, Finn's arrow and the course's edge mark).
 ##
@@ -28,7 +31,7 @@ extends Control
 ## (the web's sail-to-mark was removed on purpose).
 
 const W: float = 820.0
-const SPAN: float = deg_to_rad(105.0)
+const SPAN: float = PI
 const SLOTS: int = 5
 const CARDINAL: Array = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 const ARRIVE: float = 420.0
@@ -266,6 +269,9 @@ func _process(delta: float) -> void:
 
 
 ## A compass bearing (0 north, clockwise) of a direction in the world.
+var _bow: float = 0.0
+
+
 static func bearing(v: Vector2) -> float:
 	return atan2(v.x, -v.y)
 
@@ -276,6 +282,8 @@ func _draw() -> void:
 	var c: Vector2 = Vector2(size.x / 2.0, 14.0)
 	var heading: float = bearing(Vector2.from_angle(sea._boat.heading))
 	var half: float = W / 2.0
+	# North-up: the strip never turns; the bow's notch moves along it.
+	var up: float = 0.0
 	var f_card: Font = Kit.font("cinzel", 800)
 	var f_name: Font = Kit.font("karla", 700)
 	var f_sub: Font = Kit.font("karla", 600)
@@ -286,11 +294,9 @@ func _draw() -> void:
 		var fade: float = 1.0 - pow(absf((x0 + x1) / 2.0) / half, 3.0)
 		draw_line(c + Vector2(x0, 0), c + Vector2(x1, 0), Color(INK, 0.32 * fade * a), 1.5)
 	for d: int in range(0, 360, 15):
-		var rel: float = wrapf(deg_to_rad(float(d)) - heading, -PI, PI)
-		if absf(rel) > SPAN:
-			continue
+		var rel: float = wrapf(deg_to_rad(float(d)) - up, -PI, PI)
 		var x: float = rel / SPAN * half
-		var fade2: float = 1.0 - pow(absf(x) / half, 3.0)
+		var fade2: float = maxf(0.35, 1.0 - pow(absf(x) / half, 3.0))
 		if d % 45 == 0:
 			var t: String = CARDINAL[d / 45]
 			var px: int = 15 if d % 90 == 0 else 11
@@ -298,15 +304,18 @@ func _draw() -> void:
 			_text(f_card, c + Vector2(x - tw / 2.0, -5), t, px, Color(INK, (0.9 if d % 90 == 0 else 0.6) * fade2 * a))
 		else:
 			draw_line(c + Vector2(x, -3), c + Vector2(x, 3), Color(INK, 0.35 * fade2 * a), 1.0)
-	# The bow: a small notch in the middle.
-	draw_colored_polygon(PackedVector2Array([c + Vector2(-5, 8), c + Vector2(5, 8), c + Vector2(0, 2)]), Color(INK, 0.85 * a))
+	# The bow: a small notch on the line where she points, eased so a quick
+	# swing of the helm glides rather than jumps.
+	_bow = _bow + wrapf(heading - _bow, -PI, PI) * minf(1.0, get_process_delta_time() * 8.0)
+	var bx0: float = wrapf(_bow - up, -PI, PI) / SPAN * half
+	draw_colored_polygon(PackedVector2Array([c + Vector2(bx0 - 5, 8), c + Vector2(bx0 + 5, 8), c + Vector2(bx0, 2)]), Color(INK, 0.85 * a))
 	# The marks, nearest the bow drawn last; labels that would collide stack.
 	var placed: Array = []
 	var rows: Array = []
 	for m: Dictionary in _marks:
 		var v: Vector2 = (m["at"] as Vector2) - sea._boat.position
-		var rel2: float = wrapf(bearing(v) - heading, -PI, PI)
-		var behind: bool = absf(rel2) > SPAN
+		var rel2: float = wrapf(bearing(v) - up, -PI, PI)
+		var behind: bool = false
 		var x2: float = clampf(rel2 / SPAN, -1.0, 1.0) * (half - 6.0)
 		rows.append([absf(rel2), m, x2, behind, v.length()])
 	rows.sort_custom(func(p: Array, q: Array) -> bool: return float(p[0]) > float(q[0]))

@@ -163,6 +163,7 @@ func _sea(s: Session, crewed: bool) -> void:
 	var sea: Sea = Sea.new()
 	sea.session = s
 	sea.net = net if crewed else null
+	sea.menu_wanted.connect(_open_menu)
 	sea.left.connect(func() -> void:
 		s.persist()
 		if crewed:
@@ -183,6 +184,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("fish_back") or not (_screen is Sea):
 		return
 	get_viewport().set_input_as_handled()
+	_open_menu()
+
+
+## The Esc menu (Esc, or the settings button at the top right of the sea).
+func _open_menu() -> void:
+	if not (_screen is Sea):
+		return
 	if _menu_layer == null:
 		_menu_layer = CanvasLayer.new()
 		_menu_layer.layer = 90

@@ -28,6 +28,8 @@ signal fishing_changed(active: bool)
 signal leave
 ## The recall pill was pressed (the sea asks the rules and takes her home).
 signal recall_pressed
+## The settings button at the top right (Kong, 2026-10-09): the Esc menu.
+signal menu_pressed
 ## The chart was asked for (its pill, or M).
 signal chart_pressed
 ## The Locker was asked for, on a tab (and a slot).
@@ -238,9 +240,19 @@ func _ready() -> void:
 	tl.add_child(_auto)
 	_auto_on = session.profile().get("auto_fishing_on") == true
 
-	var tr: VBoxContainer = _box(Vector2(-20, 16), true, 360)
+	var tr: VBoxContainer = _box(Vector2(-20, 14), true, 520)
 	tr.add_theme_constant_override("separation", 4)
 	_tr = tr
+	# THE TOP RIGHT ROW (Kong, 2026-10-09: it sat "on a different plane" from
+	# the Auto Catcher, and the Captains pill "is weird"): the chart, the
+	# recall, the clock and the settings button, all water pills like the
+	# top left's, level with the captain's name. Settings opens the Esc menu
+	# (Captains and Leave the Charter live there now).
+	var clock_row: HBoxContainer = HBoxContainer.new()
+	clock_row.alignment = BoxContainer.ALIGNMENT_END
+	clock_row.add_theme_constant_override("separation", 6)
+	clock_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tr.add_child(clock_row)
 	_where = Kit.lift(Kit.text(tr, "", "title", INK))
 	_blurb = Kit.lift(Kit.text(tr, "", "small", Kit.INK_2))
 	# What is biting best here now (core/fish_bias.gd).
@@ -249,12 +261,8 @@ func _ready() -> void:
 	_stir.custom_minimum_size = Vector2(360, 0)
 	for l: Label in [_where, _blurb, _stir]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var clock_row: HBoxContainer = HBoxContainer.new()
-	clock_row.alignment = BoxContainer.ALIGNMENT_END
-	clock_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tr.add_child(clock_row)
 	# THE FREE RECALL HOME, on the clock's row: ready, or the minutes left.
-	_recall = Kit.button("Recall home", "secondary", "small")
+	_recall = _water_button("Recall home")
 	_recall.focus_mode = Control.FOCUS_NONE
 	_recall.tooltip_text = "Home to the Homestead Portal, free once a sea day"
 	_recall.pressed.connect(func() -> void:
@@ -263,7 +271,7 @@ func _ready() -> void:
 		else:
 			toast("Bring the line in first"))
 	clock_row.add_child(_recall)
-	var chart: Button = Kit.button("Chart  M", "secondary", "small")
+	var chart: Button = _water_button("CHART  M")
 	chart.focus_mode = Control.FOCUS_NONE
 	chart.tooltip_text = "The world chart: where everything is, and a course to anywhere"
 	chart.pressed.connect(func() -> void: chart_pressed.emit())
@@ -280,15 +288,16 @@ func _ready() -> void:
 	_clock = Kit.text(clock_in, "", "label", Color(0.82, 0.88, 0.93, 0.85))
 	_clock.custom_minimum_size = Vector2(62, 0)
 	_clock.tooltip_text = "The time at sea. A day is 48 minutes: 32 of daylight, 16 of night."
-	var out: Button = Kit.back_pill(leave_label)
-	out.size_flags_horizontal = Control.SIZE_SHRINK_END
-	out.focus_mode = Control.FOCUS_NONE
-	out.pressed.connect(func() -> void:
-		if phase == "idle" or phase == "result":
-			leave.emit()
-		else:
-			toast("Bring the line in first"))
-	tr.add_child(out)
+	var gear: Button = _water_button("")
+	gear.tooltip_text = "Settings, captains and quit  (Esc)"
+	gear.custom_minimum_size = Vector2(32, 28)
+	var cog: Control = Control.new()
+	cog.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cog.draw.connect(func() -> void: _draw_cog(cog))
+	gear.add_child(cog)
+	gear.pressed.connect(func() -> void: menu_pressed.emit())
+	clock_row.add_child(gear)
 
 	_bait = str(Js.nz(session.profile().get("last_used_bait"), "worm"))
 	var bottom: HBoxContainer = HBoxContainer.new()
@@ -605,6 +614,31 @@ func _paint_expedition_row() -> void:
 		if int(sd["tier"]) == tier:
 			nm = str(sd["name"])
 	_ship_val.text = nm
+
+
+## A small button on the water, as the Auto Catcher's: the top corners' one look.
+func _water_button(t: String) -> Button:
+	var bt: Pane.PaneButton = Pane.PaneButton.new(Kit.water_pill([10, 4, 12, 4]), Kit.water_pill([10, 4, 12, 4], true))
+	bt.text = t
+	bt.custom_minimum_size = Vector2(0, 28)
+	bt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bt.focus_mode = Control.FOCUS_NONE
+	bt.add_theme_font_override("font", Kit.tracked("karla", 700, 11, 0.12))
+	bt.add_theme_font_size_override("font_size", 11)
+	return bt
+
+
+## The settings cog, drawn: a ring of eight teeth round a hollow hub.
+func _draw_cog(c: Control) -> void:
+	var o: Vector2 = c.size / 2.0
+	var col: Color = Kit.SEA_INK
+	var pts: PackedVector2Array = PackedVector2Array()
+	for i: int in 32:
+		var a: float = TAU * i / 32.0
+		var r: float = 7.5 if (i % 4) < 2 else 5.6
+		pts.append(o + Vector2.from_angle(a + TAU / 64.0) * r)
+	c.draw_colored_polygon(pts, col)
+	c.draw_circle(o, 2.4, Kit.SEA_SHADE)
 
 
 func _box(at: Vector2, right: bool, w: float) -> VBoxContainer:

@@ -42,6 +42,8 @@ var _look_t: float = 0.0
 var _last_look: Dictionary = {}
 ## Leaving the sea: back to the captains (or out of the Charter).
 signal left
+## The HUD's settings button: the Esc menu (Main opens it).
+signal menu_wanted
 var _water: ShaderMaterial
 var _world: Node2D
 var _boat: Boat
@@ -388,6 +390,7 @@ func _ready() -> void:
 		_boat.set_pose("wait" if active else "rest"))
 	_hud.leave_label = "Leave the Charter" if net != null else "Captains"
 	_hud.leave.connect(func() -> void: left.emit())
+	_hud.menu_pressed.connect(func() -> void: menu_wanted.emit())
 	_hud.recall_pressed.connect(_press_recall)
 	_course.hud = _hud
 	_hud.chart_pressed.connect(_open_chart)
