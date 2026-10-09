@@ -2278,6 +2278,21 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- ONE VISUAL AND MOTION LANGUAGE (Kong, 2026-10-09: "polished and consistent… every single
+  detail feels purposeful"). An audit wrote a spec; the approved majors were applied across the
+  game. game/motion.gd (Motion) holds every timing and move (arrive, leave, panel_in/out,
+  dismiss, scrim, rise_word, note, swap, stagger, count, press); Kit and Paper hold the colour,
+  type role, spacing and rarity tokens, and BattleLook's colours are aliases of them. Applied:
+  M1 one menu header (Paper.header: eyebrow, title, Close Esc) for Room and Sheet; M2 quiet and
+  primary buttons; M3 Cinzel on every large button; M4 flat tiles (red ink ring active, gold
+  hairline ready), Tackle Shop and Almanac on them; M5 no shadows under art; M6 the hotspot as
+  words on the water; M7 golden choice and wormhole card on light paper; M9 frameless gauntlet
+  draft cards; M10 no class or tier colours on shop items; M12 the pause menu on the two papers;
+  M13 the Harbour Lobby on paper. DECLINED: M8 (the campaign marks keep their discs) and M11
+  (Foresight's "Next:" line stays; it is the one allowed enemy read, never flag it). Left over:
+  aim_dial.gd still has its own colours and SPACE keycap; golden_choice still rumbles on the
+  answer as well as the HUD on arrival; a crate catch splashes twice (ReelFight and
+  CrateSurface); tabs in the room header need a hook in room.gd.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the
