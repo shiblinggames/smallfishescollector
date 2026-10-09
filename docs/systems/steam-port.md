@@ -2278,6 +2278,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- THE CAMERA UNDER WAY, AND HITS WITH WEIGHT (Kong, 2026-10-09). At sea (Sea._cam_lead) the
+  camera leads the way she sails, up to LEAD 12% of the screen at full speed, eased over about a
+  second, and settles dead centre at anchor, with the rod out or a panel up (fishing stays locked
+  in); full sail draws it back 4%, and north of the arch it sits 10% wider for the bigger hulls.
+  In a fight (BattleStage._strike) a ball's contact holds the whole fight a few frames
+  (Engine.time_scale, released by a static callback so it cannot stick): 50ms a hit, 90ms a
+  critical, 30ms a volley's later balls; the hull flashes white through the hold (HullRig.white),
+  then the red tint; a critical leans her harder and settles slower, and pushes the camera in 2%
+  toward the ship it struck and back over 0.25s (Sea.punch). The old 0.07s beat before a
+  critical's number is gone; the number rises as the hold lets go. No screen shake anywhere.
 - THE SHIPS SIT AND SAIL LIKE SHIPS (Kong, 2026-10-09: the fishing boat "feels really tuned and
   locked in", the expedition ships "a little off or underdeveloped"). game/hull_rig.gd is the one
   ship rig: your own ship (Boat.set_ship), your crew's (Shipmate) and every hull in a fight. It

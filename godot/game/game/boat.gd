@@ -621,3 +621,8 @@ func face_to(f: float) -> void:
 func react(lean: float, shove: Vector2, tint: float = 0.0) -> void:
 	if _ship_rig != null:
 		_ship_rig.react(lean, shove, tint)
+
+
+func flash_white() -> void:
+	if _ship_rig != null:
+		_ship_rig.flash_white()

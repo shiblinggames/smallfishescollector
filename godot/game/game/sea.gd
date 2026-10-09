@@ -441,12 +441,12 @@ func _process(delta: float) -> void:
 	if _course_t > 0.5:
 		_course_t = 0.0
 		_course_chip()
+	var cam_world: Vector2 = _boat.position + _cam_lead(delta)
 	if _course_mark != null:
 		_course_mark.offset = null
 		if _course.active():
-			_course_mark.offset = Vector2(_course.dest.x - _boat.position.x, (_course.dest.y - _boat.position.y) * Chart.GROUND) * _camera.zoom.x
+			_course_mark.offset = Vector2(_course.dest.x - cam_world.x, (_course.dest.y - cam_world.y) * Chart.GROUND) * _camera.zoom.x
 			_course_mark.text = "%s  ·  %s" % [_course.label, Course.eta_text(_course.eta())]
-	var cam_world: Vector2 = _boat.position
 	_camera.position = Vector2(cam_world.x, cam_world.y * Chart.GROUND)
 	if stage != null:
 		_stage_k = minf(1.0, _stage_k + delta * 2.2)
@@ -474,9 +474,17 @@ func _process(delta: float) -> void:
 			stops[k] = stops[k].lerp((th[k] as Color).lerp(Color8(2, 5, 9), float(_theme_last.get("dim", 0.0))), _theme_k)
 	var vp: Vector2 = get_viewport_rect().size
 	_water.set_shader_parameter("u_cam", cam_world)
-	var zt: float = (_zoom_to if stage == null else float(stage["zoom"])) * (1.0 - 0.1 * _pass_k)
-	var z: float = lerpf(_camera.zoom.x, zt, 1.0 - exp(-delta * (12.0 if stage == null and _stage_k <= 0.0 else 3.5)))
+	var zt: float = (_zoom_to * (1.0 - 0.04 * _sail_k) * (1.0 - 0.1 * _ship_k) if stage == null else float(stage["zoom"])) * (1.0 - 0.1 * _pass_k)
+	# (Read back from the camera, less the last push, so a shot or a film that
+	# snaps the zoom is followed from there.)
+	_zoom_base = lerpf(_camera.zoom.x / (1.0 + _punch_was), zt, 1.0 - exp(-delta * (12.0 if stage == null and _stage_k <= 0.0 else 3.5)))
+	# The critical's push in, on top of the eased zoom and a touch toward
+	# the ship it struck.
+	var z: float = _zoom_base * (1.0 + punch)
+	_punch_was = punch
 	_camera.zoom = Vector2(z, z)
+	if punch > 0.0:
+		_camera.position = _camera.position.lerp(Vector2(punch_at.x, punch_at.y * Chart.GROUND), punch * 2.0)
 	_water.set_shader_parameter("u_zoom", _camera.zoom.x)
 	_water.set_shader_parameter("u_res", vp)
 	_water.set_shader_parameter("u_deep", stops[0])
@@ -1398,6 +1406,37 @@ func _open_finn() -> void:
 ## eases out as she enters the passage (the stone's scale), and under the span
 ## the music closes in to a muffle and opens again beyond.
 var _pass_k: float = 0.0
+## THE CAMERA UNDER WAY (Kong, 2026-10-09): it leads the way she is sailing,
+## up to LEAD of the screen at full speed, and settles dead centre at anchor,
+## with the rod out or a panel up (fishing stays locked in); it draws back
+## SAIL_OUT at full sail, and sits SHIP_OUT wider north of the arch for the
+## bigger hulls. punch: a fight's critical, a small push in (BattleStage).
+const LEAD: float = 0.12
+var _lead: Vector2 = Vector2.ZERO
+var _sail_k: float = 0.0
+var _ship_k: float = 0.0
+var punch: float = 0.0
+var punch_at: Vector2 = Vector2.ZERO
+var _zoom_base: float = 1.0
+var _punch_was: float = 0.0
+
+
+func _cam_lead(delta: float) -> Vector2:
+	var vp: Vector2 = get_viewport_rect().size
+	var v: Vector2 = _boat.velocity
+	var top: float = maxf(1.0, Boat.SPEED * _boat.hull * _boat.boat_speed)
+	var way: float = clampf(v.length() / top, 0.0, 1.0)
+	var sailing: bool = stage == null and not _boat.hush and not _boat.hold_still and v.length() > 20.0
+	var to: Vector2 = Vector2.ZERO
+	if sailing:
+		var d: Vector2 = v.normalized()
+		var z: float = maxf(0.05, _camera.zoom.x)
+		to = Vector2(d.x * vp.x, d.y * vp.y / Chart.GROUND) * LEAD / z * way
+	var k: float = 1.0 - exp(-delta * 1.4)
+	_lead = _lead.lerp(to, k)
+	_sail_k = lerpf(_sail_k, 1.0 if (sailing and _boat.cue.get("full", false) == true) else 0.0, 1.0 - exp(-delta * 1.2))
+	_ship_k = lerpf(_ship_k, 1.0 if _boat.on_ship else 0.0, 1.0 - exp(-delta * 1.5))
+	return _lead
 ## The arch's picture: thinned while she is behind its span, so the stone
 ## never hides her (she shows through it).
 var _arch: Sprite2D

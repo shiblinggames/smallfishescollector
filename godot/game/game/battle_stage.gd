@@ -1176,9 +1176,6 @@ func _one_play(x: Dictionary) -> void:
 							_landed(-1 - fj, "crit", 0)
 			else:
 				await _fx.shot(_seat_at(ss) + Vector2(40, 0), _enemy_at, land, 3 if x["action"] == "volley" else 1, x["action"] == "volley", fire_cb, land_cb)
-			if land == "crit":
-				# A beat held on a critical, before the number.
-				await _wait(0.07)
 			if x.get("dodged", false):
 				_num(_enemy_at, "Dodged!", BattleLook.MUTED)
 			elif float(x["dmg"]) > 0.0 or x["aim"] != "miss":
@@ -1224,9 +1221,6 @@ func _one_play(x: Dictionary) -> void:
 			elif x.get("dodged", false):
 				_num(_seat_at(ti), "Dodged!", BattleLook.SHIELD)
 			else:
-				if x["crit"]:
-					# The same beat held on a critical taken as on one dealt.
-					await _wait(0.07)
 				_dmg(_seat_at(ti), int(x["dmg"]), true, x["crit"])
 				if x.get("braced", false):
 					_num(_seat_at(ti) + Vector2(0, -40), "Braced", BattleLook.SHIELD)
@@ -1615,11 +1609,6 @@ func _broadside(x: Dictionary, group: Array) -> void:
 		var land: String = "dodge" if g.get("dodged", false) else ("crit" if g["crit"] else "hit")
 		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land, 2 if x["action"] == "volley" else 3, true, Callable(), func(k: int) -> void: _landed(ti, land, k))
 	await _wait(0.65)
-	# A critical in the broadside holds the same beat as one you deal.
-	for g0: Dictionary in group:
-		if g0["crit"] and not g0.get("dodged", false):
-			await _wait(0.07)
-			break
 	for g: Dictionary in group:
 		var ti2: int = int(g["target"])
 		if g.get("dodged", false):
@@ -3038,7 +3027,7 @@ func _react(who: int, kind: String) -> void:
 		"hit":
 			h.call("react", 0.07 * away, Vector2(18.0 * away, 2.0), 0.85)
 		"crit":
-			h.call("react", 0.15 * away, Vector2(34.0 * away, -4.0), 1.0)
+			h.call("react", 0.2 * away, Vector2(40.0 * away, -4.0), 1.0)
 		"recoil":
 			h.call("react", 0.035 * away, Vector2(12.0 * away, 0.0), 0.0)
 		"brace":
@@ -3050,11 +3039,59 @@ func _react(who: int, kind: String) -> void:
 			h.call("react", -0.14 * away, Vector2(30.0 * away, 70.0 * side), 0.0)
 
 
+## THE HOLD ON CONTACT (Kong, 2026-10-09: hits should feel weighty, no screen
+## shake): the whole fight holds a few frames as a ball lands (HOLD_HIT, a
+## critical HOLD_CRIT, a volley's later balls HOLD_LATER) and the hull flashes
+## white through it; the splinters burst and the number rises as it lets go
+## (they run on the fight's own clock). A critical also pushes the camera in a
+## touch toward the ship it struck and eases back (Sea.punch).
+const HOLD_HIT: float = 0.05
+const HOLD_CRIT: float = 0.09
+const HOLD_LATER: float = 0.03
+const HOLD_SCALE: float = 0.02
+const PUNCH: float = 0.02
+static var _held_until: int = 0
+
+
+func _strike(who: int, land: String, k: int) -> void:
+	var h: Object = _hull_of(who)
+	if h != null and h.has_method("flash_white"):
+		h.call("flash_white")
+	_hold(HOLD_CRIT if land == "crit" else (HOLD_LATER if k > 0 else HOLD_HIT))
+	if land == "crit" and sea != null:
+		sea.punch_at = _seat_at(who) if who >= 0 else _foe_at(-1 - who)
+		var tw: Tween = sea.create_tween().set_ignore_time_scale(true)
+		tw.tween_property(sea, "punch", PUNCH, 0.07).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(sea, "punch", 0.0, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+## Hold the fight for s seconds of real time (the longest asked wins; holds
+## never add up). Released by a static callback, so a fight that ends mid-hold
+## never leaves the game slowed.
+func _hold(s: float) -> void:
+	var until: int = Time.get_ticks_msec() + int(s * 1000.0)
+	if until <= _held_until:
+		return
+	_held_until = until
+	Engine.time_scale = HOLD_SCALE
+	get_tree().create_timer(s, true, false, true).timeout.connect(BattleStage._unhold)
+
+
+static func _unhold() -> void:
+	if Time.get_ticks_msec() >= _held_until - 4:
+		Engine.time_scale = 1.0
+
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
+
+
 ## A ball came down on (or past) a ship.
 func _landed(who: int, land: String, k: int) -> void:
 	match land:
 		"hit", "crit":
 			_react(who, land)
+			_strike(who, land, k)
 			if who >= 0:
 				Rumble.buzz([0, 35] if land == "hit" else [0, 60, 30, 60])
 		"dodge":

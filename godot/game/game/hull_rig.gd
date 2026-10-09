@@ -36,6 +36,9 @@ var slide: Vector2 = Vector2.ZERO
 var _slide_v: Vector2 = Vector2.ZERO
 ## A hit's tint, fading.
 var flash: float = 0.0
+## The white of a ball's contact (BattleStage's hold), gone in a blink.
+var white: float = 0.0
+var _heel_rate: float = 3.0
 ## How big a hull: 0 a Sloop, 1 a Man-o-War (from the rules' tier).
 var heft: float = 0.5
 ## The swell's strength (deeper water, a squall), and the lean her sailor puts
@@ -141,7 +144,8 @@ func _process(delta: float) -> void:
 	_t += delta
 	# A slow roll on the swell, the hit's heel and the broadside's kick
 	# settling back.
-	heel = lerpf(heel, 0.0, 1.0 - exp(-delta * 3.0))
+	heel = lerpf(heel, 0.0, 1.0 - exp(-delta * _heel_rate))
+	white = maxf(0.0, white - delta * 14.0)
 	kick = lerpf(kick, 0.0, 1.0 - exp(-delta * 4.0))
 	# The swell, as the fishing boat's: slower and steadier the bigger she is.
 	var rate: float = lerpf(1.0, 0.68, heft)
@@ -171,7 +175,7 @@ func _process(delta: float) -> void:
 	var pivot: Vector2 = Vector2(0, _pivot_y)
 	var at: Vector2 = Vector2(kick, _bob / g + sink * 40.0 - rise) + slide
 	_rig.transform = Transform2D(bx, by, at + pivot - by * _pivot_y)
-	_hull.self_modulate = Color.WHITE.lerp(Color(1.0, 0.55, 0.45), clampf(flash, 0.0, 1.0))
+	_hull.self_modulate = Color.WHITE.lerp(Color(1.0, 0.55, 0.45), clampf(flash, 0.0, 1.0)).lerp(Color(2.2, 2.2, 2.2), clampf(white, 0.0, 1.0))
 	# Going under: the waterline climbs the hull (the shader cuts there), the
 	# bow lifting as she settles stern first.
 	if sink > 0.0:
@@ -190,6 +194,13 @@ func _process(delta: float) -> void:
 ## A blow, a gun's recoil or a swerve: lean, a shove (it springs back), and
 ## a hit's tint.
 func react(lean: float, shove: Vector2, tint: float = 0.0) -> void:
+	# A heavy blow (a critical) rocks her and settles slower.
+	_heel_rate = 2.0 if absf(lean) > 0.12 else 3.0
 	heel += lean
 	_slide_v += shove * 9.0
 	flash = maxf(flash, tint)
+
+
+## A ball's contact: the hull flashes white (BattleStage._strike).
+func flash_white() -> void:
+	white = 1.0

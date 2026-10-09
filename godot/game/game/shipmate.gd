@@ -171,3 +171,8 @@ func wake_contact(id: String) -> Dictionary:
 func react(lean: float, shove: Vector2, tint: float = 0.0) -> void:
 	if _hull != null and is_instance_valid(_hull):
 		_hull.react(lean, shove, tint)
+
+
+func flash_white() -> void:
+	if _hull != null and is_instance_valid(_hull):
+		_hull.flash_white()
