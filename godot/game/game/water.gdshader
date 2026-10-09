@@ -75,7 +75,12 @@ uniform vec4 u_beam = vec4(0.5, 0.5, 1.0, 0.0);
 uniform float u_beam_len = 400.0;
 uniform float u_beam_k = 0.0;
 
-const float GROUND = 0.58;
+const float GROUND = 0.58; // mirrors Chart.GROUND (the ground squash)
+// The world's two lights, one value each (the visual spec, 1.3):
+// GLOW_TEAL mirrors Kit.GLOW_TEAL (= Kit.TEAL, the night's biolum glow),
+// LAMP mirrors Kit.LAMP (lanterns, berths, her beam, town lights).
+const vec3 GLOW_TEAL = vec3(0.37, 0.92, 0.83);
+const vec3 LAMP = vec3(1.0, 0.76, 0.46);
 const vec2 WIND = vec2(0.8231, 0.5679);
 
 vec2 along_wind(vec2 p, float k) {
@@ -265,8 +270,8 @@ void fragment() {
 	col += froth * vec3(0.90, 0.96, 1.0) * 0.16 * (1.0 - u_dark * 0.5);
 	// AT NIGHT THE STIRRED WATER GLOWS: plankton lighting up in the wake, round
 	// a cast, under a hull that moves.
-	col += vec3(0.36, 0.96, 0.85) * smoothstep(0.05, 0.7, fh) * u_dark * 0.55 * (0.7 + 0.3 * rag);
-	col += vec3(0.30, 0.85, 0.75) * smoothstep(0.5, 1.0, fh) * u_dark * 0.5;
+	col += GLOW_TEAL * smoothstep(0.05, 0.7, fh) * u_dark * 0.55 * (0.7 + 0.3 * rag);
+	col += GLOW_TEAL * smoothstep(0.5, 1.0, fh) * u_dark * 0.46;
 
 	// LANTERN: warm light pooled on the water around the boat, at night. The
 	// boat is always at the middle of the screen.
@@ -274,7 +279,7 @@ void fragment() {
 		vec2 off = vec2(px.x, px.y / GROUND);
 		float pool = exp(-dot(off, off) / (260.0 * 260.0));
 		float shimmer = 0.75 + 0.25 * vnoise(w * 9.0 + vec2(TIME * 0.3, -TIME * 0.2));
-		col += vec3(1.0, 0.72, 0.38) * pool * shimmer * 0.16 * u_lantern;
+		col += LAMP * pool * shimmer * 0.16 * u_lantern;
 	}
 
 	// THE CURRENTS: the water in a lane is a touch deeper and bluer, and its
@@ -383,7 +388,7 @@ void fragment() {
 			}
 			float edge = exp(-pow(sd / 6.0, 2.0)) * smoothstep(0.3, 0.8, vnoise(world * 0.04 + vec2(TIME * 0.25, 0.0)));
 			col += (lap * 0.13 + edge * 0.22) * vec3(0.92, 0.97, 1.0) * (1.0 - u_dark * 0.55);
-			col += (lap + edge) * vec3(0.36, 0.96, 0.85) * u_dark * 0.12;
+			col += (lap + edge) * GLOW_TEAL * u_dark * 0.12;
 		}
 	}
 
@@ -400,7 +405,7 @@ void fragment() {
 		float edge = exp(-pow((bd + wob - 0.96) / 0.035, 2.0));
 		float broken = smoothstep(0.35, 0.75, vnoise(world * 0.014 + vec2(TIME * 0.05, float(bi))));
 		col += vec3(0.92, 0.96, 1.0) * edge * broken * 0.14 * (1.0 - u_dark * 0.5);
-		vec3 warm = vec3(1.0, 0.78, 0.48);
+		vec3 warm = LAMP;
 		col += warm * (inside * 0.05 + edge * broken * 0.10) * B.w;
 		col += warm * inside * 0.04 * u_dark;
 	}
@@ -439,7 +444,7 @@ void fragment() {
 				float cone = 1.0 - smoothstep(b_half * 0.35, b_half, b_across);
 				float fall = (1.0 - smoothstep(b_len * 0.2, b_len * 1.2, b_along)) * smoothstep(-20.0, 30.0 * u_zoom, b_along);
 				float rip = 0.72 + 0.28 * sin(b_along * 0.07 / u_zoom - TIME * 2.2 + swell * 8.0);
-				col += vec3(1.0, 0.76, 0.46) * cone * fall * rip * u_beam_k * 0.32 * u_dark;
+				col += LAMP * cone * fall * rip * u_beam_k * 0.32 * u_dark;
 			}
 		}
 		// Stars, caught and lost on the swell.
@@ -461,9 +466,9 @@ void fragment() {
 			float e = kk * kk * (3.0 - 2.0 * kk);
 			float mottle = smoothstep(0.35, 0.85, vnoise(wa * 1.6 + vec2(TIME * 0.012, -TIME * 0.009)));
 			float breathe = 0.75 + 0.25 * sin(TIME * 0.35 + world.x * 0.0007);
-			col += e * mottle * breathe * vec3(0.22, 0.86, 0.72) * 0.14 * u_dark;
+			col += e * mottle * breathe * GLOW_TEAL * 0.126 * u_dark;
 			// Stirred water in a bloom burns brighter.
-			col += e * vec3(0.30, 1.0, 0.85) * smoothstep(0.05, 0.6, fh) * u_dark * 0.6;
+			col += e * GLOW_TEAL * 1.08 * smoothstep(0.05, 0.6, fh) * u_dark * 0.6;
 		}
 	}
 

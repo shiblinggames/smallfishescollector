@@ -123,7 +123,7 @@ func _ready() -> void:
 	_scale = _fit_scale() * 3.0
 	_scale_to = _scale
 	modulate.a = 0.0
-	create_tween().tween_property(self, "modulate:a", 1.0, 0.18)
+	create_tween().tween_property(self, "modulate:a", 1.0, Motion.PANEL_FADE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
 func _fit_scale() -> float:
@@ -139,13 +139,7 @@ func _build_chrome() -> void:
 	# A sheet of the same paper behind the title and the tally, so they read
 	# over fog and land alike.
 	var sheet: Panel = Panel.new()
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = Color(0.95, 0.92, 0.85, 0.9)
-	sb.border_color = Color(0.45, 0.36, 0.27, 0.35)
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(10)
-	sb.shadow_color = Color(0.2, 0.15, 0.1, 0.18)
-	sb.shadow_size = 8
+	var sb: StyleBoxFlat = chart_sheet()
 	sheet.add_theme_stylebox_override("panel", sb)
 	sheet.position = Vector2(14, 12)
 	sheet.size = Vector2(318, 228)
@@ -156,9 +150,9 @@ func _build_chrome() -> void:
 	top.add_theme_constant_override("separation", 2)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(top)
-	Kit.text(top, "The Chart", "display", Color(0.22, 0.17, 0.13))
+	Kit.text(top, "The Chart", "display", Paper.INK)
 	var water: Dictionary = Chart.water_at(sea._boat.position)
-	Kit.text(top, "You are in %s" % water.get("name", "the harbour approach"), "small", Color(0.32, 0.26, 0.2))
+	Kit.text(top, "You are in %s" % water.get("name", "the harbour approach"), "small", Paper.INK_SOFT)
 	# The weather, on its own sheet under the title.
 	var wsheet: Panel = Panel.new()
 	wsheet.add_theme_stylebox_override("panel", sb)
@@ -171,9 +165,9 @@ func _build_chrome() -> void:
 	wcol.custom_minimum_size = Vector2(290, 0)
 	wcol.add_theme_constant_override("separation", 3)
 	wsheet.add_child(wcol)
-	Kit.text(wcol, "Weather", "eyebrow", Color(0.6, 0.35, 0.18))
+	Kit.text(wcol, "Weather", "eyebrow", Paper.EYEBROW)
 	for line: String in _weather_lines(Clock.now_ms()):
-		Kit.text(wcol, line, "small", Color(0.25, 0.2, 0.16), true).custom_minimum_size = Vector2(290, 0)
+		Kit.text(wcol, line, "small", Paper.INK_SOFT, true).custom_minimum_size = Vector2(290, 0)
 	wcol.resized.connect(func() -> void: wsheet.size.y = wcol.size.y + 20.0)
 	_progress = VBoxContainer.new()
 	_progress.add_theme_constant_override("separation", 3)
@@ -229,7 +223,7 @@ func _build_chrome() -> void:
 	add_child(xh)
 	xh.add_child(x)
 	var gps_block: String = Rules.skill_block(_xp(), "set_course")
-	var hint: Label = Kit.text(self, ("Click the water to set a course" if gps_block == "" else gps_block) + "  ·  click a mark for more  ·  wheel to zoom, drag to move  ·  M to close", "small", Color(0.3, 0.25, 0.2))
+	var hint: Label = Kit.text(self, ("Click the water to set a course" if gps_block == "" else gps_block) + "  ·  click a mark for more  ·  wheel to zoom, drag to move  ·  M to close", "small", Paper.INK_SOFT)
 	hint.anchor_left = 0.5
 	hint.anchor_right = 0.5
 	hint.offset_left = -400
@@ -358,7 +352,7 @@ func _draw_progress() -> void:
 	var bits: PackedByteArray = sea._fog
 	var landed: Array = sea.session.save.get("discoveries", [])
 	var dug: Array = Explore.get_dig_state(sea.session.store, sea.session.uid)["dug"]
-	var ink: Color = Color(0.25, 0.2, 0.16)
+	var ink: Color = Paper.INK
 	Kit.text(_progress, "Charted  %d%%" % int(round(Explore.fog_progress(bits) * 100.0)), "label", ink)
 	for w: Dictionary in Chart.WATERS:
 		var seen: int = 0
@@ -625,8 +619,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("chart") or event.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()
 		if _card != null and event.is_action_pressed("fish_back"):
-			_card.queue_free()
-			_card = null
+			_dismiss_card()
 		else:
 			close()
 
@@ -634,8 +627,33 @@ func _unhandled_input(event: InputEvent) -> void:
 func close() -> void:
 	closed.emit()
 	var tw: Tween = create_tween()
-	tw.tween_property(self, "modulate:a", 0.0, 0.14)
+	tw.tween_property(self, "modulate:a", 0.0, Motion.PANEL_OUT).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tw.tween_callback(queue_free)
+
+
+## THE CHART'S PAPER: one sheet for the title, the weather, the tally and a
+## mark's card alike (the chart's own paper, Paper.PAPER), one shadow.
+static func chart_sheet(radius: int = Kit.R_LARGE) -> StyleBoxFlat:
+	var sb: StyleBoxFlat = StyleBoxFlat.new()
+	sb.bg_color = Color(Paper.PAPER, 0.95)
+	sb.border_color = Color(Paper.INK, 0.3)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(radius)
+	sb.shadow_color = Color(0.2, 0.15, 0.1, 0.18)
+	sb.shadow_size = 8
+	sb.shadow_offset = Vector2(0, 2)
+	return sb
+
+
+## A mark's card going: it fades and drops away (never vanishes in a frame).
+func _dismiss_card() -> void:
+	if _card == null:
+		return
+	var c: Pane = _card
+	_card = null
+	# Nothing on it can be pressed while it goes.
+	c.propagate_call("set_mouse_filter", [Control.MOUSE_FILTER_IGNORE])
+	Motion.panel_out(c, c.queue_free)
 
 
 # ── What is on the chart ───────────────────────────────────────────────────────
@@ -732,7 +750,7 @@ func _pick(s: Vector2) -> Dictionary:
 func _draw_marks() -> void:
 	var font: Font = Kit.font("cinzel", 700)
 	var small: Font = Kit.font("karla", 700)
-	var ink: Color = Color(0.2, 0.16, 0.13)
+	var ink: Color = Paper.INK
 	var now: float = Clock.now_ms()
 	if _layers["weather"]:
 		_draw_weather(now, small)
@@ -933,9 +951,8 @@ func _set_course(w: Vector2, name: String, sail: bool) -> void:
 
 
 func _open_card(m: Dictionary) -> void:
-	if _card != null:
-		_card.queue_free()
-	_card = Pane.new({ "radius": 14, "fill": [Color(Kit.PAPER, 0.97)], "border": [1, Color(0.24, 0.18, 0.13, 0.5)], "shadow": [Color(0, 0, 0, 0.3), 18, Vector2(0, 6)], "pad": 18 })
+	_dismiss_card()
+	_card = Pane.new({ "radius": Kit.R_LARGE, "fill": [Color(Paper.PAPER, 0.97)], "border": [1, Color(Paper.INK, 0.3)], "shadow": [Color(0.2, 0.15, 0.1, 0.18), 8, Vector2(0, 2)], "pad": 18 })
 	_card.anchor_left = 1.0
 	_card.anchor_right = 1.0
 	_card.offset_left = -360
@@ -949,13 +966,12 @@ func _open_card(m: Dictionary) -> void:
 	var secs: float = dist / maxf(1.0, Boat.SPEED * sea._boat.hull * sea._boat.boat_speed * 0.92)
 	var eyebrow: String = { "port": "Port", "isle": "Isle", "portal": "The Homestead Portal", "regular": "One of the regulars", "buyer": "Buyer",
 		"stranger": "Wanderer", "mate": "Crewmate", "hotspot": "Hotspot", "salter": "Salter", "dig": "Buried", "pin": "Your pin", "camp": "The campaign" }.get(m["kind"], "")
-	var ink: Color = Color(0.22, 0.17, 0.13)
-	Kit.text(v, eyebrow, "eyebrow", Color(0.6, 0.35, 0.18))
-	Kit.text(v, str(m["name"]), "title", ink)
+	Kit.text(v, eyebrow, "eyebrow", Paper.EYEBROW)
+	Kit.text(v, str(m["name"]), "title", Paper.INK)
 	for line: String in _card_lines(m):
-		Kit.text(v, line, "small", Color(ink, 0.85), true)
+		Kit.text(v, line, "small", Paper.INK_SOFT, true)
 	if dist > 0.0:
-		Kit.text(v, "About %s from her, by the course round the land." % Course.eta_text(secs), "small", Color(ink, 0.6), true)
+		Kit.text(v, "About %s from her, by the course round the land." % Course.eta_text(secs), "small", Paper.INK_FAINT, true)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	v.add_child(row)
@@ -963,8 +979,7 @@ func _open_card(m: Dictionary) -> void:
 	go.visible = Rules.skill_block(_xp(), "set_course") == ""
 	go.pressed.connect(func() -> void:
 		_set_course(m["at"], str(m["name"]), false)
-		_card.queue_free()
-		_card = null)
+		_dismiss_card())
 	row.add_child(go)
 	var sail: Button = ink_button("Set course & sail", true)
 	sail.visible = go.visible and Rules.skill_block(_xp(), "autopilot") == ""
@@ -977,16 +992,14 @@ func _open_card(m: Dictionary) -> void:
 		rm.pressed.connect(func() -> void:
 			_pins.remove_at(int(m["data"]["i"]))
 			_save_pins()
-			_card.queue_free()
-			_card = null)
+			_dismiss_card())
 		v.add_child(rm)
 	else:
 		var pin: Button = ink_button("Drop a pin here")
 		pin.pressed.connect(func() -> void:
 			_pins.append({ "x": (m["at"] as Vector2).x, "y": (m["at"] as Vector2).y, "name": "Pin: %s" % m["name"] })
 			_save_pins()
-			_card.queue_free()
-			_card = null)
+			_dismiss_card())
 		v.add_child(pin)
 	Kit.modal_in(_card)
 

@@ -16,7 +16,6 @@ extends Node2D
 ##           their shadows on the water; sail in and they flare up (alarm),
 ##           and they cry (Godot: the cries are SeaSound's).
 
-const GROUND: float = 0.58
 const KINDS: Array = [
 	[0.95, 1.0, 30.0, Vector2(190, 120), Vector2(5, 14), Color("#dfeef6")],
 	[1.85, 1.12, 17.0, Vector2(250, 155), Vector2(3, 8), Color("#c9dfe8")],
@@ -180,7 +179,7 @@ func sink_fish(into: Node2D) -> void:
 func scatter(at: Vector2) -> void:
 	for sc: Dictionary in _schools:
 		var dx: float = float(sc["x"]) - at.x
-		var dy: float = (float(sc["y"]) - at.y) / GROUND
+		var dy: float = (float(sc["y"]) - at.y) / Chart.GROUND
 		var dd: float = sqrt(dx * dx + dy * dy)
 		if dd > 520.0 or dd < 0.001:
 			continue
@@ -238,7 +237,7 @@ func step(delta: float, cam: Vector2, half: Vector2, boat: Vector2, boat_speed: 
 		# A hull under way pushes the school aside.
 		if wash > 0.05:
 			var dx: float = float(sc["x"]) - boat.x
-			var dy: float = (float(sc["y"]) - boat.y) / GROUND
+			var dy: float = (float(sc["y"]) - boat.y) / Chart.GROUND
 			var dd: float = sqrt(dx * dx + dy * dy)
 			var reach: float = 330.0 * (0.55 + 0.45 * wash)
 			if dd < reach and dd > 0.001:
@@ -260,7 +259,7 @@ func step(delta: float, cam: Vector2, half: Vector2, boat: Vector2, boat_speed: 
 			var wob: float = sin(_t * 2.2 + float(f["ph"]) * 5.0) * float(f["amp"])
 			var fx: float = float(sc["x"]) + float(sc["bx"]) * b2 + float(f["ox"]) * ax - float(f["oy"]) * ay + wob * -ay * 0.4
 			var fy: float = float(sc["y"]) + float(sc["by"]) * b2 + float(f["ox"]) * ay + float(f["oy"]) * ax + wob * ax * 0.4
-			var rot: float = atan2(ay * 0.58, ax) + sin(_t * 3.0 + float(f["ph"])) * 0.12
+			var rot: float = atan2(ay * Chart.GROUND, ax) + sin(_t * 3.0 + float(f["ph"])) * 0.12
 			var kk: float = float(f["size"]) * (0.5 + vis * 0.22) * (1.0 + float(sc["bolt"]) * 0.15)
 			var st: float = sqrt(float(f["stretch"]))
 			# On the water plane the fish lies flat: the World squashes it.
@@ -275,11 +274,11 @@ func step(delta: float, cam: Vector2, half: Vector2, boat: Vector2, boat_speed: 
 			var under: Color = Color(0.05, 0.15, 0.17).lerp(tint * 0.8, maxf(far, dark * 0.7))
 			fm.set_instance_color(i * 13 + j, Color(under.r, under.g, under.b, a * (0.85 if far < 0.5 else 0.75)))
 
-	# ── Drift ──
+	# ── Drift ── (hidden layers skip their work: the drift is off for now)
 	var dm: MultiMesh = _drift.multimesh
 	var smear: float = 1.0 + minf(3.4, _cam_speed / 210.0)
 	var busy: float = 1.0 / (1.0 + pow(_cam_speed / 240.0, 1.7))
-	for i: int in 140:
+	for i: int in (140 if _drift.visible else 0):
 		var fl: Dictionary = _d[i]
 		if not fl.has("live"):
 			fl["live"] = true
@@ -345,11 +344,13 @@ class Gulls:
 						"alt": 46.0 + randf() * 58.0, "flap": 5.0 + randf() * 4.0, "size": 0.42 + r * 0.3 })
 				flocks[key] = { "s": s, "birds": bs, "lit": 0.0, "up": 0.0 }
 			var fl: Dictionary = flocks[key]
+			fl["s"] = s
+			fl["leaving"] = false
 			var sp: Vector2 = Vector2(float(s["x"]), float(s["y"]))
 			var r0: float = float(s["r"])
 			var on_view: bool = absf(sp.x - cam.x) < half.x + 2.5 * r0 and absf(sp.y - cam.y) < half.y + 2.5 * r0
 			fl["lit"] = move_toward(float(fl["lit"]), 1.0 if on_view else 0.0, 2.2 * d)
-			var want: float = maxf(0.0, 1.0 - Vector2(sp.x - boat.x, (sp.y - boat.y) / 0.58).length() / (r0 + 420.0))
+			var want: float = maxf(0.0, 1.0 - Vector2(sp.x - boat.x, (sp.y - boat.y) / Chart.GROUND).length() / (r0 + 420.0))
 			fl["up"] = move_toward(float(fl["up"]), want, (3.4 if want > float(fl["up"]) else 0.7) * d)
 			for b: Dictionary in fl["birds"]:
 				b["ph"] = float(b["ph"]) + float(b["rate"]) * d * (1.0 + float(fl["up"]) * 1.5)
@@ -357,8 +358,18 @@ class Gulls:
 			if dist < best and float(fl["lit"]) > 0.2:
 				best = dist
 				nearest = sp
+		# A spot gone (the hotspot over): the flock lifts away and fades,
+		# never vanishing in one frame.
 		for k: String in flocks.keys():
-			if not keep.has(k):
+			if keep.has(k):
+				continue
+			var fl2: Dictionary = flocks[k]
+			fl2["leaving"] = true
+			fl2["lit"] = move_toward(float(fl2["lit"]), 0.0, 1.2 * d)
+			fl2["up"] = move_toward(float(fl2["up"]), 1.0, 1.4 * d)
+			for b: Dictionary in fl2["birds"]:
+				b["ph"] = float(b["ph"]) + float(b["rate"]) * d * (1.0 + float(fl2["up"]) * 1.5)
+			if float(fl2["lit"]) <= 0.0:
 				flocks.erase(k)
 		queue_redraw()
 
@@ -383,12 +394,13 @@ class Gulls:
 				draw_set_transform(Vector2(x, yw), 0.0, Vector2(1.0, 1.0))
 				draw_circle(Vector2.ZERO, sk * 0.5, Color(0, 0, 0, on * (0.2 - (alt - 46.0) / 58.0 * 0.09) * (1.0 - up * 0.55) * 0.6))
 				# The bird, in the air: counter-squashed so it reads upright.
-				var y: float = yw - (alt + up * 70.0) / 0.58
+				var y: float = yw - (alt + up * 70.0) / Chart.GROUND
 				var size: float = float(b["size"])
 				var dir: float = signf(cos(ph + PI / 2.0) * signf(float(b["rate"])))
 				var flap: float = 0.52 + 0.48 * absf(sin(_t * float(b["flap"]) * (1.0 + up * 0.8) + ph * 3.0))
-				draw_set_transform(Vector2(x, y), sin(ph) * 0.16, Vector2(size * dir * 1.4, size * flap * 1.4 / 0.58))
-				var c: Color = Color(_tint.r * 0.96, _tint.g * 0.97, _tint.b, on * 0.85)
+				draw_set_transform(Vector2(x, y), sin(ph) * 0.16, Vector2(size * dir * 1.4, size * flap * 1.4 / Chart.GROUND))
+				# Flat white: the world's night CanvasModulate darkens them, once.
+				var c: Color = Color(0.96, 0.97, 1.0, on * 0.85)
 				var pts: PackedVector2Array = PackedVector2Array([Vector2(-26, 4), Vector2(-14, -8), Vector2(-4, -2), Vector2(0, 2), Vector2(4, -2), Vector2(14, -8), Vector2(26, 4)])
 				draw_polyline(pts, c, 3.2, true)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

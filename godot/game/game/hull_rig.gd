@@ -119,7 +119,8 @@ func _process(delta: float) -> void:
 		(_hull.material as ShaderMaterial).set_shader_parameter("cut", lerpf(_cut, 0.0, sink))
 		_rig.rotation += sink * 0.25 * face
 	_mirror.position.x = kick + slide.x
-	_mirror.modulate.a = 1.0 - sink
+	# The reflection goes with the hull, not ahead of it.
+	_mirror.modulate.a = 1.0 - smoothstep(0.35, 0.9, sink)
 	_rig.modulate.a = 1.0 - smoothstep(0.6, 1.0, sink)
 
 

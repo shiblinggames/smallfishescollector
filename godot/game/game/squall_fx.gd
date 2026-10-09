@@ -130,8 +130,37 @@ func slant(k: float) -> void:
 	m.direction = Vector3(-0.28 + k, 1.0, 0.0).normalized()
 
 
-## deep: how far into a squall the view is; power: that squall's power.
-func step(delta: float, deep: float, power: float, screen: Vector2) -> void:
+## How a strike lights the sky at this age (0..0.9): one sharp pulse, then a
+## weaker second one. The ONE clock for a strike: the sky sheet, the world's
+## flash and WeatherFx's bolt all read it.
+const STRIKE_LIFE: float = 0.5
+
+
+static func strike_light(age: float) -> float:
+	if age < 0.0 or age > STRIKE_LIFE:
+		return 0.0
+	var first: float = age / 0.06 if age < 0.06 else maxf(0.0, 1.0 - (age - 0.06) / 0.15)
+	# The second pulse, 0.20 to 0.26s, eased in and out so it never steps.
+	var second: float = 0.5 * smoothstep(0.17, 0.2, age) * (1.0 - smoothstep(0.26, 0.31, age))
+	return maxf(first, second) * 0.9
+
+
+## The night on the rain, the spray and the fog (they sit above the world's
+## night CanvasModulate, so they take the dark themselves). tint: the bay's
+## own fog colour (white on the open sea).
+func night(dark: float, tint: Color = Color.WHITE) -> void:
+	var m: Color = Color(1, 1, 1).lerp(Color(0.55, 0.6, 0.75), clampf(dark, 0.0, 1.0))
+	_drops.modulate = m
+	_gusts.modulate = m
+	var fm: ShaderMaterial = _fog.material
+	fm.set_shader_parameter("u_dark", clampf(dark, 0.0, 1.0))
+	fm.set_shader_parameter("u_tint", Vector3(tint.r, tint.g, tint.b))
+
+
+## deep: how far into a squall the view is; power: that squall's power;
+## storm_floor: a bay written as a standing storm (The Last Fathom), which
+## strikes however light its rain.
+func step(delta: float, deep: float, power: float, screen: Vector2, storm_floor: float = 0.0) -> void:
 	rain = lerpf(rain, deep, 1.0 - exp(-delta * 0.8))
 	_power = power
 	_drops.position = Vector2(screen.x / 2.0 + 120.0, -40.0)
@@ -140,19 +169,16 @@ func step(delta: float, deep: float, power: float, screen: Vector2) -> void:
 	_drops.emitting = rain > 0.03
 	# Lightning in the heart of a heavy squall: a strike every 7 to 18
 	# seconds, two pulses, the second weaker.
-	if deep > 0.5 and power > 0.8:
+	if maxf(deep, storm_floor) > 0.5 and power > 0.8:
 		_next -= delta
 		if _next <= 0.0:
 			_next = randf_range(7.0, 18.0)
 			_strike = 0.0
-			struck.emit(deep)
+			struck.emit(maxf(deep, storm_floor))
 	if _strike >= 0.0:
 		_strike += delta
-		var u: float = _strike / 0.5
-		flash = (u / 0.12 if u < 0.12 else maxf(0.0, 1.0 - (u - 0.12) / 0.3)) * 0.9
-		if u > 0.5 and u < 0.62:
-			flash = 0.45
-		if u > 1.0:
+		flash = strike_light(_strike)
+		if _strike > STRIKE_LIFE:
 			_strike = -1.0
 			flash = 0.0
 	_sheet.color.a = flash * 0.22

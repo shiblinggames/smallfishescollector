@@ -52,37 +52,52 @@ func _ready() -> void:
 	holder.position = Vector2(-18.0, 62.0 / Chart.GROUND)
 	holder.z_index = 5
 	add_child(holder)
-	_plate = PanelContainer.new()
-	_box = StyleBoxFlat.new()
-	_box.bg_color = Color(Kit.PAPER, 0.95)
-	_box.shadow_color = Color(0, 0, 0, 0.3)
-	_box.shadow_offset = Vector2(0, 2)
-	_box.set_border_width_all(1)
-	_box.set_corner_radius_all(9)
-	_box.content_margin_left = 10
-	_box.content_margin_right = 10
-	_box.content_margin_top = 3
-	_box.content_margin_bottom = 4
-	_box.shadow_size = 5
-	_plate.add_theme_stylebox_override("panel", _box)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.add_theme_constant_override("separation", 0)
-	_plate.add_child(col)
-	_name = Kit.text(col, str(info["name"]), "name", Color("#e6eef4"))
-	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_kind = Kit.text(col, role, "small", accent)
-	_kind.add_theme_font_size_override("font_size", 11)
-	_kind.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var pl: Dictionary = plate(str(info["name"]), role, accent)
+	_plate = pl["plate"]
+	_box = pl["box"]
+	_name = pl["name"]
+	_kind = pl["sub"]
 	holder.add_child(_plate)
 	_paint()
 	_place(true)
 	_lamp = PointLight2D.new()
-	_lamp.texture = Glow.radial(128, Color(1.0, 0.78, 0.45), true)
+	_lamp.texture = Glow.radial(128, Kit.LAMP, true)
 	_lamp.texture_scale = 1.6
-	_lamp.color = Color(1.0, 0.76, 0.48)
+	_lamp.color = Kit.LAMP
 	_lamp.energy = 0.0
 	_lamp.position = Vector2(-20, -60)
 	add_child(_lamp)
+
+
+## THE NAMEPLATE on the water, one build for everyone who sails (traders,
+## regulars, buyers, crewmates): paper, a hairline in the accent's ink,
+## radius 9, the name in the "name" role and the line under it "small" at
+## 11. Returns { plate, box, name, sub }; the sub line starts hidden when empty.
+static func plate(title: String, sub: String, accent_col: Color) -> Dictionary:
+	var p: PanelContainer = PanelContainer.new()
+	var box: StyleBoxFlat = StyleBoxFlat.new()
+	box.bg_color = Color(Kit.PAPER, 0.95)
+	box.border_color = Color(Kit.ink(accent_col), 0.6)
+	box.shadow_color = Color(0, 0, 0, 0.3)
+	box.shadow_offset = Vector2(0, 2)
+	box.shadow_size = 5
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(Kit.R_SMALL)
+	box.content_margin_left = 10
+	box.content_margin_right = 10
+	box.content_margin_top = 3
+	box.content_margin_bottom = 4
+	p.add_theme_stylebox_override("panel", box)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	p.add_child(col)
+	var n: Label = Kit.text(col, title, "name", Kit.PAPER_INK)
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var k: Label = Kit.text(col, sub, "small", Kit.ink(accent_col))
+	k.add_theme_font_size_override("font_size", 11)
+	k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	k.visible = sub != ""
+	return { "plate": p, "box": box, "name": n, "sub": k }
 
 
 func _paint() -> void:
@@ -90,6 +105,7 @@ func _paint() -> void:
 	_kind.set_meta("lifted", true)
 	_name.add_theme_color_override("font_color", Color(Kit.PAPER_INK, 0.5) if done else Kit.PAPER_INK)
 	_kind.text = "Traded today" if done else role
+	_kind.visible = _kind.text != ""
 	_kind.add_theme_color_override("font_color", Color(Kit.PAPER_INK_SOFT, 0.6) if done else Kit.ink(accent))
 	_box.border_color = Color(Kit.PAPER_INK, 0.25) if done else Color(Kit.ink(accent), 0.6)
 

@@ -82,7 +82,9 @@ void fragment() {
 	vec3 lit = mix(vec3(0.70, 0.75, 0.80), vec3(0.88, 0.91, 0.94), cloud);
 	vec3 under = vec3(0.30, 0.35, 0.42);
 	vec3 col = mix(under, lit, smoothstep(0.25, 0.85, cloud));
-	col = mix(col, col * vec3(0.18, 0.22, 0.32), u_dark * 0.8);
+	// The world's night CanvasModulate dims this once already: only a slight
+	// cool shift here, never a second darkening.
+	col = mix(col, col * vec3(0.85, 0.9, 1.0), u_dark * 0.3);
 	COLOR = vec4(col, a);
 }"""
 	return s

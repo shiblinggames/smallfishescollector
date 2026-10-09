@@ -28,6 +28,20 @@ const ISLE_REACH: float = 240.0
 const DOCK_OFF: Vector2 = Vector2(-340, 250)
 const PORTAL_REACH: float = 340.0
 const GOLD: Color = Color(1.0, 0.82, 0.38)
+## A stop's tint by its state, the same on an island's prop, a hull and its
+## portrait: locked cool and dim, cleared pale and faded.
+const STATE_LOCKED: Color = Color(0.65, 0.70, 0.79, 0.9)
+const STATE_DONE: Color = Color(0.86, 0.87, 0.85, 0.8)
+## How long a stop takes to settle into a new state (after a fight, say).
+const STATE_EASE: float = 0.4
+## A bay's name is announced again only after this long, or once she has been
+## well clear of its rim (no horn each time she weaves across it).
+const BAY_AGAIN_S: float = 60.0
+const BAY_CLEAR: float = 400.0
+
+## The night undone for the words and marks on this water (Sea's lift, each
+## frame), as every other word on the water has.
+var lift: Color = Color.WHITE
 
 ## The shown campaign isles (collision, Chart.off_shore) and the shut bays
 ## (the hold, Boat), kept current by refresh().
@@ -117,14 +131,14 @@ func refresh() -> void:
 		if vis:
 			sol.append(n.isle)
 		if nid != "":
-			n.set_state(str(status.get(nid, "locked")), nid == next_id, _primed and vis and not _seen.get(nid, false), sea._field)
+			n.set_state(str(status.get(nid, "locked")), nid == next_id, _primed and vis and not _seen.get(nid, false), sea._field, _primed)
 			_seen[nid] = vis
 	solid = sol
 	for nid: String in _ships:
 		var s: Ship = _ships[nid]
 		var vis2: bool = shown(nid)
 		s.visible = vis2
-		s.set_state(str(status.get(nid, "locked")), nid == next_id, _primed and vis2 and not _seen.get(nid, false), sea._field)
+		s.set_state(str(status.get(nid, "locked")), nid == next_id, _primed and vis2 and not _seen.get(nid, false), sea._field, _primed)
 		var rid: String = str(Campaign.node(nid).get("raidId", ""))
 		s.seals = RaidRun.tier_clears(sea.session.store, sea.session.uid, rid) if rid != "" and not rid.ends_with("_challenge") and Battle.raid_def(rid).get("skirmish", false) != true else {}
 		_seen[nid] = vis2
@@ -153,6 +167,8 @@ func refresh() -> void:
 
 
 var _bay_in: String = ""
+var _bay_said: String = ""
+var _bay_said_t: float = -INF
 
 
 ## The names come up as you near an island; the docks light as you near them;
@@ -161,9 +177,17 @@ func _process(_delta: float) -> void:
 	var at: Vector2 = sea._boat.position
 	var bay: Dictionary = bay_at(at)
 	var bid: String = str(bay.get("id", ""))
+	# Out of the last bay only once well clear of its rim, so weaving across
+	# it (or out to the junction and back) does not name it again.
+	if bid == "" and _bay_in != "" and not _clear_of(_bay_in, at):
+		bid = _bay_in
 	if bid != _bay_in:
 		_bay_in = bid
-		if bid != "" and not shut.has(bay) and sea.stage == null:
+		var now: float = Time.get_ticks_msec() / 1000.0
+		var again: bool = bid != _bay_said or now - _bay_said_t > BAY_AGAIN_S
+		if bid != "" and again and not shut.has(bay) and sea.stage == null:
+			_bay_said = bid
+			_bay_said_t = now
 			var ch: Dictionary = {}
 			for c: Dictionary in Campaign.chapters():
 				if int(c["number"]) == int(bay["chapter"]):
@@ -177,6 +201,22 @@ func _process(_delta: float) -> void:
 	for nid: String in _ships:
 		(_ships[nid] as Ship).boat_at = at
 		(_ships[nid] as Ship).fighting = sea.stage != null
+		(_ships[nid] as Ship).lift = lift
+	for id2: String in _isles:
+		(_isles[id2] as Isle).lift = lift
+	for h: WayHome in _homes:
+		h.lift = lift
+	for m: Maelstrom in _maelstroms:
+		m.set_lift(lift)
+
+
+## Is she more than BAY_CLEAR outside this bay's rim?
+func _clear_of(bid: String, at: Vector2) -> bool:
+	for b: Dictionary in Campaign.water()["bays"]:
+		if str(b["id"]) == bid:
+			var c: Vector2 = Vector2(float(b["centre"]["x"]), float(b["centre"]["y"]))
+			return at.distance_to(c) > float(b["r"]) + BAY_CLEAR
+	return true
 
 
 ## The chapter whose celebration is owed (state-based: every main stop of the
@@ -316,6 +356,21 @@ func label_for(id: String) -> String:
 	return "%s %s" % [verb, lab]
 
 
+## Ease a stop's tint to its state's (at once on the first read, or when it is
+## rising into view, which fades it in by itself).
+static func tint(n: CanvasItem, to: Color, ease_it: bool) -> void:
+	if n.has_meta("_tint_tw"):
+		var old: Tween = n.get_meta("_tint_tw")
+		if old != null and old.is_valid():
+			old.kill()
+	if not ease_it or not n.is_inside_tree() or n.modulate.is_equal_approx(to):
+		n.modulate = to
+		return
+	var tw: Tween = n.create_tween()
+	tw.tween_property(n, "modulate", to, STATE_EASE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	n.set_meta("_tint_tw", tw)
+
+
 # ── The glyph over a node: a gold "?" for the next stop, a tick once done ─────
 
 class Glyph:
@@ -331,9 +386,9 @@ class Glyph:
 		if kind == "":
 			return
 		var f: Font = Kit.font("cinzel", 900)
-		var bob: float = sin(_t * 2.4) * 7.0 if kind == "next" else 0.0
+		var bob: float = sin(_t * Motion.PULSE_CALL) * 7.0 if kind == "next" else 0.0
 		if kind == "next":
-			var pulse: float = 0.5 + 0.5 * sin(_t * 2.4)
+			var pulse: float = Motion.pulse(_t)
 			draw_circle(Vector2(0, bob), 30.0 + 4.0 * pulse, Color(1.0, 0.82, 0.38, 0.16 + 0.1 * pulse))
 			draw_circle(Vector2(0, bob), 22.0, Color(0.1, 0.07, 0.03, 0.82))
 			draw_arc(Vector2(0, bob), 22.0, 0.0, TAU, 40, GOLD, 3.0, true)
@@ -384,6 +439,7 @@ class Isle:
 	var _label: Node2D
 	var _st: String = ""
 	var _t: float = randf() * 6.0
+	var lift: Color = Color.WHITE
 
 	func _ready() -> void:
 		position = Vector2(float(isle["x"]), float(isle["y"]))
@@ -405,9 +461,11 @@ class Isle:
 		_label.position = Vector2(0, -r * 1.05)
 		_label.z_index = 6
 		add_child(_label)
-		_name = Kit.lift(Kit.text(_label, str(isle["name"]), "heading", Kit.INK))
+		_name = Kit.lift(Kit.text(_label, str(isle["name"]), "heading", Kit.SEA_INK))
 		_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_name.resized.connect(func() -> void: _name.position = Vector2(-_name.size.x / 2.0, -_name.size.y))
+		# The name eases in and out as she nears (never pops).
+		_label.modulate.a = 0.0
 		_label.visible = false
 		if carries.is_empty():
 			return
@@ -423,7 +481,7 @@ class Isle:
 		_glyph.z_index = 7
 		add_child(_glyph)
 
-	func set_state(st: String, is_next: bool, rising: bool, field: SeaField) -> void:
+	func set_state(st: String, is_next: bool, rising: bool, field: SeaField, primed: bool = false) -> void:
 		_st = st
 		var r: float = float(isle["r"])
 		var chest: bool = carries.get("kind") == "cache"
@@ -438,13 +496,8 @@ class Isle:
 			_label.position = Vector2(0, minf(-r * 1.05, _glyph.position.y - 40.0 / Chart.GROUND))
 			_halo.scale = Vector2(w * 4.2, w * 2.4) / 128.0
 			_halo.position = _prop.position + Vector2(0, -_prop.texture.get_height() * sc / Chart.GROUND * 0.5)
-		match st:
-			"cleared":
-				_prop.modulate = Color(0.86, 0.88, 0.84, 0.66 if not chest else 0.9)
-			"locked":
-				_prop.modulate = Color(0.62, 0.68, 0.78, 0.9)
-			_:
-				_prop.modulate = Color.WHITE
+		var want: Color = STATE_DONE if st == "cleared" else (STATE_LOCKED if st == "locked" else Color.WHITE)
+		CampaignWater.tint(_prop, want, primed and not rising)
 		_halo.visible = st == "available"
 		_glyph.kind = "next" if is_next else ("done" if st == "cleared" else "")
 		if rising:
@@ -453,8 +506,12 @@ class Isle:
 	func _process(delta: float) -> void:
 		_t += delta
 		if _halo != null and _halo.visible:
-			_halo.modulate.a = 0.28 + 0.22 * sin(_t * TAU / 2.6)
-		_label.visible = near
+			_halo.modulate.a = 0.28 + 0.22 * sin(_t * Motion.PULSE_CALL)
+		var a: float = Motion.near(_label.modulate.a, near, delta)
+		_label.modulate = Color(lift, a)
+		_label.visible = a > 0.0
+		if _glyph != null:
+			_glyph.modulate = lift
 
 
 # ── A ship riding at anchor: the fight waiting for you ───────────────────────
@@ -470,6 +527,7 @@ class Ship:
 	var _near: bool = false
 	var _t: float = randf() * 6.0
 	var _w: float = 300.0
+	var lift: Color = Color.WHITE
 
 	func dock() -> Vector2:
 		return position + DOCK_OFF
@@ -499,11 +557,12 @@ class Ship:
 		_glyph.z_index = 7
 		add_child(_glyph)
 
-	func set_state(st: String, is_next: bool, rising: bool, field: SeaField) -> void:
+	func set_state(st: String, is_next: bool, rising: bool, field: SeaField, primed: bool = false) -> void:
 		_st = st
 		_face.visible = st != "locked"
-		_face.modulate = Color(0.62, 0.62, 0.62, 0.7) if st == "cleared" else Color.WHITE
-		rig.modulate = Color(0.68, 0.72, 0.8) if st == "locked" else (Color(1, 1, 1, 0.85) if st == "cleared" else Color.WHITE)
+		var want: Color = STATE_DONE if st == "cleared" else (STATE_LOCKED if st == "locked" else Color.WHITE)
+		CampaignWater.tint(_face, STATE_DONE if st == "cleared" else Color.WHITE, primed)
+		CampaignWater.tint(rig, want, primed and not rising)
 		_glyph.kind = "next" if is_next else ("done" if st == "cleared" else "")
 		var top: float = -_w * 0.74 / Chart.GROUND
 		if _face.texture != null and _face.visible:
@@ -515,6 +574,7 @@ class Ship:
 	func _process(delta: float) -> void:
 		_t += delta
 		_face.position.y = (-_w * 0.74 + sin(_t * TAU / 6.8) * 6.0) / Chart.GROUND
+		_glyph.modulate = lift
 		queue_redraw()
 
 	## The dock: the patch of water you fight from, gold when you are in it.
@@ -535,7 +595,7 @@ class Ship:
 		var col: Color = GOLD if inside else Color(0.85, 0.92, 1.0)
 		var a: float = 0.32 if inside else 0.14
 		draw_circle(DOCK_OFF, ENCOUNTER_REACH, Color(col, a * 0.18))
-		draw_arc(DOCK_OFF, ENCOUNTER_REACH, 0.0, TAU, 64, Color(col, a + 0.1 * sin(_t * 2.0)), 3.0, true)
+		draw_arc(DOCK_OFF, ENCOUNTER_REACH, 0.0, TAU, 64, Color(col, a + 0.1 * sin(_t * Motion.PULSE_CALL)), 3.0, true)
 		draw_arc(DOCK_OFF, ENCOUNTER_REACH * 0.9, 0.0, TAU, 64, Color(col, a * 0.4), 1.5, true)
 
 
@@ -551,6 +611,7 @@ class WayHome:
 	var _t: float = randf() * 4.0
 	var _g: float = 0.0
 	var _label: Label
+	var lift: Color = Color.WHITE
 
 	func _ready() -> void:
 		position = Vector2(float(info["at"]["x"]), float(info["at"]["y"]))
@@ -560,7 +621,7 @@ class WayHome:
 		holder.position = Vector2(0, PORTAL_REACH * 0.7)
 		holder.z_index = 6
 		add_child(holder)
-		_label = Kit.lift(Kit.text(holder, "Way Home", "heading", Color("#eef4f8")))
+		_label = Kit.lift(Kit.text(holder, "Way Home", "heading", Kit.SEA_INK))
 		_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_label.resized.connect(func() -> void: _label.position = Vector2(-_label.size.x / 2.0, 0))
 
@@ -568,6 +629,7 @@ class WayHome:
 		_t += delta
 		_g = move_toward(_g, 1.0 if gather else 0.0, delta * 2.0)
 		visible = open
+		_label.modulate = lift
 		queue_redraw()
 
 	func _draw() -> void:

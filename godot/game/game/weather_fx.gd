@@ -18,8 +18,6 @@ extends Node
 ##                       with the flash
 ## Sea feeds it each frame (step); it asks nothing of the rules.
 
-const GROUND: float = 0.58
-
 var sea: Sea
 var _world: Node2D
 var _screen: CanvasLayer
@@ -171,7 +169,7 @@ func _age(delta: float) -> void:
 	_spray = _spray.filter(func(p: Array) -> bool: return float(p[2]) < 0.6)
 	for bo: Dictionary in _bolts:
 		bo["t"] = float(bo["t"]) + delta
-	_bolts = _bolts.filter(func(bo: Dictionary) -> bool: return float(bo["t"]) < 0.42)
+	_bolts = _bolts.filter(func(bo: Dictionary) -> bool: return float(bo["t"]) <= SquallFx.STRIKE_LIFE)
 
 
 ## A front on its way (or going): its curtain at that side of the screen.
@@ -204,7 +202,7 @@ func _approach(delta: float, f: Dictionary, now: float, cam: Vector2, shown: boo
 	_glow = maxf(0.0, _glow - delta * 2.2)
 	_curtain.visible = shown and amt > 0.01
 	if _curtain.visible:
-		var sd: Vector2 = Vector2(toward.x, toward.y * GROUND).normalized()
+		var sd: Vector2 = Vector2(toward.x, toward.y * Chart.GROUND).normalized()
 		_cmat.set_shader_parameter("u_dir", sd)
 		_cmat.set_shader_parameter("u_amt", amt)
 		_cmat.set_shader_parameter("u_glow", _glow)
@@ -231,14 +229,17 @@ func _draw_world() -> void:
 		var u4: float = float(p2[2]) / 0.6
 		var tt: float = float(p2[2])
 		var lift: float = minf(0.0, float(p2[3]) * tt + 520.0 * tt * tt)
-		_world.draw_circle((p2[0] as Vector2) + Vector2(0, lift / GROUND), 3.2, Color(0.94, 0.97, 1.0, 0.7 * (1.0 - u4)))
+		_world.draw_circle((p2[0] as Vector2) + Vector2(0, lift / Chart.GROUND), 3.2, Color(0.94, 0.97, 1.0, 0.7 * (1.0 - u4)))
 
 
 func _draw_bolts() -> void:
 	for bo: Dictionary in _bolts:
 		var t: float = float(bo["t"])
-		# Two flickers, like the flash.
-		var a: float = (1.0 if t < 0.08 else (0.35 if t < 0.16 else (0.9 if t < 0.24 else maxf(0.0, 1.0 - (t - 0.24) / 0.18)))) * float(bo["k"])
+		# On the flash's own clock (SquallFx.strike_light): the bolt and the
+		# sky pulse together, the second weaker.
+		var a: float = SquallFx.strike_light(t) / 0.9 * float(bo["k"])
+		if a <= 0.001:
+			continue
 		var main: PackedVector2Array = bo["main"]
 		_bolt.draw_polyline(main, Color(0.6, 0.72, 1.0, 0.22 * a), 14.0, true)
 		_bolt.draw_polyline(main, Color(0.85, 0.9, 1.0, 0.85 * a), 3.5, true)

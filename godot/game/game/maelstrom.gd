@@ -92,6 +92,7 @@ var _debris: Array = []
 var _phys: Node2D
 var _label: Label
 var _sub: Label
+var _name_holder: Node2D
 var _awake: bool = true
 var _lx: float = 0.0
 var _ly: float = 0.0
@@ -274,12 +275,21 @@ func _ready() -> void:
 	holder.position = Vector2(0, _r * 1.2)
 	holder.z_index = 6
 	add_child(holder)
-	_label = Kit.lift(Kit.text(holder, str(info.get("name", "")), "heading", Color("#eef4f8")))
+	_name_holder = holder
+	# Lettering on the water: the one ink (the name, its line under in INK_2).
+	_label = Kit.lift(Kit.text(holder, str(info.get("name", "")), "heading", Kit.SEA_INK))
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.resized.connect(func() -> void: _label.position = Vector2(-_label.size.x / 2.0, 0))
-	_sub = Kit.lift(Kit.text(holder, "", "small", Color("#c9d6dc")))
+	_sub = Kit.lift(Kit.text(holder, "", "small", Kit.INK_2))
 	_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_sub.resized.connect(func() -> void: _sub.position = Vector2(-_sub.size.x / 2.0, 34))
+
+
+## The night undone for its name (Sea's lift, through CampaignWater): words on
+## the water stay bright when the world dims.
+func set_lift(c: Color) -> void:
+	if _name_holder != null:
+		_name_holder.modulate = c
 
 
 # ── Made once ─────────────────────────────────────────────────────────────────

@@ -31,38 +31,34 @@ func _ready() -> void:
 	holder.position = Vector2(-18.0, 62.0 / Chart.GROUND)
 	holder.z_index = 5
 	add_child(holder)
-	_plate = PanelContainer.new()
-	var s: StyleBoxFlat = StyleBoxFlat.new()
-	s.bg_color = Color(Kit.PAPER, 0.95)
-	s.border_color = Color(Kit.ink(Color(0.37, 0.92, 0.83)), 0.6)
-	s.shadow_color = Color(0, 0, 0, 0.3)
-	s.shadow_size = 5
-	s.shadow_offset = Vector2(0, 2)
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(10)
-	s.content_margin_left = 12
-	s.content_margin_right = 12
-	s.content_margin_top = 3
-	s.content_margin_bottom = 4
-	_plate.add_theme_stylebox_override("panel", s)
-	var lines: VBoxContainer = VBoxContainer.new()
-	lines.add_theme_constant_override("separation", -2)
-	_plate.add_child(lines)
-	_name_l = Label.new()
-	_name_l.add_theme_font_override("font", UiTheme.title_font())
-	_name_l.add_theme_font_size_override("font_size", 15)
-	_name_l.add_theme_color_override("font_color", Kit.PAPER_INK)
-	_name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lines.add_child(_name_l)
-	_do_l = Label.new()
-	_do_l.add_theme_font_override("font", Kit.font("karla", 600))
-	_do_l.add_theme_font_size_override("font_size", 11)
+	# The one nameplate on the water (Wanderer.plate), in the crew's teal; what
+	# they are doing under the name, in soft ink.
+	var pl: Dictionary = Wanderer.plate(mate_name, "", Kit.TEAL)
+	_plate = pl["plate"]
+	_name_l = pl["name"]
+	_do_l = pl["sub"]
 	_do_l.add_theme_color_override("font_color", Kit.PAPER_INK_SOFT)
-	_do_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_do_l.visible = false
-	lines.add_child(_do_l)
 	holder.add_child(_plate)
 	set_mate_name(mate_name)
+	# A ship coming into your sea fades in (never pops onto the water).
+	modulate.a = 0.0
+	var tw: Tween = create_tween()
+	tw.tween_property(self, "modulate:a", 1.0, FADE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+## How long a crewmate's ship takes to fade in or out.
+const FADE: float = 0.4
+
+
+## They left: the ship fades off the water, then is gone.
+func leave() -> void:
+	if is_queued_for_deletion() or has_meta("_leaving"):
+		return
+	set_meta("_leaving", true)
+	set_process(true)
+	var tw: Tween = create_tween()
+	tw.tween_property(self, "modulate:a", 0.0, FADE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.tween_callback(queue_free)
 
 
 func set_mate_name(n: String) -> void:
