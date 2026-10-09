@@ -15,7 +15,7 @@ extends Control
 
 signal done
 
-const GOLD: Color = Color(1.0, 0.82, 0.38)
+const GOLD: Color = Paper.NIGHT_GOLD
 
 static var _intro_seen: Dictionary = {}
 
@@ -27,6 +27,9 @@ var _sheet: Control
 var _body: VBoxContainer
 var _err: Label
 var _armed: String = ""
+var _shade: ColorRect
+## The sheet is up (a repaint after this eases to its new height).
+var _shown: bool = false
 
 
 func _ready() -> void:
@@ -92,10 +95,10 @@ func _paid(r: Dictionary) -> void:
 
 
 func _close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	done.emit()
-	queue_free()
+	Motion.dismiss(self, _sheet, _shade)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -107,13 +110,11 @@ func _unhandled_input(event: InputEvent) -> void:
 # ── The sheet ─────────────────────────────────────────────────────────────────
 
 func _open_sheet() -> void:
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.03, 0.05, 0.6)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
+	set_meta("night_root", true)
+	_shade = Kit.scrim(self)
+	_shade.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			_close())
-	add_child(shade)
 	_sheet = Control.new()
 	_sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_sheet.offset_left = -500
@@ -151,9 +152,17 @@ func _open_sheet() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 10)
 	scroll.add_child(_body)
+	UiTheme.night_scroll(scroll)
 	Paper.night = false
+	# Sized to what is on it FIRST, then it rises in (a rise toward the old
+	# height ended top-aligned and snapped mid-way).
+	_sheet.modulate.a = 0.0
 	_paint()
-	Kit.modal_in(_sheet)
+	await _fit()
+	if not is_instance_valid(_sheet):
+		return
+	Motion.panel_in(_sheet)
+	_shown = true
 
 
 func _paint() -> void:
@@ -162,14 +171,14 @@ func _paint() -> void:
 		c.queue_free()
 	var ch: Dictionary = Campaign.chapter_for(node_id)
 	var num: String = str(ch.get("romanNumeral", ""))
-	Paper.text(_body, ("CHAPTER %s  ·  %s" % [num, str(ch["title"]).to_upper()]) if num != "" else str(ch["title"]).to_upper(), "eyebrow", Paper.ink_soft())
-	Paper.text(_body, str(_n["label"]), "display", Paper.ink())
-	Paper.text(_body, str(_n.get("flavor", "")), "body", Paper.ink_soft(), true).add_theme_font_override("font", Kit.font("karla", 400))
-	Paper.rule(_body)
+	# THE shared header: the chapter over the stop's name, Close on the right,
+	# the rule; the feedback line under it.
+	var head: Dictionary = Paper.header(_body, str(_n["label"]), ("CHAPTER %s  ·  %s" % [num, str(ch["title"]).to_upper()]) if num != "" else str(ch["title"]).to_upper(), _close)
+	Paper.text(head["titles"] as VBoxContainer, str(_n.get("flavor", "")), "body", Paper.ink_soft(), true).add_theme_font_override("font", Kit.font("karla", 400))
+	_err = Paper.status_line(_body)
 	var det: Dictionary = Js.obj(_n.get("detail"))
 	if _n["type"] == "raid" and _st != "locked":
 		_boss_card(det)
-		_err = Paper.text(_body, "", "small", Paper.red(), true)
 		_footer(false)
 		Paper.night = false
 		_fit.call_deferred()
@@ -187,7 +196,7 @@ func _paint() -> void:
 		_fit.call_deferred()
 		return
 	if _st == "cleared":
-		Paper.text(_body, "DONE", "eyebrow", Color(0.5, 0.86, 0.58))
+		Paper.text(_body, "DONE", "eyebrow", Paper.NIGHT_GREEN)
 		Paper.text(_body, str(det.get("summary", _n.get("bridge", ""))), "body", Paper.ink(), true)
 		var choice: Variant = Js.obj(sea._campaign.view.get("raidNodeChoices")).get(node_id)
 		if choice != null:
@@ -208,7 +217,6 @@ func _paint() -> void:
 		"berth": _berth()
 		"spoils": _spoils()
 		"puzzle": _puzzle()
-	_err = Paper.text(_body, "", "small", Paper.red(), true)
 	_footer(not Js.list(_n.get("scene")).is_empty())
 	Paper.night = false
 	_fit.call_deferred()
@@ -219,9 +227,19 @@ func _fit() -> void:
 	if _sheet == null or not is_instance_valid(_body):
 		return
 	await get_tree().process_frame
+	if not is_instance_valid(_sheet) or Motion.closing(self):
+		return
 	var h: float = clampf(_body.get_combined_minimum_size().y + 64.0, 440.0, minf(820.0, size.y - 120.0))
-	_sheet.offset_top = -h / 2.0
-	_sheet.offset_bottom = h / 2.0
+	if is_equal_approx(_sheet.offset_bottom, h / 2.0):
+		return
+	if not _shown:
+		_sheet.offset_top = -h / 2.0
+		_sheet.offset_bottom = h / 2.0
+		return
+	# Up already: it eases to its new height.
+	var tw: Tween = create_tween().set_parallel(true)
+	Motion.ease_rise(tw, _sheet, "offset_top", -h / 2.0, Motion.SWAP_RESIZE)
+	Motion.ease_rise(tw, _sheet, "offset_bottom", h / 2.0, Motion.SWAP_RESIZE)
 
 
 func _footer(replay: bool) -> void:
@@ -241,9 +259,6 @@ func _footer(replay: bool) -> void:
 			await sc.finished
 			_sheet.visible = true)
 		h.add_child(r)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.pressed.connect(_close)
-	h.add_child(x)
 
 
 func _choice_label(id: String) -> String:
@@ -274,7 +289,7 @@ func _act(op: String, args: Array, then: Callable) -> void:
 	sea.session.persist()
 	if r is Dictionary and (r as Dictionary).has("error"):
 		if _err != null:
-			_err.text = str(r["error"])
+			Paper.say(_err, str(r["error"]), Paper.red(_err))
 		Rumble.tap(10)
 		return
 	sea._campaign.refresh()
@@ -364,7 +379,7 @@ func _boss_card(det: Dictionary) -> void:
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
 	_body.add_child(h)
-	var go: Pane.PaneButton = Paper.button("Set sail against %s" % _n["label"] if _st != "cleared" else "Take them on again", true)
+	var go: Pane.PaneButton = Paper.primary("Set sail against %s" % _n["label"] if _st != "cleared" else "Take them on again", true)
 	go.pressed.connect(func() -> void:
 		var rid: String = str(_n["raidId"])
 		_close()
@@ -395,7 +410,7 @@ func _toll() -> void:
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
 	_body.add_child(h)
-	var pay: Pane.PaneButton = Paper.button(("Pay %s ⟡" % Js.thousands(amt)) if _purse() >= amt else "Not enough aboard", _purse() >= amt)
+	var pay: Pane.PaneButton = Paper.primary("Pay %s ⟡" % Js.thousands(amt), true) if _purse() >= amt else Paper.button("Not enough aboard")
 	pay.disabled = _purse() < amt
 	pay.pressed.connect(func() -> void:
 		_act("claimMilestoneNode", [node_id], func(_r: Variant) -> void:
@@ -427,7 +442,7 @@ func _cache() -> void:
 		Paper.text(card, str(it.get("rarity", "")).to_upper(), "eyebrow", Paper.ink_soft())
 		Paper.text(card, str(it.get("description", "")), "small", Paper.ink_soft(), true)
 		if held.has(id):
-			Paper.text(card, "Already in the hold", "small", Color(0.5, 0.86, 0.58))
+			Paper.text(card, "Already in the hold", "small", Paper.NIGHT_GREEN)
 		var b: Pane.PaneButton = Paper.button("Take the %s" % it.get("name", id), _armed == id)
 		b.pressed.connect(func() -> void:
 			if _armed != id:
@@ -527,12 +542,12 @@ func _roll_show(r: Dictionary, o: Dictionary) -> void:
 	await die.landed
 	Paper.night = true
 	line.text = "%d + %d = %d  ·  %s" % [int(r["roll"]), int(r["bonus"]), int(r["total"]), "WON" if r["success"] else "MISSED"]
-	line.add_theme_color_override("font_color", Color(0.5, 0.86, 0.58) if r["success"] else Paper.red())
+	line.add_theme_color_override("font_color", Paper.NIGHT_GREEN if r["success"] else Paper.red())
 	var said: String = str(o.get("winText" if r["success"] else "missText", ""))
 	if said != "":
 		Paper.text(_body, said, "body", Paper.ink_soft(), true)
 	Paper.text(_body, _outcome_pill({ "doubloons": r["doubloonsDelta"], "navXp": r["navXpDelta"] }), "body_strong", GOLD)
-	var x: Pane.PaneButton = Paper.button("Done", true)
+	var x: Pane.PaneButton = Paper.primary("Done", true)
 	x.size_flags_horizontal = Control.SIZE_SHRINK_END
 	x.pressed.connect(_close)
 	_body.add_child(x)
@@ -555,7 +570,7 @@ func _gate() -> void:
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
 	_body.add_child(h)
-	var fire: Pane.PaneButton = Paper.button("Fire one shot", true)
+	var fire: Pane.PaneButton = Paper.primary("Fire one shot", true)
 	fire.pressed.connect(func() -> void:
 		_act("resolveDpsCheck", [node_id, "shot"], func(r: Variant) -> void:
 			Sound.cannon(true)
@@ -584,7 +599,7 @@ func _muster() -> void:
 		var h: HBoxContainer = HBoxContainer.new()
 		h.add_theme_constant_override("separation", 10)
 		_body.add_child(h)
-		Paper.text(h, "✓" if row["ok"] else "✗", "body_strong", Color(0.5, 0.86, 0.58) if row["ok"] else Paper.red())
+		Paper.text(h, "✓" if row["ok"] else "✗", "body_strong", Paper.NIGHT_GREEN if row["ok"] else Paper.red())
 		var v: VBoxContainer = VBoxContainer.new()
 		v.add_theme_constant_override("separation", 0)
 		h.add_child(v)
@@ -592,7 +607,7 @@ func _muster() -> void:
 		if not (row["met"] as Array).is_empty():
 			Paper.text(v, ", ".join(PackedStringArray(row["met"])), "small", Paper.ink_soft(), true)
 	if rep["passed"]:
-		var b: Pane.PaneButton = Paper.button("Stand for inspection", true)
+		var b: Pane.PaneButton = Paper.primary("Stand for inspection", true)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_END
 		b.pressed.connect(func() -> void:
 			_act("standForMuster", [node_id], func(_r: Variant) -> void:
@@ -622,11 +637,11 @@ func _class_pick() -> void:
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_theme_constant_override("separation", 3)
 		grid.add_child(v)
-		var col: Color = Color(str(c.get("color", "#d8b26a")))
-		Paper.text(v, str(c.get("name", id)), "body_strong", col)
+		# The class's name in plain ink (no class colours, M10).
+		Paper.text(v, str(c.get("name", id)), "body_strong", Paper.ink())
 		Paper.text(v, str(c.get("tagline", "")), "small", Paper.ink(), true)
 		for b: Dictionary in Js.list(c.get("bullets")):
-			Paper.text(v, ("+  " if b["positive"] else "−  ") + str(b["label"]).trim_prefix("+").trim_prefix("−"), "small", Color(0.5, 0.86, 0.58) if b["positive"] else Paper.red())
+			Paper.text(v, ("+  " if b["positive"] else "−  ") + str(b["label"]).trim_prefix("+").trim_prefix("−"), "small", Paper.NIGHT_GREEN if b["positive"] else Paper.red())
 		var cid: String = str(id)
 		var btn: Pane.PaneButton = Paper.button(("Sail as the %s" if first else "Take %s") % c.get("name", id) if _armed == cid else "Choose", _armed == cid)
 		btn.pressed.connect(func() -> void:
@@ -646,7 +661,7 @@ func _berth() -> void:
 	var what: String = "a sixth item mount" if _n.get("armory") != null else "a sixth crew berth"
 	Paper.text(_body, "%s ⟡ buys %s, for good." % [Js.thousands(price), what], "body_strong", Paper.ink(), true)
 	Paper.text(_body, "The yard does the cutting at the Gunwharf.", "small", Paper.ink_soft(), true)
-	var b: Pane.PaneButton = Paper.button("Terms heard", true)
+	var b: Pane.PaneButton = Paper.primary("Terms heard", true)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
 	b.pressed.connect(func() -> void:
 		_act("markStoryNodeRead", [node_id], func(_r: Variant) -> void: _close()))
@@ -666,14 +681,14 @@ func _spoils() -> void:
 		var sid: String = side[0]
 		var have: bool = free == sid or p.get("finn_spoil_paid") == sid
 		if have:
-			Paper.text(v, "Aboard", "small", Color(0.5, 0.86, 0.58))
+			Paper.text(v, "Aboard", "small", Paper.NIGHT_GREEN)
 			continue
 		var b: Pane.PaneButton = Paper.button("Take it" if free == null else "Buy it for %s ⟡" % Js.thousands(price), free == null)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_END
 		b.pressed.connect(func() -> void:
 			_act("chooseSpoil" if free == null else "buySpoil", [sid], func(r: Variant) -> void:
 				if r is Dictionary and r.get("ok") == false:
-					_err.text = str(r.get("error", ""))
+					Paper.say(_err, str(r.get("error", "")), Paper.red(_err))
 					return
 				Sound.chest(true)
 				_paint()))
@@ -683,12 +698,12 @@ func _spoils() -> void:
 func _puzzle() -> void:
 	var pz: Dictionary = _n["puzzle"]
 	Paper.stat(_body, "Cracking it pays", "+%s Navigation XP" % Js.thousands(Js.num(pz.get("rewardNavXp"))), GOLD)
-	var b: Pane.PaneButton = Paper.button("Crack it", true)
+	var b: Pane.PaneButton = Paper.primary("Crack it", true)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
 	b.pressed.connect(func() -> void:
 		var board: PuzzleBoard = PuzzleBoard.make(pz)
 		if board == null:
-			_err.text = "This board is not in this build yet."
+			Paper.say(_err, "This board is not in this build yet.", Paper.red(_err))
 			return
 		_sheet.visible = false
 		add_child(board)

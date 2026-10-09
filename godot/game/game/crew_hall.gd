@@ -19,8 +19,12 @@ extends Control
 signal closed
 
 const RARITY_NAMES: Array = ["Common", "Rare", "Epic", "Legendary"]
-## lib/crewGen RARITY_COLORS.
-const RARITY_COLORS: Array = [Color("#8a857c"), Color("#3b8ef0"), Color("#a78bfa"), Color("#f0c040")]
+
+
+## A crew rarity (1-4: Common, Rare, Epic, Legendary) in THE rarity table
+## (Kit.RARITY; crew skip "uncommon", so they key in by name).
+static func rarity_color(rar: int) -> Color:
+	return Kit.rarity(String(RARITY_NAMES[clampi(rar, 1, 4) - 1]))
 
 var session: Session
 var room: String = "recruit"
@@ -35,58 +39,29 @@ var _body: VBoxContainer
 var _detail: VBoxContainer
 var _tabs: HBoxContainer
 var _head_note: Label
+var _status: Label
+var _parts: Dictionary = {}
+## Where each room's list was scrolled to (a redraw keeps it).
+var _keep: Dictionary = {}
 var _busy: bool = false
 
 
 func _ready() -> void:
-	# The expedition side's paper (Paper.night): dark, cream ink, brass.
-	Paper.night = true
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.5)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.anchor_left = 0.5
-	sheet.anchor_right = 0.5
-	sheet.anchor_bottom = 1.0
-	sheet.offset_left = -560.0
-	sheet.offset_right = 560.0
-	sheet.offset_top = 40.0
-	sheet.offset_bottom = -28.0
-	add_child(sheet)
-	Paper.sheet(sheet, 8.0)
-	var margin: MarginContainer = MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 32)
-	margin.add_theme_constant_override("margin_top", 24)
-	margin.add_theme_constant_override("margin_bottom", 22)
-	sheet.add_child(margin)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	margin.add_child(col)
-	var head: HBoxContainer = HBoxContainer.new()
-	col.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	titles.add_theme_constant_override("separation", 0)
-	head.add_child(titles)
-	Paper.text(titles, "The Crew Hall", "display", Paper.ink())
-	_head_note = Paper.text(titles, "", "note", Paper.ink_soft())
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
-	_tabs = HBoxContainer.new()
-	_tabs.add_theme_constant_override("separation", 6)
-	col.add_child(_tabs)
-	Paper.rule(col)
+	# THE shell every sheet shares (Paper.open), centred, on the expedition
+	# side's night paper: dark, cream ink, CHOSEN for what is chosen.
+	_parts = Paper.open(self, Paper.SHEET_WIDE, true, close, 28)
+	var col: VBoxContainer = _parts["body"]
+	Paper.night = true
+	# THE shared header: the title (and the roster line under it), Close on the
+	# right, the rooms as tabs on their own row, the rule.
+	var head: Dictionary = Paper.header(col, "The Crew Hall", "", close)
+	_head_note = Paper.text(head["titles"] as VBoxContainer, "", "note", Paper.ink_soft())
+	_tabs = head["tabs"]
+	_tabs.visible = true
+	_status = Paper.status_line(col)
 	var split: HBoxContainer = HBoxContainer.new()
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	split.add_theme_constant_override("separation", 24)
@@ -99,17 +74,15 @@ func _ready() -> void:
 	_detail.custom_minimum_size = Vector2(360, 0)
 	_detail.add_theme_constant_override("separation", 6)
 	split.add_child(_detail)
-	sheet.modulate.a = 0.0
-	create_tween().tween_property(sheet, "modulate:a", 1.0, 0.2)
 	Paper.night = false
 	_load()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -150,14 +123,10 @@ func _act(op: String, args: Array) -> Dictionary:
 	return res
 
 
-func _note(text: String) -> void:
-	_head_note.text = text
-	_head_note.add_theme_color_override("font_color", Paper.NIGHT_RED)
-	var tw: Tween = create_tween()
-	tw.tween_interval(2.6)
-	tw.tween_callback(func() -> void:
-		_head_note.remove_theme_color_override("font_color")
-		_head_line())
+## A refusal (or, good, a plain word): on the status line under the header,
+## so nothing below it moves.
+func _note(text: String, good: bool = false) -> void:
+	Paper.say(_status, text, Paper.NIGHT_GREEN if good else Paper.NIGHT_RED)
 
 
 func _head_line() -> void:
@@ -176,6 +145,7 @@ func _draw_room() -> void:
 func _build_room() -> void:
 	_head_line()
 	for c: Node in _tabs.get_children():
+		_tabs.remove_child(c)
 		c.queue_free()
 	var board_open: int = Js.list(_state.get("board")).filter(func(b: Dictionary) -> bool: return b["recruited"] != true).size()
 	if room in ["hall", "bunks"] and not at_hall:
@@ -198,15 +168,26 @@ func _build_room() -> void:
 		waiting += int(Js.num(_skins["vouchers"][kv]))
 	rooms.append(["trunk", "The Trunk  %d/%d%s" % [Js.list(_skins.get("owned")).size(), int(Js.num(_skins.get("total"))), ("  ·  %d to open" % waiting) if waiting > 0 else ""]])
 	for o: Array in rooms:
-		var b: Pane.PaneButton = Paper.button(o[1], o[0] == room or (o[0] == "trunk" and waiting > 0 and room != "trunk"))
-		b.custom_minimum_size = Vector2(110, 34)
+		# Only the room shown is the chosen tab; vouchers waiting in the Trunk
+		# are a dot beside its count, not a second chosen tab.
+		var b: Pane.PaneButton = Paper.tab(o[1], o[0] == room, true)
+		if o[0] == "trunk" and waiting > 0 and room != "trunk":
+			_dot(b)
 		b.pressed.connect(func() -> void:
+			if room == o[0]:
+				return
 			room = o[0]
 			_pick = {}
 			_pick_kind = ""
 			_draw_room())
 		_tabs.add_child(b)
+	# A redraw keeps the room's list where it was.
+	for sc: Node in _body.find_children("", "ScrollContainer", true, false):
+		_keep[_body.get_meta("room", "")] = (sc as ScrollContainer).scroll_vertical
+		break
+	_body.set_meta("room", room)
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
 	match room:
 		"recruit":
@@ -222,7 +203,48 @@ func _build_room() -> void:
 			_body.add_child(hb)
 		_:
 			_hall_room()
+	for sc: Node in _body.find_children("", "ScrollContainer", true, false):
+		UiTheme.night_scroll(sc as ScrollContainer)
+		(sc as ScrollContainer).set_deferred("scroll_vertical", int(_keep.get(room, 0)))
+		break
 	_draw_detail()
+
+
+## Something waiting behind a tab: a small CHOSEN dot at its top right.
+static func _dot(b: Control) -> void:
+	var d: Control = Control.new()
+	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	d.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	d.draw.connect(func() -> void: d.draw_circle(Vector2(d.size.x - 5.0, 7.0), 3.0, Paper.CHOSEN))
+	b.add_child(d)
+
+
+## THE ART TILE'S FEEL (Paper.Tile's): the art swells a little under the
+## pointer or the pad's focus, a press squeezes (Kit.tap), and a pad can reach
+## it (its focus ring: CHOSEN on the night paper; pass the inked gold, Kit.ink
+## (Kit.GOLD), on the day's).
+static func art_hover(b: Button, pic: Control, ring: Color = Paper.CHOSEN) -> void:
+	b.focus_mode = Control.FOCUS_ALL
+	b.add_theme_stylebox_override("focus", UiTheme.focus_ring(Kit.R_SMALL, ring))
+	var grow: Callable = func(on: bool) -> void:
+		if not is_instance_valid(pic) or (on and b.disabled):
+			return
+		pic.pivot_offset = pic.size / 2.0
+		Motion.ease_rise(pic.create_tween(), pic, "scale", Vector2.ONE * (1.06 if on else 1.0), 0.15)
+	b.mouse_entered.connect(func() -> void: grow.call(true))
+	b.mouse_exited.connect(func() -> void: grow.call(false))
+	b.focus_entered.connect(func() -> void: grow.call(true))
+	b.focus_exited.connect(func() -> void: grow.call(false))
+	Kit.tap(b)
+
+
+## THE INKED RING (Paper.ring) round the chosen art, filling `holder`.
+static func ring_over(holder: Control) -> void:
+	var r: Control = Control.new()
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	r.draw.connect(func() -> void: Paper.ring(r, r.size / 2.0, r.size * Vector2(0.48, 0.5)))
+	holder.add_child(r)
 
 
 func _recruit_room() -> void:
@@ -271,7 +293,7 @@ func _notices_row() -> void:
 				_pick = {}
 				for c: Dictionary in Js.list(_state.get("board")):
 					if float(c["rarity"]) >= 4.0:
-						_sign_on_moment("A Legendary answers!", Color("#f0c040"))
+						_sign_on_moment("A Legendary answers!", rarity_color(4))
 			_draw_room())
 		row.add_child(b)
 
@@ -311,7 +333,7 @@ func _hall_room() -> void:
 	v.add_theme_constant_override("separation", 4)
 	row.add_child(v)
 	Paper.text(v, "Tier %d of 6" % tier, "eyebrow", Paper.ink_soft())
-	Paper.text(v, str(def["name"]), "title", Color(def["accent"]))
+	Paper.text(v, str(def["name"]), "title", Paper.ink())
 	Paper.text(v, str(def["flavor"]), "note", Paper.ink_soft(), true)
 	var cap: Dictionary = Rules.data()["crew"]["capacity"]
 	Paper.stat(v, "Roster", "%d of %d" % [Js.list(_state.get("roster")).size(), int(Js.num(_state.get("capacity")))])
@@ -328,7 +350,8 @@ func _hall_room() -> void:
 	var gate_name: String = "Fishing" if Crew.port().get("navFromFishing") == true else "Navigation"
 	Paper.text(_body, "+%d roster, a bunk more  ·  needs %s %d  ·  %s ⟡" % [int(cap["perHallTier"]), gate_name, int(nxt["minNav"]), Js.thousands(float(nxt["cost"]))], "body_strong", Paper.ink())
 	var ok: bool = Js.num(_state.get("navLevel")) >= float(nxt["minNav"]) and Js.num(_state.get("doubloons")) >= float(nxt["cost"])
-	var b: Pane.PaneButton = Paper.button("Build the %s  ·  %s ⟡" % [nxt["name"], Js.thousands(float(nxt["cost"]))], true)
+	var b: Pane.PaneButton = Paper.primary("Build the %s  ·  %s ⟡" % [nxt["name"], Js.thousands(float(nxt["cost"]))], true)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.disabled = not ok
 	b.pressed.connect(func() -> void:
 		var r: Dictionary = await _act("upgradeCrewHall", [])
@@ -344,8 +367,9 @@ func _hall_room() -> void:
 const TIER_NAMES: Dictionary = { "rare": "Rare", "epic": "Epic", "legendary": "Legendary", "chase": "Chase" }
 
 
+## A skin tier's colour, from THE rarity table (chase included).
 static func tier_color(tier: String) -> Color:
-	return SkinReveal.TIER_COLORS.get(tier, Color.WHITE)
+	return Kit.rarity(tier) if Kit.rarity_key(tier) != "" else Kit.DIM
 
 
 func _trunk_room() -> void:
@@ -397,8 +421,9 @@ func _trunk_room() -> void:
 func _voucher(kind: String) -> Control:
 	var d: Dictionary = Skins.kind_def(kind)
 	var n: int = int(Js.num(Js.obj(_skins.get("vouchers")).get(kind)))
-	var col: Color = Color(str(d.get("color", "#c0392b")))
-	var p: Pane = Kit.pane(null, { "radius": 10, "fill": [Color("#1d1712")], "border": [2 if n > 0 else 1, Color(col, 0.8 if n > 0 else 0.3)], "shadow": [Color(col, 0.35 if n > 0 else 0.0), 14, Vector2.ZERO], "pad": [12, 10, 14, 10] })
+	# Flat on the night paper: a hairline, CHOSEN while one is waiting (no
+	# colour per kind, no glow).
+	var p: Pane = Kit.pane(null, { "radius": Kit.R_LARGE, "fill": [Paper.NIGHT_PAPER_HI], "border": [1, Color(Paper.CHOSEN, 0.6) if n > 0 else Paper.NIGHT_HAIR], "pad": [12, 10, 14, 10], "keep": true, "night": true })
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	p.size_flags_stretch_ratio = 1.0
 	var h: HBoxContainer = HBoxContainer.new()
@@ -416,7 +441,7 @@ func _voucher(kind: String) -> Control:
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.add_theme_constant_override("separation", 0)
 	h.add_child(t)
-	Paper.text(t, "%d HELD" % n, "eyebrow", col.lightened(0.25) if n > 0 else Paper.ink_faint())
+	Paper.text(t, "%d HELD" % n, "eyebrow", Paper.CHOSEN if n > 0 else Paper.ink_faint())
 	Paper.text(t, str(d.get("name", kind)), "body_strong", Paper.ink() if n > 0 else Paper.ink_soft())
 	var w: Dictionary = Js.obj(d.get("weights"))
 	var odds: Array = []
@@ -424,7 +449,7 @@ func _voucher(kind: String) -> Control:
 		if float(w.get(tier, 0.0)) > 0.0:
 			var pc: float = float(w[tier])
 			odds.append("%s %s%%" % [TIER_NAMES[tier], str(int(pc)) if pc == floorf(pc) else str(pc)])
-	Paper.text(t, ", ".join(PackedStringArray(odds)), "small", col.lightened(0.25), true)
+	Paper.text(t, ", ".join(PackedStringArray(odds)), "small", Paper.ink(), true)
 	Paper.text(t, str(d.get("from", "")), "small", Paper.ink_soft(), true)
 	var b: Pane.PaneButton = Paper.button("Open", n > 0)
 	b.disabled = n <= 0
@@ -434,8 +459,9 @@ func _voucher(kind: String) -> Control:
 	if n > 0:
 		# A slow breath, so a voucher waiting looks alive.
 		var tw: Tween = p.create_tween().set_loops()
-		tw.tween_property(p, "modulate", Color(1.12, 1.12, 1.12), 0.9).set_trans(Tween.TRANS_SINE)
-		tw.tween_property(p, "modulate", Color.WHITE, 0.9).set_trans(Tween.TRANS_SINE)
+		var half: float = PI / Motion.PULSE_BREATH
+		tw.tween_property(p, "modulate", Color(1.12, 1.12, 1.12), half).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw.tween_property(p, "modulate", Color.WHITE, half).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	return p
 
 
@@ -452,7 +478,7 @@ func _open_voucher(kind: String) -> void:
 		return
 	if res.has("doubloons"):
 		Sound.chest(false)
-		_note("Every skin is already yours. The voucher pays %s ⟡." % Js.thousands(float(res["doubloons"])))
+		_note("Every skin is already yours. The voucher pays %s ⟡." % Js.thousands(float(res["doubloons"])), true)
 		_load()
 		return
 	var show: SkinReveal = SkinReveal.play(self, res)
@@ -467,7 +493,6 @@ func _skin_tile(k: Dictionary, have: bool, worn: bool) -> Control:
 	var col: Color = tier_color(tier)
 	var b: Button = Button.new()
 	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(108, 150)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -487,24 +512,14 @@ func _skin_tile(k: Dictionary, have: bool, worn: bool) -> Control:
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not have:
-		var m: ShaderMaterial = ShaderMaterial.new()
-		m.shader = preload("res://game/fx/greyed.gdshader")
-		m.set_shader_parameter("strength", 0.35)
-		pic.material = m
+		Kit.grey(pic)
+		(pic.material as ShaderMaterial).set_shader_parameter("strength", 0.35)
 	holder.add_child(pic)
 	if have:
 		ChaseFx.over(holder, k)
 	if _pick_kind == "skin" and _pick.get("id") == k["id"]:
-		var ring: Panel = Panel.new()
-		var sb: StyleBoxFlat = StyleBoxFlat.new()
-		sb.bg_color = Color(0, 0, 0, 0)
-		sb.border_color = Paper.red()
-		sb.set_border_width_all(2)
-		sb.set_corner_radius_all(10)
-		ring.add_theme_stylebox_override("panel", sb)
-		ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		holder.add_child(ring)
+		ring_over(holder)
+	art_hover(b, pic)
 	var n: Label = Paper.text(v, str(k["name"]), "small", Paper.ink() if have else Paper.ink_faint())
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	n.clip_text = true
@@ -539,9 +554,7 @@ func _skin_detail() -> void:
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if not have:
-		var m: ShaderMaterial = ShaderMaterial.new()
-		m.shader = preload("res://game/fx/greyed.gdshader")
-		pic.material = m
+		Kit.grey(pic)
 	holder.add_child(pic)
 	if have:
 		ChaseFx.over(holder, k)
@@ -604,27 +617,24 @@ func _skin_row(c: Dictionary) -> void:
 		var col: Color = tier_color(Skins.tier_of(k)) if k["id"] != null else Paper.ink_soft()
 		var b: Button = Button.new()
 		b.flat = true
-		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(54, 64)
 		b.tooltip_text = str(k["name"])
+		# Frameless on a blot of its tier; the one worn is circled in ink.
+		var holder: Control = Control.new()
+		holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(holder)
+		Paper.blot(holder, col, 0.5)
 		var pic: TextureRect = TextureRect.new()
 		pic.texture = _thumb(str(k["filename"]))
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(pic)
-		var ring: Panel = Panel.new()
-		var sb: StyleBoxFlat = StyleBoxFlat.new()
-		sb.bg_color = Color(col, 0.12)
-		sb.border_color = Paper.red() if on else Color(col, 0.45)
-		sb.set_border_width_all(2 if on else 1)
-		sb.set_corner_radius_all(8)
-		ring.add_theme_stylebox_override("panel", sb)
-		ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		ring.show_behind_parent = true
-		b.add_child(ring)
+		holder.add_child(pic)
+		if on:
+			ring_over(holder)
+		art_hover(b, pic)
 		if not on:
 			var id: Variant = k["id"]
 			b.pressed.connect(func() -> void: _equip(slug, id))
@@ -641,10 +651,9 @@ func _thumb(filename: String) -> Texture2D:
 ## level, class and trait in a line under it.
 func _card(c: Dictionary, kind: String) -> Control:
 	var rar: int = clampi(int(Js.num(c.get("rarity"))), 1, 4)
-	var rc: Color = RARITY_COLORS[rar - 1]
+	var rc: Color = rarity_color(rar)
 	var b: Button = Button.new()
 	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(150, 196) if kind == "roster" else Vector2(190, 236)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -669,16 +678,8 @@ func _card(c: Dictionary, kind: String) -> Control:
 		ChaseFx.over(holder, _worn(c))
 	var on: bool = _pick.get("id") == c.get("id") and _pick_kind == kind
 	if on:
-		var ring: Panel = Panel.new()
-		var sb: StyleBoxFlat = StyleBoxFlat.new()
-		sb.bg_color = Color(0, 0, 0, 0)
-		sb.border_color = Paper.red()
-		sb.set_border_width_all(2)
-		sb.set_corner_radius_all(10)
-		ring.add_theme_stylebox_override("panel", sb)
-		ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		holder.add_child(ring)
+		ring_over(holder)
+	art_hover(b, pic)
 	var name_l: Label = Paper.text(v, str(c.get("name", "")), "name", Paper.ink())
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.clip_text = true
@@ -721,7 +722,7 @@ func _draw_detail() -> void:
 		return
 	var c: Dictionary = _pick
 	var rar: int = clampi(int(Js.num(c.get("rarity"))), 1, 4)
-	var rc: Color = RARITY_COLORS[rar - 1]
+	var rc: Color = rarity_color(rar)
 	var holder: Control = Control.new()
 	holder.custom_minimum_size = Vector2(360, 250)
 	_detail.add_child(holder)
@@ -766,13 +767,13 @@ func _draw_detail() -> void:
 			if lvl >= int(m["unlockLevel"]):
 				now_m = m
 		if not now_m.is_empty():
-			Paper.text(_detail, "Special: %s" % now_m["desc"], "small", cls_color(cls), true)
+			Paper.text(_detail, "Special: %s" % now_m["desc"], "small", Paper.ink(), true)
 	Paper.rule(_detail)
 	if _pick_kind == "board":
 		if c.get("recruited") == true:
 			Paper.text(_detail, "Already aboard.", "note", Paper.ink_soft())
 		else:
-			var sign: Pane.PaneButton = Paper.button("Sign on", true)
+			var sign: Pane.PaneButton = Paper.primary("Sign on", true)
 			sign.pressed.connect(func() -> void:
 				var r: Dictionary = await _act("recruitCrew", [c["id"]])
 				if r.has("state"):
@@ -824,10 +825,6 @@ func _draw_detail() -> void:
 		_detail.add_child(dis)
 
 
-static func cls_color(cls: Dictionary) -> Color:
-	return Color(str(cls.get("color", "#555555"))).lightened(0.1)
-
-
 ## SIGNING ON IS A MOMENT (the web's SignOnMoment): the name blooms up in
 ## the middle in their rarity's colour with a ring breaking out behind it.
 func _sign_on_moment(name: String, col: Color) -> void:
@@ -845,8 +842,7 @@ func _sign_on_moment(name: String, col: Color) -> void:
 		var u: float = clampf(t[0] / 1.7, 0.0, 1.0)
 		var a: float = minf(1.0, u * 6.0) * (1.0 - smoothstep(0.75, 1.0, u))
 		layer.draw_texture_rect(FxSheet.glow(), Rect2(c - Vector2(520, 90), Vector2(1040, 180)), false, Color(0, 0, 0, 0.55 * a)))
-	var l: Label = Kit.text(layer, name if name.ends_with("!") else "%s is aboard!" % name, "display", Color(0.98, 0.95, 0.88))
-	l.add_theme_font_size_override("font_size", 44)
+	var l: Label = Kit.text(layer, name if name.ends_with("!") else "%s is aboard!" % name, "hero", Paper.NIGHT_INK)
 	l.add_theme_color_override("font_shadow_color", Color(col.darkened(0.5), 0.9))
 	l.add_theme_constant_override("shadow_outline_size", 14)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -856,11 +852,14 @@ func _sign_on_moment(name: String, col: Color) -> void:
 	l.offset_top = -30
 	l.offset_bottom = 30
 	l.pivot_offset = Vector2(400, 30)
-	l.scale = Vector2(0.6, 0.6)
+	# The name starts unseen and blooms in with its band (words: no BACK).
+	l.scale = Vector2(0.85, 0.85)
+	l.modulate.a = 0.0
 	var tw: Tween = layer.create_tween().set_parallel()
 	tw.tween_method(func(v: float) -> void:
 		t[0] = v
 		layer.queue_redraw(), 0.0, 1.7, 1.7)
-	tw.tween_property(l, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(l, "modulate:a", 0.0, 0.4).set_delay(1.3)
+	Motion.ease_fade(tw, l, "modulate:a", 1.0, Motion.WORD_IN)
+	Motion.ease_rise(tw, l, "scale", Vector2.ONE, 0.35)
+	Motion.ease_exit(tw, l, "modulate:a", 0.0, 0.4).set_delay(1.3)
 	tw.chain().tween_callback(layer.queue_free)

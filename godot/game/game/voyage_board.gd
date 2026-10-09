@@ -22,47 +22,27 @@ var _haul: Dictionary = {}
 var _log: bool = false
 var _tick: float = 0.0
 
-const RED: Color = Color(0.93, 0.42, 0.38)
-const GREEN: Color = Color(0.5, 0.86, 0.58)
+const RED: Color = Paper.NIGHT_RED
+const GREEN: Color = Paper.NIGHT_GREEN
+
+var _parts: Dictionary = {}
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.55)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -600
-	sheet.offset_right = 600
-	sheet.offset_top = -405
-	sheet.offset_bottom = 405
-	add_child(sheet)
-	Paper.night = true
-	Paper.sheet(sheet, 8.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 26)
-	sheet.add_child(m)
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 10)
-	m.add_child(_body)
-	Paper.night = false
+	# THE shell every sheet shares (Paper.open), on the night paper.
+	_parts = Paper.open(self, Paper.SHEET_WIDE, true, close, 26)
+	_body = _parts["body"]
 	_paint()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -98,28 +78,19 @@ static func _days(ms: float) -> String:
 func _paint() -> void:
 	Paper.night = true
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
 	var st: Dictionary = RulesApi.run(session.store, session.uid, "voyageState", [])
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	_body.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.add_theme_constant_override("separation", 0)
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(titles)
-	Paper.text(titles, "THE CHARTERHOUSE", "eyebrow", Paper.ink_soft())
-	Paper.text(titles, "The voyage board", "display", Paper.ink())
+	# THE shared header: the Charterhouse over the title; Past voyages and
+	# Close on the right; the rule.
+	var hd: Dictionary = Paper.header(_body, "The voyage board", "The Charterhouse", close)
 	if not (st["history"] as Array).is_empty():
 		var lb: Pane.PaneButton = Paper.button("Past voyages", _log)
-		lb.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		lb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		lb.pressed.connect(func() -> void:
 			_log = not _log
 			_paint())
-		head.add_child(lb)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
+		(hd["right"] as HBoxContainer).add_child(lb)
 	if not _haul.is_empty():
 		_paint_haul()
 	elif _log:
@@ -293,7 +264,7 @@ func _paint_routes(st: Dictionary) -> void:
 		var lost: float = float(r["lossChance"])
 		var note: Label = Paper.text(bar, "%s: %s aboard, home in about %s.%s" % [r["name"], "%d hand%s" % [crew_n, "" if crew_n == 1 else "s"], _days(float(r["durationMs"])), (" %d%% chance one hand does not come back." % int(round(lost * 100.0))) if lost > 0.0 else " No crew at risk."], "body_strong", RED if lost > 0.0 else Paper.ink(), true)
 		note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var go: Pane.PaneButton = Paper.button("Set sail", true)
+		var go: Pane.PaneButton = Paper.primary("Set sail", true)
 		go.pressed.connect(func() -> void:
 			var res: Variant = await session.act("sendVoyage", [_chosen])
 			session.persist()
@@ -346,7 +317,7 @@ func _route_card(r: Dictionary, crew_n: int, st: Dictionary) -> Control:
 		Paper.text(v, "Opens at Navigation %d" % int(r["minLevel"]), "small", Paper.ink_faint())
 		return b
 	var e: Dictionary = r["expected"]
-	Paper.text(v, "About %s ⟡" % Js.thousands(float(e["doubloons"])), "body_strong", Color(0.94, 0.78, 0.4))
+	Paper.text(v, "About %s ⟡" % Js.thousands(float(e["doubloons"])), "body_strong", Paper.NIGHT_GOLD)
 	Paper.text(v, "%s Navigation XP  ·  %s crew XP each" % [Js.thousands(float(e["xp"])), Js.thousands(float(e["crewXp"]))], "small", Paper.ink_soft(), true)
 	Paper.text(v, "Home in about %s" % _days(float(r["durationMs"])), "small", Paper.ink_soft())
 	var ch: Dictionary = r["chances"]
@@ -421,7 +392,7 @@ func _paint_haul() -> void:
 	var r: Dictionary = Voyages.route(str(_haul["route"]))
 	Paper.text(_body, str(r["name"]).to_upper(), "eyebrow", Paper.ink_soft())
 	if ev.get("booty") == true:
-		Paper.text(_body, "Massive Booty", "heading", Color(0.96, 0.8, 0.36))
+		Paper.text(_body, "Massive Booty", "heading", Paper.NIGHT_GOLD)
 	Paper.text(_body, str(ev["title"]), "display", Paper.ink())
 	Paper.text(_body, str(ev["narrative"]), "body", Paper.ink(), true)
 	Paper.rule(_body)
@@ -433,7 +404,7 @@ func _paint_haul() -> void:
 		var up: String = "  ·  Lv %d" % int(g["newLevel"]) if int(g["newLevel"]) > int(g["oldLevel"]) else ""
 		Paper.stat(_body, str(g["name"]), "+%s crew XP%s" % [Js.thousands(float(_haul["crewXp"])), up])
 	for b: Dictionary in Js.list(_haul.get("earnedBait")):
-		Paper.text(_body, "They brought back a %s lure." % ("Golden" if b["type"] == "golden" else "Luminous"), "body_strong", Color(0.96, 0.8, 0.36))
+		Paper.text(_body, "They brought back a %s lure." % ("Golden" if b["type"] == "golden" else "Luminous"), "body_strong", Paper.NIGHT_GOLD)
 	for n: Variant in Js.list(_haul.get("crewLostNames")):
 		Paper.text(_body, "%s did not come home. They are remembered in the Crew Hall." % str(n), "body_strong", RED, true)
 	var ok: Pane.PaneButton = Paper.button("Back to the board", true)

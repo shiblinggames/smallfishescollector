@@ -16,45 +16,29 @@ signal closed
 var session: Session
 var _body: VBoxContainer
 var _tab: String = "sound"
+var _parts: Dictionary = {}
+var _scroll: ScrollContainer
+## Where each tab's list was scrolled to (a repaint keeps it).
+var _keep: Dictionary = {}
+var _shown: String = ""
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.6)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -460
-	sheet.offset_right = 460
-	sheet.offset_top = -330
-	sheet.offset_bottom = 330
-	add_child(sheet)
-	Paper.night = true
-	Paper.sheet(sheet, 8.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 28)
-	sheet.add_child(m)
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 10)
-	m.add_child(_body)
-	Paper.night = false
+	# THE shell every sheet shares (Paper.open): the scrim, the night paper
+	# rising in, a body column.
+	_parts = Paper.open(self, Paper.SHEET_NARROW, true, close)
+	_body = _parts["body"]
 	_paint()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -65,42 +49,37 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _paint() -> void:
 	Paper.night = true
+	if _scroll != null and is_instance_valid(_scroll):
+		_keep[_shown] = _scroll.scroll_vertical
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	_body.add_child(head)
-	var tl: Label = Paper.text(head, "Settings", "display", Paper.ink())
-	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for t: Array in [["sound", "Sound"], ["display", "Display"], ["play", "Play"], ["controls", "Controls"], ["about", "About"]]:
-		var tb: Pane.PaneButton = Paper.button(t[1], _tab == t[0])
-		var id: String = t[0]
-		tb.pressed.connect(func() -> void:
-			_tab = id
-			Sound.plip()
-			_paint())
-		head.add_child(tb)
-	Paper.rule(_body)
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_body.add_child(scroll)
+	# THE shared header: the title on the left, "Close  Esc" on the right, the
+	# tabs on their own row, the rule.
+	Paper.header(_body, "Settings", "", close, [["sound", "Sound"], ["display", "Display"], ["play", "Play"], ["controls", "Controls"], ["about", "About"]], _tab, func(id: Variant) -> void:
+		if _tab == String(id):
+			return
+		_tab = String(id)
+		Sound.plip()
+		_paint())
+	_scroll = ScrollContainer.new()
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	UiTheme.night_scroll(_scroll)
+	_body.add_child(_scroll)
 	var list: VBoxContainer = VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 14)
-	scroll.add_child(list)
+	_scroll.add_child(list)
 	match _tab:
 		"sound": _sound(list)
 		"display": _display(list)
 		"play": _play(list)
 		"controls": _controls(list)
 		"about": _about(list)
-	var foot: HBoxContainer = HBoxContainer.new()
-	foot.alignment = BoxContainer.ALIGNMENT_END
-	_body.add_child(foot)
-	var x: Pane.PaneButton = Paper.button("Done  Esc")
-	x.pressed.connect(close)
-	foot.add_child(x)
+	_shown = _tab
+	# A repaint of the same tab keeps its place in the list.
+	_scroll.set_deferred("scroll_vertical", int(_keep.get(_tab, 0)))
 	Paper.night = false
 
 

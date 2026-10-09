@@ -11,75 +11,59 @@ signal closed
 var session: Session
 var _body: VBoxContainer
 var _sheet: Control
+var _parts: Dictionary = {}
+var _views: HBoxContainer
+var _status: Label
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.45)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	_sheet = Control.new()
-	_sheet.anchor_left = 0.5
-	_sheet.anchor_right = 0.5
-	_sheet.anchor_bottom = 1.0
-	_sheet.offset_left = -360.0
-	_sheet.offset_right = 360.0
-	_sheet.offset_top = 64.0
-	_sheet.offset_bottom = -24.0
-	add_child(_sheet)
-	Paper.sheet(_sheet, 8.0)
-	var margin: MarginContainer = MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 34)
-	margin.add_theme_constant_override("margin_top", 26)
-	margin.add_theme_constant_override("margin_bottom", 24)
-	_sheet.add_child(margin)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	margin.add_child(col)
-	var head: HBoxContainer = HBoxContainer.new()
-	col.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	titles.add_theme_constant_override("separation", 0)
-	head.add_child(titles)
-	Paper.text(titles, "The Fishing Guide", "display", Paper.INK)
-	Paper.text(titles, "What every level brings, and what you have earned.", "note", Paper.INK_SOFT)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
-	Paper.rule(col)
+	# THE shell every sheet shares (Paper.open): the day's paper, a tall
+	# narrow sheet, centred.
+	_parts = Paper.open(self, Vector2(720, 1000), false, close, 30)
+	_sheet = _parts["sheet"]
+	var col: VBoxContainer = _parts["body"]
+	# THE shared header: the title and its line, Close on the right, the views
+	# as tabs on their own row, the rule; the feedback line under it.
+	var head: Dictionary = Paper.header(col, "The Fishing Guide", "", close)
+	Paper.text(head["titles"] as VBoxContainer, "What every level brings, and what you have earned.", "note", Paper.INK_SOFT)
+	_views = head["tabs"]
+	_views.visible = true
+	_status = Paper.status_line(col)
 	_body = VBoxContainer.new()
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 10)
 	col.add_child(_body)
-	_sheet.modulate.a = 0.0
-	_sheet.position.y += 16.0
-	var tw: Tween = create_tween().set_parallel()
-	tw.tween_property(_sheet, "modulate:a", 1.0, 0.2)
-	tw.tween_property(_sheet, "position:y", _sheet.position.y - 16.0, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_rebuild()
 
 
 func _rebuild() -> void:
+	for c: Node in _views.get_children():
+		_views.remove_child(c)
+		c.queue_free()
+	for o: Array in [["levels", "Every level"], ["skills", "Skills"], ["renown", "Renown"], ["achievements", "Achievements"]]:
+		var b: Pane.PaneButton = Paper.tab(o[1], o[0] == _levels_view, false)
+		b.pressed.connect(func() -> void:
+			if _levels_view == o[0]:
+				return
+			_levels_view = o[0]
+			_levels_only_skills = o[0] == "skills"
+			Paper.say(_status, "")
+			_rebuild())
+		_views.add_child(b)
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
 	_build_levels()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -106,13 +90,6 @@ func _build_levels() -> void:
 	_body.add_child(head)
 	var ht: Label = Paper.text(head, "Fishing %d" % lv, "heading", Paper.INK)
 	ht.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for o: Array in [["levels", "Every level"], ["skills", "Skills"], ["renown", "Renown"], ["achievements", "Achievements"]]:
-		var b: Pane.PaneButton = Paper.button(o[1], o[0] == _levels_view)
-		b.pressed.connect(func() -> void:
-			_levels_view = o[0]
-			_levels_only_skills = o[0] == "skills"
-			_rebuild())
-		head.add_child(b)
 	if _levels_view == "achievements":
 		ht.text = "Achievements"
 		_build_achievements()
@@ -234,11 +211,12 @@ func _build_renown() -> void:
 func _renown_act(op: String, args: Array) -> void:
 	var r: Variant = await session.act(op, args)
 	session.persist()
+	_rebuild()
 	if r is Dictionary and (r as Dictionary).has("error"):
 		Sound.slack()
+		Paper.say(_status, str(r["error"]), Paper.RED)
 	else:
 		Sound.plip()
-	_rebuild()
 
 
 ## ACHIEVEMENTS (port rules): your points, the colours they unlock (the only

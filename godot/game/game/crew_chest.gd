@@ -26,44 +26,21 @@ var _said: String = ""
 var _said_bad: bool = false
 var _busy: bool = false
 var _amount: Array = [10.0, 10.0]
+var _parts: Dictionary = {}
+## Where each tab's two lists were scrolled to (a repaint keeps them).
+var _keep: Dictionary = {}
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.5)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -600
-	sheet.offset_right = 600
-	sheet.offset_top = -410
-	sheet.offset_bottom = 410
-	add_child(sheet)
-	Paper.sheet(sheet, 8.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 28)
-	sheet.add_child(m)
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 10)
-	m.add_child(_body)
+	# THE shell every sheet shares (Paper.open): the day's paper.
+	_parts = Paper.open(self, Paper.SHEET_WIDE, false, close, 28)
+	_body = _parts["body"]
 	_chest = Js.obj(Js.obj(session.save.get("charter")).get("chest"))
 	# A crewmate's move reaches this game as a fresh save: shown at once.
 	session.changed.connect(_on_changed)
-	sheet.scale = Vector2(0.97, 0.97)
-	sheet.pivot_offset = Vector2(600, 410)
-	modulate.a = 0.0
-	var tw: Tween = create_tween().set_parallel()
-	tw.tween_property(self, "modulate:a", 1.0, 0.18)
-	tw.tween_property(sheet, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_paint()
 
 
@@ -75,12 +52,12 @@ func _on_changed() -> void:
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	if session.changed.is_connected(_on_changed):
 		session.changed.disconnect(_on_changed)
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -92,37 +69,35 @@ func _unhandled_input(event: InputEvent) -> void:
 # ── The sheet ─────────────────────────────────────────────────────────────────
 
 func _paint() -> void:
+	# A repaint keeps both lists where they were.
+	var shown: String = str(_body.get_meta("tab", ""))
+	var k: int = 0
+	for sc: Node in _body.find_children("", "ScrollContainer", true, false):
+		_keep["%s/%d" % [shown, k]] = (sc as ScrollContainer).scroll_vertical
+		k += 1
+	_body.set_meta("tab", _tab)
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	_body.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.add_theme_constant_override("separation", 0)
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(titles)
-	Paper.text(titles, str(Js.obj(session.save.get("charter")).get("name", "The Charter")).to_upper(), "eyebrow", Paper.ink_soft())
-	Paper.text(titles, "The crew chest", "display", Paper.ink())
-	for t: Array in TABS:
-		var tb: Pane.PaneButton = Paper.button(t[1], _tab == t[0])
-		tb.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		var id: String = t[0]
-		tb.pressed.connect(func() -> void:
-			_tab = id
-			_said = ""
-			_paint())
-		head.add_child(tb)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
+	# THE shared header: the Charter over the title, Close on the right, the
+	# tabs on their own row, the rule; the feedback line under it.
+	Paper.header(_body, "The crew chest", str(Js.obj(session.save.get("charter")).get("name", "The Charter")), close, TABS, _tab, func(id: Variant) -> void:
+		if _tab == String(id):
+			return
+		_tab = String(id)
+		_said = ""
+		_paint())
 	var hint: String = {
 		"items": "Click to move one copy. Shift-click moves every copy you can spare.",
 		"rods": "Click to move one. Hooks and reels stay with their captain.",
 		"scrap": "Set how much, then move it.",
 	}[_tab]
-	var said: Label = Paper.text(_body, _said if _said != "" else hint, "small", Paper.red() if _said_bad else Paper.ink_soft(), true)
-	said.custom_minimum_size = Vector2(0, 18)
+	var said: Label = Paper.status_line(_body)
+	if _said != "":
+		Paper.say(said, _said, Paper.red() if _said_bad else Paper.green())
+	else:
+		said.text = hint
+		said.modulate.a = 1.0
 	var cols: HBoxContainer = HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 28)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -138,6 +113,10 @@ func _paint() -> void:
 		"rods": _rods()
 		"scrap": _scrap()
 	_foot()
+	k = 0
+	for sc: Node in _body.find_children("", "ScrollContainer", true, false):
+		(sc as ScrollContainer).set_deferred("scroll_vertical", int(_keep.get("%s/%d" % [_tab, k], 0)))
+		k += 1
 
 
 func _column(parent: Control, title: String) -> VBoxContainer:
@@ -172,16 +151,7 @@ func _empty(col: Control, t: String) -> void:
 func _tile(g: GridContainer, tex: Texture2D, name_: String, sub: String, sub_col: Color, why: String, on_move: Callable) -> Button:
 	var bt: Button = Button.new()
 	bt.flat = true
-	bt.focus_mode = Control.FOCUS_NONE
 	bt.custom_minimum_size = TILE
-	var clear: StyleBoxEmpty = StyleBoxEmpty.new()
-	var wash: StyleBoxFlat = StyleBoxFlat.new()
-	wash.bg_color = Color(Paper.ink(), 0.06)
-	wash.set_corner_radius_all(12)
-	for k: String in ["normal", "disabled", "focus"]:
-		bt.add_theme_stylebox_override(k, clear)
-	for k: String in ["hover", "pressed"]:
-		bt.add_theme_stylebox_override(k, wash)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	v.offset_left = 6
@@ -210,8 +180,12 @@ func _tile(g: GridContainer, tex: Texture2D, name_: String, sub: String, sub_col
 		pic.modulate.a = 0.4
 		n.modulate.a = 0.55
 		bt.disabled = true
+		bt.focus_mode = Control.FOCUS_NONE
 		bt.mouse_default_cursor_shape = Control.CURSOR_FORBIDDEN
 	else:
+		# Paper.Tile's feel: the painting swells under the pointer, a press
+		# squeezes, a pad can reach it.
+		CrewHall.art_hover(bt, pic, Kit.ink(Kit.GOLD))
 		bt.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		bt.tooltip_text = "Click: move one.  Shift-click: move all you can."
 		bt.pressed.connect(func() -> void:
@@ -229,8 +203,9 @@ func _count_line(n: float, rarity: String) -> String:
 	return out
 
 
+## A rarity in words' colour: THE table's pigment (Paper.rarity), inked.
 func _rarity_col(rarity: String) -> Color:
-	return Paper.rarity(float(RARITY_IDX.get(rarity, 1.0))).darkened(0.25)
+	return Paper.rarity(rarity).darkened(0.25) if Kit.rarity_key(rarity) != "" else Paper.ink_soft()
 
 
 # ── Raid items ────────────────────────────────────────────────────────────────
@@ -349,8 +324,7 @@ func _scrap() -> void:
 
 
 func _scrap_side(col: Control, total: float, side: int, verb_label: String, verb: String, none: String) -> void:
-	var big: Label = Paper.text(col, Js.thousands(total), "display", Paper.ink())
-	big.add_theme_font_size_override("font_size", 56)
+	Paper.text(col, Js.thousands(total), "hero", Paper.ink())
 	Paper.text(col, "forge scrap", "small", Paper.ink_soft())
 	if total <= 0.0:
 		_empty(col, none)

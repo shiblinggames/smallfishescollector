@@ -19,7 +19,7 @@ extends VBoxContainer
 ##              the bunks' style: driftwood up to bone), with what the next buys.
 
 const LEVIATHAN: Color = Color("#3fd6c4")
-const GOLD: Color = Color(0.98, 0.8, 0.38)
+const GOLD: Color = Paper.NIGHT_GOLD
 
 var hall: CrewHall
 var _tiles: Array = []
@@ -149,7 +149,8 @@ func pass_on_next(f: Callable) -> void:
 # ── The deep's offer ──────────────────────────────────────────────────────────
 
 func _offer_card(m: Dictionary) -> Control:
-	var p: Pane = Kit.pane(null, { "radius": 12, "fill": [Color("#0f1d1d")], "border": [2, Color(LEVIATHAN, 0.75)], "shadow": [Color(LEVIATHAN, 0.35), 18, Vector2.ZERO], "pad": [16, 12, 16, 12] })
+	# Flat on the night paper, a teal hairline for the deep (no glow).
+	var p: Pane = Kit.pane(null, { "radius": Kit.R_LARGE, "fill": [Paper.NIGHT_PAPER_HI], "border": [1, Color(LEVIATHAN, 0.5)], "pad": [16, 12, 16, 12], "keep": true, "night": true })
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	p.add_child(h)
@@ -178,7 +179,7 @@ func _offer_card(m: Dictionary) -> Control:
 	bs.add_theme_constant_override("separation", 6)
 	bs.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(bs)
-	var take: Pane.PaneButton = Paper.button("Take the new one", true)
+	var take: Pane.PaneButton = Paper.primary("Take the new one", true)
 	take.pressed.connect(func() -> void: _answer(m, true, p))
 	bs.add_child(take)
 	var keep: Pane.PaneButton = Paper.button("Keep theirs")
@@ -208,47 +209,23 @@ func _answer(m: Dictionary, take: bool, card: Control) -> void:
 		Sound.seal(true)
 	else:
 		Sound.slack()
-	var tw: Tween = card.create_tween().set_parallel()
-	tw.tween_property(card, "modulate:a", 0.0, 0.3)
-	tw.tween_property(card, "scale", Vector2(0.96, 0.96), 0.3)
-	await tw.finished
+	var tw: Tween = Motion.leave(card, false)
+	if tw != null:
+		await tw.finished
 	hall._draw_room()
 
 
 # ── Putting a hand in, and taking them out ────────────────────────────────────
 
-## An empty bunk pressed: the hands who can take it, as a row of cards.
+## An empty bunk pressed: the hands who can take it, as a row of cards, on a
+## sheet of its own over the hall (Picker: Escape or B closes only it).
 func pick_for(tile: BunkTile) -> void:
+	var pk: Picker = Picker.new()
+	hall.add_child(pk)
+	var v: VBoxContainer = pk.body
 	Paper.night = true
-	var shade: Control = Control.new()
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.mouse_filter = Control.MOUSE_FILTER_STOP
-	hall.add_child(shade)
-	var dim: ColorRect = ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.add_child(dim)
-	dim.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			shade.queue_free())
-	var cc: CenterContainer = CenterContainer.new()
-	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	shade.add_child(cc)
-	var sheet: Control = Control.new()
-	sheet.custom_minimum_size = Vector2(900, 560)
-	cc.add_child(sheet)
-	Paper.sheet(sheet, 7.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 22)
-	sheet.add_child(m)
-	var v: VBoxContainer = VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	m.add_child(v)
 	var lev: bool = Bunks.is_leviathan(float(tile.slot))
-	Paper.text(v, "The Leviathan bunk" if lev else "Bunk %d" % (tile.slot + 1), "title", LEVIATHAN if lev else Paper.ink())
+	Paper.header(v, "The Leviathan bunk" if lev else "Bunk %d" % (tile.slot + 1), "Put a hand in", pk.close)
 	var cap: int = int(Js.num(st().get("capHours")))
 	var hours: Array = [cap]
 	if lev:
@@ -256,22 +233,30 @@ func pick_for(tile: BunkTile) -> void:
 		var hr: HBoxContainer = HBoxContainer.new()
 		hr.add_theme_constant_override("separation", 6)
 		v.add_child(hr)
-		Paper.text(hr, "Stint:", "body_strong", Paper.ink())
-		var btns: Array = []
+		var lab: Label = Paper.text(hr, "Stint:", "body_strong", Paper.ink())
+		lab.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		# The stint lengths as tabs: the one chosen is inked and underlined.
+		var opts: Array = []
 		for h: int in range(1, cap + 1):
-			var hb: Pane.PaneButton = Paper.button("%dh" % h, true)
-			hb.modulate = Color(1, 1, 1, 1.0 if h == cap else 0.45)
-			btns.append(hb)
-			hb.pressed.connect(func() -> void:
-				hours[0] = h
-				for i: int in btns.size():
-					(btns[i] as Control).modulate = Color(1, 1, 1, 1.0 if i + 1 == h else 0.45))
-			hr.add_child(hb)
+			opts.append([h, "%dh" % h])
+		var holder: HBoxContainer = HBoxContainer.new()
+		hr.add_child(holder)
+		var paint: Array = [Callable()]
+		paint[0] = func() -> void:
+			for c: Node in holder.get_children():
+				holder.remove_child(c)
+				c.queue_free()
+			Paper.tabs(holder, opts, hours[0], func(h: Variant) -> void:
+				hours[0] = int(h)
+				Sound.plip()
+				(paint[0] as Callable).call(), true)
+		(paint[0] as Callable).call()
 	else:
 		Paper.text(v, "%d hour%s, %s XP when it is done. They stay in until then." % [cap, "" if cap == 1 else "s", Js.thousands(floor(Bunks.rate_per_hour(st().get("drillLevel")) * cap))], "note", Paper.ink_soft(), true)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	UiTheme.night_scroll(scroll)
 	v.add_child(scroll)
 	var cards: HFlowContainer = HFlowContainer.new()
 	cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -299,7 +284,6 @@ func pick_for(tile: BunkTile) -> void:
 		var why: String = rw[1]
 		var cb: Button = Button.new()
 		cb.flat = true
-		cb.focus_mode = Control.FOCUS_NONE
 		cb.custom_minimum_size = Vector2(112, 160)
 		cb.disabled = why != ""
 		var cv: VBoxContainer = VBoxContainer.new()
@@ -322,20 +306,17 @@ func pick_for(tile: BunkTile) -> void:
 		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		if why == "":
 			any = true
+			CrewHall.art_hover(cb, pic)
 			var mid: float = float(mem["id"])
 			cb.pressed.connect(func() -> void:
-				shade.queue_free()
+				pk.close()
 				_put_in(tile, mid, hours[0]))
+		else:
+			cb.focus_mode = Control.FOCUS_NONE
 		cards.add_child(cb)
 	if not any:
 		Paper.text(v, "Nobody free to bunk right now.", "note", Paper.ink_faint())
-	var close: Pane.PaneButton = Paper.button("Not now")
-	close.size_flags_horizontal = Control.SIZE_SHRINK_END
-	close.pressed.connect(shade.queue_free)
-	v.add_child(close)
 	Paper.night = false
-	sheet.modulate.a = 0.0
-	sheet.create_tween().tween_property(sheet, "modulate:a", 1.0, 0.18)
 
 
 func _put_in(tile: BunkTile, crew_id: float, hours: int) -> void:
@@ -385,3 +366,30 @@ func collect(tile: BunkTile) -> void:
 		pc.promo = p
 		hall.add_child(pc)
 		await pc.done
+
+
+## THE BUNK PICKER'S SHEET: its own scrim and night paper over the hall
+## (Paper.open). Escape, the pad's B, the scrim or Close shut only this sheet,
+## never the hall behind it.
+class Picker:
+	extends Control
+	var body: VBoxContainer
+	var _parts: Dictionary = {}
+
+	func _init() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_STOP
+
+	func _ready() -> void:
+		_parts = Paper.open(self, Vector2(900, 560), true, close, 22)
+		body = _parts["body"]
+
+	func close() -> void:
+		if Motion.closing(self):
+			return
+		Paper.close(self, _parts)
+
+	func _unhandled_input(event: InputEvent) -> void:
+		if event.is_action_pressed("fish_back"):
+			get_viewport().set_input_as_handled()
+			close()

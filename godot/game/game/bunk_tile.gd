@@ -38,7 +38,9 @@ var _was_ready: bool = false
 
 func _ready() -> void:
 	flat = true
-	focus_mode = Control.FOCUS_NONE
+	# A pad can reach a bunk; its ring is CHOSEN on the night paper.
+	focus_mode = Control.FOCUS_ALL if open else Control.FOCUS_NONE
+	add_theme_stylebox_override("focus", UiTheme.focus_ring(Kit.R_SMALL, Paper.CHOSEN))
 	custom_minimum_size = Vector2(W, H)
 	clip_contents = false
 	_t = randf() * 5.0
@@ -101,7 +103,10 @@ func _ready() -> void:
 	_was_ready = ready_now()
 	mouse_entered.connect(func() -> void: _hover = 1.0)
 	mouse_exited.connect(func() -> void: _hover = 0.0)
+	focus_entered.connect(func() -> void: _hover = 1.0)
+	focus_exited.connect(func() -> void: _hover = 0.0)
 	pressed.connect(_press)
+	Kit.tap(self)
 	disabled = not open
 
 
@@ -151,8 +156,8 @@ func _press() -> void:
 	else:
 		# Still asleep: a little rustle, and the time left.
 		var tw: Tween = create_tween()
-		tw.tween_property(_pic, "rotation", -0.12, 0.08)
-		tw.tween_property(_pic, "rotation", -0.06, 0.2).set_trans(Tween.TRANS_BACK)
+		tw.tween_property(_pic, "rotation", -0.12, 0.08).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(_pic, "rotation", -0.06, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Just bunked: the card drops into the bunk and settles.
@@ -170,7 +175,7 @@ func tuck_in() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	var lift: float = -4.0 * _hover if open and member.is_empty() else 0.0
-	_bunk.position.y = lerpf(_bunk.position.y, 54.0 + lift, 0.2)
+	_bunk.position.y = lerpf(_bunk.position.y, 54.0 + lift, Motion.hover_k(delta))
 	if _pic != null:
 		var rdy: bool = ready_now()
 		if rdy:
@@ -206,7 +211,7 @@ func _draw_fx() -> void:
 			_fx.draw_line(Vector2(W / 2.0, 97), Vector2(W / 2.0, 111), Color(Paper.NIGHT_INK, a), 2.0, true)
 		return
 	if ready_now():
-		var p: float = 0.5 + 0.5 * sin(_t * 3.0)
+		var p: float = Motion.pulse(_t)
 		_fx.draw_circle(c, 70.0, Color(HallBunks.GOLD, 0.08 + 0.07 * p))
 		_fx.draw_arc(c, 62.0 + 4.0 * p, 0.0, TAU, 48, Color(HallBunks.GOLD, 0.35 + 0.25 * p), 2.0, true)
 		return
@@ -224,7 +229,6 @@ func _draw_fx() -> void:
 	var hgt: float = maxf(4.0, full_h * (1.0 - pr))
 	_fx.draw_rect(Rect2(base + Vector2(-9, 0), Vector2(18, 5)), Color(0.55, 0.42, 0.25))
 	_fx.draw_rect(Rect2(base + Vector2(-5, -hgt), Vector2(10, hgt)), Color(0.93, 0.88, 0.76))
-	_fx.draw_rect(Rect2(base + Vector2(-5, -hgt), Vector2(3, hgt)), Color(1, 1, 1, 0.25))
 	# A drip down the side, longer as it burns.
 	_fx.draw_rect(Rect2(base + Vector2(3, -hgt), Vector2(2, minf(hgt, 6.0 + 20.0 * pr))), Color(0.98, 0.95, 0.85))
 	var top: Vector2 = base + Vector2(0, -hgt)

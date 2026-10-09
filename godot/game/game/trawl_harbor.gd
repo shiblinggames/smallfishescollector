@@ -14,45 +14,27 @@ var _picking: String = ""
 ## The last haul brought in, shown until dismissed.
 var _haul: Dictionary = {}
 var _tick: float = 0.0
+var _parts: Dictionary = {}
+var _status: Label
+## A word for the status line, said on the next paint.
+var _said: String = ""
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.55)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -470
-	sheet.offset_right = 470
-	sheet.offset_top = -360
-	sheet.offset_bottom = 360
-	add_child(sheet)
-	Paper.night = true
-	Paper.sheet(sheet, 8.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 28)
-	sheet.add_child(m)
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 10)
-	m.add_child(_body)
-	Paper.night = false
+	# THE shell every sheet shares (Paper.open), on the night paper.
+	_parts = Paper.open(self, Vector2(940, 720), true, close, 28)
+	_body = _parts["body"]
 	_paint()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -90,15 +72,14 @@ static func _left(ms: float) -> String:
 func _paint() -> void:
 	Paper.night = true
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
-	var head: HBoxContainer = HBoxContainer.new()
-	_body.add_child(head)
-	var tl: Label = Paper.text(head, "The Trawl Harbor", "display", Paper.ink())
-	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
+	# THE shared header and the feedback line under it.
+	Paper.header(_body, "The Trawl Harbor", "", close)
+	_status = Paper.status_line(_body)
+	if _said != "":
+		Paper.say(_status, _said, Paper.NIGHT_RED)
+		_said = ""
 	if not _haul.is_empty():
 		_paint_haul()
 		Paper.night = false
@@ -231,6 +212,7 @@ func _paint_picker(free: Array) -> void:
 			session.persist()
 			if r is Dictionary and (r as Dictionary).has("error"):
 				Sound.slack()
+				_said = str(r["error"])
 			else:
 				Sound.plip()
 			_picking = ""
@@ -246,6 +228,8 @@ func _collect(key: String) -> void:
 		Sound.chest(str(r["bumper"]) in ["good", "bumper", "jackpot"])
 	else:
 		Sound.slack()
+		if r is Dictionary:
+			_said = str(r["error"])
 	_paint()
 
 
@@ -260,7 +244,7 @@ func _paint_haul() -> void:
 	if not (_haul["fish"] as Array).is_empty():
 		Paper.text(_body, "In the nets: %s." % ", ".join(_haul["fish"]), "small", Paper.ink_soft(), true)
 	if int(_haul["newFishingLevel"]) > int(_haul["oldFishingLevel"]):
-		Paper.text(_body, "Fishing level %d." % int(_haul["newFishingLevel"]), "body_strong", Color(0.5, 0.86, 0.58))
+		Paper.text(_body, "Fishing level %d." % int(_haul["newFishingLevel"]), "body_strong", Paper.NIGHT_GREEN)
 	var ok: Pane.PaneButton = Paper.button("Back to the harbor", true)
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	ok.pressed.connect(func() -> void:

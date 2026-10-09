@@ -13,41 +13,28 @@ var session: Session
 var on_captains: Callable
 var on_quit: Callable
 var captains_label: String = "Captains"
+## The night paper (true) or the day's (false); null: read off the sea.
+var night_side: Variant = null
+var _parts: Dictionary = {}
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.55)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			_resume())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -170
-	sheet.offset_right = 170
-	sheet.offset_top = -190
-	sheet.offset_bottom = 190
-	add_child(sheet)
-	Paper.night = true
-	Paper.sheet(sheet, 8.0)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	col.offset_left = 30
-	col.offset_right = -30
-	col.offset_top = 28
-	col.offset_bottom = -28
-	col.add_theme_constant_override("separation", 10)
-	sheet.add_child(col)
-	var t: Label = Paper.text(col, "Paused", "display", Paper.ink())
+	# THE TWO PAPERS (M12): the day's paper on the fishing grounds, the night
+	# paper north of the reef and in a fight.
+	var nt: bool = _night_side()
+	_parts = Paper.open(self, Vector2(340, 400), nt, _resume, 30)
+	var col: VBoxContainer = _parts["body"]
+	Paper.night = nt
+	var t: Label = Paper.text(col, "Paused", "display_sm", Paper.ink())
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Paper.rule(col, nt)
 	var first: Pane.PaneButton = null
 	for b: Array in [["Resume", _resume], ["Settings", _settings], [captains_label, _captains], ["Quit to Desktop", _quit]]:
-		var bt: Pane.PaneButton = Paper.button(b[0], b[0] == "Resume")
+		# Resume is the one thing to do (the plank); the rest are quiet.
+		var bt: Pane.PaneButton = Paper.primary(b[0], nt) if b[0] == "Resume" else Paper.button(b[0], false, nt)
 		bt.custom_minimum_size = Vector2(0, 46)
 		bt.pressed.connect(b[1])
 		col.add_child(bt)
@@ -59,6 +46,27 @@ func _ready() -> void:
 	first.grab_focus.call_deferred()
 
 
+## Which paper: given by the opener, or read off the sea (north of the reef,
+## or a fight on the water).
+func _night_side() -> bool:
+	if night_side != null:
+		return bool(night_side)
+	var main: Node = get_tree().current_scene if is_inside_tree() else null
+	var scr: Variant = main.get("_screen") if main != null else null
+	if scr is Sea:
+		var sea: Sea = scr
+		if sea.stage != null:
+			return true
+		var boat: Variant = sea.get("_boat")
+		if boat is Node2D:
+			return North.is_north((boat as Node2D).position)
+	if session != null:
+		var y: Variant = session.profile().get("sea_y")
+		if y != null:
+			return North.is_north(Vector2(0, Js.num(y)))
+	return false
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()
@@ -66,9 +74,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _resume() -> void:
+	if Motion.closing(self):
+		return
 	Sound.plip()
 	resumed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _settings() -> void:
@@ -79,8 +89,10 @@ func _settings() -> void:
 
 
 func _captains() -> void:
+	if Motion.closing(self):
+		return
 	Sound.plip()
-	queue_free()
+	Paper.close(self, _parts)
 	if on_captains.is_valid():
 		on_captains.call()
 

@@ -116,7 +116,7 @@ func _open(d: String) -> void:
 	for q: Dictionary in _st["puzzles"]:
 		var meta: Dictionary = ChartRoom.c()["hold"][q["difficulty"]]
 		var label: String = "%s%s" % [meta["label"], "  ✓" if q.get("solved") != null else ""]
-		var b: Button = Paper.button(label, q["difficulty"] == d)
+		var b: Button = Paper.tab(label, q["difficulty"] == d, false)
 		var dd: String = q["difficulty"]
 		b.pressed.connect(func() -> void: _open(dd))
 		_tabs.add_child(b)

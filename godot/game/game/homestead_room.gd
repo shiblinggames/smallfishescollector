@@ -16,6 +16,10 @@ var _body: VBoxContainer
 var _room: String = "main"
 var _side: String = "furnish"
 var _flash: String = ""
+var _parts: Dictionary = {}
+var _scroll: ScrollContainer
+## Where each side's list was scrolled to (a repaint keeps it).
+var _keep: Dictionary = {}
 
 const ROOM_W: float = 700.0
 const ROOM_H: float = 700.0 * 666.0 / 1008.0
@@ -25,37 +29,17 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.5)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -600
-	sheet.offset_right = 600
-	sheet.offset_top = -390
-	sheet.offset_bottom = 390
-	add_child(sheet)
-	Paper.sheet(sheet, 8.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 26)
-	sheet.add_child(m)
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 10)
-	m.add_child(_body)
+	# THE shell every sheet shares (Paper.open): the day's paper.
+	_parts = Paper.open(self, Paper.SHEET_WIDE, false, close, 26)
+	_body = _parts["body"]
 	_paint()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -69,18 +53,16 @@ func _h() -> Dictionary:
 
 
 func _paint() -> void:
+	if _scroll != null and is_instance_valid(_scroll):
+		_keep[_scroll.get_meta("side", "")] = _scroll.scroll_vertical
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
 	var h: Dictionary = _h()
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	_body.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.add_theme_constant_override("separation", 0)
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(titles)
-	Paper.text(titles, "YOUR ISLAND  ·  %s" % str(Homestead.built(h)["name"]).to_upper(), "eyebrow", Paper.INK_SOFT)
-	Paper.text(titles, Homestead.name_of(h), "display", Paper.INK)
+	# THE shared header: the island over its name on the left; the name field,
+	# Name it and Close on the right; the rule.
+	var hd: Dictionary = Paper.header(_body, Homestead.name_of(h), "Your island  ·  %s" % str(Homestead.built(h)["name"]), close)
+	var head: HBoxContainer = hd["right"]
 	var field: LineEdit = LineEdit.new()
 	field.placeholder_text = "Name your island"
 	field.text = str(Js.nz(h.get("name"), ""))
@@ -93,12 +75,11 @@ func _paint() -> void:
 	nb.pressed.connect(func() -> void: _act("homesteadRename", [field.text], "Named."))
 	field.text_submitted.connect(func(_t: String) -> void: nb.pressed.emit())
 	head.add_child(nb)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	x.pressed.connect(close)
-	head.add_child(x)
+	# The feedback line: reserved, so a message never pushes the rooms down.
+	var status: Label = Paper.status_line(_body)
 	if _flash != "":
-		Paper.text(_body, _flash.trim_prefix("!"), "body_strong", Paper.RED if _flash.begins_with("!") else Color(0.25, 0.5, 0.32), true)
+		Paper.say(status, _flash.trim_prefix("!"), Paper.RED if _flash.begins_with("!") else Paper.GREEN)
+		_flash = ""
 	var cols: HBoxContainer = HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 24)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -111,7 +92,7 @@ func _paint() -> void:
 	left.add_child(rooms)
 	for r: Dictionary in Homestead.data()["rooms"]:
 		var open: bool = Homestead.tier(h) >= int(r["needsHouse"])
-		var b: Pane.PaneButton = Paper.button(str(r["name"]).trim_prefix("The ").capitalize() if open else "%s  ·  %s" % [str(r["name"]).trim_prefix("The ").capitalize(), Homestead.data()["house"][int(r["needsHouse"])]["name"]], _room == r["id"])
+		var b: Pane.PaneButton = Paper.tab(str(r["name"]).trim_prefix("The ").capitalize() if open else "%s  ·  %s" % [str(r["name"]).trim_prefix("The ").capitalize(), Homestead.data()["house"][int(r["needsHouse"])]["name"]], _room == r["id"], false)
 		b.disabled = not open
 		var rid: String = r["id"]
 		b.pressed.connect(func() -> void:
@@ -139,7 +120,7 @@ func _paint() -> void:
 	if Homestead.tier(h) >= 2:
 		sides.append(["hang", "Hang badges"])
 	for t: Array in sides:
-		var tb: Pane.PaneButton = Paper.button(t[1], _side == t[0])
+		var tb: Pane.PaneButton = Paper.tab(t[1], _side == t[0], false)
 		var sid: String = t[0]
 		tb.pressed.connect(func() -> void:
 			_side = sid
@@ -157,6 +138,9 @@ func _paint() -> void:
 		"furnish": _furnish(list, h)
 		"build": _build(list, h)
 		"hang": _hang(list, h)
+	_scroll = scroll
+	_scroll.set_meta("side", _side)
+	_scroll.set_deferred("scroll_vertical", int(_keep.get(_side, 0)))
 
 
 # ── The room, painted ────────────────────────────────────────────────────────
@@ -266,7 +250,7 @@ func _room_view(h: Dictionary) -> Control:
 					ic.tooltip_text = str(f["name"])
 					row.add_child(ic)
 			if row.get_child_count() == 0:
-				var e: Label = Paper.text(box, "No giant on the wall yet. They live in the Ancient Deep.", "small", Color(0.95, 0.9, 0.8))
+				var e: Label = Kit.lift(Paper.text(box, "No giant on the wall yet. They live in the Ancient Deep.", "small", Kit.SEA_INK))
 				e.position = Vector2(ROOM_W * 0.5 - 200.0, ROOM_H * 0.4)
 				e.size = Vector2(400, 30)
 				e.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -299,7 +283,7 @@ func _furnish(list: VBoxContainer, h: Dictionary) -> void:
 			nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			var owned: bool = (h["owned"] as Array).has(o["id"])
 			if here["id"] == o["id"]:
-				Paper.text(row, "In place", "small", Color(0.25, 0.5, 0.32))
+				Paper.text(row, "In place", "small", Paper.GREEN)
 				continue
 			var found: bool = o.get("found") != null
 			if found and not owned:
@@ -327,7 +311,7 @@ func _build(list: VBoxContainer, h: Dictionary) -> void:
 		var nm: Label = Paper.text(top, str(b["name"]), "body_strong", Paper.INK if k <= t + 1 else Paper.INK_FAINT)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if k <= t:
-			Paper.text(top, "Standing", "small", Color(0.25, 0.5, 0.32))
+			Paper.text(top, "Standing", "small", Paper.GREEN)
 		elif k == t + 1:
 			var bb: Pane.PaneButton = Paper.button("Build  ·  %s ⟡" % Js.thousands(float(b["cost"])), true)
 			bb.disabled = float(b["cost"]) > doubloons

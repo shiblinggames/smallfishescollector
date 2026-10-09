@@ -58,6 +58,8 @@ var _almanac: Almanac
 
 func _ready() -> void:
 	session = sea.session
+	# The fishing side: the day's paper.
+	set_meta("night_root", false)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
@@ -103,28 +105,17 @@ func _ready() -> void:
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
 	margin.add_child(col)
-	var head: HBoxContainer = HBoxContainer.new()
-	col.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	titles.add_theme_constant_override("separation", 0)
-	head.add_child(titles)
-	Paper.text(titles, "The Locker", "display", Paper.INK)
-	Paper.text(titles, "What she carries, and what it does.", "note", Paper.INK_SOFT)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
-	_tabs = HBoxContainer.new()
-	_tabs.add_theme_constant_override("separation", 6)
-	col.add_child(_tabs)
-	Paper.rule(col)
+	# THE shared header: the title and its line, Close on the right, the tabs
+	# on their own row, the rule.
+	var head: Dictionary = Paper.header(col, "The Locker", "", close)
+	Paper.text(head["titles"] as VBoxContainer, "What she carries, and what it does.", "note", Paper.INK_SOFT)
+	_tabs = head["tabs"]
+	_tabs.visible = true
 	_body = VBoxContainer.new()
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 10)
 	col.add_child(_body)
-	panel.modulate.a = 0.0
-	create_tween().tween_property(panel, "modulate:a", 1.0, 0.25)
+	Motion.panel_in(panel)
 	_show_tab(tab)
 
 
@@ -136,14 +127,16 @@ func _stage(t: String) -> void:
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	sea.stage = null
 	if _almanac != null and is_instance_valid(_almanac):
 		_almanac.mark_read()
 	_wear(Skipper.look_of(session.profile()))
 	closed.emit()
-	queue_free()
+	if _card.visible:
+		Motion.leave(_card, false)
+	Motion.dismiss(self, _panel, _veil)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -173,10 +166,10 @@ func _show_tab(t: String) -> void:
 	tab = t
 	_stage(t)
 	for c: Node in _tabs.get_children():
+		_tabs.remove_child(c)
 		c.queue_free()
 	for o: Array in [["loadout", "Loadout"], ["boat", "Boat"], ["hold", "Hold"], ["crates", "Crates%s" % ("  %d" % _crate_count() if _crate_count() > 0 else "")], ["orders", "Orders"], ["log", "Log"]]:
-		var b: Pane.PaneButton = Paper.button(o[1], o[0] == t)
-		b.custom_minimum_size = Vector2(76, 34)
+		var b: Pane.PaneButton = Paper.tab(o[1], o[0] == t, false)
 		b.tooltip_text = "Tab to switch"
 		b.pressed.connect(func() -> void: _show_tab(o[0]))
 		_tabs.add_child(b)
@@ -256,13 +249,9 @@ func _order_row(c: Dictionary, got: float, claimed: bool, i: int, claim_label: S
 	v.add_theme_constant_override("separation", 3)
 	row.add_child(v)
 	Paper.text(v, str(c["label"]), "body_strong", Paper.INK if not claimed else Paper.INK_FAINT)
-	var bar: Control = Control.new()
-	bar.custom_minimum_size = Vector2(0, 6)
+	# THE progress bar (Kit.bar), on the day paper.
 	var frac: float = clampf(got / maxf(1.0, target), 0.0, 1.0)
-	bar.draw.connect(func() -> void:
-		bar.draw_rect(Rect2(Vector2.ZERO, bar.size), Color(Paper.INK, 0.12))
-		bar.draw_rect(Rect2(Vector2.ZERO, Vector2(bar.size.x * frac, bar.size.y)), Color(0.36, 0.6, 0.42) if frac >= 1.0 else Color(Paper.INK, 0.45)))
-	v.add_child(bar)
+	_bar(v, frac, Paper.GREEN if frac >= 1.0 else Color(Paper.INK, 0.45))
 	Paper.text(v, "%s of %s" % [Js.thousands(minf(got, target)), Js.thousands(target)], "small", Paper.INK_SOFT)
 	if claimed:
 		Paper.text(row, "Claimed", "small", Paper.INK_FAINT)
@@ -274,6 +263,15 @@ func _order_row(c: Dictionary, got: float, claimed: bool, i: int, claim_label: S
 	else:
 		var rw: Label = Paper.text(row, claim_label.trim_prefix("Claim  ·  "), "small", Paper.INK_FAINT)
 		rw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+
+## Kit.bar on the paper (its track inked for it).
+static func _bar(parent: Node, frac: float, col: Color) -> void:
+	var w: VBoxContainer = VBoxContainer.new()
+	w.set_meta("paper", true)
+	w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(w)
+	Kit.bar(w, frac, col)
 
 
 func _order_act(op: String, args: Array) -> void:
@@ -539,7 +537,7 @@ func _crate_table(col: VBoxContainer, tier: String, stowed: int) -> void:
 		head.add_child(b)
 	# Collected.
 	Paper.text(col, "Collected  %d of %d" % [got[0], got[1]], "value", Paper.INK)
-	Kit.bar(col, float(got[0]) / maxf(1.0, float(got[1])), Color(0.3, 0.55, 0.4))
+	_bar(col, float(got[0]) / maxf(1.0, float(got[1])), Paper.GREEN)
 	# Always inside.
 	var w: Dictionary = c["outcomeWeights"][tier]
 	var tot: float = float(w["doubloons"]) + float(w["bait"]) + float(w["cosmetic"])
@@ -643,7 +641,7 @@ func _build_loadout() -> void:
 	row.add_theme_constant_override("separation", 5)
 	_body.add_child(row)
 	for s: Array in SLOTS:
-		var b: Pane.PaneButton = Paper.button(s[1], s[0] == slot)
+		var b: Pane.PaneButton = Paper.tab(s[1], s[0] == slot, false)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func() -> void: pick_slot(s[0]))
 		row.add_child(b)
@@ -1063,7 +1061,7 @@ func _build_hold() -> void:
 	_body.add_child(sorts)
 	Paper.text(sorts, "Sort", "label", Paper.INK_SOFT).vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	for o: Array in [["value", "Value"], ["rarity", "Rarity"], ["name", "Name"]]:
-		var b: Pane.PaneButton = Paper.button(o[1], o[0] == _hold_sort)
+		var b: Pane.PaneButton = Paper.tab(o[1], o[0] == _hold_sort, false)
 		b.pressed.connect(func() -> void:
 			_hold_sort = o[0]
 			_show_tab("hold"))
@@ -1190,7 +1188,6 @@ class Pips:
 			if i < units.size():
 				var col: Color = units[i]
 				draw_circle(c + Vector2(0.4, 0.3), r * (0.9 + 0.08 * sin(i * 2.3)), Color(col, 0.75))
-				draw_circle(c - Vector2(r * 0.25, r * 0.25), r * 0.35, Color(1, 1, 1, 0.18))
 			draw_arc(c, r, 0.0, TAU, 18, Color(Paper.INK, 0.45 if i < units.size() else 0.28), 1.0, true)
 
 

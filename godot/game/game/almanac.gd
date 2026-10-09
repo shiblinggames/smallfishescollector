@@ -8,8 +8,9 @@ extends Control
 ## chapter heading whose rule is its progress, with the water's payout and
 ## prestige; and nine other ways to read the book), the Goldens, the Giants
 ## (the Long Vigil's wall and the release), the Pets, and the Stats. Specimens
-## stand frameless on a halo of their rarity with a floor shadow; what is not
-## caught yet is a silhouette. It re-reads the save every time it opens and
+## stand frameless on a halo of their rarity, no floor shadow (M5); what is not
+## caught yet is a silhouette. No coloured rims or accent bars (M4): the room
+## shown is an inked, underlined word. It re-reads the save every time it opens and
 ## after a claim or a prestige; closing it stamps the book as read, so NEW
 ## marks last the whole visit. The accent is the Almanac's violet; the ink is
 ## the kit's.
@@ -80,6 +81,10 @@ func _ready() -> void:
 		book.set_meta("paper", true)
 		add_child(book)
 		Paper.sheet(book, 6.0)
+		# The book opens in (and closes out) like every sheet.
+		modulate.a = 0.0
+		Motion.ease_fade(create_tween(), self, "modulate:a", 1.0, Motion.PANEL_FADE)
+		Motion.panel_in(book)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	col.add_theme_constant_override("separation", 0)
@@ -141,9 +146,12 @@ func _ready() -> void:
 
 
 func close() -> void:
+	if Motion.closing(self):
+		return
 	mark_read()
 	closed.emit()
-	queue_free()
+	Motion.ease_exit(create_tween(), self, "modulate:a", 0.0, Motion.PANEL_OUT)
+	Motion.dismiss(self)
 
 
 ## Stamp the book as read (closing it, or leaving the Locker's Log tab).
@@ -230,10 +238,20 @@ func _draw_tabs() -> void:
 	]
 	for l: Array in labels:
 		var on: bool = l[0] == _room
-		var n: Dictionary = { "radius": 9, "fill": [Kit.a(ACCENT, 0.13) if on else Color(0, 0, 0, 0)], "border": [1, Kit.a(ACCENT, 0.4) if on else Color(0, 0, 0, 0)], "pad": 0 }
+		# A contents line, no box or accent wash: the room shown is inked full
+		# and underlined in red ink (as Paper.tab), the rest soft.
+		var n: Dictionary = { "radius": Kit.R_SMALL, "fill": [Color(0, 0, 0, 0)], "pad": 0, "keep": true }
 		var h: Dictionary = n.duplicate()
-		h["fill"] = [Kit.a(ACCENT, 0.18) if on else Color(1, 1, 1, 0.04)]
+		h["fill"] = [Color(Paper.INK, 0.05)]
 		var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
+		if on:
+			var ul: Control = Control.new()
+			ul.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			ul.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			ul.draw.connect(func() -> void:
+				var y: float = ul.size.y - 5.0
+				ul.draw_line(Vector2(11, y), Vector2(ul.size.x * 0.55, y), Paper.RED, 2.0, true))
+			b.add_child(ul)
 		b.custom_minimum_size = Vector2(0, 38)
 		var row: HBoxContainer = HBoxContainer.new()
 		row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -244,7 +262,7 @@ func _draw_tabs() -> void:
 		var name_l: Label = Kit.text(row, l[0], "body_strong", INK if on else DIM)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		var badge: Label = Kit.text(row, l[1], "small", ACCENT.lightened(0.2) if on else FAINT)
+		var badge: Label = Kit.text(row, l[1], "small", INK if on else FAINT)
 		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		b.pressed.connect(func() -> void:
 			_room = l[0]
@@ -285,9 +303,9 @@ func _collection() -> void:
 	var opts: Array = []
 	for v: String in VIEWS:
 		opts.append([v, v])
-	var pills: HBoxContainer = Kit.tabs(null, opts, _view, ACCENT, func(k: Variant) -> void:
+	var pills: HBoxContainer = Paper.tabs(null, opts, _view, func(k: Variant) -> void:
 		_view = k
-		_draw_room())
+		_draw_room(), false)
 	for b: Node in pills.get_children():
 		pills.remove_child(b)
 		flow.add_child(b)
@@ -375,7 +393,7 @@ func _water(z: Array) -> void:
 ## The chapter rule: a hairline that fills in a colour as far as it has got.
 func _rule(frac: float, c: Color) -> Control:
 	var track: ColorRect = ColorRect.new()
-	track.color = Color(1, 1, 1, 0.10)
+	track.color = Color(Paper.INK, 0.12)
 	track.custom_minimum_size = Vector2(0, 2)
 	var fill: ColorRect = ColorRect.new()
 	fill.color = c
@@ -403,7 +421,7 @@ func _prestige_line(z: Array, zc: Color, cycle_done: bool) -> void:
 		var s: Label = Label.new()
 		s.text = "★"
 		s.add_theme_font_size_override("font_size", 13)
-		s.add_theme_color_override("font_color", (Kit.GOLD if lvl >= 5 else zc) if i < lvl else Color(1, 1, 1, 0.16))
+		s.add_theme_color_override("font_color", Kit.ink(Kit.GOLD if lvl >= 5 else zc) if i < lvl else Color(Paper.INK, 0.2))
 		stars.add_child(s)
 	if lvl >= 5:
 		_t(row, "Max Prestige", "eyebrow", Kit.GOLD).size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -530,9 +548,15 @@ func _card(e: Dictionary) -> Control:
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.disabled = not caught
 	if caught:
-		# Lift on hover, as the web's specimens do.
-		b.mouse_entered.connect(func() -> void: holder.create_tween().tween_property(holder, "position:y", -3.0, 0.12))
-		b.mouse_exited.connect(func() -> void: holder.create_tween().tween_property(holder, "position:y", 0.0, 0.16))
+		# The specimen swells a little under the pointer (Paper.Tile's feel; a
+		# container owns its place, so it scales rather than lifts).
+		var grow: Callable = func(on: bool) -> void:
+			holder.pivot_offset = holder.size / 2.0
+			Motion.ease_rise(holder.create_tween(), holder, "scale", Vector2.ONE * (1.06 if on else 1.0), 0.15)
+		b.mouse_entered.connect(func() -> void: grow.call(true))
+		b.mouse_exited.connect(func() -> void: grow.call(false))
+		b.focus_entered.connect(func() -> void: grow.call(true))
+		b.focus_exited.connect(func() -> void: grow.call(false))
 		Kit.tap(b)
 	b.pressed.connect(func() -> void: _species(e))
 	return b
@@ -687,7 +711,7 @@ func _needle(pct: float, c: Color) -> Control:
 	track.custom_minimum_size = Vector2(0, 12)
 	track.draw.connect(func() -> void:
 		var y: float = track.size.y / 2.0
-		track.draw_line(Vector2(3, y), Vector2(track.size.x - 3, y), Color(1, 1, 1, 0.08), 6.0, true)
+		track.draw_line(Vector2(3, y), Vector2(track.size.x - 3, y), Color(Paper.INK, 0.12), 6.0, true)
 		var px: float = clampf(track.size.x * pct, 2.0, track.size.x - 2.0)
 		track.draw_rect(Rect2(Vector2(px - 1.5, 0), Vector2(3, track.size.y)), c))
 	return track
@@ -699,6 +723,7 @@ func _sheet(w: float, spec: Dictionary) -> Pane:
 	if _overlay != null:
 		_overlay.queue_free()
 	_overlay = Control.new()
+	_overlay.name = "Overlay"
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_overlay)
@@ -712,14 +737,14 @@ func _sheet(w: float, spec: Dictionary) -> Pane:
 	_overlay.add_child(center)
 	var card: Pane = Kit.pane(center, spec)
 	card.custom_minimum_size = Vector2(w, 0)
-	card.modulate.a = 0.0
-	(func() -> void: Kit.modal_in(card)).call_deferred()
+	Motion.panel_in(card)
 	return card
 
 
+## The panel over the book goes: it fades out (it never vanishes in a frame).
 func _close_overlay() -> void:
 	if _overlay != null:
-		_overlay.queue_free()
+		Motion.leave(_overlay, true, false)
 		_overlay = null
 
 
@@ -761,7 +786,7 @@ func _tally(pairs: Array, c: Color) -> void:
 	for i: int in pairs.size():
 		if i > 0:
 			var rule: ColorRect = ColorRect.new()
-			rule.color = Color(1, 1, 1, 0.07)
+			rule.color = Color(Paper.INK, 0.12)
 			rule.custom_minimum_size = Vector2(1, 0)
 			strip.add_child(rule)
 		var v: VBoxContainer = VBoxContainer.new()
@@ -858,8 +883,10 @@ func _giants() -> void:
 		slab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(slab)
 		# The slab: the deep behind it, darkened from the left where the words are.
-		var width: int = 1 if (rank < 2 or not lit) else (3 if rank == 5 else 2)
-		var edge: Color = Kit.a(Color(fr[1]), 0.7) if lit else (Color(1, 1, 1, 0.14) if got else Color(1, 1, 1, 0.08))
+		# A plain hairline round the slab (no rim in the frame's colour, M4): the
+		# frame is named in words under the giant's name.
+		var width: int = 1
+		var edge: Color = Color(1, 1, 1, 0.22) if lit else (Color(1, 1, 1, 0.14) if got else Color(1, 1, 1, 0.08))
 		var face: Pane = Pane.new({ "radius": 14, "fill": [Color(0.031, 0.024, 0.063, 0.72)], "pad": 0 })
 		face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -917,7 +944,7 @@ func _giants() -> void:
 				var m: ShaderMaterial = ShaderMaterial.new()
 				m.shader = load("res://game/golden.gdshader")
 				art.material = m
-		Kit.lift(_t(col, eyebrow, "eyebrow", Color(fr[1]) if lit else DIM))
+		Kit.lift(_t(col, eyebrow, "eyebrow", Kit.INK_2 if lit else DIM))
 		Kit.lift(_t(col, name, "heading", INK if got else LOCKED))
 		var sl: Label = Kit.lift(_t(col, sub, "small", DIM, true))
 		sl.custom_minimum_size = Vector2(150, 0)

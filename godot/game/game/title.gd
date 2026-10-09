@@ -87,15 +87,12 @@ func _ready() -> void:
 	page.custom_minimum_size = Vector2(minf(1180.0, get_viewport_rect().size.x - 48.0), 0)
 	page.add_theme_constant_override("separation", 6)
 	margin.add_child(page)
-	var t: Label = Kit.lift(Kit.text(page, "Seas the Booty", "display", Kit.INK))
-	t.add_theme_font_size_override("font_size", 52)
+	var t: Label = Kit.lift(Kit.text(page, "Seas the Booty", "hero", Kit.SEA_INK))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var sub: Label = Kit.text(page, "Fish the open sea, alone or with your crew", "body_strong", Color(0.96, 0.92, 0.84))
-	sub.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
-	sub.add_theme_constant_override("shadow_offset_y", 2)
+	var sub: Label = Kit.lift(Kit.text(page, "Fish the open sea, alone or with your crew", "body_strong", Kit.SEA_INK))
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if note != "":
-		var n: Label = Kit.lift(Kit.text(page, note, "body_strong", Color("#f8c28a"), true))
+		var n: Label = Kit.lift(Kit.text(page, note, "body_strong", Kit.SEA_GOLD, true))
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var gap: Control = Control.new()
 	gap.custom_minimum_size = Vector2(0, 14)
@@ -136,8 +133,8 @@ func _sheet(eyebrow: String, heading: String, blurb: String, tint: Color, emblem
 	tv.add_theme_constant_override("separation", 0)
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(tv)
-	Kit.text(tv, eyebrow, "eyebrow", Kit.ink(SEA_DYE) if emblem == "fleet" else Color(0.55, 0.3, 0.15))
-	Kit.text(tv, heading, "title", Kit.PAPER_INK).add_theme_font_size_override("font_size", 28)
+	Kit.text(tv, eyebrow, "eyebrow", Kit.ink(SEA_DYE) if emblem == "fleet" else Paper.EYEBROW)
+	Kit.text(tv, heading, "display_sm", Kit.PAPER_INK)
 	Kit.text(v, blurb, "note", Kit.PAPER_INK_SOFT, true)
 	Paper.rule(v)
 	return v
@@ -162,14 +159,14 @@ func _captains(v: VBoxContainer) -> void:
 		h.add_child(info)
 		if c.has("error"):
 			Kit.text(info, id, "heading", Kit.PAPER_INK)
-			Kit.text(info, "This save would not open.", "small", Color(0.66, 0.2, 0.15))
+			Kit.text(info, "This save would not open.", "small", Paper.RED)
 			continue
-		Kit.text(info, c["name"], "heading", Kit.PAPER_INK).add_theme_font_size_override("font_size", 20)
+		Kit.text(info, c["name"], "title", Kit.PAPER_INK)
 		var stats: HBoxContainer = HBoxContainer.new()
 		stats.add_theme_constant_override("separation", 10)
 		info.add_child(stats)
 		Kit.text(stats, "Fishing Lv %d" % int(c["level"]), "value", Kit.PAPER_INK)
-		Kit.text(stats, "%s ⟡" % Js.thousands(float(c["doubloons"])), "value", Color(0.55, 0.38, 0.06))
+		Kit.text(stats, "%s ⟡" % Js.thousands(float(c["doubloons"])), "value", Paper.MONEY)
 		Kit.text(info, "Last sailed %s" % _ago(int(c["at"])), "note", Kit.PAPER_INK_SOFT)
 		var btns: VBoxContainer = VBoxContainer.new()
 		btns.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -219,7 +216,7 @@ func _creator(v: VBoxContainer, heading: String, go_label: String, on_go: Callab
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 8)
 	row.add_child(col)
-	Kit.text(col, heading, "eyebrow", Color(0.55, 0.3, 0.15))
+	Kit.text(col, heading, "eyebrow", Paper.EYEBROW)
 	var nm: LineEdit = _line(col, _name_draft if _name_draft != "" else SteamLayer.suggested_name(), "Your captain's name")
 	nm.text_changed.connect(func(t: String) -> void: _name_draft = t)
 	Kit.text(col, "Their colours", "label", Kit.PAPER_INK_SOFT)
@@ -323,11 +320,11 @@ func _charters(v: VBoxContainer) -> void:
 		var top: HBoxContainer = HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		col.add_child(top)
-		Kit.text(top, c["name"], "heading", Kit.PAPER_INK).add_theme_font_size_override("font_size", 20)
-		Kit.chip(top, "Hardcore" if c["hardcore"] else "Normal", Color(0.66, 0.2, 0.15) if c["hardcore"] else Kit.ink(SEA_DYE))
+		Kit.text(top, c["name"], "title", Kit.PAPER_INK)
+		Kit.chip(top, "Hardcore" if c["hardcore"] else "Normal", Paper.RED if c["hardcore"] else Kit.ink(SEA_DYE))
 		if c["hardcore"] and c["sailed"]:
 			var lv: int = int(c.get("lives", 0.0))
-			Kit.text(top, "%d %s left" % [lv, "life" if lv == 1 else "lives"], "small", Color(0.66, 0.2, 0.15))
+			Kit.text(top, "%d %s left" % [lv, "life" if lv == 1 else "lives"], "small", Paper.RED)
 		var sp: Control = Control.new()
 		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(sp)
@@ -376,7 +373,7 @@ func _charters(v: VBoxContainer) -> void:
 			slot.custom_minimum_size = Vector2(60, 60)
 			var el: Label = Kit.text(e, "Open berth", "note", Kit.PAPER_INK_SOFT)
 			el.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		Kit.text(col, "At sea" if c["sailed"] else "In harbor, the crew still gathering", "note", Kit.ink(SEA_DYE) if c["sailed"] else Color(0.55, 0.38, 0.06))
+		Kit.text(col, "At sea" if c["sailed"] else "In harbor, the crew still gathering", "note", Kit.ink(SEA_DYE) if c["sailed"] else Paper.MONEY)
 		if c["founder"] != mine:
 			Kit.text(col, "Only its founder can host it.", "note", Kit.PAPER_INK_SOFT)
 	var acts: HBoxContainer = HBoxContainer.new()

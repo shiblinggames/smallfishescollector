@@ -14,8 +14,14 @@ var info: Dictionary = {}
 var _berths: VBoxContainer
 var _sail: Button
 var _crew: int = 0
+var _foot: HBoxContainer
+## Escape asked once: the next Escape (or the button) leaves.
+var _asking: bool = false
 
 
+## THE CHARTER CARD (M13, 2026-10-09): the same sea-dyed paper sheet the title
+## screen shows the Charters on, so the hand-off from the title to the harbor
+## keeps its look. Escape is Leave (it asks once).
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UiTheme.make()
@@ -25,47 +31,85 @@ func _ready() -> void:
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
-	var scrim: ColorRect = ColorRect.new()
-	scrim.color = Color(0.02, 0.035, 0.055, 0.66)
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(scrim)
+	# The title screen's veil: the harbour stays a harbour.
+	Kit.wash(self, [[Color(0.02, 0.04, 0.06, 0.25), 0.0], [Color(0.02, 0.04, 0.06, 0.45), 0.5], [Color(0.02, 0.035, 0.05, 0.75), 1.0]])
 	var center: CenterContainer = CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
-	var card: PanelContainer = Room.panel(center, Room.box(Color(0.04, 0.063, 0.086, 0.97), Color(0.37, 0.92, 0.83, 0.3), 18, 24))
-	card.custom_minimum_size = Vector2(560, 0)
+	var card: Pane = Kit.pane(center, { "radius": 16, "fill": [Kit.PAPER.lerp(Title.SEA_DYE, 0.16)], "border": [1, Color(Kit.PAPER_INK, 0.35)], "shadow": [Color(0, 0, 0, 0.45), 26, Vector2(0, 10)], "pad": [26, 22, 26, 24], "paper": true })
+	card.custom_minimum_size = Vector2(580, 0)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	card.add_child(v)
-	Room.text(v, "IN HARBOR", 12, Color(0.75, 0.84, 0.89, 0.8))
-	var top: HBoxContainer = HBoxContainer.new()
-	top.add_theme_constant_override("separation", 10)
-	v.add_child(top)
-	Room.text(top, str(info.get("name", "The Charter")), 28, Color("#f4ecd8"), true)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 14)
+	v.add_child(head)
+	var mark: Title.Emblem = Title.Emblem.new()
+	mark.kind = "fleet"
+	mark.custom_minimum_size = Vector2(58, 48)
+	head.add_child(mark)
+	var tv: VBoxContainer = VBoxContainer.new()
+	tv.add_theme_constant_override("separation", 0)
+	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(tv)
+	Kit.text(tv, "In harbor", "eyebrow", Kit.ink(Title.SEA_DYE))
+	var nr: HBoxContainer = HBoxContainer.new()
+	nr.add_theme_constant_override("separation", 10)
+	tv.add_child(nr)
+	Kit.text(nr, str(info.get("name", "The Charter")), "display_sm", Kit.PAPER_INK)
 	if info.get("hardcore", false):
-		Room.chip(top, "HARDCORE", Color("#f87171"), Color(0.97, 0.44, 0.44, 0.1), Color(0.97, 0.44, 0.44, 0.35), 10).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		Kit.chip(nr, "Hardcore", Paper.RED)
+	Kit.text(v, "The crew gathers here before the Charter sails.", "note", Kit.PAPER_INK_SOFT, true)
+	Paper.rule(v)
 	_berths = VBoxContainer.new()
 	_berths.add_theme_constant_override("separation", 6)
 	v.add_child(_berths)
 	if net.hosting:
 		if SteamLayer.up:
-			var inv: Button = Room.tinted("Invite friends", Color("#5eead4"), 14, 40)
+			var inv: Button = Kit.button("Invite friends", "accent", "large", Title.SEA_DYE)
 			inv.pressed.connect(net.invite)
 			v.add_child(inv)
 		else:
-			Room.text(v, "Crewmates join from their title screen at %s." % _address(), 13, Color("#9fb4c2"), false, true).custom_minimum_size = Vector2(0, 0)
-		Room.text(v, "Set Sail locks the crew for good: nobody joins afterwards. A crewmate who stops playing keeps their berth.", 12, Color("#9fb4c2"), false, true).custom_minimum_size = Vector2(0, 0)
+			Kit.text(v, "Crewmates join from their title screen at %s." % _address(), "small", Kit.PAPER_INK_SOFT, true)
+		Kit.text(v, "Set Sail locks the crew for good: nobody joins afterwards. A crewmate who stops playing keeps their berth.", "note", Kit.PAPER_INK_SOFT, true)
 		_sail = Kit.button("Set Sail", "primary")
 		_sail.custom_minimum_size = Vector2(0, 50)
 		_sail.pressed.connect(func() -> void: set_sail.emit())
 		v.add_child(_sail)
 	else:
-		Room.text(v, "Waiting for the founder to set sail.", 14, Color("#9fb4c2"))
-	var out: Button = Room.tinted("Leave", Color("#8a95a0"), 13, 36)
-	out.pressed.connect(func() -> void: leave.emit())
-	v.add_child(out)
+		Kit.text(v, "Waiting for the founder to set sail.", "body", Kit.PAPER_INK_SOFT)
+	_foot = HBoxContainer.new()
+	_foot.alignment = BoxContainer.ALIGNMENT_END
+	v.add_child(_foot)
+	_leave_button()
+	Motion.panel_in(card)
 	net.roster_changed.connect(_show)
 	_show(net.roster())
+
+
+## Leave (quiet), or, once Escape has asked, the red "Leave the harbor?".
+func _leave_button() -> void:
+	for c: Node in _foot.get_children():
+		_foot.remove_child(c)
+		c.queue_free()
+	var out: Button = Kit.button("Leave the harbor?" if _asking else "Leave", "danger" if _asking else "secondary", "small")
+	out.tooltip_text = "Esc"
+	out.pressed.connect(func() -> void: leave.emit())
+	_foot.add_child(out)
+	if _asking:
+		out.grab_focus.call_deferred()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_action_pressed("fish_back"):
+		return
+	get_viewport().set_input_as_handled()
+	if _asking:
+		leave.emit()
+		return
+	_asking = true
+	Sound.plip()
+	_leave_button()
 
 
 func _address() -> String:
@@ -75,26 +119,31 @@ func _address() -> String:
 	return "127.0.0.1"
 
 
+## The four berths, as the title's Charter cards list a crew: a name and where
+## they are, in words.
 func _show(list: Array) -> void:
 	if not is_inside_tree():
 		return
 	for c: Node in _berths.get_children():
+		_berths.remove_child(c)
 		c.queue_free()
 	_crew = 0
 	for i: int in Charter.BERTHS:
-		var row: PanelContainer = Room.panel(_berths, Room.box(Color(0.06, 0.08, 0.1, 0.95), Color(1, 1, 1, 0.07), 12, 12))
+		var filled: bool = i < list.size()
+		var row: Pane = Kit.pane(_berths, { "radius": Kit.R_LARGE, "fill": [Kit.PAPER.lightened(0.05) if filled else Color(Kit.PAPER_INK, 0.04)], "border": [1, Color(Kit.PAPER_INK, 0.25 if filled else 0.14)], "pad": [14, 10, 14, 10], "paper": true })
 		var h: HBoxContainer = HBoxContainer.new()
 		h.add_theme_constant_override("separation", 10)
 		row.add_child(h)
-		if i < list.size():
+		if filled:
 			var m: Dictionary = list[i]
 			_crew += 1
-			Room.text(h, "●", 13, Color("#4ade80") if m["aboard"] else Color("#5a6570"))
-			var n: Label = Room.text(h, m["name"], 17, Color("#f4ecd8"), true)
+			var n: Label = Kit.text(h, m["name"], "title", Kit.PAPER_INK)
 			n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			Room.text(h, "Founder" if m["founder"] else ("Aboard" if m["aboard"] else "Ashore"), 12, Color("#9fb4c2"))
+			var where: String = "Founder" if m["founder"] else ("Aboard" if m["aboard"] else "Ashore")
+			var st: Label = Kit.text(h, where, "label", Paper.GREEN if m["aboard"] else Paper.INK_FAINT)
+			st.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		else:
-			Room.text(h, "Open berth", 14, Color("#5a6570"))
+			Kit.text(h, "Open berth", "body", Paper.INK_FAINT)
 	if _sail != null:
 		_sail.disabled = _crew < 2
 		_sail.tooltip_text = "A Charter sails with at least two captains." if _crew < 2 else ""

@@ -21,49 +21,30 @@ var _outcome: Dictionary = {}
 var _flash: String = ""
 var _flash_col: Color = Color.WHITE
 
-const GREEN: Color = Color(0.5, 0.86, 0.58)
-const GOLD: Color = Color(0.94, 0.78, 0.4)
-const RED: Color = Color(0.93, 0.48, 0.42)
-const RARITY: Dictionary = { "rare": Color(0.45, 0.68, 0.95), "epic": Color(0.72, 0.5, 0.95), "legendary": Color(1.0, 0.75, 0.3), "ancient": Color(0.4, 0.9, 0.85) }
+const GREEN: Color = Paper.NIGHT_GREEN
+const GOLD: Color = Paper.NIGHT_GOLD
+const RED: Color = Paper.NIGHT_RED
+
+var _parts: Dictionary = {}
+## Where each tab's list was scrolled to (a repaint keeps it).
+var _keep: Dictionary = {}
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var shade: ColorRect = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.06, 0.55)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
-	add_child(shade)
-	var sheet: Control = Control.new()
-	sheet.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	sheet.offset_left = -590
-	sheet.offset_right = 590
-	sheet.offset_top = -400
-	sheet.offset_bottom = 400
-	add_child(sheet)
-	Paper.night = true
-	Paper.sheet(sheet, 8.0)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 26)
-	sheet.add_child(m)
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 10)
-	m.add_child(_body)
-	Paper.night = false
+	# THE shell every sheet shares (Paper.open), on the night paper.
+	_parts = Paper.open(self, Paper.SHEET_WIDE, true, close, 26)
+	_body = _parts["body"]
 	_paint()
 
 
 func close() -> void:
-	if is_queued_for_deletion():
+	if Motion.closing(self):
 		return
 	closed.emit()
-	queue_free()
+	Paper.close(self, _parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -87,44 +68,43 @@ func _say(t: String, col: Color = GREEN) -> void:
 
 func _paint() -> void:
 	Paper.night = true
+	for sc: Node in _body.find_children("", "ScrollContainer", true, false):
+		_keep[str(_body.get_meta("tab", ""))] = (sc as ScrollContainer).scroll_vertical
+		break
+	_body.set_meta("tab", _tab if _picking < 0 else "picking")
 	for c: Node in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
 	var st: Dictionary = _st()
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	_body.add_child(head)
-	var titles: VBoxContainer = VBoxContainer.new()
-	titles.add_theme_constant_override("separation", 0)
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(titles)
-	Paper.text(titles, "THE FORGE  ·  %s SCRAP  ·  %s FATHOMS" % [Js.thousands(float(st["scrap"])), Js.thousands(float(st["fathoms"]))], "eyebrow", Paper.ink_soft())
-	Paper.text(titles, "The anvil", "display", Paper.ink())
+	# THE shared header: the forge's stock over the title, Close on the right,
+	# the tabs on their own row, the rule; the feedback line under it.
+	var tabs: Array = []
 	if st["forge"]:
-		for t: Array in [["anvil", "Anvil"], ["book", "Recipe book  %d of %d" % [(st["book"] as Array).size(), int(st["total"])]], ["items", "Your items"]]:
-			var tb: Pane.PaneButton = Paper.button(t[1], _tab == t[0])
-			tb.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			var id: String = t[0]
-			tb.pressed.connect(func() -> void:
-				_tab = id
-				_picking = -1
-				_flash = ""
-				_paint())
-			head.add_child(tb)
-	var x: Pane.PaneButton = Paper.button("Close  Esc")
-	x.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	x.pressed.connect(close)
-	head.add_child(x)
+		tabs = [["anvil", "Anvil"], ["book", "Recipe book  %d of %d" % [(st["book"] as Array).size(), int(st["total"])]], ["items", "Your items"]]
+	Paper.header(_body, "The anvil", "The forge  ·  %s scrap  ·  %s fathoms" % [Js.thousands(float(st["scrap"])), Js.thousands(float(st["fathoms"]))], close, tabs, _tab, func(id: Variant) -> void:
+		if _tab == String(id) and _picking < 0:
+			return
+		_tab = String(id)
+		_picking = -1
+		_flash = ""
+		_paint())
 	if not st["forge"]:
 		Paper.text(_body, "The anvil is cold. The Forge opens in the Davy Jones Gauntlet's Locker.", "body", Paper.ink_soft(), true)
 		Paper.text(_body, "Once it is lit: put two raid items on the anvil to find what they fuse into, forge what you find, temper spare copies to make an item stronger, and break unwanted copies into scrap.", "small", Paper.ink_soft(), true)
 		Paper.night = false
 		return
+	var status: Label = Paper.status_line(_body)
 	if _flash != "":
-		Paper.text(_body, _flash, "body_strong", _flash_col, true)
+		Paper.say(status, _flash, _flash_col)
+		_flash = ""
 	match _tab:
 		"anvil": _anvil(st)
 		"book": _book(st)
 		"items": _items(st)
+	for sc: Node in _body.find_children("", "ScrollContainer", true, false):
+		UiTheme.night_scroll(sc as ScrollContainer)
+		(sc as ScrollContainer).set_deferred("scroll_vertical", int(_keep.get(str(_body.get_meta("tab", "")), 0)))
+		break
 	Paper.night = false
 
 
@@ -134,28 +114,20 @@ func _name(id: String) -> String:
 	return str(Armory.item(id).get("name", id))
 
 
+## An item's rarity colour, from THE rarity table (Kit.RARITY), as it reads on
+## the night paper.
 func _rcol(id: String) -> Color:
-	return RARITY.get(str(Armory.item(id).get("rarity", "")), Color(0.6, 0.55, 0.5))
+	var r: String = str(Armory.item(id).get("rarity", ""))
+	return Kit.rarity(r) if Kit.rarity_key(r) != "" else Paper.NIGHT_INK_SOFT
 
 
+## An item as a tile: frameless, its painting on a watercolour blot of its
+## rarity, the name and a line under it; the slot being filled is circled in
+## ink (Paper.ring). An empty slot is a faint blot that says what to do.
 func _tile(id: String, px: Vector2, sub: String, on: bool = false) -> Button:
-	var col: Color = _rcol(id) if id != "" else Color(1, 1, 1, 0.4)
 	var bt: Button = Button.new()
 	bt.flat = true
-	bt.focus_mode = Control.FOCUS_NONE
 	bt.custom_minimum_size = px
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = Color(col, 0.08 if id != "" else 0.03)
-	sb.border_color = Color(col, 0.95 if on else 0.5)
-	sb.set_border_width_all(2 if on else 1)
-	sb.set_corner_radius_all(10)
-	var hv: StyleBoxFlat = sb.duplicate()
-	hv.bg_color = Color(col, 0.16)
-	hv.border_color = Color(col, 0.95)
-	for k: String in ["normal", "disabled"]:
-		bt.add_theme_stylebox_override(k, sb)
-	for k: String in ["hover", "pressed"]:
-		bt.add_theme_stylebox_override(k, hv)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	v.offset_left = 6
@@ -166,17 +138,27 @@ func _tile(id: String, px: Vector2, sub: String, on: bool = false) -> Button:
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_theme_constant_override("separation", 2)
 	bt.add_child(v)
+	var holder: Control = Control.new()
+	holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(holder)
+	Paper.blot(holder, _rcol(id) if id != "" else Paper.NIGHT_INK_FAINT, 0.55 if id != "" else 0.25, float(absi((id + sub).hash()) % 5000) / 100.0)
+	var pic: TextureRect = TextureRect.new()
+	if id != "":
+		pic.texture = Skipper.tex(str(Armory.item(id).get("image", "")).trim_prefix("/"))
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(pic)
+	if on:
+		CrewHall.ring_over(holder)
+	CrewHall.art_hover(bt, pic)
 	if id == "":
 		var e: Label = Paper.text(v, sub, "small", Paper.ink_faint(), true)
 		e.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		e.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		return bt
-	var pic: TextureRect = TextureRect.new()
-	pic.texture = Skipper.tex(str(Armory.item(id).get("image", "")).trim_prefix("/"))
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pic.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(pic)
 	var n: Label = Paper.text(v, _name(id), "small", Paper.ink(), true)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if sub != "":
@@ -341,7 +323,7 @@ func _preview(st: Dictionary) -> void:
 	var warn: Array = []
 	if kind == "transmute":
 		var enough: bool = int(held.get(a, 0)) >= 2 and float(st["scrap"]) >= Forge.TRANSMUTE_SCRAP
-		var tb: Pane.PaneButton = Paper.button("Transmute  ·  2 copies and %d scrap" % int(Forge.TRANSMUTE_SCRAP), enough)
+		var tb: Pane.PaneButton = Paper.primary("Transmute  ·  2 copies and %d scrap" % int(Forge.TRANSMUTE_SCRAP), true)
 		tb.disabled = not enough
 		tb.pressed.connect(func() -> void: _do("forgeTransmute", [a], "Transmuted into %s." % _name(res)))
 		act.add_child(tb)
@@ -353,7 +335,7 @@ func _preview(st: Dictionary) -> void:
 		for id: String in need:
 			if int(held.get(id, 0)) < int(need[id]):
 				enough = false
-		var fb: Pane.PaneButton = Paper.button("Forge it  ·  one copy of each part", enough)
+		var fb: Pane.PaneButton = Paper.primary("Forge it  ·  one copy of each part", true)
 		fb.disabled = not enough
 		fb.pressed.connect(func() -> void: _do("forgeRaidItem", [res], "Forged: %s." % _name(res)))
 		act.add_child(fb)

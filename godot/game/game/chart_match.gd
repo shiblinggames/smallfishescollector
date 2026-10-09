@@ -93,7 +93,7 @@ func _new_run() -> void:
 		_off.append(Vector2(0, -CELL * (_rows + 1 - i / _cols) * 0.0))
 		_scale.append(1.0)
 	if _end != null:
-		_end.queue_free()
+		Motion.leave(_end, true, false)
 		_end = null
 	# The board drops in, column by column.
 	for i: int in _board.size():
@@ -310,10 +310,8 @@ func _finish() -> void:
 	_end = Control.new()
 	_end.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_canvas.add_child(_end)
-	var dim: ColorRect = ColorRect.new()
-	dim.color = Color(0.05, 0.08, 0.09, 0.62)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_end.add_child(dim)
+	# THE scrim (the kit's tinted base), over the board only.
+	Kit.scrim(_end, Kit.SCRIM_SHEET, false)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	v.offset_left = -170
@@ -323,19 +321,19 @@ func _finish() -> void:
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	_end.add_child(v)
 	var head: String = "Top of the ladder!" if res.get("maxed", false) else ("Run over" if _left <= 0 else "Done")
-	var l1: Label = Kit.text(v, head, "title", Color(0.98, 0.95, 0.88))
+	var l1: Label = Kit.text(v, head, "title", Paper.NIGHT_INK)
 	l1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var l2: Label = Kit.text(v, "%s  ·  tier %d of 5" % [Js.thousands(_score), int(res.get("tier", 0))], "heading", ChartStudy.TEAL.lightened(0.2))
 	l2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var won: int = int(res.get("pointsWon", 0))
-	var l3: Label = Kit.text(v, ("+%d charting point%s" % [won, "" if won == 1 else "s"]) if won > 0 else "No new points: beat your best tier to bank more.", "small", Color(0.9, 0.86, 0.78), true)
+	var l3: Label = Kit.text(v, ("+%d charting point%s" % [won, "" if won == 1 else "s"]) if won > 0 else "No new points: beat your best tier to bank more.", "small", Paper.NIGHT_INK_SOFT, true)
 	l3.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var again: Button = Kit.button("Play again", "primary", "small")
 	again.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	again.pressed.connect(_new_run)
 	v.add_child(again)
 	_end.modulate.a = 0.0
-	create_tween().tween_property(_end, "modulate:a", 1.0, 0.25)
+	Motion.ease_fade(create_tween(), _end, "modulate:a", 1.0, Motion.PANEL_FADE + 0.07)
 	if won > 0:
 		Sound.perfect()
 
