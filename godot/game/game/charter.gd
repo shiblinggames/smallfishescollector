@@ -663,6 +663,7 @@ func flush() -> void:
 			b["look"] = Skipper.look_of(s.profile())
 	_dirty.clear()
 	DirAccess.make_dir_recursive_absolute(_dir())
+	Playtest.stamp(data)
 	var err: Error = SaveFile.write_file(ProjectSettings.globalize_path(_path(id())), JsJson.stringify(data))
 	if err != OK:
 		push_error("the Charter did not write: %s" % error_string(err))

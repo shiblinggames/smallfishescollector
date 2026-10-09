@@ -59,6 +59,7 @@ static func create(id: String) -> Dictionary:
 
 static func write(save: Dictionary, carried: Dictionary) -> Error:
 	DirAccess.make_dir_recursive_absolute(_dir())
+	Playtest.stamp(save)
 	var text: String = SaveFile.serialize(save, carried, Js.iso(Clock.now_ms()))
 	return SaveFile.write_file(ProjectSettings.globalize_path(_path(save["uid"])), text)
 
@@ -82,6 +83,29 @@ static func summary(id: String) -> Dictionary:
 		"at": FileAccess.get_modified_time(_path(id)),
 		"look": Skipper.look_of(p),
 	}
+
+
+## IMPORT A CAPTAIN (test builds only, Playtest): a save file from anywhere
+## (a web captain converted by tools/import_web_captain.mts) checked and written
+## in as its own captain; one already here with the same id is kept beside it
+## as <id>.json.bak. { name } or { error }.
+static func import_file(file_path: String) -> Dictionary:
+	if Playtest.release():
+		return { "error": "Importing is for test builds only." }
+	var loaded: Dictionary = SaveFile.deserialize(FileAccess.get_file_as_string(file_path), _species())
+	if loaded.has("error"):
+		return { "error": "That file is not a captain's save (%s)." % loaded["error"] }
+	var save: Dictionary = loaded["save"]
+	if str(save.get("uid", "")) == "":
+		return { "error": "That save has no captain in it." }
+	DirAccess.make_dir_recursive_absolute(_dir())
+	var at: String = _path(save["uid"])
+	if FileAccess.file_exists(at):
+		DirAccess.copy_absolute(at, at + ".bak")
+	var err: Error = write(save, loaded["carried"])
+	if err != OK:
+		return { "error": "It could not be written: %s" % error_string(err) }
+	return { "name": str(Js.nz((save["profile"] as Dictionary).get("username"), "Captain")) }
 
 
 ## RETIRE: the file moves to retired/<id>-<stamp>.json. Nothing is deleted; a

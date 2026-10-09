@@ -2278,6 +2278,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- PLAYTEST PROGRESS STAYS IN THE PLAYTEST (Kong, 2026-10-09: testers' web captains brought in
+  for testing, then wiped "once we do the full production release"; everything is wiped, imported
+  or not). game/playtest.gd: the build's channel is game/channel (tools/build.mjs writes it into
+  override.cfg; "dev" from the editor). A build that is not the store game stamps every captain
+  (Captains.write) and Charter (Charter.flush) it writes "playtest"; the store game's title
+  screen moves stamped files to user://playtest_archive (nothing deleted) and refuses imports.
+  Test builds have "Import a captain" on the title screen (Captains.import_file: checked as a
+  save, written in, one already there kept as .bak). For testers: from web/, export each
+  account (scripts/player-save.mts export <username> --out playtest/<name>.json), then
+  `npx tsx ../godot/game/tools/import_web_captain.mts saves/playtest/*.json --out
+  saves/playtest-captains` writes <username>.json files to send each tester their own, and
+  `IMPORT_DIR=<folder> godot --headless -s tests/import_check.gd` opens every one on the real sea
+  and reads every system. tests/playtest_check.gd holds the stamp, import and sweep.
 - THE COMPASS GOES NORTH-UP, AND THE TOP RIGHT ROW (Kong, 2026-10-09: the heading-up ribbon "is a
   bit nauseating"; the top right "sits on a different plane" from the Auto Catcher; the Captains
   pill "is weird"). The ribbon no longer scrolls: north fixed in the middle, the whole round

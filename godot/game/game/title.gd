@@ -39,6 +39,8 @@ var _first: Control = null
 
 
 func _ready() -> void:
+	# The store game: playtest captains and Charters set aside (Playtest).
+	Playtest.sweep()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UiTheme.make()
 	var bg: TextureRect = TextureRect.new()
@@ -197,10 +199,40 @@ func _captains(v: VBoxContainer) -> void:
 		v.add_child(add)
 		if _first == null:
 			_first = add
+		# A test build takes a captain brought from the web (Playtest).
+		if not Playtest.release():
+			var imp: Button = Kit.button("Import a captain", "secondary", "small")
+			imp.tooltip_text = "Open a captain's save file (a web captain sent to you for the playtest)"
+			imp.pressed.connect(_pick_import)
+			v.add_child(imp)
+			if _import_note != "":
+				var note: Label = Kit.text(v, _import_note, "small", Kit.INK_2)
+				note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		return
 	_creator(v, "New captain", "Set out", func(n: String) -> void: new_captain.emit(n, _color), func() -> void:
 		_making = false
 		_build())
+
+
+var _import_note: String = ""
+
+
+## The file picker for a captain's save; the captain is written in and listed.
+func _pick_import() -> void:
+	var fd: FileDialog = FileDialog.new()
+	fd.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	fd.access = FileDialog.ACCESS_FILESYSTEM
+	fd.filters = PackedStringArray(["*.json ; Captain save"])
+	fd.use_native_dialog = true
+	fd.title = "Import a captain"
+	add_child(fd)
+	fd.file_selected.connect(func(p: String) -> void:
+		var r: Dictionary = Captains.import_file(p)
+		_import_note = str(r["error"]) if r.has("error") else "%s is aboard." % r["name"]
+		fd.queue_free()
+		_build())
+	fd.canceled.connect(fd.queue_free)
+	fd.popup_centered_ratio(0.6)
 
 
 ## Name and colour, with the captain shown as you choose.

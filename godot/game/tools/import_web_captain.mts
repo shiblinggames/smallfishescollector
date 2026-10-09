@@ -13,6 +13,12 @@
 //   npx tsx ../godot/game/tools/import_web_captain.mts saves/kingkong-for-port.json
 //
 // An existing save for that captain is kept beside it as <id>.json.bak first.
+//
+// FOR TESTERS (the playtest): --out <folder> writes <username>.json there
+// instead, to send each tester their own (they press "Import a captain" on the
+// title screen of a test build). Several exports at once:
+//
+//   npx tsx ../godot/game/tools/import_web_captain.mts saves/playtest/*.json --out saves/playtest-captains
 // Tables the port does not model are carried in the file untouched.
 
 import fs from 'fs'
@@ -21,13 +27,17 @@ import os from 'os'
 import { fromWebExport, serializeSave, type WebExport } from '../../../web/lib/data/local/saveFile'
 import type { SpeciesRow } from '../../../web/lib/data/fishingData'
 
-const src = process.argv[2]
-if (!src) {
-  console.log('usage: npx tsx ../godot/game/tools/import_web_captain.mts <export.json>')
+const args = process.argv.slice(2)
+const outI = args.indexOf('--out')
+const outDir = outI >= 0 ? args[outI + 1] : null
+const srcs = args.filter((_, i) => outI < 0 || (i !== outI && i !== outI + 1))
+if (!srcs.length) {
+  console.log('usage: npx tsx ../godot/game/tools/import_web_captain.mts <export.json>... [--out <folder>]')
   process.exit(1)
 }
 const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
 const species = JSON.parse(fs.readFileSync(path.join(here, '..', 'content', 'fish_species.json'), 'utf8')) as SpeciesRow[]
+for (const src of srcs) {
 const exp = JSON.parse(fs.readFileSync(src, 'utf8')) as WebExport
 const { save, carried } = fromWebExport(exp, species)
 
@@ -46,13 +56,15 @@ s.bounty = null
 s.bountyHistory = []
 
 const appdata = process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming')
-const dir = path.join(appdata, 'Seas the Booty', 'captains')
+const dir = outDir ?? path.join(appdata, 'Seas the Booty', 'captains')
 fs.mkdirSync(dir, { recursive: true })
-const out = path.join(dir, `${save.uid}.json`)
-if (fs.existsSync(out)) fs.copyFileSync(out, out + '.bak')
+const name = String((save.profile as Record<string, unknown>).username ?? save.uid).replace(/[^A-Za-z0-9_-]/g, '_')
+const out = path.join(dir, outDir ? `${name}.json` : `${save.uid}.json`)
+if (!outDir && fs.existsSync(out)) fs.copyFileSync(out, out + '.bak')
 fs.writeFileSync(out, serializeSave(save, carried))
 
 const p = save.profile as Record<string, unknown>
 console.log(`${p.username ?? save.uid}: fishing xp ${p.fishing_xp}, ship tier ${p.ship_tier}, ${save.crew.length} crew, ${Object.keys(save.collection).length} species caught, ${save.clears.length} raids cleared`)
 console.log(`carried untouched: ${Object.keys(carried).join(', ') || 'none'}`)
 console.log(`-> ${out}`)
+}

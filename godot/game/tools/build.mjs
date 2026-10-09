@@ -91,7 +91,7 @@ let commit = 'unknown'
 try { commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: HERE }).toString().trim() } catch {}
 const stamp = `${channel} ${new Date().toISOString().slice(0, 10)} ${commit}`
 fs.mkdirSync(CONTENT, { recursive: true })
-fs.writeFileSync(path.join(CONTENT, 'override.cfg'), `; Written by tools/build.mjs: this build's Steam channel.\n[steam]\napp_id=${ch.appId}\n\n[application]\nconfig/build="${stamp}"\n`)
+fs.writeFileSync(path.join(CONTENT, 'override.cfg'), `; Written by tools/build.mjs: this build's Steam channel.\n[steam]\napp_id=${ch.appId}\n\n[application]\nconfig/build="${stamp}"\n\n[game]\nchannel="${channel}"\n`)
 if (!ch.appId) console.log(`\nNOTE: the ${channel} channel has no appId yet in godot/steam/ids.json: the build runs without Steam until it does.`)
 
 // 5. SteamPipe.
