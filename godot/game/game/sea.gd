@@ -1940,7 +1940,8 @@ func _wanderers(now: float, clock: Dictionary, lift: Color) -> void:
 			want[t["key"]] = t
 		for k: String in _strangers.keys():
 			if not want.has(k) and k != _hailing:
-				(_strangers[k] as Node).queue_free()
+				# A trader leaving the water fades off it (never gone in a frame).
+				Motion.leave(_strangers[k] as Wanderer, true, false)
 				_strangers.erase(k)
 		var labels: Dictionary = Rules.data()["traders"]["kindLabel"]
 		for k: String in want:
@@ -1952,6 +1953,9 @@ func _wanderers(now: float, clock: Dictionary, lift: Color) -> void:
 			w.done = _dealt_keys.has(k)
 			_world.add_child(w)
 			_strangers[k] = w
+			# And one coming into it fades in.
+			w.modulate.a = 0.0
+			Motion.ease_fade(w.create_tween(), w, "modulate:a", 1.0, Shipmate.FADE)
 	for list: Dictionary in [_regulars, _strangers]:
 		for k: String in list:
 			(list[k] as Wanderer).lift = lift

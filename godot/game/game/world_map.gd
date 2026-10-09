@@ -505,21 +505,21 @@ func _draw_bays() -> void:
 		if shut:
 			for k: int in range(-12, 13):
 				var off: float = k * r / 6.0
-				_bays.draw_line(c + Vector2(off - r, -r), c + Vector2(off + r, r), Color(0.3, 0.22, 0.16, 0.12), 1.5, true)
+				_bays.draw_line(c + Vector2(off - r, -r), c + Vector2(off + r, r), Color(Paper.INK, 0.12), 1.5, true)
 		var nm: String = str(b["name"])
 		var fs: int = clampi(int(r * 0.14), 12, 30)
 		var tw: float = big.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		_bays.draw_string(big, c + Vector2(-tw / 2.0, -r * 0.62), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.2, 0.15, 0.1, 0.35 if shut else 0.55))
+		_bays.draw_string(big, c + Vector2(-tw / 2.0, -r * 0.62), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(Paper.INK, 0.35 if shut else 0.55))
 		# How much of an open bay is charted, under its name.
 		if not shut and sea._xfog != null and Charting.BONUS.has(str(b["id"])) and r > 60.0:
 			var sh2: float = Charting.share(str(b["id"]), sea._xfog.bits)
 			var cl: String = "Charted whole" if sh2 >= Charting.DONE_AT else "%d%% charted" % int(floor(sh2 * 100.0))
 			var cw: float = small.get_string_size(cl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
-			_bays.draw_string(small, c + Vector2(-cw / 2.0, -r * 0.62 + 20), cl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.22, 0.16, 0.1, 0.7))
+			_bays.draw_string(small, c + Vector2(-cw / 2.0, -r * 0.62 + 20), cl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(Paper.INK, 0.7))
 		if shut and r > 60.0:
 			var line: String = str(b["shutLine"])
 			var lw: float = small.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
-			_bays.draw_string(small, c + Vector2(-lw / 2.0, -r * 0.62 + 20), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.45, 0.2, 0.15, 0.8))
+			_bays.draw_string(small, c + Vector2(-lw / 2.0, -r * 0.62 + 20), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(Paper.RED, 0.8))
 
 
 ## The campaign's fog mask, stamped soft at four times its grid like the
@@ -581,6 +581,9 @@ var _zoom_world: Vector2 = Vector2.ZERO
 
 
 func _gui_input(event: InputEvent) -> void:
+	if has_meta("_closing"):
+		accept_event()
+		return
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event
 		if mb.pressed and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
@@ -625,9 +628,19 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func close() -> void:
+	if has_meta("_closing"):
+		return
+	set_meta("_closing", true)
 	closed.emit()
+	# Nothing on it answers while it goes (closed first, input off, then
+	# freed); it still holds the clicks, so none fall through to the sea.
+	set_process_unhandled_input(false)
+	var block: Control = Control.new()
+	block.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	block.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(block)
 	var tw: Tween = create_tween()
-	tw.tween_property(self, "modulate:a", 0.0, Motion.PANEL_OUT).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	Motion.ease_exit(tw, self, "modulate:a", 0.0, Motion.PANEL_OUT)
 	tw.tween_callback(queue_free)
 
 
@@ -797,11 +810,11 @@ func _draw_marks() -> void:
 			var seg: float = a.distance_to(b)
 			var s: float = fposmod(_t * 30.0, 14.0)
 			while s < seg:
-				_marks.draw_line(a.move_toward(b, s), a.move_toward(b, minf(s + 8.0, seg)), Color(0.7, 0.18, 0.15, 0.9), 2.5, true)
+				_marks.draw_line(a.move_toward(b, s), a.move_toward(b, minf(s + 8.0, seg)), Color(Paper.RED, 0.9), 2.5, true)
 				s += 14.0
 		var d: Vector2 = to_screen(crs.dest)
 		_marks.draw_line(d, d - Vector2(0, 26), ink, 2.0, true)
-		_marks.draw_colored_polygon(PackedVector2Array([d - Vector2(0, 26), d - Vector2(-16, 20), d - Vector2(0, 14)]), Color(0.75, 0.2, 0.18))
+		_marks.draw_colored_polygon(PackedVector2Array([d - Vector2(0, 26), d - Vector2(-16, 20), d - Vector2(0, 14)]), Paper.RED)
 		var info: String = "%s  ·  %s" % [crs.label, Course.eta_text(crs.eta())]
 		_marks.draw_string(small, d + Vector2(10, -28), info, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, ink)
 	# Every mark (names that would land on another are left off).
@@ -874,15 +887,15 @@ func _draw_marks() -> void:
 				_marks.draw_circle(at - Vector2(0, 20), 6.0, c)
 				_name(small, at + Vector2(8, -14), str(m["name"]), 11, ink, false, true)
 		if hot:
-			_marks.draw_arc(at, 14.0, 0.0, TAU, 32, Color(0.75, 0.2, 0.18, 0.8), 2.0, true)
+			_marks.draw_arc(at, 14.0, 0.0, TAU, 32, Color(Paper.RED, 0.8), 2.0, true)
 	# Her: a hull mark pointing the way she is going, and her wake behind.
 	var me: Vector2 = to_screen(sea._boat.position)
 	var dir: Vector2 = Vector2.from_angle(sea._boat.heading)
 	for j: int in 5:
 		_marks.draw_circle(me - dir * (8.0 + j * 7.0), 3.0 - j * 0.45, Color(1, 1, 1, 0.45 - j * 0.08))
 	var pts: PackedVector2Array = PackedVector2Array([me + dir * 12.0, me - dir * 7.0 + dir.orthogonal() * 7.0, me - dir * 3.0, me - dir * 7.0 - dir.orthogonal() * 7.0])
-	_marks.draw_circle(me, 16.0 + 3.0 * sin(_t * 3.0), Color(0.75, 0.2, 0.18, 0.18))
-	_marks.draw_colored_polygon(pts, Color(0.75, 0.2, 0.18))
+	_marks.draw_circle(me, 16.0 + 3.0 * sin(_t * 3.0), Color(Paper.RED, 0.18))
+	_marks.draw_colored_polygon(pts, Paper.RED)
 	_marks.draw_polyline(PackedVector2Array([pts[0], pts[1], pts[2], pts[3], pts[0]]), ink, 1.2, true)
 	# The compass rose, bottom right.
 	_rose(Vector2(size.x - 90, size.y - 140), 42.0, ink)
@@ -913,19 +926,19 @@ func _name(font: Font, at: Vector2, text: String, size_px: int, col: Color, cent
 			if r.intersects(rect):
 				return
 	_taken.append(rect)
-	_marks.draw_string(font, pos + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, Color(0.96, 0.92, 0.84, 0.7))
+	_marks.draw_string(font, pos + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, Color(Paper.PAPER.lightened(0.5), 0.7))
 	_marks.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, col)
 
 
 func _rose(c: Vector2, r: float, ink: Color) -> void:
-	_marks.draw_circle(c, r * 1.05, Color(0.93, 0.89, 0.8, 0.6))
+	_marks.draw_circle(c, r * 1.05, Color(Paper.PAPER.lightened(0.5), 0.6))
 	_marks.draw_arc(c, r, 0.0, TAU, 48, Color(ink, 0.6), 1.2, true)
 	for k: int in 8:
 		var a: float = k * TAU / 8.0 - PI / 2.0
 		var long: float = r * (0.95 if k % 2 == 0 else 0.6)
 		var tip: Vector2 = c + Vector2.from_angle(a) * long
 		var side: Vector2 = Vector2.from_angle(a + PI / 2.0) * r * 0.12
-		var fill: Color = Color(0.7, 0.2, 0.17) if k == 0 else Color(ink, 0.75 if k % 2 == 0 else 0.45)
+		var fill: Color = Paper.RED if k == 0 else Color(ink, 0.75 if k % 2 == 0 else 0.45)
 		_marks.draw_colored_polygon(PackedVector2Array([c + side, tip, c - side]), fill)
 	_marks.draw_string(Kit.font("cinzel", 700), c + Vector2(-5, -r - 6), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, ink)
 

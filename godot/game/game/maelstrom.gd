@@ -282,6 +282,7 @@ func _ready() -> void:
 	_label.resized.connect(func() -> void: _label.position = Vector2(-_label.size.x / 2.0, 0))
 	_sub = Kit.lift(Kit.text(holder, "", "small", Kit.INK_2))
 	_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_sub.modulate.a = 0.0
 	_sub.resized.connect(func() -> void: _sub.position = Vector2(-_sub.size.x / 2.0, 34))
 
 
@@ -514,7 +515,12 @@ func _process(delta: float) -> void:
 	_t += delta
 	_g = move_toward(_g, 1.0 if gather else 0.0, delta * 2.0)
 	if _sub != null:
-		_sub.text = why if why != "" else ("Dive alone or with your crew" if gather else "")
+		# The line under the name eases in and out (lettering on the water
+		# never pops); the words change only while it shows something.
+		var line: String = why if why != "" else ("Dive alone or with your crew" if gather else "")
+		if line != "":
+			_sub.text = line
+		_sub.modulate.a = Motion.near(_sub.modulate.a, line != "", delta)
 	var cam: Camera2D = get_viewport().get_camera_2d()
 	var cp: Vector2 = cam.get_screen_center_position() if cam != null else global_position
 	# The camera in the world's own units (the world is squashed).

@@ -28,6 +28,8 @@ const ISLE_REACH: float = 240.0
 const DOCK_OFF: Vector2 = Vector2(-340, 250)
 const PORTAL_REACH: float = 340.0
 const GOLD: Color = Color(1.0, 0.82, 0.38)
+## A way home's light: its well, and the passage it opens.
+const HOME_GLOW: Color = Color(0.55, 0.85, 0.95)
 ## A stop's tint by its state, the same on an island's prop, a hull and its
 ## portrait: locked cool and dim, cleared pale and faded.
 const STATE_LOCKED: Color = Color(0.65, 0.70, 0.79, 0.9)
@@ -312,7 +314,7 @@ func reach(at: Vector2) -> Variant:
 			return ["Dive into %s" % m.info["name"], func() -> void: sea.open_gauntlet(variant)]
 	if home != null:
 		var to: Dictionary = Campaign.water()["portalHome"]
-		return ["Take the way home", func() -> void: sea._warp(float(to["x"]), float(to["y"]), Color(0.55, 0.85, 0.95))]
+		return ["Take the way home", func() -> void: sea._warp(float(to["x"]), float(to["y"]), HOME_GLOW)]
 	if pick == "":
 		return null
 	return [label_for(pick), func() -> void: node_pressed.emit(pick)]
@@ -375,8 +377,17 @@ static func tint(n: CanvasItem, to: Color, ease_it: bool) -> void:
 
 class Glyph:
 	extends Node2D
-	var kind: String = ""
+	## "next" (bobbing, redrawn each frame), "done" (still, drawn once) or ""
+	## (nothing shown): only the bobbing one does per-frame work.
+	var kind: String = "":
+		set(v):
+			kind = v
+			set_process(v == "next")
+			queue_redraw()
 	var _t: float = randf() * 6.0
+
+	func _ready() -> void:
+		set_process(kind == "next")
 
 	func _process(delta: float) -> void:
 		_t += delta
@@ -413,15 +424,15 @@ static func reveal(holder: Node2D, mark: Node2D, field: SeaField) -> void:
 	g.z_index = -1
 	holder.add_child(g)
 	var tw: Tween = holder.create_tween()
-	tw.tween_property(g, "modulate:a", 0.8, 0.3)
-	tw.tween_property(g, "modulate:a", 0.0, 1.6)
+	Motion.ease_fade(tw, g, "modulate:a", 0.8, 0.3)
+	Motion.ease_fade(tw, g, "modulate:a", 0.0, 1.6)
 	tw.tween_callback(g.queue_free)
 	var to: Vector2 = mark.position
 	mark.position = to + Vector2(0, 26.0 / Chart.GROUND)
 	mark.modulate.a = 0.0
 	var t2: Tween = holder.create_tween().set_parallel()
 	t2.tween_property(mark, "position", to, 0.85).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	t2.tween_property(mark, "modulate:a", 1.0, 0.85)
+	Motion.ease_fade(t2, mark, "modulate:a", 1.0, 0.85)
 	Sound.chest(false)
 
 
@@ -634,7 +645,7 @@ class WayHome:
 
 	func _draw() -> void:
 		var r: float = PORTAL_REACH
-		var c: Color = Color(0.55, 0.85, 0.95)
+		var c: Color = HOME_GLOW
 		var hot: float = 1.5 + _g * 1.2
 		var spin: float = -_t * (0.4 + _g * 0.9)
 		draw_circle(Vector2.ZERO, r, Color(c, 0.08 + 0.08 * _g))
