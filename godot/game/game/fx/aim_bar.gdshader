@@ -22,11 +22,15 @@ uniform vec3 u_burst_col = vec3(1.0, 0.85, 0.4);
 uniform float u_burst_x = 0.5;
 uniform float u_needle = 0.5;
 
-const vec3 PANEL = vec3(0.135, 0.11, 0.095);
+// The bands' colours come from AimBar.LIT_COL (one palette for the bands, the
+// needle, the embers and the result word); these defaults mirror it.
+uniform vec3 u_graze_col = vec3(0.92, 0.7, 0.38);
+uniform vec3 u_hit_col = vec3(0.498, 0.839, 0.627);
+uniform vec3 u_crit_col = vec3(0.961, 0.812, 0.416);
+
+// PANEL mirrors BattleLook.LACQUER (Paper.NIGHT_PAPER_DEEP).
+const vec3 PANEL = vec3(0.12, 0.1, 0.085);
 const vec3 TRACK = vec3(0.07, 0.06, 0.055);
-const vec3 GRAZE = vec3(0.86, 0.62, 0.3);
-const vec3 HIT = vec3(0.4, 0.78, 0.52);
-const vec3 CRIT = vec3(0.98, 0.8, 0.32);
 
 float sd_box(vec2 p, vec2 c, vec2 b, float r) {
 	vec2 q = abs(p - c) - b + vec2(r);
@@ -55,7 +59,7 @@ void fragment() {
 		float cw0 = max(1.6, u_crit * px_u0);
 		float over = abs(p.y - tc.y) - th.y;
 		if (dc0 < cw0 && over > 0.0 && over < 6.0) {
-			col = vec4(CRIT, (1.0 - smoothstep(cw0 - 1.2, cw0, dc0)) * 0.95);
+			col = vec4(u_crit_col, (1.0 - smoothstep(cw0 - 1.2, cw0, dc0)) * 0.95);
 		}
 	}
 	// THE TRACK: flat and dark, the bands solid on it.
@@ -76,21 +80,21 @@ void fragment() {
 		float gw = (u_hit + u_graze) * px_u;
 		if (dz < gw) {
 			float fade = 1.0 - smoothstep(gw - 14.0, gw, dz);
-			c = mix(c, GRAZE, (u_lit == 1 ? 0.42 : 0.22) * fade);
+			c = mix(c, u_graze_col, (u_lit == 1 ? 0.42 : 0.22) * fade);
 		}
 		float hw = u_hit * px_u;
 		float d_hit = sd_box(vec2(abs(u - u_zone) * px_u, yy), vec2(0.0), vec2(hw, th.y - 5.0), th.y - 5.0);
 		if (d_hit < 0.5) {
 			float inside = 1.0 - smoothstep(-0.5, 0.5, d_hit);
 			float rim = 1.0 - smoothstep(0.0, 1.4, abs(d_hit + 0.8));
-			vec3 hc = mix(TRACK, HIT, u_lit == 2 ? 0.92 : 0.6);
+			vec3 hc = mix(TRACK, u_hit_col, u_lit == 2 ? 0.92 : 0.6);
 			hc = mix(hc, vec3(0.86, 1.0, 0.9), rim * 0.55);
 			c = mix(c, hc, inside);
 		}
 		float cw = max(1.6, u_crit * px_u);
 		if (dc < cw) {
 			float core = 1.0 - smoothstep(cw - 1.2, cw, dc);
-			c = mix(c, CRIT, (u_lit == 3 ? 1.0 : 0.9) * core);
+			c = mix(c, u_crit_col, (u_lit == 3 ? 1.0 : 0.9) * core);
 		}
 		// A lock flashes the band it hit (flat, fading).
 		c = mix(c, u_burst_col, u_burst * 0.5 * (1.0 - step(70.0, abs(p.x - (u_track.x + u_burst_x * px_u)))));

@@ -38,16 +38,15 @@ var _card: Panel
 var _faces: Dictionary = {}
 var _body: Control
 var _solo_tier: String = "normal"
+var _scrim: ColorRect
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var scrim: ColorRect = ColorRect.new()
-	scrim.color = Color(0, 0, 0, 0.78)
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(scrim)
+	# The sea dims behind it (fading in, never in one frame).
+	_scrim = Kit.scrim(self, Kit.SCRIM_SHEET)
 	var vp: Vector2 = get_viewport_rect().size
 	_card = Panel.new()
 	_card.add_theme_stylebox_override("panel", BattleLook.box(Dossier.FILL, Dossier.HAIR, 1, 18, 40.0, Color(0, 0, 0, 0.55)))
@@ -61,8 +60,8 @@ func _ready() -> void:
 	else:
 		_st = _solo_state()
 		_paint()
-	_card.modulate.a = 0.0
-	create_tween().tween_property(_card, "modulate:a", 1.0, 0.18)
+	if not Motion.closing(self):
+		Motion.panel_in(_card)
 
 
 func _solo_state() -> Dictionary:
@@ -88,10 +87,13 @@ func _on_table(st: Dictionary) -> void:
 
 
 func _close() -> void:
+	if Motion.closing(self):
+		return
 	if table != null and table.changed.is_connected(_on_table):
 		table.changed.disconnect(_on_table)
 	closed.emit()
-	queue_free()
+	# The card and the dim fade out before it goes.
+	Motion.dismiss(self, _card, _scrim)
 
 
 func _mine() -> String:
@@ -424,7 +426,7 @@ class SeatCard:
 		var x0: float = cx - (n * 26.0 - 4.0) / 2.0 + 11.0
 		for k: int in n:
 			var cm: Dictionary = crew[k]
-			BattleLook.medallion(self, Vector2(x0 + k * 26.0, 268), 11.0, crew_tex[k] if k < crew_tex.size() else null, Color(str(cm.get("color", "#cccccc"))), str(cm.get("name", "?")).substr(0, 1), 1.0, Vector2(0.5, 0.36), 0.36)
+			BattleLook.medallion(self, Vector2(x0 + k * 26.0, 268), 11.0, crew_tex[k] if k < crew_tex.size() else null, Color(1, 1, 1, 0.3), str(cm.get("name", "?")).substr(0, 1), 1.0, Vector2(0.5, 0.36), 0.36)
 		if crew.is_empty():
 			BattleLook.say(self, Kit.font("karla", 600), cx, 272, "no hands seated", 11, Dossier.FAINT)
 		# The tiers of this raid they have beaten, as seals.
@@ -490,7 +492,8 @@ class BossPane:
 		for it: Dictionary in items:
 			if y > r.size.y - 16.0:
 				break
-			var rc: Color = { "epic": Color("#b69cf6"), "legendary": Color("#f0c040"), "cosmetic": Color("#5eead4"), "ancient": Color("#f2826e") }.get(str(it.get("rarity", "")), Dossier.SOFT)
+			var rk: String = Kit.rarity_key(str(it.get("rarity", "")))
+			var rc: Color = Kit.rarity(rk) if rk != "" else (Kit.TEAL if str(it.get("rarity", "")) == "cosmetic" else Dossier.SOFT)
 			draw_circle(Vector2(32, y - 4), 3.0, rc)
 			draw_string(Kit.font("karla", 700), Vector2(42, y), str(it.get("label", "")), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 130, 13, Dossier.INK)
 			var pct: String = "%.1f%%" % (float(it["chance"]) * 100.0)
@@ -505,7 +508,6 @@ static func seal(ci: CanvasItem, c: Vector2, r: float, won: bool) -> void:
 	if not won:
 		ci.draw_arc(c, r, 0.0, TAU, 32, Color(1, 1, 1, 0.18), 1.2, true)
 		return
-	ci.draw_circle(c, r + 2.0, Color(0, 0, 0, 0.35))
+	# Flat: a gold disc and a dark check (no highlight ring, no shadow).
 	ci.draw_circle(c, r, BattleLook.GOLD.darkened(0.15))
-	ci.draw_arc(c, r * 0.78, 0.0, TAU, 32, Color(1, 0.95, 0.75, 0.6), 1.0, true)
 	ci.draw_polyline(PackedVector2Array([c + Vector2(-r * 0.42, 0), c + Vector2(-r * 0.1, r * 0.32), c + Vector2(r * 0.45, -r * 0.34)]), Color(0.18, 0.12, 0.05), maxf(1.6, r * 0.2), true)

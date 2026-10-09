@@ -9,6 +9,8 @@ extends Control
 
 var sea: Sea
 var _card: Pane
+## The banner's holder (what fades in and out).
+var _holder: Control = null
 var _body: VBoxContainer
 var _until: float = 0.0
 var _t: float = 0.0
@@ -45,7 +47,7 @@ func _on_table(st: Dictionary) -> void:
 			if _member(st):
 				_close()
 				# In the line: the entry screen.
-				if _screen == null or not is_instance_valid(_screen):
+				if _screen == null or not is_instance_valid(_screen) or Motion.closing(_screen):
 					_screen = ReadyScreen.new()
 					_screen.sea = sea
 					_screen.table = RaidTable.live
@@ -99,16 +101,25 @@ static func invite_block(body: VBoxContainer, st: Dictionary, my_key: String, by
 		Kit.text(body, "On your way. It is pinned on your compass.", "small", Kit.GOLD, true)
 
 
-func _close() -> void:
+## The banner going: it fades away (fade = false: freed at once, for a
+## repaint that puts the next one straight in its place).
+func _close(fade: bool = true) -> void:
 	_join = null
+	if _holder != null and is_instance_valid(_holder):
+		if fade:
+			Motion.note_out(_holder)
+		else:
+			_holder.queue_free()
+	_holder = null
 	if _card != null:
-		_card.queue_free()
 		_card = null
 		_left = null
 
 
 func _paint(st: Dictionary) -> void:
-	_close()
+	# A repaint swaps in place; a banner that was not up arrives (Motion.note_in).
+	var was_up: bool = _holder != null and is_instance_valid(_holder)
+	_close(false)
 	var raid: Dictionary = Battle.raid_def(str(st["raidId"]))
 	var node: Dictionary = Campaign.node(str(st["nodeId"]))
 	var spec: Dictionary = Kit.modal(Kit.GOLD, 18)
@@ -120,6 +131,9 @@ func _paint(st: Dictionary) -> void:
 	holder.offset_top = 96
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(holder)
+	_holder = holder
+	if not was_up:
+		Motion.note_in(holder)
 	_card = Kit.pane(holder, spec)
 	_card.custom_minimum_size = Vector2(540, 0)
 	_body = VBoxContainer.new()

@@ -36,11 +36,8 @@ extends Control
 signal finished(won: bool)
 
 const BAR: float = 74.0
-const NIGHT: Color = Color("#1a1512")
-const BRASS: Color = Color(0.86, 0.68, 0.36)
-const CREAM: Color = Color(0.96, 0.92, 0.84)
-## Ink on the night paper.
-const NIGHT_INK: Color = Color(0.93, 0.88, 0.78)
+## Every colour on the fight's screen comes from BattleLook (aliases of the
+## Kit and Paper tokens): no hand-typed colours here.
 
 var sea: Sea
 var raid_id: String = "corsairs_reckoning"
@@ -78,8 +75,10 @@ var _banner_t: float = -1.0
 var _t: float = 0.0
 var _portrait: Texture2D
 var _shown_hp: Dictionary = {}
-## How far the deck has sunk below its place (it rises in, sinks out).
-var _drop: float = 260.0
+## How far the deck's orders are dimmed, out of play (0 lit, 1 dimmed):
+## eased by _deck_dim, one curve both ways.
+var _dim: float = 1.0
+var _dim_tw: Tween = null
 var _from: Vector2
 ## Out on the campaign's water: the dock she fights from, and the hull riding
 ## at anchor there (it becomes the enemy it stands for: the skirmish's raider,
@@ -112,6 +111,8 @@ var _pumping: bool = false
 var _gone: bool = false
 var _spoke: bool = false
 var _plan_until: float = 0.0
+## The plan's whole wait when it began (for the draining line).
+var _plan_len: float = 0.0
 ## A crossfire's lines from the ships to the enemy, fading (seconds left).
 var _xfire_seats: Array = []
 ## A co-op tier's field: every enemy ship's hull, where it rides, its portrait;
@@ -177,7 +178,7 @@ func _ready() -> void:
 	_fx.z_index = 6
 	sea._world.add_child(_fx)
 	_frame()
-	_banner = Kit.text(self, "", "display", CREAM)
+	_banner = Kit.text(self, "", "display", BattleLook.CREAM)
 	_banner.add_theme_font_size_override("font_size", 44)
 	_banner.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	_banner.add_theme_constant_override("shadow_outline_size", 12)
@@ -345,8 +346,10 @@ func _process(delta: float) -> void:
 		var dip: float = 0.0
 		_deck.offset_top = top_y + dip
 		_deck.offset_bottom = -BAR - 12.0 + dip
-		_deck_box.modulate.a = 1.0 - 0.65 * clampf(_drop / 190.0, 0.0, 1.0)
-		_crew_row.modulate.a = 1.0 if _crew_lit else _deck_box.modulate.a
+		_deck_box.modulate.a = 1.0 - 0.65 * clampf(_dim, 0.0, 1.0)
+		# A chooser open (Fire, Special): the crew's keys mean other things
+		# there, so their row steps back.
+		_crew_row.modulate.a = 1.0 if _crew_lit else _deck_box.modulate.a * (0.45 if _menu != "" else 1.0)
 		_log.offset_top = top_y - 54.0
 		_log.offset_bottom = top_y - 22.0
 	for n: Dictionary in _numbers:
@@ -357,6 +360,9 @@ func _process(delta: float) -> void:
 		_banner.modulate.a = clampf(_banner_t / 0.2, 0.0, 1.0) * (1.0 - smoothstep(1.6, 2.1, _banner_t))
 		if _banner_t > 2.1:
 			_banner_t = -1.0
+		# A queued line takes the banner once the one up has finished arriving.
+		if not _say_queue.is_empty() and (_banner_t < 0.0 or _banner_t >= 0.6):
+			_say(str(_say_queue.pop_front()))
 	queue_redraw()
 
 
@@ -596,7 +602,7 @@ func _build_deck() -> void:
 	_deck_log.offset_bottom = -12.0
 	_deck_log.mouse_filter = Control.MOUSE_FILTER_PASS
 	_deck.add_child(_deck_log)
-	_log = Kit.text(self, "", "body_strong", CREAM)
+	_log = Kit.text(self, "", "body_strong", BattleLook.CREAM)
 	_log.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_log.offset_left = -470
 	_log.offset_right = 470
@@ -613,7 +619,16 @@ func _build_deck() -> void:
 		add_child(_clog)
 		_clog.mini.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_deck_log.add_child(_clog.mini)
-	create_tween().tween_property(self, "_drop", 0.0, 0.6).set_delay(0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_deck_dim(false, 0.6)
+
+
+## The deck's orders dimmed out of play (on) or lit for your turn: one 0.2s
+## SINE curve both ways, for every caller.
+func _deck_dim(on: bool, delay: float = 0.0) -> void:
+	if _dim_tw != null and _dim_tw.is_valid():
+		_dim_tw.kill()
+	_dim_tw = create_tween()
+	Motion.ease_fade(_dim_tw, self, "_dim", 1.0 if on else 0.0, 0.2).set_delay(delay)
 
 
 func _deck_paper(on: bool) -> void:
@@ -640,8 +655,8 @@ func _await_plan() -> void:
 	_plan = {}
 	_menu = ""
 	_paint_actions()
-	# The deck rises back for your turn.
-	create_tween().tween_property(self, "_drop", 0.0, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# The deck lights back up for your turn.
+	_deck_dim(false)
 	if autoplay:
 		await _wait(0.3)
 		var s: Dictionary = b["seats"][me]
@@ -674,18 +689,20 @@ func _paint_actions() -> void:
 	match _menu:
 		"fire":
 			# Fire's chooser: the single shot, the volley, the Mega.
-			var fk2: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], true, "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire"), "fire")
+			# One rule for emphasis: the recommended action is the big gold
+			# word. Here that is the Volley when it can be fired, else Fire.
+			var fk2: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], not lg["volley"], "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire"), "fire")
 			top.add_child(fk2)
 			top.add_child(_word_key("Volley", "V", lg["volley"], lg["volley"], "Three balls: a double-damage broadside", BattleLook.GOLD, func() -> void: _pick_fire("volley"), "volley"))
 			if not mg.is_empty():
-				top.add_child(_word_key(str(mg["name"]), "M", lg.get("mega", false), lg.get("mega", false), "%s  ·  %d balls" % [mg.get("tagline", ""), int(Armory.aug()["megaCost"])], Color(str(mg.get("color", "#d8b26b"))), func() -> void: _pick_fire("mega"), "mega"))
+				top.add_child(_word_key(str(mg["name"]), "M", lg.get("mega", false), false, "%s  ·  %d balls" % [mg.get("tagline", ""), int(Armory.aug()["megaCost"])], BattleLook.GOLD, func() -> void: _pick_fire("mega"), "mega"))
 			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _close_menu(), "back"))
 		"special":
 			# The specials: the repair kit (the crew's orders have their row).
 			if not kit.is_empty():
 				var rg: Vector2 = Battle.repair_range(s)
 				var why: String = "Used this fight" if s.get("kitUsed", false) else ("Hull already full" if float(s["hp"]) >= float(s["max"]) else "Heals %d-%d, costs your turn" % [int(rg.x), int(rg.y)])
-				var kk: BattleLook.ActionKey = _word_key(str(kit["name"]), "1", lg.get("repair", false), lg.get("repair", false), str(kit.get("description", "")), Color(0.5, 0.95, 0.6), func() -> void:
+				var kk: BattleLook.ActionKey = _word_key(str(kit["name"]), "1", lg.get("repair", false), false, str(kit.get("description", "")), BattleLook.HEAL, func() -> void:
 					_menu = ""
 					_choose("repair"), "special")
 				kk.sub = why
@@ -698,7 +715,7 @@ func _paint_actions() -> void:
 			if str(cf.get("order", "")) != "":
 				var why2: String = Battle.order_ok(s)
 				var armed: bool = _plan.get("keg", false) == true
-				var ok_k: BattleLook.ActionKey = _word_key(str(CaptainClass.ORDER_NAME.get(cf["order"], "Order")), "2", why2 == "" and not armed, why2 == "", CaptainClass.order_line(cf), BattleLook.GOLD, _press_order, "special")
+				var ok_k: BattleLook.ActionKey = _word_key(str(CaptainClass.ORDER_NAME.get(cf["order"], "Order")), "2", why2 == "" and not armed, false, CaptainClass.order_line(cf), BattleLook.GOLD, _press_order, "special")
 				ok_k.sub = "Armed: your next attack" if armed else (why2 if why2 != "" else ("No turn spent" if cf.get("kegFree", false) and cf["order"] == "powder_keg" else "Takes your turn"))
 				ok_k.custom_minimum_size = Vector2(maxf(ok_k.custom_minimum_size.x, 240.0), 82)
 				top.add_child(ok_k)
@@ -710,7 +727,7 @@ func _paint_actions() -> void:
 				if not Battle.alive(b).has(st):
 					continue
 				var at: int = i
-				var sk: BattleLook.ActionKey = _word_key("Your ship" if i == me else str(st["name"]), "", true, false, "%d / %d hull" % [int(st["hp"]), int(st["max"])], Color(0.5, 0.95, 0.6), func() -> void:
+				var sk: BattleLook.ActionKey = _word_key("Your ship" if i == me else str(st["name"]), "", true, false, "%d / %d hull" % [int(st["hp"]), int(st["max"])], BattleLook.HEAL, func() -> void:
 					_menu = ""
 					_plan["ally"] = at
 					_choose("order"), "special")
@@ -721,7 +738,7 @@ func _paint_actions() -> void:
 			top.add_child(_word_key("Reload", "R", lg["reload"], false, "+1 ball", BattleLook.CREAM, func() -> void: _choose("reload"), "reload"))
 			var fk: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire, "fire")
 			top.add_child(fk)
-			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Brace for a shot (not twice running)", BattleLook.CREAM, func() -> void: _choose("dodge"), "dodge"))
+			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Dodge the next shot (not twice running)", BattleLook.CREAM, func() -> void: _choose("dodge"), "dodge"))
 			var ord_name: String = str(CaptainClass.ORDER_NAME.get(str(Js.obj(s.get("cls")).get("order", "")), ""))
 			var sp_sub: String = " and ".join(PackedStringArray([str(kit.get("name", "")), ord_name].filter(func(x: String) -> bool: return x != "")))
 			top.add_child(_word_key("Special", "S", not kit.is_empty() or ord_name != "", false, sp_sub if sp_sub != "" else "No special aboard", BattleLook.CREAM, func() -> void: _open_menu("special"), "special"))
@@ -775,7 +792,8 @@ func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, 
 	var k: BattleLook.ActionKey = BattleLook.ActionKey.new()
 	k.kind = icon
 	k.disc = true
-	k.big = primary and icon == "fire"
+	# The recommended action (primary) is the big gold word: one rule.
+	k.big = primary
 	k.label = word
 	k.key_hint = key
 	k.primary = on and primary
@@ -783,7 +801,7 @@ func _word_key(word: String, key: String, on: bool, primary: bool, tip: String, 
 	k.disabled = not on
 	k.tooltip_text = tip
 	var w: float = Kit.font("karla", 800).get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x + 44.0 + Kit.font("karla", 800).get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + (30.0 if icon != "" else 0.0)
-	var big: bool = primary and icon == "fire"
+	var big: bool = primary
 	var ww: float = Kit.font("cinzel", 700).get_string_size(word.to_upper() if big else word, HORIZONTAL_ALIGNMENT_LEFT, -1, 30 if big else 22).x
 	k.custom_minimum_size = Vector2(maxf(96.0, ww + 34.0), 82)
 	k.pressed.connect(f)
@@ -797,9 +815,10 @@ func _order_card(s: Dictionary, c: Dictionary, i: int = 0) -> Control:
 	var bt: BattleLook.CrewCard = BattleLook.CrewCard.new()
 	bt.tex = Skipper.tex("card_thumbs/%s.png" % str(c["filename"]).get_basename())
 	bt.hand = str(c["name"])
-	bt.col = Color(str(cls.get("color", "#cccccc")))
 	bt.chosen = chosen
-	bt.key_hint = str(i + 1) if i < 6 else ""
+	# A chooser open (Fire, Special): 1 and 2 mean other things there, so the
+	# crew's keys are hidden until it closes.
+	bt.key_hint = str(i + 1) if i < 6 and _menu == "" else ""
 	bt.state = ("ORDERED" if chosen else str(cls.get("shortLabel", "")).to_upper()) if why == "" else ("USED" if why.begins_with("Already") else why.to_upper())
 	bt.disabled = why != ""
 	bt.title = str(cls.get("shortLabel", cls.get("name", "")))
@@ -1043,15 +1062,17 @@ func _choose(act: String) -> void:
 		_deck_paper(true)
 		_plan["aim"] = res
 		_plan["target"] = _target
-		await get_tree().create_timer(0.3).timeout
+		# The lock's feedback (its word, ring and embers) plays out first.
+		if is_instance_valid(bar) and not bar._settled:
+			await bar.settled
 	_busy = true
 	_clear_deck()
 	if table != null:
 		_act(["plan", _plan])
 		_waiting()
 		return
-	# The deck dips out of the way while the round plays on the water.
-	create_tween().tween_property(self, "_drop", 190.0, 0.2).set_ease(Tween.EASE_IN)
+	# The deck dims out of play while the round plays on the water.
+	_deck_dim(true)
 	var rev: Array = Battle.resolve(b, [_plan])
 	# A big hit counts toward the raid-damage bounties and badges; the round
 	# toward the feat badges.
@@ -1122,12 +1143,12 @@ func _one_play(x: Dictionary) -> void:
 			await _wait(0.3)
 			_react(rs, "reload")
 			var got: int = 1 + int(Js.num(x.get("extra")))
-			_num(_seat_at(rs) + Vector2(0, -70), "+%d ball%s" % [got, "" if got == 1 else "s"], CREAM)
+			_num(_seat_at(rs) + Vector2(0, -70), "+%d ball%s" % [got, "" if got == 1 else "s"], BattleLook.CREAM)
 			await _wait(0.2)
 		"brace":
 			_strip_lit = int(x["seat"])
 			_react(int(x["seat"]), "brace")
-			_num(_seat_at(int(x["seat"])), "Bracing", Color(0.7, 0.85, 1.0))
+			_num(_seat_at(int(x["seat"])), "Dodging", BattleLook.SHIELD)
 			await _wait(0.25)
 		"shot":
 			var ss: int = int(x["seat"])
@@ -1159,16 +1180,16 @@ func _one_play(x: Dictionary) -> void:
 				# A beat held on a critical, before the number.
 				await _wait(0.07)
 			if x.get("dodged", false):
-				_num(_enemy_at, "Slipped it!", Color(0.85, 0.85, 0.85))
+				_num(_enemy_at, "Dodged!", BattleLook.MUTED)
 			elif float(x["dmg"]) > 0.0 or x["aim"] != "miss":
-				_num(_enemy_at, ("%d!" % int(x["dmg"])) if land == "crit" else str(int(x["dmg"])), Color(1.0, 0.85, 0.35) if land == "crit" else CREAM, land == "crit")
+				_dmg(_enemy_at, int(x["dmg"]), false, land == "crit")
 				if x.has("shielded"):
-					_num(_enemy_at + Vector2(-40, -30), "-%d shield" % int(x["shielded"]), Color(0.55, 0.8, 1.0))
+					_num(_enemy_at + Vector2(-40, -30), "-%d shield" % int(x["shielded"]), BattleLook.SHIELD)
 			else:
-				_num(_enemy_at, "Miss", Color(0.8, 0.8, 0.8))
+				_num(_enemy_at, "Miss", BattleLook.MUTED)
 			_shown_hp[_ek()] = float(x["enemyHp"])
 			if x.has("crossfire") and not x.get("dodged", false):
-				_num(_enemy_at, "Crossfire  x%s" % str(snappedf(float(x["crossfire"]), 0.01)), Color(1.0, 0.85, 0.35))
+				_num(_enemy_at, "Crossfire  x%s" % str(snappedf(float(x["crossfire"]), 0.01)), BattleLook.GOLD)
 			await _wait(0.15)
 		"intent":
 			pass
@@ -1177,12 +1198,12 @@ func _one_play(x: Dictionary) -> void:
 			_fx.reload(_enemy_at, false)
 			await _wait(0.3)
 			_react(-1 - _cur, "reload")
-			_num(_enemy_at + Vector2(0, -70), "Reloads", Color(CREAM, 0.8))
+			_num(_enemy_at + Vector2(0, -70), "Reloads", Color(BattleLook.CREAM, 0.8))
 			await _wait(0.15)
 		"eDodge":
 			_strip_lit = -1 - _cur
 			_react(-1 - _cur, "brace")
-			_num(_enemy_at, "Evades", Color(0.75, 0.85, 1.0))
+			_num(_enemy_at, "Dodging", BattleLook.SHIELD)
 			await _wait(0.2)
 		"eSpecial":
 			_fx.sigil(_enemy_at, Color(1.0, 0.6, 0.4))
@@ -1199,13 +1220,16 @@ func _one_play(x: Dictionary) -> void:
 				func(_k: int) -> void: _react(-1 - fj2, "recoil"),
 				func(k: int) -> void: _landed(ti, land2, k))
 			if x.get("fog", false):
-				_num(_seat_at(ti), "Lost in the fog", Color(0.85, 0.9, 0.95))
+				_num(_seat_at(ti), "Lost in the fog", BattleLook.WORD)
 			elif x.get("dodged", false):
-				_num(_seat_at(ti), "Dodged!", Color(0.6, 0.9, 1.0))
+				_num(_seat_at(ti), "Dodged!", BattleLook.SHIELD)
 			else:
-				_num(_seat_at(ti), ("%d!" % int(x["dmg"])) if x["crit"] else str(int(x["dmg"])), Color(1.0, 0.45, 0.35), x["crit"])
+				if x["crit"]:
+					# The same beat held on a critical taken as on one dealt.
+					await _wait(0.07)
+				_dmg(_seat_at(ti), int(x["dmg"]), true, x["crit"])
 				if x.get("braced", false):
-					_num(_seat_at(ti) + Vector2(0, -40), "Braced", Color(0.7, 0.85, 1.0))
+					_num(_seat_at(ti) + Vector2(0, -40), "Braced", BattleLook.SHIELD)
 				Rumble.buzz([0, 40] if not x["crit"] else [0, 60, 30, 60])
 			_shown_hp[ti] = float(x["hp"])
 			await _wait(0.15)
@@ -1245,46 +1269,47 @@ func _one_play(x: Dictionary) -> void:
 			_shown_hp[int(x["seat"])] = float(x["hp"])
 			await _wait(0.9)
 		"sunk":
+			_sunk_said = true
 			_say("Holed below the waterline")
 			await _wait(0.8)
 		"burn":
 			_fx.flare_up(_seat_at(int(x["seat"])))
 			var si: int = int(x["seat"])
-			_num(_seat_at(si), "-%d  burning" % int(x["dmg"]), Color(1.0, 0.55, 0.25))
+			_dmg(_seat_at(si), int(x["dmg"]), true, false, "Burning", BattleLook.FIRE)
 			_shown_hp[si] = float(x["hp"])
 			Sound.impact(false)
 			await _wait(0.35)
 		"eBurn":
 			_fx.flare_up(_enemy_at)
-			_num(_enemy_at, "-%d  burning" % int(x["dmg"]), Color(1.0, 0.55, 0.25))
+			_dmg(_enemy_at, int(x["dmg"]), false, false, "Burning", BattleLook.FIRE)
 			_shown_hp[_ek()] = float(x["hp"])
 			await _wait(0.35)
 		"frozen":
 			_fx.freeze_snap(_seat_at(int(x["seat"])))
 			_strip_lit = int(x["seat"])
-			_num(_seat_at(int(x["seat"])), "Frozen solid", Color(0.75, 0.9, 1.0), true)
+			_num(_seat_at(int(x["seat"])), "Frozen solid", BattleLook.ICE, true)
 			await _wait(0.6)
 		"eFrozen":
 			_fx.freeze_snap(_enemy_at)
 			_strip_lit = -1 - _cur
-			_num(_enemy_at, "Frozen solid", Color(0.75, 0.9, 1.0), true)
+			_num(_enemy_at, "Frozen solid", BattleLook.ICE, true)
 			await _wait(0.6)
 		"ablaze":
 			_fx.flare_up(_seat_at(int(x["seat"])), true)
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "Set ablaze!", Color(1.0, 0.5, 0.2))
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "Set ablaze!", BattleLook.FIRE)
 		"iced":
 			_fx.freeze_snap(_seat_at(int(x["seat"])))
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "Iced over!", Color(0.75, 0.9, 1.0))
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "Iced over!", BattleLook.ICE)
 		"eAblaze":
 			_fx.flare_up(_enemy_at, true)
-			_num(_enemy_at + Vector2(0, -40), "Ablaze!", Color(1.0, 0.5, 0.2))
+			_num(_enemy_at + Vector2(0, -40), "Ablaze!", BattleLook.FIRE)
 		"eIced":
 			_fx.freeze_snap(_enemy_at)
-			_num(_enemy_at + Vector2(0, -40), "Iced over!", Color(0.75, 0.9, 1.0))
+			_num(_enemy_at + Vector2(0, -40), "Iced over!", BattleLook.ICE)
 		"fumble":
 			_fx.burst(_seat_at(int(x["seat"])), false)
 			_strip_lit = int(x["seat"])
-			_num(_seat_at(int(x["seat"])), "False colors!  -%d" % int(x["chip"]), Color(1.0, 0.55, 0.35), true)
+			_dmg(_seat_at(int(x["seat"])), int(x["chip"]), true, false, "False colors!", BattleLook.FOE)
 			_shown_hp[int(x["seat"])] = float(x["hp"])
 			Rumble.buzz([0, 40])
 			await _wait(0.6)
@@ -1293,17 +1318,17 @@ func _one_play(x: Dictionary) -> void:
 			if x.has("enemyHp"):
 				_fx.shot(_seat_at(int(x["seat"])) + Vector2(40, -20), _enemy_at, "hit")
 				await _wait(0.35)
-				_num(_enemy_at, "%s  %d" % [x.get("name", "Parry"), int(x["dmg"])], Color(0.7, 0.9, 1.0))
+				_dmg(_enemy_at, int(x["dmg"]), false, false, str(x.get("name", "Parry")), BattleLook.SHIELD)
 				_shown_hp[_ek()] = float(x["enemyHp"])
 			else:
 				_fx.shot(_enemy_at + Vector2(-40, -20), _seat_at(int(x["seat"])), "hit")
 				await _wait(0.35)
-				_num(_seat_at(int(x["seat"])), "%s  %d" % [x.get("name", "Riposte"), int(x["dmg"])], Color(1.0, 0.5, 0.4))
+				_dmg(_seat_at(int(x["seat"])), int(x["dmg"]), true, false, str(x.get("name", "Riposte")), BattleLook.FOE)
 				_shown_hp[int(x["seat"])] = float(x["hp"])
 			await _wait(0.2)
 		"volatile":
 			_fx.burst(_enemy_at, true)
-			_num(_seat_at(int(x["seat"])), "The wreck goes up!  -%d" % int(x["dmg"]), Color(1.0, 0.5, 0.25), true)
+			_dmg(_seat_at(int(x["seat"])), int(x["dmg"]), true, false, "The wreck goes up!", BattleLook.FIRE)
 			_shown_hp[int(x["seat"])] = float(x["hp"])
 			await _wait(0.5)
 		"bite":
@@ -1311,21 +1336,21 @@ func _one_play(x: Dictionary) -> void:
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "A ball knocked loose", Color(1.0, 0.7, 0.4))
 		"loaded":
 			_fx.reload(_seat_at(int(x["seat"])), true)
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "+1 ball", CREAM)
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "+1 ball", BattleLook.CREAM)
 		"strip":
 			_fx.toss(_enemy_at, _enemy_at + Vector2(130, 80), true)
-			_num(_enemy_at + Vector2(0, -40), "Its powder spilled", Color(1.0, 0.85, 0.35))
+			_num(_enemy_at + Vector2(0, -40), "Its powder spilled", BattleLook.GOLD)
 		"leech":
-			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), Color(0.5, 0.95, 0.6), 8)
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
+			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), BattleLook.HEAL, 8)
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -40), "+%d" % int(x["heal"]), BattleLook.HEAL)
 			_shown_hp[int(x["seat"])] = float(x["hp"])
 		"rack":
 			for ld: Variant in Js.list(x.get("landed")):
 				_fx.status_burst(_enemy_at, str(ld))
 			_num(_enemy_at + Vector2(0, -60), "The rack fires", Color(0.85, 0.75, 0.55))
 		"eHeal":
-			_fx.rise(_enemy_at, Color(0.5, 0.95, 0.6))
-			_num(_enemy_at + Vector2(0, -40), "%s  +%d" % [x.get("why", ""), int(x["heal"])], Color(0.6, 0.95, 0.6))
+			_fx.rise(_enemy_at, BattleLook.HEAL)
+			_num(_enemy_at + Vector2(0, -40), "+%d" % int(x["heal"]), BattleLook.HEAL, false, false, str(x.get("why", "")), BattleLook.HEAL)
 			_shown_hp[_ek()] = float(x["hp"])
 			await _wait(0.25)
 		"wardSurge":
@@ -1361,19 +1386,23 @@ func _one_play(x: Dictionary) -> void:
 			await _reaction(x)
 		"order":
 			# A captain's class order (core/captain_class.gd), on the water.
+			# As much ceremony as a crew order: the strip lights the captain,
+			# the order's name goes up as the banner, the seal sounds.
 			var osi: int = int(x["seat"])
-			var gold: Color = Color(1.0, 0.82, 0.45)
-			_num(_seat_at(osi) + Vector2(0, -130), str(x.get("name", "")), gold, true)
+			_strip_lit = osi
+			_say(str(x.get("name", "")))
+			Sound.seal(true)
+			_num(_seat_at(osi) + Vector2(0, -130), str(x.get("name", "")), BattleLook.GOLD, true)
 			match str(x.get("order", "")):
 				"powder_keg":
-					_fx.rise(_seat_at(osi), Color(1.0, 0.6, 0.3), 10)
+					_fx.rise(_seat_at(osi), BattleLook.FIRE, 10)
 				"draw_fire":
 					_fx.pulse(_seat_at(osi), Color(0.95, 0.4, 0.3))
 				"field_surgery":
 					for h: Dictionary in Js.list(x.get("healed")):
 						var hsi: int = int(h["seat"])
-						_fx.heal_rain(_seat_at(hsi), Color(0.5, 0.95, 0.6), 10)
-						_num(_seat_at(hsi), "+%d" % int(h["heal"]), Color(0.5, 0.95, 0.6), true)
+						_fx.heal_rain(_seat_at(hsi), BattleLook.HEAL, 10)
+						_num(_seat_at(hsi), "+%d" % int(h["heal"]), BattleLook.HEAL, true)
 						_shown_hp[hsi] = float(b["seats"][hsi]["hp"]) if hsi < (b["seats"] as Array).size() else 0.0
 				"full_sail":
 					for li: Variant in Js.list(x.get("loaded")):
@@ -1383,9 +1412,9 @@ func _one_play(x: Dictionary) -> void:
 		"repair":
 			var rsi: int = int(x["seat"])
 			_strip_lit = rsi
-			_fx.heal_rain(_seat_at(rsi), Color(0.5, 0.95, 0.6), 10)
+			_fx.heal_rain(_seat_at(rsi), BattleLook.HEAL, 10)
 			await _wait(0.5)
-			_num(_seat_at(rsi), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6), true)
+			_num(_seat_at(rsi), "+%d" % int(x["heal"]), BattleLook.HEAL, true)
 			_shown_hp[rsi] = float(x["hp"])
 			await _wait(0.3)
 		"comboNote":
@@ -1409,13 +1438,13 @@ func _one_play(x: Dictionary) -> void:
 			await _wait(0.3)
 		"drum":
 			_fx.pulse(_seat_at(int(x["seat"])), Color(1.0, 0.8, 0.45))
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -90), str(x.get("name", "The drum")), Color(1.0, 0.85, 0.5))
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -90), str(x.get("name", "The drum")), BattleLook.GOLD)
 			if x.has("refreshed"):
 				_log_line("The drum beats: an order is ready again.")
 		"intercept":
 			_strip_lit = -1 - _cur
 			_react(-1 - _cur, "brace")
-			_num(_enemy_at + Vector2(0, -70), "Intercepted!", Color(0.75, 0.85, 1.0), true)
+			_num(_enemy_at + Vector2(0, -70), "Intercepted!", BattleLook.SHIELD, true)
 			await _wait(0.35)
 		"crossfire":
 			_xfire_seats = Js.list(x["seats"])
@@ -1425,7 +1454,7 @@ func _one_play(x: Dictionary) -> void:
 			var who: Array = []
 			for si3: Variant in _xfire_seats:
 				who.append("you" if int(si3) == me else str(b["seats"][int(si3)]["name"]))
-				_num(_seat_at(int(si3)) + Vector2(0, -60), "Critical", Color(1.0, 0.85, 0.35), true)
+				_num(_seat_at(int(si3)) + Vector2(0, -60), "Critical", BattleLook.GOLD, true)
 			_log_line("Criticals from %s: each of those shots hits %d%% harder." % [" and ".join(PackedStringArray(who)), int(round((float(x["mult"]) - 1.0) * 100.0))])
 			Sound.perfect()
 			Rumble.buzz([0, 30, 30, 50])
@@ -1435,7 +1464,10 @@ func _one_play(x: Dictionary) -> void:
 			if fs == me:
 				await _show_flee(x, int(x["need"]))
 			else:
-				_num(_seat_at(fs), "Got away" if x["success"] else "Caught!  -%d" % int(x.get("dmg", 0)), Color(0.5, 0.86, 0.58) if x["success"] else Color(1.0, 0.45, 0.35), true)
+				if x["success"]:
+					_num(_seat_at(fs), "Got away", BattleLook.HEAL, true)
+				else:
+					_dmg(_seat_at(fs), int(x.get("dmg", 0)), true, false, "Caught!", BattleLook.FOE)
 				if x.has("hp"):
 					_shown_hp[fs] = float(x["hp"])
 				await _wait(0.6)
@@ -1500,11 +1532,11 @@ func _one_play(x: Dictionary) -> void:
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -80), "Press-Gang  +1 ball" if x.get("kept", false) else "Press-Gang", BattleLook.GOLD)
 			await _wait(0.2)
 		"overkill":
-			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), Color(0.5, 0.95, 0.6), 10)
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
+			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), BattleLook.HEAL, 10)
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), BattleLook.HEAL)
 		"leech":
-			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), Color(0.5, 0.95, 0.6), 8)
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6))
+			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), BattleLook.HEAL, 8)
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), BattleLook.HEAL)
 		"bond":
 			# A bond reaching a crewmate (or the ship it marked): its motion,
 			# then a line over them.
@@ -1515,7 +1547,7 @@ func _one_play(x: Dictionary) -> void:
 		"rake":
 			var fj: int = int(x["foe"])
 			_fx.splash(_foe_at(fj))
-			_num(_foe_at(fj), "Raked  -%d" % int(x["dmg"]), Color(1.0, 0.75, 0.45))
+			_dmg(_foe_at(fj), int(x["dmg"]), false, false, "Raked")
 			_shown_hp["e%d" % fj] = float(x["enemyHp"])
 		"execute":
 			_fx.finisher(_enemy_at)
@@ -1524,29 +1556,29 @@ func _one_play(x: Dictionary) -> void:
 			await _wait(0.5)
 		"tithe":
 			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), Color(0.85, 1.0, 0.6), 12)
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "Tithe  +%d" % int(x["heal"]), Color(0.5, 0.95, 0.6), true)
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), BattleLook.HEAL, true, false, "Tithe", BattleLook.HEAL)
 		"coil":
 			_fx.splash(_enemy_at + Vector2(randf_range(-60, 60), 10))
 			_num(_enemy_at + Vector2(0, -90), "Coils %d/%d" % [int(x["coils"]), int(x["of"])], Color(0.55, 0.85, 0.8))
 		"grip":
 			_say("Kraken's Grip!")
 			_react(-1 - _cur, "hit")
-			_num(_enemy_at, "-%d" % int(x["crush"]), Color(0.55, 0.85, 0.8), true)
+			_dmg(_enemy_at, int(x["crush"]), false)
 			_shown_hp[_ek()] = float(x["enemyHp"])
 			await _wait(0.5)
 		"thermal":
 			_say("Thermal Shock!")
 			_fx.splash(_enemy_at)
-			_num(_enemy_at, "-%d" % int(x["dmg"]), Color(1.0, 0.75, 0.5), true)
+			_dmg(_enemy_at, int(x["dmg"]), false)
 			_shown_hp[_ek()] = float(x["enemyHp"])
 			await _wait(0.5)
 		"counter":
 			var cs: int = int(x["seat"])
 			_say("Counter-Battery!")
 			await _fx.shot(_seat_at(cs) + Vector2(40, 0), _enemy_at, "hit", 1, false, func(_k: int) -> void: _react(cs, "recoil"), func(_k: int) -> void: pass)
-			_num(_enemy_at + Vector2(0, -80), "Countered", Color(0.75, 0.85, 1.0), true)
+			_num(_enemy_at + Vector2(0, -80), "Countered", BattleLook.SHIELD, true)
 			if x.has("reflect"):
-				_num(_enemy_at, "-%d" % int(x["reflect"]), CREAM)
+				_dmg(_enemy_at, int(x["reflect"]), false)
 				_shown_hp[_ek()] = float(x["enemyHp"])
 			await _wait(0.3)
 		"streak":
@@ -1554,14 +1586,14 @@ func _one_play(x: Dictionary) -> void:
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -100), "Cannonade x%d" % int(x["n"]), BattleLook.GOLD)
 		"streakBroken":
 			_fx.fizzle(_seat_at(int(x["seat"])))
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -100), "Cannonade broken", Color(CREAM, 0.7))
+			_num(_seat_at(int(x["seat"])) + Vector2(0, -100), "Cannonade broken", Color(BattleLook.CREAM, 0.7))
 		"eStatus":
 			_fx.status_burst(_enemy_at, str(x.get("status", "")))
 			_num(_enemy_at + Vector2(0, -100), str(x["status"]).capitalize(), Color(0.8, 0.6, 1.0))
 		"tided":
 			var r: Dictionary = Js.obj(Js.obj(x.get("picks")).get(my_key))
 			if Js.num(r.get("heal")) > 0.0:
-				_num(_seat_at(me), "+%d" % int(r["heal"]), Color(0.5, 0.95, 0.6), true)
+				_num(_seat_at(me), "+%d" % int(r["heal"]), BattleLook.HEAL, true)
 			if r.get("refreshed") != null:
 				_log_line("A spent crew order is ready again.")
 			await _wait(0.6)
@@ -1583,12 +1615,17 @@ func _broadside(x: Dictionary, group: Array) -> void:
 		var land: String = "dodge" if g.get("dodged", false) else ("crit" if g["crit"] else "hit")
 		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(ti), land, 2 if x["action"] == "volley" else 3, true, Callable(), func(k: int) -> void: _landed(ti, land, k))
 	await _wait(0.65)
+	# A critical in the broadside holds the same beat as one you deal.
+	for g0: Dictionary in group:
+		if g0["crit"] and not g0.get("dodged", false):
+			await _wait(0.07)
+			break
 	for g: Dictionary in group:
 		var ti2: int = int(g["target"])
 		if g.get("dodged", false):
-			_num(_seat_at(ti2), "Dodged!", Color(0.6, 0.9, 1.0))
+			_num(_seat_at(ti2), "Dodged!", BattleLook.SHIELD)
 		else:
-			_num(_seat_at(ti2), ("%d!" % int(g["dmg"])) if g["crit"] else str(int(g["dmg"])), Color(1.0, 0.45, 0.35), true)
+			_dmg(_seat_at(ti2), int(g["dmg"]), true, g["crit"])
 		_shown_hp[ti2] = float(g["hp"])
 	await _wait(0.4)
 
@@ -1634,16 +1671,16 @@ func _ability_card(x: Dictionary) -> void:
 			await _fx.tide(tat, col)
 		"sharpshot":
 			_fx.mark("reticle", _enemy_at, col, 1.2)
-			_num(_seat_at(si) + Vector2(0, -90), "Steady aim: a wider crit", col.lightened(0.3))
+			_num(_seat_at(si) + Vector2(0, -90), "Steady aim: a wider crit", BattleLook.CREAM)
 		"snare":
 			_fx.mark("chains", _enemy_at, col, 1.4)
 			await _wait(0.4)
 			_fx.status_burst(_enemy_at, "slowed")
-			_num(_enemy_at + Vector2(0, -90), "Snared: it cannot dodge", col.lightened(0.3))
+			_num(_enemy_at + Vector2(0, -90), "Snared: it cannot dodge", BattleLook.CREAM)
 		"anchor":
 			_fx.splash(tat)
 			_fx.status_burst(tat, "fortify")
-			_num(tat + Vector2(0, -90), "Braced", col.lightened(0.3))
+			_num(tat + Vector2(0, -90), "Braced", BattleLook.CREAM)
 		"navigator":
 			var got: int = int(Js.num(x.get("charges")))
 			for k2: int in got:
@@ -1661,7 +1698,7 @@ func _ability_card(x: Dictionary) -> void:
 					_fx.lightning(_enemy_at, col)
 				else:
 					_fx.shot(_seat_at(si), _enemy_at + Vector2(randf_range(-40, 40), 0), "hit")
-				_num(_enemy_at + Vector2(randf_range(-40, 40), -20), "%d" % int(Js.num(h)), col.lightened(0.3))
+				_dmg(_enemy_at + Vector2(randf_range(-40, 40), -20), int(Js.num(h)), false)
 				await _wait(0.16)
 		"foresight":
 			_fx.mark("glyphs", _enemy_at, col, 1.8, big)
@@ -1674,15 +1711,15 @@ func _ability_card(x: Dictionary) -> void:
 			_fx.status_burst(_enemy_at, "marked")
 	# The numbers.
 	if x.has("heal") and float(x["heal"]) > 0.0:
-		_num(tat, "+%d" % int(x["heal"]), Color(0.5, 0.95, 0.6), true)
+		_num(tat, "+%d" % int(x["heal"]), BattleLook.HEAL, true)
 		_shown_hp[tgt] = float(b["seats"][tgt]["hp"])
 	if x.has("shield"):
-		_num(tat + Vector2(0, -40), "+%d shield" % int(x["shield"]), Color(0.55, 0.8, 1.0))
+		_num(tat + Vector2(0, -40), "+%d shield" % int(x["shield"]), BattleLook.SHIELD)
 	if x.has("charges"):
-		_num(tat, "+%d ball%s" % [int(x["charges"]), "" if int(x["charges"]) == 1 else "s"] if float(x["charges"]) > 0.0 else "No luck", CREAM)
+		_num(tat, "+%d ball%s" % [int(x["charges"]), "" if int(x["charges"]) == 1 else "s"] if float(x["charges"]) > 0.0 else "No luck", BattleLook.CREAM)
 	if x.has("dmg"):
 		_fx.finisher(_enemy_at) if cid == "leviathan" else _fx.burst(_enemy_at, true)
-		_num(_enemy_at, "%d!" % int(x["dmg"]), col.lightened(0.3), true)
+		_dmg(_enemy_at, int(x["dmg"]), false)
 		_shown_hp[_ek()] = float(b["enemy"]["hp"])
 	if x.has("reveal"):
 		_log_line("Next: %s" % ", ".join(PackedStringArray(x["reveal"])))
@@ -1708,22 +1745,55 @@ func _wait(s: float) -> void:
 	await get_tree().create_timer(s).timeout
 
 
-func _num(world_p: Vector2, text: String, col: Color, big: bool = false) -> void:
+## Words or a figure rising off the water. crit: a critical (gold, the glow,
+## CRITICAL over it), set only where the event says so; word: a small source
+## word over the figure ("Burning", "Raked"), in word_col.
+func _num(world_p: Vector2, text: String, col: Color, big: bool = false, crit: bool = false, word: String = "", word_col: Color = BattleLook.MUTED) -> void:
 	# Words landing on the same spot at once stack upward rather than overprint.
 	var stack: int = 0
 	for n: Dictionary in _numbers:
 		if float(n["t"]) < 0.7 and (n["p"] as Vector2).distance_to(world_p) < 90.0:
 			stack = maxi(stack, int(n.get("k", 0)) + 1)
-	_numbers.append({ "p": world_p, "text": text, "col": col, "big": big, "t": 0.0, "k": stack, "dx": randf_range(-26.0, 26.0) })
+	_numbers.append({ "p": world_p, "text": text, "col": col, "big": big, "crit": crit, "word": word, "wcol": word_col, "t": 0.0, "k": stack, "dx": randf_range(-26.0, 26.0) })
+
+
+## THE damage figure, one style: a bare number, cream on an enemy, the
+## damage-taken red on your line, gold only for a critical; where it came
+## from goes in a small word over it.
+func _dmg(world_p: Vector2, amount: int, on_you: bool, crit: bool = false, word: String = "", word_col: Color = BattleLook.MUTED) -> void:
+	var col: Color = BattleLook.CRIT if crit else (BattleLook.DMG_TAKEN if on_you else BattleLook.CREAM)
+	_num(world_p, ("%d!" % amount) if crit else str(amount), col, crit, crit, word, word_col)
 
 
 func _puff(world_p: Vector2, text: String, col: Color) -> void:
 	_num(world_p, text, col)
 
 
+## The headline banner. One at a time: a new line while one is up swaps its
+## words in place (no blink); one under 0.6s old is let finish its entrance
+## first (queued). A Stamp on screen holds it (it carries the moment).
+var _say_queue: Array = []
+
+
 func _say(text: String) -> void:
+	if _stamp_up():
+		return
+	if _banner_t >= 0.0 and _banner_t < 0.6 and _banner.text != text:
+		_say_queue.append(text)
+		return
+	if _banner_t >= 0.2 and _banner_t <= 1.6:
+		_banner.text = text
+		_banner_t = 0.2
+		return
 	_banner.text = text
 	_banner_t = 0.0
+
+
+func _stamp_up() -> bool:
+	for c: Node in get_children():
+		if c is Stamp and not c.is_queued_for_deletion():
+			return true
+	return false
 
 
 func _log_line(text: String) -> void:
@@ -1823,8 +1893,10 @@ func _crate() -> void:
 		RaidFeats.grant(sea.session.store, sea.session.uid, raid_id, _feats)
 	sea.session.persist()
 	if not _raid.get("skirmish", false):
-		_stamp("normal", first)
-	_say(str(_raid.get("bossDefeatedText", "Victory")) if str(_raid.get("bossDefeatedText", "")) != "" else "Victory")
+		# The Stamp carries the moment (and the boss line); no banner over it.
+		_stamp("normal", first, str(_raid.get("bossDefeatedText", "")))
+	else:
+		_say(str(_raid.get("bossDefeatedText", "Victory")) if str(_raid.get("bossDefeatedText", "")) != "" else "Victory")
 	if not r.is_empty():
 		var items: Array = (r["items"] as Array).map(func(x: Dictionary) -> String: return str(x.get("label", x["id"])))
 		_log_line("The crate: %s ⟡%s" % [Js.thousands(float(r["coin"])), ("  ·  " + ", ".join(PackedStringArray(items))) if not items.is_empty() else ""])
@@ -1833,10 +1905,24 @@ func _crate() -> void:
 	_end(true)
 
 
+## The "sunk" event's banner already said it: _lost only says it when no
+## event did (one sinking banner, not two).
+var _sunk_said: bool = false
+
+
 func _lost() -> void:
-	_say("Your ship is going down")
-	_log_line("She limps home to the Gunwharf. Refit and come back.")
+	if not _sunk_said:
+		_say("Holed below the waterline")
+	_log_line("Your ship is going down. She limps home to the Gunwharf. Refit and come back.")
 	Sound.slack()
+	# Her hull answers as an enemy's does: a slow list and a settle, with a
+	# burst and bubbles off her (righted when she is towed home).
+	var at: Vector2 = _seat_at(me)
+	if _fx != null:
+		_fx.burst(at, false)
+		_fx.glyph_burst(at, "bubble", BattleLook.CREAM, 8, 90.0, 18.0, -120.0)
+	var ls: Tween = sea._boat.create_tween()
+	ls.tween_property(sea._boat, "rotation", 0.1, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await _wait(2.6)
 	_end(false)
 
@@ -1850,7 +1936,12 @@ func _end(won: bool, fled: bool = false) -> void:
 	if table != null and table.is_connected("changed", _pump):
 		table.disconnect("changed", _pump)
 	if _ov != null:
-		_ov.queue_free()
+		# The sheet fades away before it goes.
+		_ov._hide()
+		var ov: GauntletOverlay = _ov
+		get_tree().create_timer(0.25).timeout.connect(func() -> void:
+			if is_instance_valid(ov):
+				ov.queue_free())
 	if _moments != null:
 		_moments.clear()
 		_moments.queue_free()
@@ -1862,7 +1953,10 @@ func _end(won: bool, fled: bool = false) -> void:
 	if gauntlet != "":
 		sea.water_theme = {}
 	sea._boat.modulate = Color.WHITE
-	sea._boat.rotation = 0.0
+	# A listing hull rights itself (sunk, she settled over).
+	if absf(sea._boat.rotation) > 0.001:
+		var rt: Tween = sea._boat.create_tween()
+		rt.tween_property(sea._boat, "rotation", 0.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	for k3: Variant in sea._mates:
 		if is_instance_valid(sea._mates[k3]):
 			(sea._mates[k3] as Node2D).modulate = Color.WHITE
@@ -1871,14 +1965,23 @@ func _end(won: bool, fled: bool = false) -> void:
 		if is_instance_valid(sea._mates[k2]):
 			(sea._mates[k2] as Shipmate).face_lock = 0.0
 			(sea._mates[k2] as Shipmate)._plate.visible = true
+	# The enemy hulls fade off the water; the fight's effects fade out (smoke
+	# still rising is not cut off) before they go.
 	for n0: Variant in _foe_nodes:
 		if n0 != null and is_instance_valid(n0):
-			(n0 as Node).queue_free()
+			var hn: Node2D = n0
+			var ht: Tween = hn.create_tween()
+			Motion.ease_exit(ht, hn, "modulate:a", 0.0, 0.4)
+			ht.tween_callback(hn.queue_free)
 	if mark != null:
 		mark.visible = true
-	_fx.queue_free()
+	if _fx != null and is_instance_valid(_fx):
+		var fx0: BattleFx = _fx
+		_fx = null
+		var ft: Tween = fx0.create_tween()
+		Motion.ease_fade(ft, fx0, "modulate:a", 0.0, 0.5)
+		ft.tween_callback(fx0.queue_free)
 	sea.stage = null
-	sea._hud.visible = true
 	# Home: back to where she lay (sunk, to the Gunwharf's berth).
 	var home: Vector2 = _from
 	if gauntlet != "":
@@ -1895,10 +1998,17 @@ func _end(won: bool, fled: bool = false) -> void:
 		var back: Tween = create_tween()
 		back.tween_property(sea._boat, "position", home, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		back.tween_callback(func() -> void: sea._boat.hold_still = false)
+	# The bars leave as they came, mirrored (CUBIC in), the deck dimming with
+	# them; then the sea's HUD fades back in.
 	var tw: Tween = create_tween()
-	tw.tween_property(self, "_bars", 0.0, 0.5)
-	tw.parallel().tween_property(self, "_drop", 260.0, 0.4)
+	Motion.ease_exit(tw, self, "_bars", 0.0, Motion.BARS_OUT)
+	_deck_dim(true)
 	await tw.finished
+	var hud: Control = sea._hud
+	hud.modulate.a = 0.0
+	hud.visible = true
+	var hw: Tween = hud.create_tween()
+	Motion.ease_fade(hw, hud, "modulate:a", 1.0, 0.35)
 	finished.emit(won and not fled)
 	queue_free()
 
@@ -1935,7 +2045,19 @@ func _draw() -> void:
 		var cw: float = f.get_string_size(cd, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		var cr: Rect2 = Rect2(vp.x / 2.0 - cw / 2.0 - 22.0, hb * 0.5 - 15.0, cw + 44.0, 30.0)
 		BattleLook.draw_box(self, cr, BattleLook.box(Color(BattleLook.LACQUER_HI, 0.95), Color(0, 0, 0, 0), 0, 15))
-		BattleLook.say(self, f, vp.x / 2.0, cr.get_center().y + 5.0, cd, 15, BattleLook.BRASS_HI)
+		BattleLook.say(self, f, vp.x / 2.0, cr.get_center().y + 5.0, cd, 15, Kit.GOLD_HI)
+		# How long the table waits before it takes the default: a thin
+		# draining line under the pill and the seconds (gold in the last 10).
+		var left: float = _plan_until - _t
+		if not who.is_empty() and left > 0.0 and _plan_len > 0.0:
+			var share: float = clampf(left / _plan_len, 0.0, 1.0)
+			var lw: float = 120.0
+			var ly: float = cr.end.y + 5.0
+			var lx: float = vp.x / 2.0 - lw / 2.0 - 14.0
+			var hot: bool = left <= 10.0
+			draw_rect(Rect2(lx, ly, lw, 2.0), Color(1, 1, 1, 0.14))
+			draw_rect(Rect2(lx, ly, lw * share, 2.0), BattleLook.GOLD if hot else BattleLook.MUTED)
+			draw_string(Kit.font("karla", 800), Vector2(lx + lw + 8.0, ly + 5.0), "%ds" % ceili(left), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, BattleLook.GOLD if hot else BattleLook.MUTED)
 	# The log's backing, and the banner's brass flourish.
 	if _log.visible and _log.text != "" and _log.modulate.a > 0.01:
 		var la: float = _log.modulate.a
@@ -1994,9 +2116,9 @@ func _draw() -> void:
 		_plate(ep, str(e["name"]), float(_shown_hp.get(key, e["hp"])), float(e["max"]), float(e["shield"]), int(e["charges"]), int(e["mag"]), e["statuses"], true, _strip_lit == -1 - j2, key, etag, _foe_tex[j2], "", 1.0 - float(en.sink))
 		if not card_seen and float(en.sink) < 0.05 and j2 == 0:
 			if not frames:
-				BattleLook.say(self, Kit.font("karla", 800), ep.x + 8.0, ep.y + 76.0, "CLICK FOR STATS", 10, Color(BattleLook.GOLD, 0.6 + 0.3 * sin(_t * 3.0)), 4)
+				BattleLook.say(self, Kit.font("karla", 800), ep.x + 8.0, ep.y + 76.0, "CLICK FOR STATS", 10, Color(BattleLook.GOLD, 0.6 + 0.3 * sin(_t * Motion.PULSE_CALL)), 4)
 			else:
-				BattleLook.say(self, Kit.font("karla", 800), ep.x + 8.0, ep.y - 14.0, "CLICK A FRAME FOR STATS", 10, Color(BattleLook.GOLD, 0.6 + 0.3 * sin(_t * 3.0)), 4)
+				BattleLook.say(self, Kit.font("karla", 800), ep.x + 8.0, ep.y - 14.0, "CLICK A FRAME FOR STATS", 10, Color(BattleLook.GOLD, 0.6 + 0.3 * sin(_t * Motion.PULSE_CALL)), 4)
 	for i: int in (b["seats"] as Array).size():
 		var s: Dictionary = b["seats"][i]
 		var sp: Vector2 = _plate_at[i]
@@ -2015,7 +2137,7 @@ func _draw() -> void:
 		var u: float = float(n["t"]) / 1.4
 		var txt: String = n["text"]
 		var dmg: bool = txt.trim_suffix("!").is_valid_int()
-		var crit: bool = n["big"] and dmg
+		var crit: bool = n.get("crit", false) == true
 		var rise: float = 1.0 - pow(1.0 - clampf(u, 0.0, 1.0), 3.0)
 		var p: Vector2 = _screen(n["p"]) + Vector2(float(n.get("dx", 0.0)) * rise, -40.0 - (90.0 if dmg else 60.0) * rise - 38.0 * float(n.get("k", 0)))
 		var fs: int = (46 if crit else (34 if dmg else (30 if n["big"] else 21)))
@@ -2029,10 +2151,18 @@ func _draw() -> void:
 		draw_set_transform(p, rot, Vector2(pop, pop))
 		if crit:
 			var gr: float = fs * 1.5
-			draw_texture_rect(_num_glow, Rect2(Vector2(-gr, -fs * 0.3 - gr), Vector2(gr, gr) * 2.0), false, Color(1.0, 0.72, 0.25, 0.5 * a))
+			draw_texture_rect(_num_glow, Rect2(Vector2(-gr, -fs * 0.3 - gr), Vector2(gr, gr) * 2.0), false, Color(BattleLook.CRIT, 0.5 * a))
 			var cw2: float = Kit.font("karla", 800).get_string_size("CRITICAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 			draw_string_outline(Kit.font("karla", 800), Vector2(-cw2 / 2.0, -fs * 0.95), "CRITICAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 5, Color(0, 0, 0, 0.7 * a))
-			draw_string(Kit.font("karla", 800), Vector2(-cw2 / 2.0, -fs * 0.95), "CRITICAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.9, 0.55, a))
+			draw_string(Kit.font("karla", 800), Vector2(-cw2 / 2.0, -fs * 0.95), "CRITICAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(Kit.GOLD_HI, a))
+		# Where it came from, a small word over the figure.
+		var wd: String = str(n.get("word", ""))
+		if wd != "":
+			var wf: Font = Kit.font("karla", 800)
+			var wy: float = -fs * 0.95 - (16.0 if crit else 0.0)
+			var ww: float = wf.get_string_size(wd, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+			draw_string_outline(wf, Vector2(-ww / 2.0, wy), wd, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 5, Color(0, 0, 0, 0.7 * a))
+			draw_string(wf, Vector2(-ww / 2.0, wy), wd, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(n.get("wcol", BattleLook.MUTED), a))
 		draw_string_outline(f, Vector2(-w / 2.0, 0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 9 if dmg else 7, Color(0, 0, 0, 0.8 * a))
 		draw_string(f, Vector2(-w / 2.0, 0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(n["col"], a))
 		# The first instant of a hit: a white flash on the figure.
@@ -2054,17 +2184,19 @@ func _plate(at: Vector2, name: String, hp: float, mx: float, shield: float, ch: 
 	_trail[key] = tr
 	var out: bool = out_word != ""
 	var a: float = alpha * (0.55 if out else 1.0)
-	var glow: float = (0.65 + 0.35 * sin(_t * 6.0)) if lit else 0.0
+	var glow: float = (0.65 + 0.35 * sin(_t * Motion.PULSE_CALL)) if lit else 0.0
 	BattleLook.panel(self, r, 12.0, a, glow)
 	var mc: Vector2 = Vector2(r.position.x + 4.0, r.position.y + h * 0.5)
 	BattleLook.medallion(self, mc, 27.0 if foe else 24.0, portrait, BattleLook.FOE if foe else BattleLook.ALLY, name.substr(0, 1), a, Vector2(0.5, 0.27) if foe else Vector2(0.5, 0.5), 0.25 if foe else 0.5)
 	if tag != "":
-		var tone: Color = BattleLook.FOE if tag == "BOSS" else (BattleLook.GOLD if tag == "ELITE" else BattleLook.ALLY)
-		var tf: Font = Kit.font("karla", 800)
-		var tw: float = tf.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x + 12.0
-		var tr2: Rect2 = Rect2(Vector2(r.position.x + 36.0, r.position.y - 9.0), Vector2(tw, 15))
-		BattleLook.draw_box(self, tr2, BattleLook.box(Color(BattleLook.LACQUER_LO, a), Color(tone, a), 1, 7))
-		draw_string(tf, tr2.position + Vector2(6, 11), tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(tone.lightened(0.3), a))
+		# Gold means aimed at (as the reticle round the hull); green your
+		# line; red the boss; a role or ELITE in plain cream.
+		var tone: Color = BattleLook.FOE if tag == "BOSS" else (BattleLook.GOLD if tag == "TARGET" else (BattleLook.ALLY if tag == "YOU" else BattleLook.CREAM))
+		var tf: Font = BattleLook.tag_font()
+		var tw: float = BattleLook.pill_w(tag)
+		var tr2: Rect2 = Rect2(Vector2(r.position.x + 36.0, r.position.y - 10.0), Vector2(tw, 17))
+		BattleLook.draw_box(self, tr2, BattleLook.box(Color(BattleLook.LACQUER_LO, a), Color(tone, a), 1, 8))
+		draw_string(tf, tr2.position + Vector2(6, 12.5), tag.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, Kit.role_px("tag"), Color(tone.lightened(0.3), a))
 	var x0: float = r.position.x + 36.0
 	var hf: Font = Kit.font("karla", 800)
 	var ht: String = "%d / %d" % [int(hp), int(mx)]
@@ -2077,17 +2209,16 @@ func _plate(at: Vector2, name: String, hp: float, mx: float, shield: float, ch: 
 		BattleLook.ball(self, Vector2(x0 + 6.0 + k * 14.0, r.position.y + 49.0), 5.0, k < ch, a)
 	# What it is under, right to left.
 	var sx: float = r.end.x - 12.0
-	var pf: Font = Kit.font("karla", 800)
 	for id: String in st:
 		var word: String = id.capitalize()
 		if word.length() > 9:
 			word = word.substr(0, 9)
 		# Its own colour, the same as the effect the ship wears.
 		var tone2: Color = FxSheet.status_color(id) if FxSheet.STATUS.has(id) else (BattleLook.ALLY if id in ["fortify", "enrage", "regen", "haste"] else BattleLook.FOE)
-		sx -= pf.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x + 12.0
+		sx -= BattleLook.pill_w(word)
 		if sx < x0 + mag * 14.0:
 			break
-		BattleLook.pill(self, Vector2(sx, r.position.y + 42.0), word, tone2, a)
+		BattleLook.pill(self, Vector2(sx, r.position.y + 41.0), word, tone2, a)
 		sx -= 4.0
 	if out:
 		BattleLook.draw_box(self, r, BattleLook.box(Color(0, 0, 0, 0.45 * alpha), Color(0, 0, 0, 0), 0, 12))
@@ -2169,18 +2300,18 @@ func _summon(x: Dictionary) -> void:
 		"leviathan":
 			for h: Dictionary in x["hits"]:
 				await sm.lunge(_seat_at(int(h["seat"])))
-				_num(_seat_at(int(h["seat"])), "%d!" % int(h["dmg"]), Color(1.0, 0.4, 0.35), true)
+				_dmg(_seat_at(int(h["seat"])), int(h["dmg"]), true)
 				_shown_hp[int(h["seat"])] = float(h["hp"])
 		"blitz":
 			for h: Dictionary in x["hits"]:
 				for k: int in 4:
 					_fx.shot(sm.position, _seat_at(int(h["seat"])) + Vector2(randf_range(-40, 40), 0), "hit")
 					await _wait(0.12)
-				_num(_seat_at(int(h["seat"])), "%d!" % int(h["dmg"]), Color(1.0, 0.4, 0.35), true)
+				_dmg(_seat_at(int(h["seat"])), int(h["dmg"]), true)
 				_shown_hp[int(h["seat"])] = float(h["hp"])
 		"abyssal_tide":
 			await sm.pulse()
-			_num(_enemy_at, "+%d  ·  +%d shield" % [int(x.get("heal", 0)), int(x.get("shield", 0))], Color(0.6, 0.95, 0.7), true)
+			_num(_enemy_at, "+%d  ·  +%d shield" % [int(x.get("heal", 0)), int(x.get("shield", 0))], BattleLook.HEAL, true)
 			_shown_hp[_ek()] = float(x["enemyHp"])
 		"foresight":
 			await sm.pulse()
@@ -2227,11 +2358,11 @@ func _play_list(ev: Array) -> void:
 					_clog.add(x)
 				if float(x["dmg"]) > 0.0:
 					_fx.burst(_seat_at(int(x["seat"])), float(x["missed"]) >= 2.0)
-					_num(_seat_at(int(x["seat"])), "-%d" % int(x["dmg"]), Color(1.0, 0.5, 0.3), true)
+					_dmg(_seat_at(int(x["seat"])), int(x["dmg"]), true)
 					_shown_hp[int(x["seat"])] = float(x["hp"])
 					await _wait(0.4)
 				else:
-					_num(_seat_at(int(x["seat"])), "Not a spark landed", CREAM)
+					_num(_seat_at(int(x["seat"])), "Not a spark landed", BattleLook.CREAM)
 					await _wait(0.4)
 			_:
 				await _one(x)
@@ -2252,7 +2383,7 @@ func _tide(tide: Dictionary, eyebrow: String) -> void:
 		return
 	var r: Dictionary = Battle.tide_pick(b, me, tide, id)
 	if float(r.get("heal", 0.0)) > 0.0:
-		_num(_seat_at(me), "+%d" % int(r["heal"]), Color(0.5, 0.95, 0.6), true)
+		_num(_seat_at(me), "+%d" % int(r["heal"]), BattleLook.HEAL, true)
 		_shown_hp[me] = float(b["seats"][me]["hp"])
 	if r.get("refreshed") != null:
 		_log_line("A spent crew order is ready again.")
@@ -2370,9 +2501,9 @@ func _beat_drum() -> void:
 	Sound.horn()
 	Rumble.buzz([0, 40, 40, 40, 40, 60])
 	if r.get("refreshed") != null:
-		_num(_seat_at(me), "A crew order is back", Color(0.95, 0.85, 0.5), true)
+		_num(_seat_at(me), "A crew order is back", BattleLook.GOLD, true)
 	else:
-		_num(_seat_at(me), "The drum goes unanswered", CREAM)
+		_num(_seat_at(me), "The drum goes unanswered", BattleLook.CREAM)
 	_paint_actions()
 
 
@@ -2404,7 +2535,7 @@ func _flee() -> void:
 
 func _show_flee(x: Dictionary, need: int) -> void:
 	_clear_deck()
-	create_tween().tween_property(self, "_drop", 0.0, 0.2)
+	_deck_dim(false)
 	Paper.night = true
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 20)
@@ -2419,19 +2550,21 @@ func _show_flee(x: Dictionary, need: int) -> void:
 	Paper.text(v, "MAKING A RUN FOR IT", "eyebrow", Paper.ink_soft())
 	Paper.text(v, "Need %d or better  ·  a 20 always gets away, a 1 never does" % need, "body_strong", Paper.ink())
 	var said: Label = Paper.text(v, "", "display", Paper.ink())
+	# Read while the night paper is set: Caught in its red, Away in the heal.
+	var caught_col: Color = Paper.red()
 	Paper.night = false
 	await die.landed
 	if x["success"]:
 		said.text = "Away!"
-		said.add_theme_color_override("font_color", Color(0.5, 0.86, 0.58))
+		said.add_theme_color_override("font_color", BattleLook.HEAL)
 		Sound.horn()
 	else:
 		said.text = "Caught!"
-		said.add_theme_color_override("font_color", Color(0.93, 0.45, 0.33))
+		said.add_theme_color_override("font_color", caught_col)
 		await _wait(0.4)
 		_fx.shot(_enemy_at + Vector2(-40, 0), _seat_at(me), "hit")
 		await _wait(0.5)
-		_num(_seat_at(me), "Parting shot  -%d" % int(x.get("dmg", 0)), Color(1.0, 0.45, 0.35), true)
+		_dmg(_seat_at(me), int(x.get("dmg", 0)), true, false, "Parting shot", BattleLook.FOE)
 		_shown_hp[me] = float(x.get("hp", b["seats"][me]["hp"]))
 	await _wait(1.0)
 	_clear_deck()
@@ -2586,7 +2719,7 @@ func _phase(cur: Dictionary) -> void:
 			b = (cur["b"] as Dictionary).duplicate(true)
 			_busy = true
 			_clear_deck()
-			create_tween().tween_property(self, "_drop", 190.0, 0.2).set_ease(Tween.EASE_IN)
+			_deck_dim(true)
 			await _play_events(Js.list(cur.get("ev")))
 			_strip_lit = -99
 			_shown_hp.clear()
@@ -2632,7 +2765,8 @@ func _phase(cur: Dictionary) -> void:
 		"plan":
 			_ov_phase = ""
 			b = (cur["b"] as Dictionary).duplicate(true)
-			_plan_until = _t + float(Js.nz(cur.get("left"), RaidTable.PLAN))
+			_plan_len = float(Js.nz(cur.get("left"), RaidTable.PLAN))
+			_plan_until = _t + _plan_len
 			if _alive_me() and not Js.obj(cur.get("plans")).has(my_key):
 				_await_plan()
 				_xfire_hint()
@@ -2653,7 +2787,7 @@ func _phase(cur: Dictionary) -> void:
 			b = (cur["b"] as Dictionary).duplicate(true)
 			_busy = true
 			_clear_deck()
-			create_tween().tween_property(self, "_drop", 260.0, 0.3).set_ease(Tween.EASE_IN)
+			_deck_dim(true)
 			var ph: String = str(cur.get("phase", ""))
 			await _stage(cur)
 			_ov_phase = ph
@@ -2680,13 +2814,13 @@ func _waiting() -> void:
 	var line: String = "Orders given. Waiting on %s." % ", ".join(PackedStringArray(names)) if not names.is_empty() else "Orders given. The round is coming."
 	if not _alive_me():
 		line = "You are out of this fight. The crew fight on."
-	var lb: Label = Kit.text(_deck_box, line, "body_strong", NIGHT_INK)
+	var lb: Label = Kit.text(_deck_box, line, "body_strong", BattleLook.CREAM)
 	lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lb.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if plans.is_empty() and str(_latest.get("phase", "")) != "plan":
 		lb.text = "The crew are seeing to it."
-	create_tween().tween_property(self, "_drop", 0.0, 0.2)
+	_deck_dim(false)
 
 
 ## A ship's order for the round, under its plate while the crew plan: what it
@@ -2948,7 +3082,7 @@ func _bond_move(x: Dictionary, at: Vector2) -> void:
 	elif tx.contains("shield") or tx == "Shield Wall":
 		_fx.tether(from, at, Color(0.6, 0.85, 1.0))
 	elif tx.begins_with("+"):
-		_fx.motes(from, at, Color(0.5, 0.95, 0.6), 8)
+		_fx.motes(from, at, BattleLook.HEAL, 8)
 	elif tx == "Marked" or tx.begins_with("Spotted"):
 		_fx.sigil(at, Color(1.0, 0.82, 0.4))
 	elif tx == "Boarded!":
@@ -3006,7 +3140,7 @@ func _reaction(x: Dictionary) -> void:
 		"numbed":
 			_fx.freeze_snap(at)
 			_fx.status_burst(at, "slowed")
-			_num(at + Vector2(0, -60), "Numbed  +1 turn frozen", Color(0.7, 0.85, 1.0))
+			_num(at + Vector2(0, -60), "Numbed  +1 turn frozen", BattleLook.ICE)
 		"last_rites":
 			# A beam of gold down onto the marked hull.
 			_fx.beam(from, at, Color(1.0, 0.85, 0.45), false)
@@ -3018,11 +3152,11 @@ func _reaction(x: Dictionary) -> void:
 				_fx.glyph_burst(_foe_at(j2), "ember", Color(0.3, 0.85, 0.85), 16, 200.0, 14.0)
 				_fx.splash(_foe_at(j2))
 	if Js.num(x.get("dmg")) > 0.0:
-		_num(at, "-%d" % int(x["dmg"]), Color(1.0, 0.8, 0.5), true)
+		_dmg(at, int(x["dmg"]), false)
 	for o2: Variant in others:
 		var od: Dictionary = Js.obj(o2)
 		if od.has("dmg"):
-			_num(_foe_at(int(od["foe"])), "-%d" % int(od["dmg"]), Color(1.0, 0.75, 0.45))
+			_dmg(_foe_at(int(od["foe"])), int(od["dmg"]), false)
 			_shown_hp["e%d" % int(od["foe"])] = float(od["hp"])
 	_shown_hp["e%d" % fj] = float(x["enemyHp"])
 	var fresh: bool = Js.list(x.get("new")).has(my_key)
@@ -3045,7 +3179,7 @@ func _role_move(x: Dictionary) -> void:
 		"shieldwright", "sawbones":
 			var tj: int = int(x["to"])
 			var to: Vector2 = _foe_at(tj)
-			var col: Color = Color(0.55, 0.8, 1.0) if x["role"] == "shieldwright" else Color(0.5, 0.95, 0.6)
+			var col: Color = BattleLook.SHIELD if x["role"] == "shieldwright" else BattleLook.HEAL
 			_react(-1 - _cur, "brace")
 			_fx.tether(from, to, col)
 			await _wait(0.45)
@@ -3084,10 +3218,15 @@ func _role_move(x: Dictionary) -> void:
 ## THE MARK OF A RAID BEATEN: a gold seal slams down mid-screen (a thump, a
 ## ring of light), "RAID CLEARED" over it and the tier under it; the first
 ## clear of that tier says so on a ribbon, with a burst of gold.
-func _stamp(tier: String, first: bool) -> void:
+func _stamp(tier: String, first: bool, line: String = "") -> void:
 	var st: Stamp = Stamp.new()
 	st.tier = { "normal": "Normal", "coop": "Co-op", "coopc": "Co-op Challenge" }.get(tier, "Normal")
 	st.first = first
+	st.line = line
+	# One headline at a time: the banner gives way to the Stamp.
+	_banner_t = -1.0
+	_banner.modulate.a = 0.0
+	_say_queue.clear()
 	add_child(st)
 	Sound.impact(true)
 	Sound.seal(true)
@@ -3100,6 +3239,8 @@ class Stamp:
 	extends Control
 	var tier: String = ""
 	var first: bool = false
+	## The boss's last line (bossDefeatedText), under the tier.
+	var line: String = ""
 	var _t: float = 0.0
 
 	func _ready() -> void:
@@ -3118,7 +3259,7 @@ class Stamp:
 		var k: float = lerpf(2.6, 1.0, 1.0 - pow(1.0 - land, 3.0))
 		var a: float = clampf(_t / 0.12, 0.0, 1.0) * (1.0 - smoothstep(2.6, 3.2, _t))
 		# The sea dims behind it, so the seal reads.
-		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.62 * a))
+		draw_rect(Rect2(Vector2.ZERO, size), Color(Kit.SCRIM_BASE, 0.62 * a))
 		# The ring of light where it lands.
 		if land >= 1.0:
 			var u: float = clampf((_t - 0.22) / 0.6, 0.0, 1.0)
@@ -3130,10 +3271,8 @@ class Stamp:
 					draw_circle(c + Vector2(cos(ang), sin(ang)) * d, 4.0 * (1.0 - u), Color(1.0, 0.85, 0.4, 1.0 - u))
 		draw_set_transform(c, -0.06, Vector2(k, k))
 		var r: float = 78.0
-		draw_circle(Vector2(0, 4), r + 8.0, Color(0, 0, 0, 0.35 * a))
+		# Flat: a gold disc and a dark check, no highlight or shadow.
 		draw_circle(Vector2.ZERO, r, Color(BattleLook.GOLD.darkened(0.12), a))
-		draw_arc(Vector2.ZERO, r - 8.0, 0.0, TAU, 64, Color(1, 0.95, 0.75, 0.55 * a), 2.0, true)
-		draw_arc(Vector2.ZERO, r - 14.0, 0.0, TAU, 64, Color(0.3, 0.2, 0.08, 0.35 * a), 1.0, true)
 		draw_polyline(PackedVector2Array([Vector2(-30, 2), Vector2(-8, 24), Vector2(32, -22)]), Color(0.18, 0.12, 0.05, a), 9.0, true)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		var f: Font = Kit.font("cinzel", 800)
@@ -3145,6 +3284,8 @@ class Stamp:
 			var rr: Rect2 = Rect2(Vector2(c.x - rw / 2.0, c.y + 136.0), Vector2(rw, 26))
 			BattleLook.draw_box(self, rr, BattleLook.box(Color(BattleLook.GOLD.darkened(0.5), 0.95 * a), Color(BattleLook.GOLD, a), 1, 13))
 			BattleLook.say(self, Kit.font("karla", 800), c.x, rr.end.y - 8.0, rib, 13, Color(BattleLook.GOLD.lightened(0.3), a))
+		if line != "":
+			BattleLook.say(self, Kit.font("karla", 700), c.x, c.y + (190.0 if first else 156.0), line, 17, Color(BattleLook.CREAM, 0.92 * a), 6)
 
 
 
@@ -3304,12 +3445,29 @@ class DepthCall:
 	func _ready() -> void:
 		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		create_tween().tween_property(self, "_a", 1.0, 0.35)
+		Motion.ease_fade(create_tween(), self, "_a", 1.0, 0.35)
 
 	func leave() -> void:
 		var tw: Tween = create_tween()
-		tw.tween_property(self, "_a", 0.0, 0.4)
+		Motion.ease_fade(tw, self, "_a", 0.0, 0.4)
 		tw.tween_callback(queue_free)
+
+	## The dark band behind the call: one vertical gradient, soft at its
+	## edges (not stacked strips).
+	static var _band: GradientTexture2D
+
+	static func band_tex() -> GradientTexture2D:
+		if _band == null:
+			var g: Gradient = Gradient.new()
+			g.offsets = PackedFloat32Array([0.0, 0.12, 0.88, 1.0])
+			g.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 1), Color(1, 1, 1, 1), Color(1, 1, 1, 0)])
+			_band = GradientTexture2D.new()
+			_band.gradient = g
+			_band.width = 1
+			_band.height = 64
+			_band.fill_from = Vector2(0, 0)
+			_band.fill_to = Vector2(0, 1)
+		return _band
 
 	func _process(_d: float) -> void:
 		queue_redraw()
@@ -3318,8 +3476,7 @@ class DepthCall:
 		var vp: Vector2 = size
 		var c: Vector2 = Vector2(vp.x / 2.0, vp.y * 0.36)
 		var acc: Color = Color(str(band.get("accent", "#cccccc")))
-		for k: int in 6:
-			draw_rect(Rect2(0, c.y - 110 + k * 4, vp.x, 220 - k * 8), Color(0, 0, 0, 0.07 * _a))
+		draw_texture_rect(band_tex(), Rect2(0, c.y - 110, vp.x, 220), false, Color(0, 0, 0, 0.42 * _a))
 		var eyebrow: String = str(rise.get("eyebrow", "")) if not rise.is_empty() else ("Into the Green" if don else "Into the Locker") if depth <= 1 else ("A milestone" if depth % 10 == 0 else "Deeper still")
 		BattleLook.say(self, Kit.font("karla", 800), c.x, c.y - 62, eyebrow.to_upper(), 13, Color(acc, _a))
 		var title: String = str(rise.get("title", "")) if not rise.is_empty() else "Depth %d" % depth

@@ -31,6 +31,9 @@ extends Control
 ##   NARROWED   every band (crit, hit, graze) smaller, judged the same.
 
 signal locked(result: String)
+## The lock's feedback has played out (the result word, the ring, the embers):
+## the stage clears the bar on this, not on `locked`.
+signal settled
 
 var _shade: Texture2D
 var _face: ColorRect
@@ -79,6 +82,9 @@ var _done: bool = false
 var _flash: String = ""
 var _flash_t: float = 0.0
 var _t: float = 0.0
+var _settled: bool = false
+## How long a lock's feedback plays before `settled`.
+const SETTLE: float = 0.55
 
 
 func _ready() -> void:
@@ -145,6 +151,9 @@ func _process(delta: float) -> void:
 			_zdir = 1.0
 	else:
 		_flash_t += delta
+		if not _settled and _flash_t >= SETTLE:
+			_settled = true
+			settled.emit()
 	for sp: Dictionary in _sparks:
 		sp["t"] = float(sp["t"]) + delta
 		sp["p"] = (sp["p"] as Vector2) + (sp["v"] as Vector2) * delta
@@ -194,7 +203,14 @@ func _lit() -> int:
 	return 0
 
 
-const LIT_COL: Array = [Color(0.94, 0.88, 0.77), Color(0.92, 0.7, 0.38), Color(0.5, 0.85, 0.6), Color(1.0, 0.84, 0.38)]
+## THE bar's one palette (none, graze, hit, crit): the needle, the embers, the
+## result word and the shader's bands all read it (fed as uniforms).
+const LIT_COL: Array = [BattleLook.CREAM, Color(0.92, 0.7, 0.38), BattleLook.ALLY, Kit.GOLD_HI]
+## The result word for a miss or a fumble.
+const MISS_COL: Color = BattleLook.FOE
+
+
+var _fed_cols: bool = false
 
 
 func _feed() -> void:
@@ -214,6 +230,11 @@ func _feed() -> void:
 	m.set_shader_parameter("u_burst_col", Vector3(_burst_col.r, _burst_col.g, _burst_col.b))
 	m.set_shader_parameter("u_burst_x", _burst_x)
 	m.set_shader_parameter("u_needle", _pos)
+	if not _fed_cols:
+		_fed_cols = true
+		for k: int in 3:
+			var lc: Color = LIT_COL[k + 1]
+			m.set_shader_parameter(["u_graze_col", "u_hit_col", "u_crit_col"][k], Vector3(lc.r, lc.g, lc.b))
 
 
 func _gui_input(e: InputEvent) -> void:
@@ -333,10 +354,9 @@ func _draw() -> void:
 		var hgt: float = rail.size.y + 12.0
 		draw_rect(Rect2(rail.position.x - 6.0, top, maxf(0.0, wx0 - rail.position.x + 6.0), hgt), dark)
 		draw_rect(Rect2(wx1, top, maxf(0.0, rail.end.x + 6.0 - wx1), hgt), dark)
-		for k: int in 8:
-			var fa: float = dark.a * (1.0 - (k + 1) / 9.0)
-			draw_rect(Rect2(wx0 + k * 3.0, top, 3.0, hgt), Color(dark, fa))
-			draw_rect(Rect2(wx1 - (k + 1) * 3.0, top, 3.0, hgt), Color(dark, fa))
+		# The window's soft edges: one gradient each side, not stepped strips.
+		draw_texture_rect(_edge_tex(), Rect2(wx0, top, 24.0, hgt), false, dark)
+		draw_texture_rect(_edge_tex(), Rect2(wx1, top, -24.0, hgt), false, dark)
 	# The needle: a flat bar in the colour of the band it is over (gold:
 	# press now for a crit), flat brackets above and below, a faint trail.
 	var nx: float = px.call(_pos)
@@ -366,30 +386,28 @@ func _draw() -> void:
 	var f: Font = Kit.font("cinzel", 800)
 	if _flash != "":
 		var word: String = { "critical": "CRITICAL!", "hit": "HIT", "graze": "GRAZE", "miss": "MISS", "fumble": "FALSE COLORS!" }[_flash]
-		var c2: Color = { "critical": Color(1, 0.85, 0.35), "hit": Color(0.55, 0.9, 0.6), "graze": Color(0.95, 0.88, 0.62), "miss": Color(0.9, 0.5, 0.45), "fumble": Color(0.95, 0.5, 0.35) }[_flash]
+		var c2: Color = { "critical": LIT_COL[3], "hit": LIT_COL[2], "graze": LIT_COL[1] }.get(_flash, MISS_COL)
+		# A fixed size, popped by scale (whole-pixel size steps jumped).
 		var u: float = clampf(_flash_t / 0.5, 0.0, 1.0)
-		var fs: int = int(lerpf(34.0, 26.0, u))
+		var fs: int = 30
 		var tw: float = f.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string_outline(f, Vector2(nx - tw / 2.0, rail.position.y - 22), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0, 0, 0, 0.7))
-		draw_string(f, Vector2(nx - tw / 2.0, rail.position.y - 22), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c2)
+		var sc: float = lerpf(1.25, 1.0, 1.0 - pow(1.0 - u, 3.0))
+		draw_set_transform(Vector2(nx, rail.position.y - 22), 0.0, Vector2.ONE * sc)
+		draw_string_outline(f, Vector2(-tw / 2.0, 0), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0, 0, 0, 0.7))
+		draw_string(f, Vector2(-tw / 2.0, 0), word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c2)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	else:
-		# The order, bold, its key in a pill beside it, and what the enemy is
-		# doing to the bar under them.
+		# The order in the deck key's own words (Cinzel), its key drawn as the
+		# deck's keys are, and what the enemy is doing to the bar under them.
 		var word: String = "VOLLEY" if volley else "FIRE"
-		var wf: Font = Kit.font("karla", 800)
-		var fs2: int = 24
-		var ww: float = wf.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2).x + 3.0 * word.length()
-		var kf: Font = Kit.font("karla", 800)
-		var kw: float = kf.get_string_size("SPACE", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 18.0
+		var wf: Font = Kit.font("cinzel", 700)
+		var fs2: int = 22
+		var ww: float = wf.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2).x
+		var kw: float = maxf(19.0, Kit.font("karla", 800).get_string_size("Space", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 10.0)
 		var x0: float = w / 2.0 - (ww + 12.0 + kw) / 2.0
 		var by: float = rail.end.y + 50.0
-		var cx: float = x0
-		for ch: String in word:
-			draw_string(wf, Vector2(cx, by), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, Color(1, 0.97, 0.9))
-			cx += wf.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2).x + 3.0
-		var kr: Rect2 = Rect2(x0 + ww + 12.0, by - 18.0, kw, 20.0)
-		BattleLook.draw_box(self, kr, BattleLook.box(Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.3), 1, 10))
-		draw_string(kf, Vector2(kr.position.x + 9.0, kr.position.y + 14.5), "SPACE", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1, 1, 1, 0.9))
+		BattleLook.say(self, wf, x0 + ww / 2.0, by, word, fs2, BattleLook.CREAM, 5)
+		BattleLook.keycap(self, Vector2(x0 + ww + 12.0 + kw / 2.0, by - 7.0), "Space")
 		var hint: String = ""
 		if blind > 0.0:
 			hint = "BLINDED  ·  YOU SEE ONLY NEAR THE NEEDLE"
@@ -407,6 +425,22 @@ func _draw() -> void:
 
 
 static var _gt: Texture2D
+static var _et: Texture2D
+
+
+## A soft edge: opaque at its left, clear at its right (drawn flipped for the
+## other side).
+static func _edge_tex() -> Texture2D:
+	if _et == null:
+		var g: Gradient = Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		var gt: GradientTexture2D = GradientTexture2D.new()
+		gt.gradient = g
+		gt.width = 64
+		gt.height = 1
+		_et = gt
+	return _et
 
 
 static func _glow_tex() -> Texture2D:

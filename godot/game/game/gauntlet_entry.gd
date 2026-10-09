@@ -39,16 +39,15 @@ var _side_body: Control
 var _side_tab: String = "descent"
 var _side_bar: HBoxContainer
 var _fathoms: Label
+var _scrim: ColorRect
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
-	var scrim: ColorRect = ColorRect.new()
-	scrim.color = Color(0, 0, 0, 0.78)
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(scrim)
+	# The sea dims behind it (fading in, never in one frame).
+	_scrim = Kit.scrim(self, Kit.SCRIM_SHEET)
 	var vp: Vector2 = get_viewport_rect().size
 	_card = Panel.new()
 	_card.add_theme_stylebox_override("panel", BattleLook.box(Dossier.FILL, Dossier.HAIR, 1, 18, 40.0, Color(0, 0, 0, 0.55)))
@@ -59,8 +58,8 @@ func _ready() -> void:
 	_build_side()
 	table.changed.connect(_on_table)
 	_on_table(table.state)
-	_card.modulate.a = 0.0
-	create_tween().tween_property(_card, "modulate:a", 1.0, 0.18)
+	if not Motion.closing(self):
+		Motion.panel_in(_card)
 
 
 func _on_table(st: Dictionary) -> void:
@@ -76,10 +75,13 @@ func _on_table(st: Dictionary) -> void:
 
 
 func _close() -> void:
+	if Motion.closing(self):
+		return
 	if table != null and table.changed.is_connected(_on_table):
 		table.changed.disconnect(_on_table)
 	closed.emit()
-	queue_free()
+	# The card and the dim fade out before it goes.
+	Motion.dismiss(self, _card, _scrim)
 
 
 func _act(args: Array) -> Variant:
@@ -317,7 +319,7 @@ func _side_paint() -> void:
 	var sp: Control = Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_side_bar.add_child(sp)
-	_fathoms = Kit.text(_side_bar, "%s Fathoms" % Js.thousands(Js.num(sea.session.profile().get("gauntlet_fathoms"))), "body_strong", Color("#7fd6c8"))
+	_fathoms = Kit.text(_side_bar, "%s Fathoms" % Js.thousands(Js.num(sea.session.profile().get("gauntlet_fathoms"))), "body_strong", GauntletOverlay.FATHOMS)
 	_fathoms.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if _side_body != null:
 		_side_body.queue_free()
@@ -440,6 +442,7 @@ class DiveLocker:
 	var _box: Panel
 	var _list: VBoxContainer
 	var _head: Label
+	var _scrim: ColorRect = null
 
 	func _ready() -> void:
 		_box = Panel.new()
@@ -450,10 +453,7 @@ class DiveLocker:
 		else:
 			set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			mouse_filter = Control.MOUSE_FILTER_STOP
-			var scrim: ColorRect = ColorRect.new()
-			scrim.color = Color(0, 0, 0, 0.6)
-			scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			add_child(scrim)
+			_scrim = Kit.scrim(self, Kit.SCRIM_SHEET)
 			var vp: Vector2 = get_viewport_rect().size
 			_box.add_theme_stylebox_override("panel", BattleLook.box(Dossier.FILL, Dossier.HAIR, 1, 18, 40.0, Color(0, 0, 0, 0.6)))
 			_box.size = Vector2(minf(980.0, vp.x - 60.0), minf(720.0, vp.y - 60.0))
@@ -479,10 +479,12 @@ class DiveLocker:
 			var close: Button = Kit.button("Done", "primary")
 			close.custom_minimum_size = Vector2(160, 48)
 			close.position = Vector2(_box.size.x - 190, _box.size.y - 66)
-			close.pressed.connect(queue_free)
+			close.pressed.connect(func() -> void: Motion.dismiss(self, _box, _scrim))
 			_box.add_child(close)
 		_fill()
 		Pane.set_night(_box, true)
+		if not embedded:
+			Motion.panel_in(_box)
 
 	func _fill() -> void:
 		for c: Node in _list.get_children():

@@ -14,7 +14,8 @@ extends Node
 ## Everything is drawn in code (FxSheet's rule: no painted effects). A band
 ## change crossfades; leave() fades it all out.
 
-const GROUND: float = 0.58
+## The sea's ground squash (one value, Chart.GROUND).
+const GROUND: float = Chart.GROUND
 
 var sea: Sea
 var _layer: CanvasLayer
@@ -34,9 +35,13 @@ var _cur: Dictionary = { "murk": Color(0.5, 0.6, 0.6), "murkA": 0.0, "vig": 0.0 
 var _sp: Array = []
 var _wp: Array = []
 var _next: float = 0.0
+## The clear zone's lean toward the enemy off her bow: 0.17 of the screen in a
+## fight, eased to 0 (centred on her) while she sails.
+var _bias: float = 0.0
 
 
 func _ready() -> void:
+	_bias = 0.17 if sea != null and sea.stage != null else 0.0
 	_layer = CanvasLayer.new()
 	_layer.layer = 2
 	add_child(_layer)
@@ -106,6 +111,8 @@ func _process(delta: float) -> void:
 	_mat.set_shader_parameter("u_res", vp)
 	_mat.set_shader_parameter("u_t", _t)
 	_mat.set_shader_parameter("u_fade", _fade)
+	_bias = lerpf(_bias, 0.17 if sea.stage != null else 0.0, 1.0 - exp(-delta * 1.2))
+	_mat.set_shader_parameter("u_bias", _bias)
 	_step_screen(delta, vp)
 	_step_water(delta)
 	_screen.queue_redraw()
@@ -121,8 +128,10 @@ func _step_screen(delta: float, vp: Vector2) -> void:
 	var n: int = int(SCREEN_N.get(_kind, 0))
 	if int(_look.get("band", 0)) == 8:
 		n = int(n * 0.4)
+	# The set builds over the whole screen (already hanging in the water, not
+	# sweeping in as one band); only recycled motes come in from an edge.
 	while _sp.size() < n:
-		_sp.append(_spawn_screen(vp, _sp.size() < n and _sp.is_empty()))
+		_sp.append(_spawn_screen(vp, true))
 	for p: Dictionary in _sp:
 		p["t"] = float(p["t"]) + delta
 		var v: Vector2 = p["v"]
@@ -186,6 +195,10 @@ func _spawn_screen(vp: Vector2, anywhere: bool) -> Dictionary:
 		_:
 			p["p"] = Vector2(x, y)
 			p["v"] = Vector2.ZERO
+	if anywhere:
+		# Somewhere in its life already, so a fresh set does not all fade in
+		# on the same frame.
+		p["t"] = randf() * float(p["life"]) * 0.7
 	return p
 
 
@@ -399,6 +412,8 @@ uniform vec2 u_focus = vec2(800.0, 450.0);
 uniform vec2 u_res = vec2(1600.0, 900.0);
 uniform float u_t = 0.0;
 uniform float u_fade = 0.0;
+// The clear zone's lean toward the enemy (a share of the screen's width).
+uniform float u_bias = 0.17;
 
 float hash(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -416,7 +431,7 @@ void fragment() {
 	vec2 px = SCREEN_UV * u_res;
 	// Round the fight: between her and the enemy off her bow, so both hulls
 	// stay clear while the water round them closes in.
-	vec2 f = u_focus + vec2(u_res.x * 0.17, 0.0);
+	vec2 f = u_focus + vec2(u_res.x * u_bias, 0.0);
 	float d = length((px - f) / vec2(u_res.y * 1.45, u_res.y * 0.78));
 	float n = vnoise(px / 320.0 + vec2(u_t * 0.03, u_t * 0.012)) * 0.6 + vnoise(px / 110.0 - vec2(u_t * 0.05, 0.0)) * 0.4;
 	float haze = u_amt * (0.5 + 0.7 * n) * mix(0.35, 1.0, smoothstep(0.1, 0.6, d));

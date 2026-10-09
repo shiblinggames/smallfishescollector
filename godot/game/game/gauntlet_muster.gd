@@ -10,6 +10,8 @@ var sea: Sea
 var table: GauntletTable
 var my_key: String = ""
 var _card: Pane
+## The banner's holder (what fades in and out).
+var _holder: Control = null
 var _join: Button = null
 var _last: Dictionary = {}
 var _opened_seq: int = -1
@@ -38,7 +40,7 @@ func _on_table(st: Dictionary) -> void:
 		"muster":
 			if _member(st):
 				_close()
-				if _screen == null or not is_instance_valid(_screen):
+				if _screen == null or not is_instance_valid(_screen) or Motion.closing(_screen):
 					_screen = GauntletEntry.new()
 					_screen.sea = sea
 					_screen.table = table
@@ -58,15 +60,23 @@ func _on_table(st: Dictionary) -> void:
 			_close()
 
 
-func _close() -> void:
+## The banner going: it fades away (fade = false: freed at once, for a
+## repaint that puts the next one straight in its place).
+func _close(fade: bool = true) -> void:
 	_join = null
-	if _card != null:
-		_card.queue_free()
-		_card = null
+	if _holder != null and is_instance_valid(_holder):
+		if fade:
+			Motion.note_out(_holder)
+		else:
+			_holder.queue_free()
+	_holder = null
+	_card = null
 
 
 func _paint(st: Dictionary) -> void:
-	_close()
+	# A repaint swaps in place; a banner that was not up arrives (Motion.note_in).
+	var was_up: bool = _holder != null and is_instance_valid(_holder)
+	_close(false)
 	var spec: Dictionary = Kit.modal(Kit.GOLD, 18)
 	spec["night"] = true
 	var holder: Control = Control.new()
@@ -76,6 +86,9 @@ func _paint(st: Dictionary) -> void:
 	holder.offset_top = 96
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(holder)
+	_holder = holder
+	if not was_up:
+		Motion.note_in(holder)
 	_card = Kit.pane(holder, spec)
 	_card.custom_minimum_size = Vector2(540, 0)
 	var body: VBoxContainer = VBoxContainer.new()

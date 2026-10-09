@@ -79,16 +79,21 @@ func _hide() -> void:
 	if _scrim != null:
 		var sc: ColorRect = _scrim
 		_scrim = null
-		var tw0: Tween = create_tween()
-		tw0.tween_property(sc, "modulate:a", 0.0, 0.2)
-		tw0.tween_callback(sc.queue_free)
+		Motion.scrim_out(sc)
 	if _sheet != null:
 		var s: Panel = _sheet
 		_sheet = null
-		var tw: Tween = create_tween()
-		tw.tween_property(s, "modulate:a", 0.0, 0.18)
-		tw.tween_callback(s.queue_free)
+		_phase_shown = ""
+		Motion.panel_out(s, s.queue_free)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+## The sheet's size for the phase being built (the builders lay out to it, so
+## a phase change can ease the sheet there while the new body fades in).
+var _ss: Vector2 = Vector2.ZERO
+## The phase the sheet shows, and the resize running between two.
+var _phase_shown: String = ""
+var _resize: Tween = null
 
 
 func _paint(fresh: bool) -> void:
@@ -96,30 +101,52 @@ func _paint(fresh: bool) -> void:
 	# Over everything on the screen (a depth's call, a banner).
 	get_parent().move_child(self, -1)
 	if _scrim == null:
-		_scrim = ColorRect.new()
-		_scrim.color = Color(0.01, 0.015, 0.03, 0.62)
-		_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_scrim = Kit.scrim(self, Kit.SCRIM_SHEET)
 		_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_scrim.modulate.a = 0.0
-		add_child(_scrim)
 		move_child(_scrim, 0)
-		create_tween().tween_property(_scrim, "modulate:a", 1.0, 0.25)
 	var vp: Vector2 = get_viewport_rect().size
+	var h: float = minf(_height(), vp.y - 150.0)
+	_ss = Vector2(minf(W, vp.x - 40.0), h)
+	var at: Vector2 = Vector2((vp.x - _ss.x) / 2.0, maxf(84.0, (vp.y - h) / 2.0 - 30.0))
+	var ph: String = str(_st["phase"])
+	# A phase change on an open sheet crossfades: the old body fades out, the
+	# sheet eases to its new size, the new body fades in. Same-phase repaints
+	# stay instant.
+	var swap: bool = _sheet != null and _phase_shown != "" and ph != _phase_shown
+	if _resize != null and _resize.is_valid():
+		_resize.kill()
 	if _sheet == null:
 		_sheet = Panel.new()
 		_sheet.add_theme_stylebox_override("panel", BattleLook.box(Color(Dossier.FILL, 0.97), Dossier.HAIR, 1, 18, 40.0, Color(0, 0, 0, 0.6)))
 		_sheet.clip_contents = true
 		add_child(_sheet)
-		_sheet.modulate.a = 0.0
-		create_tween().tween_property(_sheet, "modulate:a", 1.0, 0.22)
-	var h: float = minf(_height(), vp.y - 150.0)
-	_sheet.size = Vector2(minf(W, vp.x - 40.0), h)
-	_sheet.position = Vector2((vp.x - _sheet.size.x) / 2.0, maxf(84.0, (vp.y - h) / 2.0 - 30.0))
+		_sheet.size = _ss
+		_sheet.position = at
+		Motion.panel_in(_sheet)
+	elif swap:
+		_resize = create_tween().set_parallel()
+		Motion.ease_rise(_resize, _sheet, "size", _ss, Motion.SWAP_RESIZE).set_delay(Motion.SWAP_OUT)
+		Motion.ease_rise(_resize, _sheet, "position", at, Motion.SWAP_RESIZE).set_delay(Motion.SWAP_OUT)
+	else:
+		_sheet.size = _ss
+		_sheet.position = at
+	_phase_shown = ph
 	if _body != null:
-		_body.queue_free()
+		if swap:
+			var old: Control = _body
+			old.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var ot: Tween = old.create_tween()
+			Motion.ease_fade(ot, old, "modulate:a", 0.0, Motion.SWAP_OUT)
+			ot.tween_callback(old.queue_free)
+		else:
+			_body.queue_free()
 	_body = Control.new()
 	_body.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_sheet.add_child(_body)
+	if swap:
+		_body.modulate.a = 0.0
+		var nt: Tween = _body.create_tween()
+		Motion.ease_fade(nt, _body, "modulate:a", 1.0, Motion.SWAP_IN).set_delay(Motion.SWAP_OUT + Motion.SWAP_RESIZE * 0.5)
 	match str(_st["phase"]):
 		"curse": _curse()
 		"draft": _draft(fresh)
@@ -216,12 +243,17 @@ func _label(at: Vector2, s: String, family: String, weight: int, fs: int, c: Col
 	return l
 
 
-func _head(eyebrow: String, title: String, sub: String = "") -> float:
-	var w: float = _sheet.size.x
-	_label(Vector2(0, 26), eyebrow.to_upper(), "karla", 800, 12, Dossier.SOFT, w, true)
-	_label(Vector2(0, 44), title, "cinzel", 700, 30, Dossier.INK, w, true)
+## THE sheet's header, for every phase: the eyebrow (12), the title (30) and
+## a line under it (14), at fixed heights; centred, or set left (the breather,
+## whose right half is the crew).
+func _head(eyebrow: String, title: String, sub: String = "", left: bool = false, tone: Color = Dossier.SOFT) -> float:
+	var w: float = _ss.x
+	var x: float = 36.0 if left else 0.0
+	var lw: float = w * 0.5 if left else w
+	_label(Vector2(x, 26), eyebrow.to_upper(), "karla", 800, 12, tone, lw, not left)
+	_label(Vector2(x, 44), title, "cinzel", 700, 30, Dossier.INK, lw, not left)
 	if sub != "":
-		_label(Vector2(60, 88), sub, "karla", 500, 14, Dossier.SOFT, w - 120.0, true)
+		_label(Vector2(36.0 if left else 60.0, 88), sub, "karla", 500, 14, Dossier.SOFT, w * 0.5 if left else w - 120.0, not left)
 		return 124.0
 	return 100.0
 
@@ -239,7 +271,7 @@ func _foot(y: float) -> HBoxContainer:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 12)
 	row.position = Vector2(0, y)
-	row.size = Vector2(_sheet.size.x, 50)
+	row.size = Vector2(_ss.x, 50)
 	_body.add_child(row)
 	return row
 
@@ -268,7 +300,7 @@ func _card(at: Vector2, sz: Vector2) -> GCard:
 func _curse() -> void:
 	var cu: Dictionary = Js.obj(_st.get("curse"))
 	var o: Dictionary = Js.obj(cu.get("offer"))
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	var up: bool = o.get("isUpgrade", false) == true
 	_head("The Locker tightens its grip" if up else "The Locker curses you", "%s%s" % [o.get("name", ""), ("  " + Gauntlet.tier_label(int(o.get("tier", 1)))) if int(o.get("tier", 1)) > 1 else ""])
 	var c: GCard = _card(Vector2(w / 2.0 - 300.0, 112), Vector2(600, 230))
@@ -296,13 +328,12 @@ func _curse() -> void:
 
 func _draft(fresh: bool) -> void:
 	var d: Dictionary = Js.obj(_st.get("draft"))
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	var order: Array = Js.list(d.get("order"))
 	var turn: int = int(Js.num(d.get("turn")))
 	var who: String = str(order[turn]) if turn < order.size() else ""
 	var mine: bool = who == my_key
-	_label(Vector2(0, 22), ("A paid draft" if d.get("personal", false) else ("The draft table" if order.size() > 1 else "A gift from the deep")).to_upper(), "karla", 800, 12, Dossier.SOFT, w, true)
-	_label(Vector2(0, 40), str(d.get("title", "Choose a Power")), "cinzel", 700, 30, Dossier.INK, w, true)
+	_head("A paid draft" if d.get("personal", false) else ("The draft table" if order.size() > 1 else "A gift from the deep"), str(d.get("title", "Choose a Power")))
 	# The order of the table: each captain's face in turn, the one at it lit.
 	if order.size() > 1:
 		var strip: OrderStrip = OrderStrip.new()
@@ -341,7 +372,7 @@ func _draft(fresh: bool) -> void:
 			c.art = _tx(cf.get("image"))
 			c.title = str(cd["name"])
 			c.kicker = "Crew synergy  ·  Level %s" % Gauntlet.tier_label(int(Js.num(cd.get("level"))))
-			c.tone = Color("#c79bff")
+			c.tone = SYNERGY
 			c.body = str(cd.get("desc", ""))
 			c.foot = "For %s.  Either may take it; both get it." % " and ".join(PackedStringArray(Js.list(cd.get("names")).map(func(x: Variant) -> String: return str(x))))
 			c.foot_tone = Dossier.WARN
@@ -358,7 +389,7 @@ func _draft(fresh: bool) -> void:
 			var rar: String = str(cd.get("rarity", "common"))
 			c.art = _tx(fam.get("image"))
 			c.title = str(cd["name"])
-			c.tone = RARITY.get(rar, Dossier.SOFT)
+			c.tone = Kit.rarity(rar) if Kit.rarity_key(rar) != "" else Dossier.SOFT
 			c.role = str(fam.get("role", ""))
 			var pre: String = ("Bond  ·  %s  ·  " % c.role.capitalize()) if c.role != "" else ""
 			if nx > tiers.size():
@@ -392,7 +423,7 @@ func _draft(fresh: bool) -> void:
 		sc.kicker = "Your %s  ·  %s" % ["convergence" if syn.get("isConvergence", false) else "synergy", "Level %s" % Gauntlet.tier_label(int(syn.get("level", 1)))]
 		sc.title = str(syn["name"])
 		sc.art = _tx(syn.get("image"))
-		sc.tone = Color("#c79bff")
+		sc.tone = SYNERGY
 		sc.body = str(syn.get("desc", ""))
 		sc.foot = "%s + %s.  Taken instead of a card." % [syn["halves"][0], syn["halves"][1]]
 		sc.foot_tone = Dossier.SOFT
@@ -420,7 +451,10 @@ func _draft(fresh: bool) -> void:
 		_label(Vector2(0, y + ch + 76.0), "You took %s." % _took_line(took), "karla", 700, 13, Dossier.HELP, w, true)
 
 
-const RARITY: Dictionary = { "common": Color("#6ee7d6"), "rare": Color("#8b9cff"), "legendary": Color("#f5b94a") }
+## The dive's tokens: rarity keys into THE table (Kit.RARITY); a synergy's
+## violet and the Fathoms' teal are the kit's own.
+const SYNERGY: Color = Kit.VIOLET
+const FATHOMS: Color = Kit.TEAL
 
 
 func _took_line(t: Dictionary) -> String:
@@ -451,7 +485,7 @@ func _banish_mode() -> void:
 func _shrine() -> void:
 	var sh: Dictionary = Js.obj(_st.get("shrine"))
 	var picks: Dictionary = Js.obj(sh.get("picks"))
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	_head("A shrine rises from the water", "The Drowned Shrine", "Each captain makes their own offering.")
 	var art: ArtStrip = ArtStrip.new()
 	art.tex = _tx("gauntlet-shrine.webp")
@@ -514,7 +548,7 @@ func _shrine() -> void:
 func _fence() -> void:
 	var fe: Dictionary = Js.obj(_st.get("fence"))
 	var stall: Dictionary = Js.obj(Js.obj(fe.get("stalls")).get(my_key))
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	var cleared: int = int(Js.num(Js.obj(_run().get("roll")).get("cleared")))
 	var spend: float = Gauntlet.fathoms_for_depth(cleared, "don") - Js.num(_cap().get("fenceSpent"))
 	_head("A hulk draws alongside", "The Fence", "Paid from the Fathoms you have earned this dive: %d to spend." % int(spend))
@@ -553,7 +587,7 @@ func _fence() -> void:
 
 func _contract() -> void:
 	var job: Dictionary = Js.obj(_st.get("job"))
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	var def: Dictionary = Js.obj(Js.obj(Gauntlet.t().get("contracts")).get(job.get("kind", "")))
 	_head("The Don has a job", str(def.get("name", "")), "\"%s\"" % def.get("job", ""))
 	var offers: Array = Js.list(job.get("offers"))
@@ -596,7 +630,7 @@ func _job_result() -> void:
 	var jr: Dictionary = Js.obj(_st.get("jobResult"))
 	var job: Dictionary = Js.obj(jr.get("job"))
 	var met: bool = jr.get("met", false) == true
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	var def: Dictionary = Js.obj(Js.obj(Gauntlet.t().get("contracts")).get(job.get("kind", "")))
 	_head(str(def.get("name", "The job")), "Contract Cleared" if met else "Contract Broken")
 	var c: GCard = _card(Vector2(w / 2.0 - 260.0, 120), Vector2(520, 160))
@@ -620,7 +654,7 @@ func _marks() -> void:
 	var mk: Dictionary = Js.obj(_st.get("marks"))
 	var offer: Dictionary = Js.obj(Js.obj(mk.get("offers")).get(my_key))
 	var picks: Dictionary = Js.obj(mk.get("picks"))
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	_head(str(fall.get("eyebrow", "The Don falls")), str(fall.get("title", "Don Finleone Falls")), "\"%s\"" % fall.get("line", ""))
 	var meta: Dictionary = Js.obj(Js.obj(Gauntlet.t().get("marks")).get("meta"))
 	var cats: Dictionary = Js.obj(Js.obj(Gauntlet.t().get("marks")).get("cats"))
@@ -653,13 +687,11 @@ func _marks() -> void:
 
 func _breather() -> void:
 	var run: Dictionary = _run()
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	var cleared: int = int(Js.num(Js.obj(run.get("roll")).get("cleared")))
 	var depth: int = cleared + int(Js.num(run.get("skip")))
 	var band: Dictionary = Gauntlet.band(maxi(1, depth), _variant())
-	_label(Vector2(36, 26), str(band.get("name", "")).to_upper(), "karla", 800, 12, Color(str(band.get("accent", "#cccccc"))))
-	_label(Vector2(36, 42), "Depth %d" % depth, "cinzel", 700, 34, Dossier.INK)
-	_label(Vector2(36, 88), "%d ship%s sunk.  The pot rides on what you bank." % [cleared, "" if cleared == 1 else "s"], "karla", 600, 13, Dossier.SOFT)
+	_head(str(band.get("name", "")), "Depth %d" % depth, "%d ship%s sunk.  The pot rides on what you bank." % [cleared, "" if cleared == 1 else "s"], true, Color(str(band.get("accent", "#cccccc"))))
 	# What banking pays this captain.
 	var bv: Dictionary = Js.obj(Js.obj(_st.get("bank")).get(my_key))
 	var offer: Dictionary = Js.obj(Js.obj(run.get("offer")).get("live"))
@@ -696,7 +728,7 @@ func _breather() -> void:
 	# The crew's hulls and the run so far, on the right.
 	var crew: CrewPane = CrewPane.new()
 	crew.position = Vector2(left_w, 30)
-	crew.size = Vector2(w - left_w - 36.0, _sheet.size.y - 140.0)
+	crew.size = Vector2(w - left_w - 36.0, _ss.y - 140.0)
 	for k: String in _keys():
 		var s: Dictionary = _seat(k)
 		crew.rows.append({ "name": _name(k), "face": face_of.call(k) if face_of.is_valid() else null, "hp": Js.num(s.get("hp")), "max": Js.num(s.get("max")),
@@ -706,7 +738,7 @@ func _breather() -> void:
 	_body.add_child(crew)
 	# The vote.
 	var votes: Dictionary = Js.obj(_st.get("votes"))
-	var row: HBoxContainer = _foot(_sheet.size.y - 92.0)
+	var row: HBoxContainer = _foot(_ss.y - 92.0)
 	var shut: String = str(_st.get("bankShut", ""))
 	var bank_t: String = "Take the deal" if not offer.is_empty() else "Bank the haul"
 	var bb: Button = _btn(row, bank_t, "secondary", func() -> void: _send(["vote", "bank"]), 220.0)
@@ -725,7 +757,7 @@ func _breather() -> void:
 		line = "You voted to %s.  %s" % [{ "bank": "bank", "dive": "dive", "hold": "hold the dive" }.get(str(votes[my_key]), "bank"), _waiting_on(votes)]
 	if shut != "":
 		line = shut
-	_label(Vector2(0, _sheet.size.y - 36.0), line, "karla", 600, 13, Dossier.FAINT, w, true)
+	_label(Vector2(0, _ss.y - 36.0), line, "karla", 600, 13, Dossier.FAINT, w, true)
 
 
 # ══ The haul, and the deep ════════════════════════════════════════════════════
@@ -736,7 +768,7 @@ func _breather() -> void:
 ## repaint shows it as it ended.
 func _haul(fresh: bool = false) -> void:
 	var p: Dictionary = Js.obj(Js.obj(_st.get("pays")).get(my_key))
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	_head("Banked at depth %d" % int(Js.num(p.get("depth"))), "You climbed back into the light")
 	var art: ChestArt = ChestArt.new()
 	art.tex = _tx("donschestopen.png" if _don() else "davychestopen.png")
@@ -755,7 +787,7 @@ func _haul(fresh: bool = false) -> void:
 	var rows: Array = [
 		["Doubloons", "%s ⟡" % Js.thousands(Js.num(p.get("doubloons"))), Dossier.WARN],
 		["Navigation XP", "+%s" % Js.thousands(Js.num(p.get("navXp"))), Dossier.INK],
-		["Fathoms", "+%s" % Js.thousands(Js.num(p.get("fathoms"))), Color("#7fd6c8")],
+		["Fathoms", "+%s" % Js.thousands(Js.num(p.get("fathoms"))), FATHOMS],
 	]
 	if Js.num(p.get("fleet")) > 1.0:
 		rows.append(["Fleet Chest", "+%d%% doubloons" % int(round((float(p["fleet"]) - 1.0) * 100.0)), Dossier.WARN])
@@ -793,13 +825,8 @@ func _haul(fresh: bool = false) -> void:
 		for i: int in shown.size():
 			var at: float = roll + 0.32 * i
 			for c: Variant in shown[i]:
-				var lb: Label = c
-				lb.modulate.a = 0.0
-				var y0: float = lb.position.y
-				lb.position.y = y0 + 8.0
-				var tw: Tween = lb.create_tween().set_parallel()
-				tw.tween_property(lb, "modulate:a", 1.0, 0.25).set_delay(at)
-				tw.tween_property(lb, "position:y", y0, 0.3).set_delay(at).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+				# Words arriving: the one rise for lettering (Motion.rise_word).
+				Motion.rise_word(c as Label, at)
 			if (shown[i] as Array).size() == 2:
 				var val: Label = shown[i][1]
 				var full: String = val.text
@@ -816,7 +843,7 @@ func _dead() -> void:
 	var p: Dictionary = Js.obj(Js.obj(_st.get("pays")).get(my_key))
 	if p.is_empty():
 		p = Js.obj(_cap().get("paid"))
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	_head("Depth %d" % int(Js.num(p.get("depth"))), "The Green Takes It" if _don() else "The Locker Takes It", "Every ship sank." if _keys().size() > 1 or Js.obj(_st.get("caps")).size() > 1 else "You sank.")
 	var lost: float = Js.num(_st.get("lostPot", _run().get("pot", 0.0)))
 	# The chest, shut and sinking into the dark.
@@ -830,7 +857,7 @@ func _dead() -> void:
 	var c: Dictionary = _cap()
 	var rows: Array = [
 		["The pot, gone", "%s ⟡" % Js.thousands(lost), Color(Dossier.HARM, 0.9)],
-		["Fathoms salvaged", "+%s" % Js.thousands(Js.num(p.get("fathoms"))), Color("#7fd6c8")],
+		["Fathoms salvaged", "+%s" % Js.thousands(Js.num(p.get("fathoms"))), FATHOMS],
 		["Depth reached", str(int(Js.num(p.get("depth")))), Dossier.INK],
 		["Powers held", str(Js.obj(c.get("boons")).size()), Dossier.INK],
 		["Curses borne", str(Js.obj(_run().get("curses")).size()), Dossier.INK],
@@ -847,7 +874,7 @@ func _dead() -> void:
 
 ## The dive held: where it waits, and how to come back to it.
 func _held() -> void:
-	var w: float = _sheet.size.x
+	var w: float = _ss.x
 	var d: int = int(Js.num(_st.get("heldAt")))
 	_head("The dive is held", "Depth %d, waiting" % d, "The pot, the powers, the curses and every hull stay as they are.")
 	_label(Vector2(0, 160), "%s ⟡ riding on it" % Js.thousands(Js.num(_run().get("pot"))), "cinzel", 700, 30, Dossier.WARN, w, true)
@@ -869,18 +896,21 @@ func _codex() -> void:
 
 func _home_foot() -> void:
 	var acks: Dictionary = Js.obj(_st.get("acks"))
-	var row: HBoxContainer = _foot(_sheet.size.y - 84.0)
+	var row: HBoxContainer = _foot(_ss.y - 84.0)
 	var b: Button = _btn(row, "Back to the sea", "primary", func() -> void: _send(["home"]), 220.0)
 	b.disabled = acks.has(my_key)
 
 
 # ══ Its pieces ════════════════════════════════════════════════════════════════
 
-## A card on the table: art in a ring of its tone, a small kicker, its name,
-## what it does, a foot line. Taken, a captain's face is stamped on it.
+## A card on the table: a small kicker, its name, what it does, a foot line.
+## A tall card (the draft's powers, synergies and reprieve, the curse) is FRAMELESS
+## (M9, Kong 2026-10-09): the painting stands on the sheet's ground, no ring
+## or disc; its rarity shows only in the kicker word; a surface comes up only
+## under the pointer. Cards without art (an offering, a stall, a stake) keep a
+## plain surface to press. Taken, a captain's face is stamped on it.
 class GCard:
 	extends Button
-	const ROLE_TONE: Dictionary = { "tank": Color("#8fb4d8"), "healer": Color("#8fd8a8"), "support": Color("#e6c36f"), "gunner": Color("#e88a6a") }
 	var art: Texture2D
 	var tone: Color = Dossier.SOFT
 	var kicker: String = ""
@@ -903,6 +933,7 @@ class GCard:
 	var delay: float = -1.0
 	var _t: float = 0.0
 	var _frames: int = 0
+	var _hover: float = 0.0
 
 	func _init() -> void:
 		flat = true
@@ -911,33 +942,48 @@ class GCard:
 
 	func _ready() -> void:
 		if delay >= 0.0:
-			# Dealt: each card flips up in turn.
+			# Dealt: each card comes up in turn, the one arrival with a
+			# bounce (BACK is kept for the dealt cards only).
 			modulate.a = 0.0
 			var y0: float = position.y
-			position.y += 26.0
+			position.y += 12.0
 			var tw: Tween = create_tween().set_parallel()
-			tw.tween_property(self, "modulate:a", 1.0, 0.24).set_delay(delay)
-			tw.tween_property(self, "position:y", y0, 0.32).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			Motion.ease_fade(tw, self, "modulate:a", 1.0, 0.24).set_delay(delay)
+			Motion.ease_pop(tw, self, "position:y", y0, 0.3).set_delay(delay)
 			if legend:
 				tw.tween_callback(func() -> void: Sound.seal(true)).set_delay(delay + 0.2)
 
 	func _process(d: float) -> void:
 		_t += d
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if live or banish else Control.CURSOR_ARROW
-		if _frames < 12 or live or legend:
+		# Hover eases in and out (as every hover in the fight does).
+		var want: float = 1.0 if is_hovered() and (live or banish) else 0.0
+		if _hover != want:
+			_hover = lerpf(_hover, want, Motion.hover_k(d))
+			if absf(_hover - want) < 0.01:
+				_hover = want
+			queue_redraw()
+		elif _frames < 12:
 			_frames += 1
 			queue_redraw()
 
 	func _draw() -> void:
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
-		var hov: bool = is_hovered() and (live or banish)
-		var lift: float = -4.0 if hov else 0.0
-		var rr: Rect2 = Rect2(r.position + Vector2(0, lift), r.size)
-		var bg: Color = BattleLook.LACQUER_HI.lightened(0.06 if hov else 0.0)
-		var rim: Color = Color(tone, 0.85) if (hov or legend) else Color(1, 1, 1, 0.08)
-		if banish:
-			rim = Color(Dossier.HARM, 0.9)
-		BattleLook.draw_box(self, rr, BattleLook.box(bg, rim, 2 if (hov or legend or banish) else 1, 14, 18.0 if hov else 8.0, Color(0, 0, 0, 0.45)))
+		var rr: Rect2 = Rect2(r.position + Vector2(0, -4.0 * _hover), r.size)
+		# The tall cards of the spread (and the curse) stand frameless.
+		var frameless: bool = art != null or not short
+		if frameless:
+			# No resting card: a surface only under the pointer (and the
+			# banish mode's hairline, which says what a press will do).
+			if _hover > 0.01 or banish:
+				var rim0: Color = Color(Dossier.HARM, 0.9) if banish else Color(0, 0, 0, 0)
+				BattleLook.draw_box(self, rr, BattleLook.box(Color(BattleLook.LACQUER_HI, 0.9 * _hover), rim0, 2 if banish else 0, 14))
+		else:
+			var bg: Color = BattleLook.LACQUER_HI.lightened(0.06 * _hover)
+			var rim: Color = Color(tone, 0.85 * _hover) if _hover > 0.01 else Color(1, 1, 1, 0.08)
+			if banish:
+				rim = Color(Dossier.HARM, 0.9)
+			BattleLook.draw_box(self, rr, BattleLook.box(bg, rim, 2 if (_hover > 0.5 or banish) else 1, 14, lerpf(8.0, 18.0, _hover), Color(0, 0, 0, 0.45)))
 		var a: float = 0.45 if dim else 1.0
 		if role != "":
 			_role_mark(Vector2(rr.end.x - 26.0, rr.position.y + 26.0), a)
@@ -947,22 +993,18 @@ class GCard:
 			# Wide: art on the left, words on the right.
 			if art != null:
 				var c0: Vector2 = Vector2(rr.position.x + 110.0, rr.get_center().y)
-				draw_circle(c0, 82.0, Color(tone, 0.12))
-				_fit(art, Rect2(c0 - Vector2(70, 70), Vector2(140, 140)), a)
+				_fit(art, Rect2(c0 - Vector2(78, 78), Vector2(156, 156)), a)
 			x0 = 230.0
 			y = rr.position.y + 36.0
 			y = _words(Vector2(x0, y), size.x - x0 - 22.0, a)
 			return
 		if art != null and not short:
 			var c: Vector2 = Vector2(rr.get_center().x, y + 66.0)
-			draw_circle(c, 64.0, Color(tone, 0.12 + (0.05 * sin(_t * 3.0) if legend else 0.0)))
-			draw_arc(c, 64.0, 0.0, TAU, 48, Color(tone, 0.35 * a), 1.5, true)
-			_fit(art, Rect2(c - Vector2(54, 54), Vector2(108, 108)), a)
+			_fit(art, Rect2(c - Vector2(62, 62), Vector2(124, 124)), a)
 			y += 148.0
 		elif not short:
 			var c2: Vector2 = Vector2(rr.get_center().x, y + 50.0)
-			draw_circle(c2, 44.0, Color(tone, 0.14))
-			# A reprieve: a plain cross of relief.
+			# A reprieve: a plain cross of relief (drawn, no disc behind it).
 			draw_line(c2 - Vector2(14, 0), c2 + Vector2(14, 0), tone, 6.0, true)
 			draw_line(c2 - Vector2(0, 14), c2 + Vector2(0, 14), tone, 6.0, true)
 			y += 110.0
@@ -978,9 +1020,10 @@ class GCard:
 			BattleLook.say(self, Kit.font("cinzel", 700), sc.x, sc.y + 56.0, "Taken by %s" % stamp_name if stamp_name != "You" else "Yours", 15, BattleLook.GOLD)
 
 	## The role's mark: a shield (tank), a cross (healer), a pennant (support),
-	## a gunsight (gunner), drawn, in the role's colour.
+	## a gunsight (gunner), drawn in one ink: the shape carries the role (no
+	## colour coding).
 	func _role_mark(c: Vector2, a: float) -> void:
-		var col: Color = Color(ROLE_TONE.get(role, Dossier.SOFT), a)
+		var col: Color = Color(Dossier.SOFT, a)
 		draw_circle(c, 15.0, Color(col, 0.16 * a))
 		match role:
 			"tank":
@@ -1092,7 +1135,7 @@ class OrderStrip:
 			var lit: bool = i == at
 			var col: Color = BattleLook.GOLD if lit else (Dossier.HELP if done[i] else Color(1, 1, 1, 0.3))
 			if lit:
-				draw_circle(c, 27.0 + 2.0 * sin(_t * 4.0), Color(BattleLook.GOLD, 0.18))
+				draw_circle(c, 27.0 + 2.0 * sin(_t * Motion.PULSE_CALL), Color(BattleLook.GOLD, 0.18))
 			BattleLook.medallion(self, c, 21.0, faces[i], col, str(names[i]).substr(0, 1), 1.0 if (lit or not done[i]) else 0.6, Vector2(0.5, 0.5), 0.5)
 			BattleLook.say(self, Kit.font("karla", 800), c.x, 62.0, str(names[i]), 12, BattleLook.GOLD if lit else Dossier.SOFT)
 
@@ -1115,11 +1158,23 @@ class ArtStrip:
 		var src_h: float = size.y / sc
 		var src: Rect2 = Rect2(0, maxf(0.0, (tex.get_height() - src_h) * 0.45), tex.get_width(), minf(src_h, tex.get_height()))
 		draw_texture_rect_region(tex, Rect2(Vector2.ZERO, size), src, Color(1, 1, 1, 0.9))
-		for k: int in 20:
-			var t: float = k / 20.0
-			var a: float = 1.0 - t
-			draw_rect(Rect2(k * 4.0, 0, 4.0, size.y), Color(Dossier.FILL, a))
-			draw_rect(Rect2(size.x - (k + 1) * 4.0, 0, 4.0, size.y), Color(Dossier.FILL, a))
+		# Its ends fade into the sheet: one gradient each side.
+		draw_texture_rect(_edge(), Rect2(0, 0, 80.0, size.y), false, Dossier.FILL)
+		draw_texture_rect(_edge(), Rect2(size.x, 0, -80.0, size.y), false, Dossier.FILL)
+
+	static var _et: GradientTexture2D
+
+	## Opaque at its left, clear at its right.
+	static func _edge() -> GradientTexture2D:
+		if _et == null:
+			var g: Gradient = Gradient.new()
+			g.set_color(0, Color(1, 1, 1, 1))
+			g.set_color(1, Color(1, 1, 1, 0))
+			_et = GradientTexture2D.new()
+			_et.gradient = g
+			_et.width = 64
+			_et.height = 1
+		return _et
 
 
 ## A chest's painting and its name.
@@ -1277,7 +1332,7 @@ class CrewPane:
 			if x + w2 > size.x:
 				x = 0.0
 				y += 36.0
-			_chip(Vector2(x, y), nm2, Color("#8b9cff"), _tex(bd.get("image")))
+			_chip(Vector2(x, y), nm2, Kit.rarity("rare"), _tex(bd.get("image")))
 			x += w2 + 8.0
 
 	var _texs: Dictionary = {}

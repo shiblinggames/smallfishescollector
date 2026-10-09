@@ -27,8 +27,8 @@ extends Node2D
 ## the peddler's boat are paintings, as set pieces on the water.
 ## Lives in the sea's World (squashed by GROUND); the stage owns it.
 
-const GROUND: float = 0.58
-const CREAM: Color = Color(0.96, 0.9, 0.78)
+## The sea's ground squash (one value, Chart.GROUND).
+const GROUND: float = Chart.GROUND
 
 var field: SeaField
 var fx: BattleFx
@@ -123,10 +123,9 @@ func _draw_over() -> void:
 		var spin: float = absf(cos(float(c["t"]) * 11.0))
 		var rr: float = 17.0
 		_over.draw_set_transform(p + Vector2(0, -float(c["lift"]) * GROUND - 60.0), 0.0, Vector2(maxf(0.08, spin), 1.0))
+		# A flat coin: one gold fill in one darker ring (no shine, no bevel).
 		_over.draw_circle(Vector2.ZERO, rr + 2.0, Color(0.45, 0.3, 0.08, 0.9))
 		_over.draw_circle(Vector2.ZERO, rr, Color(0.98, 0.78, 0.3))
-		_over.draw_circle(Vector2(-4, -4), rr * 0.45, Color(1.0, 0.95, 0.7, 0.7))
-		_over.draw_arc(Vector2.ZERO, rr * 0.72, 0.0, TAU, 24, Color(0.6, 0.42, 0.12, 0.8), 2.0, true)
 	_over.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
