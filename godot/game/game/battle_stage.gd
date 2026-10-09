@@ -873,6 +873,61 @@ func _toggle_order(c: Dictionary) -> void:
 	_paint_actions()
 
 
+## AN ORDER GIVEN SHOWS AT ONCE (Kong, 2026-10-09: pressing a crewmate "doesn't
+## use their ability"; it goes first in the round, with the captain's action).
+## While choosing: a ring breathing on the water under what it will touch (the
+## ship it helps, your own ship, or the enemy it works on) with its name, and
+## beside the crew, what it is and when it goes.
+const ORDER_ALLY: Array = ["mender", "abyssal_tide", "anchor", "vengeance"]
+const ORDER_FOE: Array = ["snare", "leviathan", "blitz", "requiem"]
+
+
+func _order_label(c: Dictionary) -> String:
+	var cls: Dictionary = Js.obj(Js.obj(Crew.t().get("classes")).get(c["cls"]))
+	return str(cls.get("shortLabel", cls.get("name", "order")))
+
+
+func _order_preview() -> void:
+	var ab: Dictionary = Js.obj(_plan.get("ability"))
+	if ab.is_empty() or _busy or me < 0 or me >= (b["seats"] as Array).size():
+		return
+	var c: Dictionary = {}
+	for x: Dictionary in b["seats"][me]["crew"]:
+		if x["id"] == ab["crew"]:
+			c = x
+	if c.is_empty():
+		return
+	var cls: String = str(c["cls"])
+	var at: Vector2
+	var col: Color = BattleLook.GOLD
+	if cls in ORDER_FOE:
+		at = _screen(_foe_at(maxi(0, _target) if _field() else maxi(0, _cur)))
+		col = Color(1.0, 0.62, 0.42)
+	elif cls in ORDER_ALLY:
+		var ti: int = int(Js.nz(ab.get("target"), float(me)))
+		at = _screen(_seat_at(ti if ti >= 0 and ti < (b["seats"] as Array).size() else me))
+		col = BattleLook.HEAL if cls == "mender" else (BattleLook.CREAM if cls == "anchor" else BattleLook.SHIELD)
+	else:
+		at = _screen(_seat_at(me))
+	var z: float = _z()
+	var k: float = 0.5 + 0.5 * sin(_t * 3.2)
+	draw_set_transform(at + Vector2(0, 8.0 * z), 0.0, Vector2(1.0, 0.3))
+	draw_arc(Vector2.ZERO, (128.0 + 10.0 * k) * z, 0.0, TAU, 64, Color(col, 0.3 + 0.35 * k), 3.0, true)
+	draw_arc(Vector2.ZERO, 104.0 * z, 0.0, TAU, 64, Color(col, 0.16), 2.0, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var f_big: Font = Kit.font("cinzel", 800)
+	var lw: float = f_big.get_string_size(_order_label(c), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+	Kit.sea_string(self, f_big, Vector2(at.x - lw / 2.0, at.y + 62.0 * z), _order_label(c), 16, Color(col, 0.75 + 0.25 * k))
+	# Beside the crew: who, what, and when it goes.
+	if _crew_row != null and is_instance_valid(_crew_row):
+		var cr: Rect2 = _crew_row.get_global_rect()
+		var o: Vector2 = cr.position - get_global_rect().position
+		var x0: float = o.x + cr.size.x + 22.0
+		var y0: float = o.y + cr.size.y * 0.55
+		Kit.sea_string(self, f_big, Vector2(x0, y0), "%s: %s" % [str(c["name"]), _order_label(c)], 17, Color(BattleLook.GOLD, 0.95))
+		Kit.sea_string(self, Kit.font("karla", 700), Vector2(x0, y0 + 20.0), "Goes first this round, with your action", 12, Color(BattleLook.CREAM, 0.85))
+
+
 ## The crew orders that may go to another ship in the line.
 const SHARED_ORDERS: Array = ["mender", "abyssal_tide", "anchor", "vengeance"]
 
@@ -2012,6 +2067,7 @@ func _draw() -> void:
 	draw_rect(Rect2(0, vp.y - hb, vp.x, hb), Color(0, 0, 0, 0.92))
 	if _bars < 0.5 or b.is_empty():
 		return
+	_order_preview()
 	# A crossfire: gold lines from each critical ship to the enemy, fading.
 	_xfire_t = maxf(0.0, _xfire_t - get_process_delta_time())
 	if _xfire_t > 0.0 and _enemy != null and is_instance_valid(_enemy):
@@ -2851,7 +2907,7 @@ func _order_chip(at: Vector2, s: Dictionary, beside: bool = false) -> void:
 		if not ab.is_empty():
 			for c: Dictionary in s["crew"]:
 				if c["id"] == ab["crew"]:
-					txt += "  +  %s" % c["name"]
+					txt += "  +  %s's %s" % [c["name"], _order_label(c)]
 			var ti: int = int(Js.nz(ab.get("target"), -1.0))
 			if ti >= 0 and ti < (b["seats"] as Array).size() and b["seats"][ti] != s:
 				txt += " for %s" % ("you" if ti == me else str(b["seats"][ti]["name"]))
