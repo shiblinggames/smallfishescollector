@@ -132,7 +132,8 @@ func _process(delta: float) -> void:
 			_nod(-0.08 * (1.0 - k) * sin(_t * 30.0))
 			_shadow.modulate.a = 0.3 * (1.0 - minf(1.0, k * 3.0))
 	if k >= 1.0:
-		if result == "catch":
+		# A crate's splash is CrateSurface's own, as it breaks the surface.
+		if result == "catch" and not crate:
 			boat.splash(false, _shadow.position)
 		done.emit()
 		queue_free()

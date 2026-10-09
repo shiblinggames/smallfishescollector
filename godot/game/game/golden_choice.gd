@@ -87,7 +87,6 @@ func _answer(how: String) -> void:
 	if _busy or Motion.closing(self):
 		return
 	_busy = true
-	Rumble.buzz(Rumble.GOLDEN)
 	var id: float = float(golden["id"])
 	var r: Dictionary = await session.act("sellGoldenTrophy" if how == "sell" else "mountGoldenTrophy", [id])
 	session.persist()
