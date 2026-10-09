@@ -552,7 +552,7 @@ func _process(delta: float) -> void:
 		contacts.append(Boat.contact_for("buyer:" + str(b.info["zoneId"]), b.position, b.skipper))
 	for k: String in _mates:
 		var m: Shipmate = _mates[k]
-		contacts.append(Boat.contact_for("mate:" + k, m.position, m.skipper))
+		contacts.append(m.wake_contact("mate:" + k))
 	_wake.lay(contacts)
 	var speeds: Dictionary = {}
 	for id: String in _wake._seen:

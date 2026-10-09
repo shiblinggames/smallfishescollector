@@ -10,6 +10,15 @@ extends Node2D
 ##
 ##   face   1 bow-right as painted, -1 turned (the enemy faces the line)
 ##   box    how wide the hull is drawn
+##
+## HOW A SHIP SITS IN THE SEA (Kong, 2026-10-09: the fishing boat "feels really
+## tuned and locked in", the ships "a little off"): the fishing boat's own
+## swell (Skipper.sway: two waves each for the bob and the roll, eased in,
+## pivoted on the waterline), slower and steadier the bigger the hull (heft).
+## Whoever sails her (Boat, Shipmate) sets rough and lean_deg each frame, the
+## heel into a turn and the bow lifting under way; a turn about narrows the
+## hull through its beam and out again (turn()) instead of flipping in a frame.
+## The roll is a true rotation on the screen, not in the World's squashed plane.
 
 var tex: Texture2D
 var def: Dictionary = {}
@@ -27,6 +36,22 @@ var slide: Vector2 = Vector2.ZERO
 var _slide_v: Vector2 = Vector2.ZERO
 ## A hit's tint, fading.
 var flash: float = 0.0
+## How big a hull: 0 a Sloop, 1 a Man-o-War (from the rules' tier).
+var heft: float = 0.5
+## The swell's strength (deeper water, a squall), and the lean her sailor puts
+## on her in degrees (a turn's heel, the bow lifting).
+var rough: float = 0.8
+var lean_deg: float = 0.0
+## Lifted out of the water (a crossing's rise), in World pixels.
+var rise: float = 0.0
+## A turn about takes this long.
+const TURN_S: float = 0.32
+var _face0: float = 1.0
+var _shown: float = 1.0
+var _bob: float = 0.0
+var _rock: float = 0.0
+var _pivot_y: float = 0.0
+var _mirror_y: float = 0.0
 var _rig: Node2D
 var _hull: Sprite2D
 var _mirror: CanvasGroup
@@ -38,6 +63,8 @@ var _cut: float = 0.9
 func _ready() -> void:
 	if tex == null:
 		return
+	heft = clampf((float(def.get("tier", 4.0)) - 2.0) / 4.0, 0.0, 1.0)
+	_face0 = face if face != 0.0 else 1.0
 	var flip: bool = def.get("seaFlip", false) == true
 	var sc: float = box / float(tex.get_width())
 	_hull = Sprite2D.new()
@@ -53,6 +80,7 @@ func _ready() -> void:
 	var cut: float = (waterline - top) / h
 	var depth: float = (keel - waterline) / h
 	_cut = cut
+	_pivot_y = waterline
 	_hull.material = Skipper.afloat_mat("res://game/fx/waterline.gdshader", _hull, cut, depth, phase)
 	(_hull.material as ShaderMaterial).set_shader_parameter("tilt", Skipper.keel_tilt(tex) * (-1.0 if _hull.flip_h else 1.0))
 	_mirror = CanvasGroup.new()
@@ -66,7 +94,8 @@ func _ready() -> void:
 	twin.position = _hull.position
 	twin.flip_h = _hull.flip_h
 	_mirror.add_child(twin)
-	_mirror.position = Vector2(0, waterline * (1.0 + Skipper.LIE))
+	_mirror_y = waterline * (1.0 + Skipper.LIE)
+	_mirror.position = Vector2(0, _mirror_y)
 	_mirror.scale = Vector2(1.0, -Skipper.LIE)
 	add_child(_mirror)
 	_rig = Node2D.new()
@@ -77,16 +106,25 @@ func _ready() -> void:
 	_base_y = _hull.position.y
 
 
-## Turn her about (a crewmate's ship sailing the other way): the hull and its
-## reflection flip, the waterline's tilt with them.
-func turn(f: float) -> void:
-	if _hull == null or signf(f) == signf(face):
+## Turn her about (sailing the other way): the hull and its reflection narrow
+## through the beam and open out the other way over TURN_S, or at once.
+func turn(f: float, instant: bool = false) -> void:
+	if f == 0.0:
 		return
-	face = f
-	_hull.flip_h = (face < 0.0) != (def.get("seaFlip", false) == true)
-	(_hull.material as ShaderMaterial).set_shader_parameter("tilt", Skipper.keel_tilt(tex) * (-1.0 if _hull.flip_h else 1.0))
-	for c: Node in _mirror.get_children():
-		(c as Sprite2D).flip_h = _hull.flip_h
+	face = signf(f)
+	if instant:
+		_shown = face / _face0
+
+
+## Where her wake starts, for the sea's Wake layer (Boat.wake_contact's shape):
+## the cutwater a little in from the bow, on the waterline; bow is the way she
+## faces on the screen (1 right).
+func wake_contact(id: String, at: Vector2, bow: float) -> Dictionary:
+	var wl: float = Skipper.SINK * box / Chart.GROUND
+	return {
+		"id": id, "x": at.x + bow * box * 0.36, "y": at.y - wl,
+		"cx": at.x, "cy": at.y, "scale": box / 300.0,
+	}
 
 
 ## The hull's middle above the water, in the World's space (for shots and
@@ -105,20 +143,44 @@ func _process(delta: float) -> void:
 	# settling back.
 	heel = lerpf(heel, 0.0, 1.0 - exp(-delta * 3.0))
 	kick = lerpf(kick, 0.0, 1.0 - exp(-delta * 4.0))
-	var roll: float = sin(_t * 1.1 + phase) * 0.018
+	# The swell, as the fishing boat's: slower and steadier the bigger she is.
+	var rate: float = lerpf(1.0, 0.68, heft)
+	var bob: float = (sin(_t * 1.15 * rate + phase) * 2.6 + sin(_t * 0.67 * rate + phase * 1.7) * 1.8) * rough * lerpf(1.0, 1.25, heft)
+	var roll: float = (sin(_t * 0.92 * rate + phase * 0.6) * 1.4 + sin(_t * 1.61 * rate + phase) * 0.6) * rough * lerpf(0.85, 0.6, heft)
+	var k: float = 1.0 - exp(-delta * 3.0)
+	_bob = lerpf(_bob, bob, k)
+	_rock = lerpf(_rock, roll + lean_deg, k)
+	# A turn about: through the beam and out, leaning a little into it.
+	var to: float = face / _face0
+	_shown = move_toward(_shown, to, delta * 2.0 / TURN_S)
+	var through: float = 1.0 - absf(_shown)
+	var u: float = absf(_shown)
+	var sx: float = (1.0 if _shown >= 0.0 else -1.0) * maxf(0.06, u * u * (3.0 - 2.0 * u))
 	# The shove springs back (a little overshoot, then settles).
 	_slide_v += (-slide * 60.0 - _slide_v * 9.0) * delta
 	slide += _slide_v * delta
 	flash = maxf(0.0, flash - delta * 5.0)
-	_rig.rotation = roll + heel
-	_rig.position = Vector2(kick, sin(_t * 1.6 + phase) * 2.5 + sink * 40.0) + slide
+	var rot: float = deg_to_rad(_rock + through * 3.0 * signf(to)) + heel + sink * 0.25 * face
+	# Rolled on the screen, about the waterline (the World is squashed by
+	# GROUND, so the turn is built through it, not inside it).
+	var g: float = Chart.GROUND
+	var c: float = cos(rot)
+	var sn: float = sin(rot)
+	var bx: Vector2 = Vector2(c, sn / g) * sx
+	var by: Vector2 = Vector2(-g * sn, c)
+	var pivot: Vector2 = Vector2(0, _pivot_y)
+	var at: Vector2 = Vector2(kick, _bob / g + sink * 40.0 - rise) + slide
+	_rig.transform = Transform2D(bx, by, at + pivot - by * _pivot_y)
 	_hull.self_modulate = Color.WHITE.lerp(Color(1.0, 0.55, 0.45), clampf(flash, 0.0, 1.0))
 	# Going under: the waterline climbs the hull (the shader cuts there), the
 	# bow lifting as she settles stern first.
 	if sink > 0.0:
 		(_hull.material as ShaderMaterial).set_shader_parameter("cut", lerpf(_cut, 0.0, sink))
-		_rig.rotation += sink * 0.25 * face
 	_mirror.position.x = kick + slide.x
+	# Water flips a lean and keeps the picture mostly where it is.
+	_mirror.scale.x = sx
+	_mirror.rotation = -rot * 0.5
+	_mirror.position.y = _mirror_y - _bob / g * 0.75 + rise * Skipper.LIE
 	# The reflection goes with the hull, not ahead of it.
 	_mirror.modulate.a = 1.0 - smoothstep(0.35, 0.9, sink)
 	_rig.modulate.a = 1.0 - smoothstep(0.6, 1.0, sink)

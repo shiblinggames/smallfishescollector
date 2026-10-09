@@ -127,21 +127,14 @@ func _ready() -> void:
 	add_child(lantern)
 
 
-var _ship: Sprite2D
-var _ship_base_y: float = 0.0
 ## Under her, north of the arch: the expedition ship (North).
 var on_ship: bool = false
 
 
-## The ship's rig (the hull, sunk at its waterline, and the water it pushes
-## aside), her reflection, and whether her picture is drawn bow-right (so it
-## turns the other way to the fishing boat's bow-left convention).
-var _ship_rig: Node2D
-var _ship_mirror: CanvasGroup
-var _ship_flip: bool = false
-var _ship_mirror_y: float = 0.0
+## The ship (HullRig: the hull sunk at its waterline, the water it pushes
+## aside, its reflection, and how it sits in the swell).
+var _ship_rig: HullRig
 var _ship_phase: float = randf() * 6.28
-var _ship_wob: float = 0.0
 
 
 ## THE CHANGE OF BOAT (North): past the sign in the arch, the ship you own
@@ -158,7 +151,6 @@ var _ship_wob: float = 0.0
 ## pool of light blooms under her (gold going north, sea-blue coming home),
 ## the hull she leaves fades down into the water and the one she takes rises
 ## out of it, settling with a little overshoot.
-var _rise: float = 0.0
 var _swap_tw: Tween
 
 
@@ -166,12 +158,8 @@ func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float
 	on_ship = on
 	if _swap_tw != null and _swap_tw.is_valid():
 		_swap_tw.kill()
-	_rise = 0.0
 	var old_rig: Node2D = _ship_rig
-	var old_mirror: Node2D = _ship_mirror
 	_ship_rig = null
-	_ship_mirror = null
-	_ship = null
 	if animate:
 		_bloom(Color(1.0, 0.8, 0.45) if on else Color(0.45, 0.82, 1.0))
 		_spray(on)
@@ -186,15 +174,14 @@ func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float
 			_swap_tw.set_parallel()
 		else:
 			skipper.visible = false
-	for n: Node2D in [old_rig, old_mirror]:
-		if n == null:
-			continue
+	if old_rig != null:
 		if animate:
-			var fade: Tween = n.create_tween()
-			fade.tween_property(n, "modulate:a", 0.0, 0.3)
-			fade.tween_callback(n.queue_free)
+			var fade: Tween = old_rig.create_tween()
+			fade.tween_property(old_rig, "modulate:a", 0.0, 0.3)
+			fade.tween_callback(old_rig.queue_free)
 		else:
-			n.queue_free()
+			old_rig.queue_free()
+	_rush_size(1.0)
 	# What she takes: risen out of it.
 	if not on:
 		skipper.visible = true
@@ -204,57 +191,25 @@ func set_ship(on: bool, def: Dictionary = {}, tex: Texture2D = null, wide: float
 		return
 	if tex == null:
 		return
-	_ship_flip = def.get("seaFlip", false) == true
-	var box: float = 340.0 * wide
-	var sc: float = box / float(tex.get_width())
-	var hull: Sprite2D = Sprite2D.new()
-	hull.texture = tex
-	hull.scale = Vector2(sc, sc / Chart.GROUND)
-	var h: float = tex.get_height() * hull.scale.y
-	# The keel on the water here (y 0), and the waterline a little up it, by
-	# the same share as the fishing boats sink (Skipper.SINK of the box).
-	var keel_frac: float = float(def.get("seaKeel", 0.75))
-	hull.position = Vector2(0, -h * (keel_frac - 0.5))
-	var top: float = hull.position.y - h / 2.0
-	var keel: float = top + h * keel_frac
-	var waterline: float = keel - Skipper.SINK * box / Chart.GROUND
-	var cut: float = (waterline - top) / h
-	var depth: float = (keel - waterline) / h
-	# Along the keel's own slope (a hull drawn stern-high sits so in the water).
-	var tilt: float = Skipper.keel_tilt(tex)
-	hull.material = Skipper.afloat_mat("res://game/fx/waterline.gdshader", hull, cut, depth, _ship_phase)
-	(hull.material as ShaderMaterial).set_shader_parameter("tilt", tilt)
-	_ship_rig = Node2D.new()
-	add_child(_ship_rig)
-	_ship_rig.add_child(hull)
-	var collar: Sprite2D = Skipper.collar_of(hull, cut, depth, _ship_phase)
-	(collar.material as ShaderMaterial).set_shader_parameter("tilt", tilt)
-	_ship_rig.add_child(collar)
-	_ship = hull
-	# The reflection: a twin about the waterline, lying down, under the hull.
-	_ship_mirror = CanvasGroup.new()
-	_ship_mirror.fit_margin = 12.0
-	var mm: ShaderMaterial = ShaderMaterial.new()
-	mm.shader = load("res://game/fx/hull_mirror.gdshader")
-	_ship_mirror.material = mm
-	var twin: Sprite2D = Sprite2D.new()
-	twin.texture = tex
-	twin.scale = hull.scale
-	twin.position = hull.position
-	_ship_mirror.add_child(twin)
-	_ship_mirror_y = waterline * (1.0 + Skipper.LIE)
-	_ship_mirror.position = Vector2(0, _ship_mirror_y)
-	_ship_mirror.scale = Vector2(1.0, -Skipper.LIE)
-	add_child(_ship_mirror)
-	move_child(_ship_mirror, 0)
-	_ship_base_y = 0.0
+	var rig: HullRig = HullRig.new()
+	rig.tex = tex
+	rig.def = def
+	rig.box = 340.0 * wide
+	rig.phase = _ship_phase
+	rig.face = -_facing
+	add_child(rig)
+	_ship_rig = rig
+	_rush_size(rig.box / SPRITE_W)
 	if animate:
-		_rise = 30.0
-		_ship_rig.modulate.a = 0.0
-		_ship_mirror.modulate.a = 0.0
-		_swap_tw.tween_property(_ship_rig, "modulate:a", 1.0, 0.45).set_delay(0.15)
-		_swap_tw.tween_property(_ship_mirror, "modulate:a", 1.0, 0.6).set_delay(0.25)
-		_swap_tw.tween_property(self, "_rise", 0.0, 0.7).set_delay(0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		rig.rise = 30.0
+		rig.modulate.a = 0.0
+		_swap_tw.tween_property(rig, "modulate:a", 1.0, 0.5).set_delay(0.15)
+		_swap_tw.tween_property(rig, "rise", 0.0, 0.7).set_delay(0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## The streaks rushing past her, spread to the hull she is in.
+func _rush_size(k: float) -> void:
+	(_rush.process_material as ParticleProcessMaterial).emission_box_extents = Vector3(170.0 * k, 120.0 * k, 0)
 
 
 ## A pool of light blooming under her and fading, for the crossing.
@@ -331,6 +286,16 @@ func steer(input: Vector2, delta: float) -> void:
 		velocity = Vector2.ZERO
 		return
 	var top: float = SPEED * hull * boat_speed * weather_speed
+	# THE SHIP'S WEIGHT (Kong, 2026-10-09): a ship picks up slower, carries her
+	# way longer, comes round wider and drifts more the bigger she is; her top
+	# speed is the same. The fishing boat is untouched (heavy < 0).
+	var heavy: float = _ship_rig.heft if _ship_rig != null else -1.0
+	var acc_k: float = 1.0 if heavy < 0.0 else lerpf(0.8, 0.5, heavy)
+	var coast_k: float = 1.0 if heavy < 0.0 else lerpf(0.7, 0.4, heavy)
+	var turn_k: float = 1.0 if heavy < 0.0 else lerpf(0.85, 0.6, heavy)
+	var grip_k: float = 1.0 if heavy < 0.0 else lerpf(0.8, 0.55, heavy)
+	var pivot_k: float = 2.5 if heavy < 0.0 else lerpf(1.6, 0.9, heavy)
+	var slow: float = SLOW if heavy < 0.0 else SLOW * lerpf(1.3, 2.0, heavy)
 	var order: Variant = null
 	var want: float = 0.0
 	if not locked:
@@ -345,13 +310,13 @@ func steer(input: Vector2, delta: float) -> void:
 				target = null
 			else:
 				order = to.angle()
-				var t: float = clampf((d - ARRIVE) / (SLOW - ARRIVE), 0.0, 1.0)
+				var t: float = clampf((d - ARRIVE) / (slow - ARRIVE), 0.0, 1.0)
 				want = top * t * t * (3.0 - 2.0 * t) * _sail_mom * _kelp_keep
 	# The bow comes round toward the order, faster from a standstill.
 	var spd: float = velocity.length()
 	if order != null:
 		var stopped: float = 1.0 - minf(1.0, spd / (SPEED * 0.35))
-		var max_turn: float = TURN * rudder * agility * weather_turn * (1.0 + stopped * 2.5) * delta
+		var max_turn: float = TURN * rudder * agility * weather_turn * turn_k * (1.0 + stopped * pivot_k) * delta
 		heading += clampf(wrapf(float(order) - heading, -PI, PI), -max_turn, max_turn)
 	# Along the heading she picks up toward the speed she wants; across it the
 	# drift bleeds off.
@@ -360,9 +325,10 @@ func steer(input: Vector2, delta: float) -> void:
 	var fwd: float = velocity.dot(h)
 	var lat: float = velocity.dot(n)
 	var align: float = maxf(0.0, 0.5 + 0.5 * cos(heading - float(order))) if order != null else 0.0
-	var kf: float = 1.0 - exp(-ACCEL * rig * agility * delta)
-	fwd += (want * align - fwd) * kf
-	lat *= exp(-GRIP * delta)
+	var goal: float = want * align
+	var kf: float = 1.0 - exp(-ACCEL * rig * agility * (acc_k if goal > fwd else coast_k) * delta)
+	fwd += (goal - fwd) * kf
+	lat *= exp(-GRIP * grip_k * delta)
 	velocity = h * fwd + n * lat
 	var next: Vector2 = position + velocity * delta
 	_flow(delta, top, input.length() > 0.1)
@@ -420,25 +386,12 @@ func steer(input: Vector2, delta: float) -> void:
 		_facing = 1.0 if velocity.x > 0.0 else -1.0
 		skipper.scale.x = -_facing
 	if _ship_rig != null:
-		# Bow-left by convention (as the fishing boat), turned to her way; a
-		# little roll and heave on the waterline, the reflection keeping time
-		# and swaying as the boats' does.
-		var fx: float = -1.0 if ((_facing > 0.0) != _ship_flip) else 1.0
-		var bob: float = sin(Time.get_ticks_msec() / 1300.0) * 3.0
-		_ship_rig.scale.x = fx
-		_fx_v += (-_fx_slide * 60.0 - _fx_v * 9.0) * delta
-		_fx_slide += _fx_v * delta
-		_fx_heel = lerpf(_fx_heel, 0.0, 1.0 - exp(-delta * 3.0))
-		_fx_flash = maxf(0.0, _fx_flash - delta * 5.0)
-		_ship_rig.rotation = sin(Time.get_ticks_msec() / 900.0) * 0.012 * rough + _fx_heel
-		_ship_rig.position.y = bob + _rise + _fx_slide.y
-		_ship_rig.position.x = _fx_slide.x
-		_ship_rig.modulate = Color.WHITE.lerp(Color(1.0, 0.55, 0.45), clampf(_fx_flash, 0.0, 1.0))
-		_ship_mirror.scale.x = fx
-		_ship_mirror.rotation = -_ship_rig.rotation
-		_ship_mirror.position.y = _ship_mirror_y - bob * 0.75 - _rise * Skipper.LIE
-		_ship_wob += delta
-		_ship_mirror.skew = sin(_ship_wob * Skipper.MIRROR_RATE + _ship_phase) * Skipper.MIRROR_SHEAR + sin(_ship_wob * Skipper.MIRROR_RATE * 1.63 + _ship_phase * 2.1) * Skipper.MIRROR_SHEAR * 0.45
+		# The ship sits in the swell as the fishing boat does (HullRig), the
+		# heel and the bow's lift a little less the bigger she is, and comes
+		# about through her beam when she turns.
+		_ship_rig.turn(-_facing)
+		_ship_rig.rough = rough
+		_ship_rig.lean_deg = (heel + pitch) * lerpf(0.9, 0.6, _ship_rig.heft)
 
 
 ## Where her wake starts (SeaMap.tsx): the cutwater, 40px toward the bow and
@@ -451,6 +404,11 @@ const KEEL_Y: float = 34.0
 
 func wake_contact() -> Dictionary:
 	var speed: float = velocity.length()
+	if _ship_rig != null:
+		var c: Dictionary = _ship_rig.wake_contact("me", position, _facing)
+		c["ang"] = atan2(velocity.y, velocity.x) if speed > 1.0 else heading
+		c["force"] = minf(1.0, speed / (SPEED * 0.9)) if speed > 26.0 else 0.0
+		return c
 	var web_facing: float = signf(skipper.scale.x)
 	return {
 		"id": "me", "x": position.x + web_facing * BOW_X - 1.0, "y": position.y + BOW_DOWN / Chart.GROUND,
@@ -655,21 +613,11 @@ func face_to(f: float) -> void:
 	# and the hull is otherwise only turned while she sails, so a Man-o-War,
 	# painted bow-left, went into a fight facing away from the enemy).
 	if _ship_rig != null:
-		var fx: float = -1.0 if ((_facing > 0.0) != _ship_flip) else 1.0
-		_ship_rig.scale.x = fx
-		if _ship_mirror != null:
-			_ship_mirror.scale.x = fx
+		_ship_rig.turn(-_facing, true)
 
 
 
-var _fx_slide: Vector2 = Vector2.ZERO
-var _fx_v: Vector2 = Vector2.ZERO
-var _fx_heel: float = 0.0
-var _fx_flash: float = 0.0
-
-
-## In a fight: a blow, her guns' recoil or a swerve (as HullRig.react).
+## In a fight: a blow, her guns' recoil or a swerve (HullRig.react).
 func react(lean: float, shove: Vector2, tint: float = 0.0) -> void:
-	_fx_heel += lean
-	_fx_v += shove * 9.0
-	_fx_flash = maxf(_fx_flash, tint)
+	if _ship_rig != null:
+		_ship_rig.react(lean, shove, tint)

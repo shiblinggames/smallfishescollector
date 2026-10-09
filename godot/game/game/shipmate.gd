@@ -141,7 +141,29 @@ func _process(delta: float) -> void:
 	_plate.modulate = lift
 	_plate.position = Vector2(-_plate.size.x / 2.0, 0)
 	var way: float = clampf(_vel.length() / 300.0, 0.0, 1.0)
-	skipper.sway(delta, 1.0 + clampf((position.length() - 1400.0) / 21200.0, 0.0, 1.0) * 1.4, 0.0, -signf(_vel.x) * way * 2.8 if absf(_vel.x) > 8.0 else 0.0)
+	var rough: float = 1.0 + clampf((position.length() - 1400.0) / 21200.0, 0.0, 1.0) * 1.4
+	var pitch: float = -signf(_vel.x) * way * 2.8 if absf(_vel.x) > 8.0 else 0.0
+	skipper.sway(delta, rough, 0.0, pitch)
+	if _hull != null:
+		# Their ship sits in the swell as yours does (Boat.steer): the heel
+		# into a turn read off the way their heading swings.
+		var ang: float = _vel.angle() if _vel.length() > 20.0 else _ang
+		var swing: float = wrapf(ang - _ang, -PI, PI) / maxf(delta, 0.0001)
+		_ang = ang
+		var heel: float = clampf(swing * way * 4.0, -7.0, 7.0) * signf(_vel.x if absf(_vel.x) > 1.0 else 1.0)
+		_hull.rough = rough
+		_hull.lean_deg = (heel + pitch) * lerpf(0.9, 0.6, _hull.heft)
+
+
+var _ang: float = 0.0
+
+
+## Where their wake starts: their ship's cutwater north of the arch, the
+## fishing boat's otherwise.
+func wake_contact(id: String) -> Dictionary:
+	if _hull != null:
+		return _hull.wake_contact(id, position, -signf(skipper.scale.x))
+	return Boat.contact_for(id, position, skipper)
 
 
 

@@ -2278,6 +2278,18 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- THE SHIPS SIT AND SAIL LIKE SHIPS (Kong, 2026-10-09: the fishing boat "feels really tuned and
+  locked in", the expedition ships "a little off or underdeveloped"). game/hull_rig.gd is the one
+  ship rig: your own ship (Boat.set_ship), your crew's (Shipmate) and every hull in a fight. It
+  takes the fishing boat's swell (two waves each for bob and roll, eased, pivoted on the
+  waterline), slower and steadier by heft (the hull's tier: Sloop 0 to Man-o-War 1), rolled as a
+  true rotation on the screen; the sailor sets rough and lean_deg (the heel into a turn and the
+  bow's lift, less the bigger she is). A turn about narrows the hull through its beam and out over
+  0.32s. The wake starts at the ship's own cutwater (HullRig.wake_contact), and the full-sail
+  streaks spread to her size. DEPARTURE, HANDLING: a ship picks up slower (x0.8 to x0.5), carries
+  her way longer (x0.7 to x0.4 easing off), comes round wider (x0.85 to x0.6, and less spin from a
+  standstill), drifts more (grip x0.8 to x0.55) and starts slowing for a click sooner (SLOW x1.3 to
+  x2.0), Sloop to Man-o-War; top speed unchanged; the fishing boat untouched (Boat.steer).
 - ONE VISUAL AND MOTION LANGUAGE (Kong, 2026-10-09: "polished and consistent… every single
   detail feels purposeful"). An audit wrote a spec; the approved majors were applied across the
   game. game/motion.gd (Motion) holds every timing and move (arrive, leave, panel_in/out,
