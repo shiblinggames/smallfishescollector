@@ -2278,6 +2278,15 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- A WEB CAPTAIN INTO THE PORT (Kong, 2026-10-09: his kingkong, "a maxed out character to test
+  with"). From web/: `npx tsx scripts/player-save.mts export <username> --out <name>.json` (a
+  read-only snapshot into git-ignored web/saves/), then `npx tsx
+  ../godot/game/tools/import_web_captain.mts saves/<name>.json`: the web's own fromWebExport into
+  the v13 save, with the port's departures fixed up (voyages gain created_ms/duration_ms,
+  bountyEvents become bounty_events with at_ms, the web's bounty board is dropped for the port's
+  own), written to %APPDATA%/Seas the Booty/captains/<id>.json (an existing one kept as .bak).
+  Tables the port does not model are carried untouched. Gems in the profile do nothing (the port
+  has none).
 - THE CAMERA UNDER WAY, AND HITS WITH WEIGHT (Kong, 2026-10-09). At sea (Sea._cam_lead) the
   camera leads the way she sails, up to LEAD 12% of the screen at full speed, eased over about a
   second, and settles dead centre at anchor, with the rod out or a panel up (fishing stays locked
