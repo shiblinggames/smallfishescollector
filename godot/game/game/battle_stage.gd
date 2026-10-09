@@ -691,7 +691,7 @@ func _paint_actions() -> void:
 			# Fire's chooser: the single shot, the volley, the Mega.
 			# One rule for emphasis: the recommended action is the big gold
 			# word. Here that is the Volley when it can be fired, else Fire.
-			var fk2: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], not lg["volley"], "One ball, one shot", BattleLook.GOLD, func() -> void: _pick_fire("fire"), "fire")
+			var fk2: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], false, "One ball, one shot", BattleLook.CREAM, func() -> void: _pick_fire("fire"), "fire")
 			top.add_child(fk2)
 			top.add_child(_word_key("Volley", "V", lg["volley"], lg["volley"], "Three balls: a double-damage broadside", BattleLook.GOLD, func() -> void: _pick_fire("volley"), "volley"))
 			if not mg.is_empty():
@@ -735,8 +735,9 @@ func _paint_actions() -> void:
 				top.add_child(sk)
 			top.add_child(_word_key("Back", "Esc", true, false, "", BattleLook.MUTED, func() -> void: _open_menu("special"), "back"))
 		_:
+			# Fire is one of the row, not a bigger gold word (Kong, 2026-10-09).
 			top.add_child(_word_key("Reload", "R", lg["reload"], false, "+1 ball", BattleLook.CREAM, func() -> void: _choose("reload"), "reload"))
-			var fk: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], true, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.GOLD, _tap_fire, "fire")
+			var fk: BattleLook.ActionKey = _word_key("Fire", "F", lg["fire"], false, "Fire; with the balls for it, a Volley or the Mega" if (lg["volley"] or lg.get("mega", false)) else "One ball, one shot", BattleLook.CREAM, _tap_fire, "fire")
 			top.add_child(fk)
 			top.add_child(_word_key("Dodge", "D", lg["dodge"], false, "Dodge the next shot (not twice running)", BattleLook.CREAM, func() -> void: _choose("dodge"), "dodge"))
 			var ord_name: String = str(CaptainClass.ORDER_NAME.get(str(Js.obj(s.get("cls")).get("order", "")), ""))
@@ -2160,6 +2161,11 @@ func _draw() -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
+## Each plate's balls as last drawn, and when each slot was last loaded.
+var _rack_seen: Dictionary = {}
+var _rack_pop: Dictionary = {}
+
+
 func _plate(at: Vector2, name: String, hp: float, mx: float, shield: float, ch: int, mag: int, st: Dictionary, foe: bool, lit: bool, key: Variant, tag: String, portrait: Texture2D, out_word: String, alpha: float) -> void:
 	if alpha <= 0.01:
 		return
@@ -2194,8 +2200,19 @@ func _plate(at: Vector2, name: String, hp: float, mx: float, shield: float, ch: 
 	draw_string(Kit.font("cinzel", 800), Vector2(x0, r.position.y + 21.0), name, HORIZONTAL_ALIGNMENT_LEFT, r.end.x - 20.0 - hw - x0, 14, Color(BattleLook.CREAM, a))
 	var bar: Rect2 = Rect2(x0, r.position.y + 28.0, r.end.x - 12.0 - x0, 10.0)
 	BattleLook.bar(self, bar, share, tr, shield / maxf(1.0, mx), BattleLook.FOE if foe else BattleLook.ALLY, BattleLook.FOE_LO if foe else BattleLook.ALLY_LO, a)
+	# The rack: a ball just loaded pops in (BattleLook.ball), so a reload
+	# reads as balls gained.
+	var rk: String = str(key)
+	var had: int = int(_rack_seen.get(rk, ch))
+	var now: int = Time.get_ticks_msec()
+	if ch > had:
+		for k0: int in range(had, ch):
+			_rack_pop["%s:%d" % [rk, k0]] = now
+	_rack_seen[rk] = ch
 	for k: int in mag:
-		BattleLook.ball(self, Vector2(x0 + 6.0 + k * 14.0, r.position.y + 49.0), 5.0, k < ch, a)
+		var at_ms: int = int(_rack_pop.get("%s:%d" % [rk, k], 0))
+		var pop: float = clampf(1.0 - float(now - at_ms) / 450.0, 0.0, 1.0) if at_ms > 0 and k < ch else 0.0
+		BattleLook.ball(self, Vector2(x0 + 7.0 + k * 17.0, r.position.y + 49.0), 6.5, k < ch, a, pop)
 	# What it is under, right to left.
 	var sx: float = r.end.x - 12.0
 	for id: String in st:
@@ -2205,7 +2222,7 @@ func _plate(at: Vector2, name: String, hp: float, mx: float, shield: float, ch: 
 		# Its own colour, the same as the effect the ship wears.
 		var tone2: Color = FxSheet.status_color(id) if FxSheet.STATUS.has(id) else (BattleLook.ALLY if id in ["fortify", "enrage", "regen", "haste"] else BattleLook.FOE)
 		sx -= BattleLook.pill_w(word)
-		if sx < x0 + mag * 14.0:
+		if sx < x0 + mag * 17.0:
 			break
 		BattleLook.pill(self, Vector2(sx, r.position.y + 41.0), word, tone2, a)
 		sx -= 4.0

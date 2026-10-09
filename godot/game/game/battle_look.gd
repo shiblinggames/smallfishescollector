@@ -87,12 +87,22 @@ static func bar(ci: CanvasItem, r: Rect2, frac: float, trail: float, shield: flo
 
 
 ## A cannonball: a flat dark disc with a faint ring; empty, the ring alone.
-static func ball(ci: CanvasItem, c: Vector2, rad: float, full: bool, alpha: float = 1.0) -> void:
+## A ball in the rack (Kong, 2026-10-09: loaded balls drawn black on the dark
+## plate looked like nothing was gained): loaded, lit iron with a highlight;
+## empty, a faint ring. pop (1 to 0, just loaded): it lands a size larger, in
+## a ring of cream light, and settles.
+static func ball(ci: CanvasItem, c: Vector2, rad: float, full: bool, alpha: float = 1.0, pop: float = 0.0) -> void:
 	if full:
-		ci.draw_circle(c, rad, Color(0.07, 0.07, 0.08, alpha))
-		ci.draw_arc(c, rad, 0.0, TAU, 24, Color(1, 1, 1, 0.28 * alpha), 1.0, true)
+		var r: float = rad * (1.0 + 0.55 * pop * pop)
+		if pop > 0.0:
+			ci.draw_arc(c, rad + 7.0 * (1.0 - pop), 0.0, TAU, 24, Color(CREAM, 0.7 * pop * alpha), 1.5, true)
+		ci.draw_circle(c, r, Color(0.5, 0.51, 0.55, alpha).lerp(Color(CREAM, alpha), 0.5 * pop))
+		ci.draw_circle(c + Vector2(r * 0.18, r * 0.2), r * 0.72, Color(0.24, 0.25, 0.28, 0.6 * alpha))
+		ci.draw_circle(c + Vector2(-r * 0.34, -r * 0.34), r * 0.34, Color(0.9, 0.92, 0.95, 0.85 * alpha))
+		ci.draw_arc(c, r, 0.0, TAU, 24, Color(0.0, 0.0, 0.0, 0.55 * alpha), 1.0, true)
 	else:
-		ci.draw_arc(c, rad - 0.5, 0.0, TAU, 24, Color(1, 1, 1, 0.16 * alpha), 1.0, true)
+		ci.draw_circle(c, rad - 0.5, Color(1, 1, 1, 0.05 * alpha))
+		ci.draw_arc(c, rad - 0.5, 0.0, TAU, 24, Color(1, 1, 1, 0.22 * alpha), 1.0, true)
 
 
 static func _head(ci: CanvasItem, tip: Vector2, dir: Vector2, s: float, col: Color) -> void:
