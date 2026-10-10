@@ -34,11 +34,10 @@ extends Node
 
 signal changed(state: Dictionary)
 
-const MUSTER: float = 25.0
+## No clock on a plan (battle_stage reads PLAN only as a fallback).
 const PLAN: float = 30.0
 const PLAY: float = 25.0
 const FLARES: float = 25.0
-const TIDE: float = 30.0
 const MAX_SEATS: int = 4
 ## How near the raid's dock a ship must be to call or join it.
 const NEAR: float = 1400.0
@@ -66,6 +65,16 @@ func _exit_tree() -> void:
 
 func hosting() -> bool:
 	return charter != null
+
+
+## The Charter is left (CrewNet): the raid is gone with it, so a later Charter
+## starts idle (a muster left standing refused every new call).
+func reset() -> void:
+	charter = null
+	state = {}
+	_r = { "phase": "idle", "seq": 0 }
+	_feats = {}
+	_phase_seen = ""
 
 
 # ── The founder's side ─────────────────────────────────────────────────────────
@@ -536,18 +545,13 @@ func _process(delta: float) -> void:
 	if float(_r["left"]) > 0.0:
 		return
 	_r["left"] = -1.0
+	# Only these two run on a clock: a plan and a tide wait for the crew (the
+	# AFK nudge moves those on).
 	match str(_r["phase"]):
-		"plan":
-			_resolve()
 		"playing":
 			_advance()
 		"flares":
 			_land_flares()
-		"tide":
-			for s: Dictionary in Battle.alive(_r["b"]):
-				if not _r["tidePicks"].has(s["key"]):
-					var ch: Array = Js.list(_r["tide"].get("choices"))
-					_tide_pick(s["key"], str(ch[ch.size() - 1]["id"]) if not ch.is_empty() else "")
 
 
 ## Send the raid to everyone (and to this game's own screens).
@@ -667,11 +671,13 @@ func _invite_refusal(s: Session) -> String:
 
 
 ## A captain back on the line mid-raid: back in their seat, and shown where
-## the raid is now.
+## the raid is now. Only one whose LINE dropped (drop) comes back in: a captain
+## who fled or sank left the fight for good, and stays out of it.
 func welcome(key: String, id: int) -> void:
 	if str(_r.get("phase", "idle")) == "idle":
 		return
-	if Js.obj(_r.get("gone")).has(key) and not ["muster", "done"].has(str(_r["phase"])):
+	if Js.obj(_r.get("dropped")).has(key) and not ["muster", "done"].has(str(_r["phase"])):
+		_r["dropped"].erase(key)
 		_r["gone"].erase(key)
 		var si: int = _seat_of(key)
 		if si >= 0 and not _r["b"]["seats"][si].get("sunk", false):
@@ -712,6 +718,13 @@ func drop(key: String) -> void:
 			_leave(key)
 			return
 	var si: int = _seat_of(key)
+	# Out by the line alone (not already fled, sunk or gone): only such a
+	# captain is let back in on a later hello (welcome).
+	var was_out: bool = Js.obj(_r.get("gone")).has(key) or (si >= 0 and (_r["b"]["seats"][si].get("fled", false) or _r["b"]["seats"][si].get("sunk", false)))
+	if not was_out:
+		if not _r.has("dropped"):
+			_r["dropped"] = {}
+		_r["dropped"][key] = true
 	if si >= 0:
 		_r["b"]["seats"][si]["fled"] = true
 	_r["gone"][key] = true

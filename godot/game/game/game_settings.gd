@@ -60,12 +60,24 @@ static func _vol(bus: String, lin: float) -> void:
 
 
 static func apply() -> void:
+	apply_audio()
+	apply_display()
+
+
+## The buses and their volumes only. Coming back to the window calls just this
+## (to undo the quiet-when-unfocused mute): the display block would force a
+## maximised window back to windowed and a resized one back to its saved size.
+static func apply_audio() -> void:
 	ensure_buses()
 	_vol("Master", float(value("vol_master")))
 	# Recording a film: the score is laid over afterwards, so no music here.
 	_vol("UserMusic", 0.0 if OS.get_environment("FILM_NOMUSIC") != "" else float(value("vol_music")))
 	_vol("SFX", float(value("vol_sfx")))
 	_vol("UserAmb", float(value("vol_amb")))
+
+
+## The window mode and size, vsync and the frame cap.
+static func apply_display() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
 	match str(value("window_mode")):

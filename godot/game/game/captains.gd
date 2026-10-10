@@ -16,8 +16,16 @@ static func _dir() -> String:
 	return dir_override if dir_override != "" else DIR
 
 
+## The species file, parsed once per run (92 KB through the GDScript JSON
+## parser on every captain card, every berth and every welcome added up). Each
+## caller gets its own deep copy, since it lands in a save as save.species.
+static var _species_cache: Array = []
+
+
 static func _species() -> Array:
-	return JsJson.parse(FileAccess.get_file_as_string("res://content/fish_species.json"))
+	if _species_cache.is_empty():
+		_species_cache = JsJson.parse(FileAccess.get_file_as_string("res://content/fish_species.json"))
+	return _species_cache.duplicate(true)
 
 
 static func _path(id: String) -> String:

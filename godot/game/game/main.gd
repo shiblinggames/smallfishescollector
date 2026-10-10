@@ -218,11 +218,17 @@ func _notification(what: int) -> void:
 					cs.session.charter.flush()
 				if cs.net != null:
 					cs.net.leave()
+			# Anywhere else (the harbor, say), a Charter this game hosts still
+			# writes its batched changes (a crewmate's new berth) before closing.
+			if net != null and net.hosting and net.charter != null:
+				net.charter.flush()
+				net.leave()
 		NOTIFICATION_APPLICATION_FOCUS_OUT:
 			if bool(GameSettings.value("quiet_unfocused")):
 				AudioServer.set_bus_mute(0, true)
 		NOTIFICATION_APPLICATION_FOCUS_IN:
-			GameSettings.apply()
+			# Only the sound: re-applying the display here un-maximised the window.
+			GameSettings.apply_audio()
 
 
 func _fps_layer() -> void:

@@ -21,6 +21,8 @@ var _derby_box: VBoxContainer
 var _derby_title: Label
 var _derby_rows: Label
 var _t: float = 0.0
+## Whether the last frame drew anything (one more redraw clears it).
+var _drew: bool = false
 
 
 func _ready() -> void:
@@ -141,7 +143,12 @@ func _process(delta: float) -> void:
 	for p: Dictionary in _pops:
 		p["t"] = float(p["t"]) + delta
 	_pops = _pops.filter(func(p: Dictionary) -> bool: return float(p["t"]) < 2.6)
-	queue_redraw()
+	# Only redrawn while there is something to draw (a pop, a streak), and
+	# once more after, to clear the last of it.
+	var drawing: bool = not _pops.is_empty() or fishing.streak >= 2
+	if drawing or _drew:
+		queue_redraw()
+	_drew = drawing
 
 
 func _draw() -> void:
@@ -166,8 +173,9 @@ func _draw() -> void:
 			if hull == null or not is_instance_valid(hull):
 				continue
 			var c: Vector2 = hull.get_global_transform_with_canvas().origin
+			var salt: float = float(str(k).hash() % 97)
 			for i: int in count:
-				var seed: float = float(i) * 12.9898 + float(str(k).hash() % 97)
+				var seed: float = float(i) * 12.9898 + salt
 				var x: float = fmod(abs(sin(seed) * 43758.5453), 1.0)
 				var life: float = fmod(_t * (0.35 + 0.25 * x) + x * 3.0, 1.0)
 				var pos: Vector2 = c + Vector2((x - 0.5) * 220.0, 30.0 - life * 150.0)

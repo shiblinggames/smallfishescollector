@@ -3,9 +3,12 @@ extends RefCounted
 ## THE CAPTAIN IN PLAY (Godot port, stage 1): their save, the store the rules
 ## read and write it through, and the write after every action.
 ##
-## The dice are the save's own: seeded from the captain and the moment the
-## session opened, as the desktop shell seeded them, so every roll the rules
-## make goes through Dice.next() on a generator this session owns.
+## The dice: opening a session seeds the game's one Dice generator from the
+## captain and the moment it opened, as the desktop shell seeded them, and
+## every roll the rules make goes through Dice.next(). There is only one
+## generator, so in a Charter the last captain opened (the founder's game opens
+## every berth, and a new crewmate's captain is made mid-play) seeds it for the
+## whole crew. The rolls stay random either way.
 
 var save: Dictionary
 var carried: Dictionary
@@ -20,6 +23,9 @@ var writer: Callable = Callable()
 ## On the founder's game, the Charter this captain sails in: their actions run
 ## through it, so the purse, the book and the market are the crew's.
 var charter: Charter = null
+## Its Charter has closed on this game (Charter.close): nothing is written from
+## here any more, and above all not as a solo captain's file.
+var closed: bool = false
 
 ## The save changed from outside this captain's own screens (a crewmate's
 ## catch filled the shared book, a sale filled the shared purse).
@@ -79,7 +85,7 @@ func adopt(text: String) -> void:
 
 
 func persist() -> void:
-	if remote != null:
+	if remote != null or closed:
 		return
 	if writer.is_valid():
 		writer.call()

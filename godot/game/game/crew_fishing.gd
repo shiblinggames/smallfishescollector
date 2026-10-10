@@ -48,6 +48,20 @@ func hosting() -> bool:
 	return charter != null and is_multiplayer_authority()
 
 
+## The Charter is left (CrewNet): no derby or streak carries into the next one.
+func reset() -> void:
+	charter = null
+	_pos.clear()
+	_streak = 0
+	_streak_keys = []
+	_derby = {}
+	_derby_end_ms = 0
+	derby = {}
+	derby_got_ms = 0
+	streak = 0
+	streak_keys = []
+
+
 func _send(method: String, args: Array) -> void:
 	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
 		callv("rpc", [method] + args)

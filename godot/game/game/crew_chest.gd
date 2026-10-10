@@ -375,22 +375,15 @@ func _scrap_side(col: Control, total: float, side: int, verb_label: String, verb
 
 # ── Moving things ─────────────────────────────────────────────────────────────
 
-## Move `n` copies across, one action each; the painting slides to the other
-## side as the first goes.
+## Move `n` copies across in one action (the founder's game moves as many as
+## it can and says how many); the painting slides to the other side.
 func _move(bt: Button, verb: String, kind: String, id: String, n: int, to_col: Control) -> void:
 	_busy = true
 	_glide(bt, to_col)
-	var r: Variant = null
-	var moved: int = 0
-	for i: int in maxi(1, n):
-		r = await session.act("crewChest", [verb, kind, id])
-		if r is Dictionary and (r as Dictionary).has("error"):
-			break
-		moved += 1
+	var r: Variant = await session.act("crewChest", [verb, kind, id, float(maxi(1, n))])
+	var moved: int = int(Js.num((r as Dictionary).get("moved", 1.0))) if r is Dictionary else 0
 	var what: String = str(Armory.item(id).get("name", "")) if kind == "item" else str(Rules.rod_by_id(id).get("name", ""))
 	var line: String = "%s %s%s." % ["Took" if verb == "take" else "Put in", what, "" if moved <= 1 else " x%d" % moved]
-	if moved > 0 and r is Dictionary and (r as Dictionary).has("error"):
-		r = { "chest": Js.obj(Js.obj(session.save.get("charter")).get("chest")) }
 	_done(r, line)
 
 

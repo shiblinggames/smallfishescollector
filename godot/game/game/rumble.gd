@@ -6,15 +6,12 @@ extends RefCounted
 ## the native shell, maps each to one impact by its total on-time: 60 or more
 ## is heavy, 20 or more medium, less light. The same rule drives the pad.
 
-## The patterns the fishing loop uses, named for their moment.
-const CAST: Array = [12]
+## The patterns the fishing loop uses, named for their moment (the web's
+## cast, catch, miss, skip and hold taps were never wired here; a moment that
+## wants one adds it back from web/lib/haptics.ts).
 const BITE: Array = [0, 26, 40, 18]
 const PERFECT: Array = [40, 60, 80]
-const CATCH: Array = [6]
-const MISS: Array = [6]
 const SECOND_WIND: Array = [0, 20, 50, 20]
-const SKIP: Array = [10]
-const HOLD: Array = [8]
 const GOLDEN: Array = [0, 18, 40, 26]
 const LEVEL_UP: Array = [0, 22, 50, 30]
 

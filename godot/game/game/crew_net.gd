@@ -22,7 +22,7 @@ extends Node
 ##   roster(list)            founder -> all, whenever someone comes or goes
 ##   sail()                  founder -> all: the roster is locked, to the sea
 ##   req(n, op, args)        crewmate -> founder: one action
-##   res(n, result, captain) founder -> crewmate: its answer and the save
+##   res(n, result, captain, fresh) founder -> crewmate: its answer and the save
 ##   boat(key, state)        anyone -> all, ten times a second, unreliable
 ##   look(key, name, look)   anyone -> all, when it changes
 
@@ -47,6 +47,13 @@ signal _answered(n: int, result: Variant)
 const PORT: int = 24650
 ## How long a crewmate waits on one action before giving up on it.
 const REQUEST_WAIT: float = 20.0
+## How long the crew have to answer a vote (ask_crew).
+const VOTE_WAIT: float = 60.0
+## An action the founder's game may put to a crew vote first waits out the
+## vote and then some: at REQUEST_WAIT the proposer was told it failed while
+## the vote could still pass and the prestige run.
+const VOTED_OPS: Array[String] = ["prestigeZone"]
+const VOTED_WAIT: float = VOTE_WAIT + 15.0
 const LOBBY_FRIENDS_ONLY: int = 1
 
 var hosting: bool = false
@@ -81,7 +88,6 @@ func _ready() -> void:
 	fishing = CrewFishing.new()
 	fishing.name = "CrewFishing"
 	add_child(fishing)
-	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected)
 	multiplayer.connection_failed.connect(func() -> void: _drop("Could not reach the founder's game."))
@@ -145,6 +151,13 @@ func _farewell(why: String) -> void:
 	_end_note = why
 
 
+## The Charter is on its way to a crewmate (hand_over): until they answer,
+## nothing more is applied here, since this copy is about to be put away and
+## anything done meanwhile would never reach the new founder's copy.
+var _handing: bool = false
+const HANDING: String = "The Charter is changing hands."
+
+
 ## The founder hands the whole Charter to a crewmate aboard now: the file goes
 ## across in parts, the crewmate's game writes it as its own, and this game's
 ## copy is put away. Everyone leaves port; the new founder hosts from the
@@ -161,6 +174,8 @@ func hand_over(to_key: String) -> String:
 	if not ["idle", "done"].has(str(raids._r.get("phase", "idle"))) or not ["idle", "done"].has(str(gauntlets._r.get("phase", "idle"))):
 		return "Not while the crew are in a fight."
 	_hand_to = to_key
+	_handing = true
+	charter.busy_why = HANDING
 	var text: String = charter.handover_text(to_key)
 	var parts: int = int(ceil(float(text.length()) / float(CHUNK)))
 	for i: int in parts:
@@ -189,6 +204,8 @@ func _handed(why: String) -> void:
 		return
 	if why != "":
 		push_error("a handover did not take: " + why)
+		_handing = false
+		charter.busy_why = ""
 		return
 	var who: String = charter.berth_of(_hand_to).get("name", "your crewmate")
 	var cname: String = str(charter.data["name"])
@@ -254,6 +271,7 @@ func join_address(address: String, as_name: String) -> Error:
 
 ## A crewmate joins a Steam lobby (an invite, or Join Game).
 func join_lobby(lobby: int, as_name: String = "") -> void:
+	_reset()
 	hosting = false
 	key = SteamLayer.player_key()
 	if as_name != "":
@@ -267,10 +285,24 @@ func _reset() -> void:
 	_members.clear()
 	_looks.clear()
 	_open.clear()
+	_answering.clear()
+	_skipped.clear()
 	_mine = null
+	_reset_tables()
+
+
+## Every table back to idle with no Charter: a raid, a dive, a Den countdown or
+## a derby left running on the last Charter must not refuse, tick on or finish
+## into the next one.
+func _reset_tables() -> void:
 	if tables != null:
-		tables.charter = null
-		tables.states.clear()
+		tables.reset()
+	if raids != null:
+		raids.reset()
+	if gauntlets != null:
+		gauntlets.reset()
+	if fishing != null:
+		fishing.reset()
 
 
 func _on_lobby_created(ok: int, lobby: int) -> void:
@@ -312,6 +344,16 @@ func invite() -> void:
 
 
 func leave() -> void:
+	# A vote still open ends as "not now" (its line is going), so the action
+	# waiting on it answers before the line closes.
+	_end_votes()
+	# A hardcore Charter whose last life is spent sinks now, not after this
+	# game has moved on (its farewell has no line to go down; ended must never
+	# fire on a solo game later).
+	if _sink_due and hosting and charter != null:
+		charter.sink()
+	_sink_due = false
+	_sink_wait = 0.0
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
@@ -324,6 +366,15 @@ func leave() -> void:
 	_fail_open("You left the Charter.")
 	if charter != null and hosting:
 		charter.flush()
+		charter.close()
+	_hand_parts = []
+	_hand_to = ""
+	_handing = false
+	hosting = false
+	charter = null
+	_answering.clear()
+	_skipped.clear()
+	_reset_tables()
 
 
 func _drop(why: String) -> void:
@@ -347,10 +398,6 @@ func _fail_open(why: String) -> void:
 
 func _on_connected() -> void:
 	_hello.rpc_id(1, key, captain_name)
-
-
-func _on_peer_connected(_id: int) -> void:
-	pass
 
 
 func _on_peer_disconnected(id: int) -> void:
@@ -486,8 +533,10 @@ func request(op: String, args: Array) -> Variant:
 	_req.rpc_id(1, n, op, args)
 	# Never wait forever (Kong's audit, 2026-10-06): an answer that has not come
 	# in REQUEST_WAIT seconds (the founder's game hit an error, or the line is
-	# hung) comes back as an error, and the screen carries on.
-	get_tree().create_timer(REQUEST_WAIT).timeout.connect(func() -> void:
+	# hung) comes back as an error, and the screen carries on. One the crew may
+	# vote on first waits out the vote.
+	var wait: float = VOTED_WAIT if VOTED_OPS.has(op) else REQUEST_WAIT
+	get_tree().create_timer(wait).timeout.connect(func() -> void:
 		if _open.has(n):
 			_open.erase(n)
 			_answered.emit(n, { "error": "The founder's game did not answer. Try again." }))
@@ -507,13 +556,28 @@ func _req(n: int, op: String, args: Array) -> void:
 	var k: Variant = _members.get(id)
 	var s: Session = charter.session_for(k) if k != null else null
 	if s == null:
-		_res.rpc_id(id, n, { "error": "You are not aboard this Charter." }, "")
+		_res.rpc_id(id, n, { "error": "You are not aboard this Charter." }, "", false)
 		return
+	if _handing:
+		_res.rpc_id(id, n, { "error": HANDING }, "", false)
+		return
+	# While this answer is on its way, a table settling sends this captain no
+	# separate save: the answer carries it (_on_shared_changed).
+	_answering[k] = int(_answering.get(k, 0)) + 1
 	var r: Variant = await charter.run(s, op, args)
 	if r is String and r == "not ported":
 		r = { "error": "That is not in this build yet." }
+	_answering[k] = int(_answering.get(k, 1)) - 1
+	if int(_answering[k]) <= 0:
+		_answering.erase(k)
+	# Left the Charter while it ran (a vote ended by leave()): no line to answer on.
+	if not hosting or multiplayer.multiplayer_peer == null:
+		return
 	s.persist()
-	_res.rpc_id(id, n, r, _ship(s))
+	var fresh: bool = _skipped.has(k) and not _answering.has(k)
+	if fresh:
+		_skipped.erase(k)
+	_res.rpc_id(id, n, r, _ship(s), fresh)
 
 
 ## Who is aboard now, by name (for the tables' invites).
@@ -536,15 +600,24 @@ func _ship(s: Session) -> String:
 	return text
 
 
+## Crewmates with an action being answered now (key -> how many), and those
+## a table's save was held back from meanwhile (their answer then says so,
+## and their screens refresh as a _sync would have made them).
+var _answering: Dictionary = {}
+var _skipped: Dictionary = {}
+
+
 @rpc("authority", "reliable")
-func _res(n: int, result: Variant, captain: String) -> void:
+func _res(n: int, result: Variant, captain: String, fresh: bool) -> void:
+	# A late answer (given up on at the wait) still brings the save as it now
+	# stands: a vote that ran long may have passed and changed it.
+	if captain != "" and _mine != null:
+		_mine.adopt(captain)
+		if fresh or not _open.has(n):
+			_mine.changed.emit()
 	if not _open.has(n):
 		return
 	_open.erase(n)
-	if captain != "":
-		var s: Session = _mine
-		if s != null:
-			s.adopt(captain)
 	_answered.emit(n, result)
 
 
@@ -564,6 +637,10 @@ func _on_shared_changed(actor_key: String) -> void:
 		# their whole save. One captain's action changes only what the crew
 		# shares: just that.
 		if actor_key == "":
+			# Their action's answer is still to go, and carries the save.
+			if _answering.has(k):
+				_skipped[k] = true
+				continue
 			_sync.rpc_id(int(id), _ship(s))
 		else:
 			_sync_shared.rpc_id(int(id), _shared_slice(s))
@@ -634,7 +711,7 @@ func ask_crew(proposer_key: String, text: String) -> bool:
 			proposed.emit(n, by, text)
 		else:
 			_propose.rpc_id(int(id), n, by, text)
-	var timer: SceneTreeTimer = get_tree().create_timer(60.0)
+	var timer: SceneTreeTimer = get_tree().create_timer(VOTE_WAIT)
 	timer.timeout.connect(func() -> void:
 		if _votes.has(n) and not _votes[n]["done"]:
 			_votes[n]["no"] = true
@@ -647,6 +724,16 @@ func ask_crew(proposer_key: String, text: String) -> bool:
 	var ok: bool = not _votes[n]["no"]
 	_votes.erase(n)
 	return ok
+
+
+## Every open vote ends as "not now" (leaving the Charter).
+func _end_votes() -> void:
+	for n: Variant in _votes.keys():
+		if _votes.has(n) and not _votes[n]["done"]:
+			_votes[n]["no"] = true
+			_votes[n]["done"] = true
+			_voted.emit(int(n))
+	_votes.clear()
 
 
 @rpc("authority", "reliable")

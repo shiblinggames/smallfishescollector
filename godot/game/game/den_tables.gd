@@ -38,9 +38,27 @@ static var live: DenTables = null
 var charter: Charter = null
 ## The latest of each table, as everyone sees it.
 var states: Dictionary = {}
-var _rl: Dictionary = { "round": 0, "phase": "betting", "left": -1.0, "seats": {}, "result": {} }
-var _bj: Dictionary = { "round": 0, "phase": "betting", "left": -1.0, "seats": {}, "order": [], "turn": "", "hand": 0, "dealer": [], "shoe": [] }
+var _rl: Dictionary = _fresh_rl()
+var _bj: Dictionary = _fresh_bj()
 var _push_t: float = 0.0
+
+
+static func _fresh_rl() -> Dictionary:
+	return { "round": 0, "phase": "betting", "left": -1.0, "seats": {}, "result": {} }
+
+
+static func _fresh_bj() -> Dictionary:
+	return { "round": 0, "phase": "betting", "left": -1.0, "seats": {}, "order": [], "turn": "", "hand": 0, "dealer": [], "shoe": [] }
+
+
+## The Charter is left (CrewNet): both tables cleared, so a countdown from the
+## old Charter neither runs on nor reaches the next one.
+func reset() -> void:
+	charter = null
+	states.clear()
+	_rl = _fresh_rl()
+	_bj = _fresh_bj()
+	_push_t = 0.0
 
 
 func _ready() -> void:
@@ -115,7 +133,12 @@ func _process(delta: float) -> void:
 ## Send a table to everyone (and to this game's own screens).
 func _push(game: String) -> void:
 	var pub: Dictionary = _public(game)
-	_state.rpc(game, pub)
+	# With no line open, an rpc fails (and skips the local call): this game's
+	# own screens are told directly, as the other tables do.
+	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
+		_state.rpc(game, pub)
+	else:
+		_state(game, pub)
 
 
 @rpc("authority", "call_local", "reliable")

@@ -72,6 +72,9 @@ var raids: RaidTable = null
 var gauntlets: GauntletTable = null
 ## Fishing together: catch pops, callouts, the crew streak, derbies.
 var fishing: CrewFishing = null
+## Why no action runs now ("" when they do): set while the Charter is being
+## handed over (CrewNet.hand_over), since this copy is about to be put away.
+var busy_why: String = ""
 
 
 static func _dir() -> String:
@@ -90,6 +93,11 @@ static func list() -> Array:
 		if not f.ends_with(".json"):
 			continue
 		var d: Variant = JsJson.parse(FileAccess.get_file_as_string("%s/%s" % [_dir(), f]))
+		# Sunk but never moved (the game closed while the last fight played
+		# out): the flag is the truth, so it goes to charters/sunk now.
+		if d is Dictionary and (d as Dictionary).get("sunk", false) == true and (d as Dictionary).has("id"):
+			_bury(str(d["id"]))
+			continue
 		if d is Dictionary:
 			var names: Array = []
 			var looks: Array = []
@@ -123,6 +131,10 @@ static func found(charter_name: String, hardcore: bool, founder_key: String, cap
 static func open(id: String) -> Charter:
 	var d: Variant = JsJson.parse(FileAccess.get_file_as_string(_path(id)))
 	if not d is Dictionary:
+		return null
+	# A sunk Charter never opens again, however it was left (see list()).
+	if (d as Dictionary).get("sunk", false) == true:
+		_bury(str((d as Dictionary).get("id", id)))
 		return null
 	var c: Charter = Charter.new()
 	c.data = d
@@ -325,6 +337,8 @@ func _spread(actor_key: String) -> void:
 ## Run one action for a captain of this Charter: what the crew must agree to is
 ## put to the crew first; then lend, run, take back, record, spread, write.
 func run(s: Session, op: String, args: Array) -> Variant:
+	if busy_why != "":
+		return { "error": busy_why }
 	var key: String = key_of(s)
 	# A seat at the Den's shared tables: run by the tables, not the rules.
 	if op == "denTable":
@@ -422,11 +436,40 @@ func spend_life(key: String, what: String) -> void:
 ## deleted; a slip is undone by moving it back by hand).
 func sink() -> void:
 	flush()
+	_bury(id())
+	_closed = true
+
+
+## A sunk Charter's file, moved to charters/sunk.
+static func _bury(charter_id: String) -> void:
 	var to_dir: String = "%s/sunk" % _dir()
 	DirAccess.make_dir_recursive_absolute(to_dir)
 	var stamp: String = Time.get_datetime_string_from_system(true).replace(":", "").replace("-", "")
-	DirAccess.rename_absolute(_path(id()), "%s/%s-%s.json" % [to_dir, id(), stamp])
-	_closed = true
+	DirAccess.rename_absolute(_path(charter_id), "%s/%s-%s.json" % [to_dir, charter_id, stamp])
+
+
+## Done with this Charter on this game (left, sunk, handed over, a berth
+## released from the title): what is batched is written, and the Charter and
+## its captains let go of each other. Each Session held the Charter (its writer
+## and its charter) while the Charter held each Session, a cycle Godot never
+## frees, so every Charter opened in a run stayed in memory with every save.
+## The sessions are marked closed, so a late persist() from a screen still
+## being torn down writes nothing (never a solo captain's file).
+func close() -> void:
+	flush()
+	for k: String in sessions:
+		var s: Session = sessions[k]
+		s.charter = null
+		s.writer = Callable()
+		s.closed = true
+	sessions.clear()
+	if CrewRules.crew_of.is_valid() and CrewRules.crew_of.get_object() == self:
+		CrewRules.crew_of = Callable()
+	voter = Callable()
+	tables = null
+	raids = null
+	gauntlets = null
+	fishing = null
 
 
 # ── The crew, released and handed over ────────────────────────────────────────
@@ -511,6 +554,8 @@ func _chest_view() -> Dictionary:
 
 
 ## One chest action: [verb ("put"/"take"), kind ("item"/"rod"/"scrap"), id, n].
+## For an item or a rod, n copies move in one action (a shift-click), stopping
+## at the first that cannot; the answer says how many moved.
 func chest_run(key: String, s: Session, args: Array) -> Dictionary:
 	var verb: String = str(args[0]) if args.size() > 0 else ""
 	var kind: String = str(args[1]) if args.size() > 1 else ""
@@ -519,20 +564,34 @@ func chest_run(key: String, s: Session, args: Array) -> Dictionary:
 	if not ["put", "take"].has(verb):
 		return { "error": "The chest does not do that." }
 	var r: Dictionary
+	var moved: int = 1
 	match kind:
-		"item": r = _chest_item(s, verb, id_)
-		"rod": r = _chest_rod(s, verb, id_)
+		"item", "rod":
+			moved = 0
+			for i: int in int(n):
+				var one: Dictionary = _chest_item(s, verb, id_) if kind == "item" else _chest_rod(s, verb, id_)
+				if one.has("error"):
+					if moved == 0:
+						r = one
+					break
+				r = one
+				moved += 1
 		"scrap": r = _chest_scrap(s, verb, n)
 		_: return { "error": "That does not go in the crew chest." }
 	if r.has("error"):
 		return r
+	var what: String = str(r["what"]) if moved <= 1 else "%s x%d" % [r["what"], moved]
 	var c: Dictionary = _chest()
-	(c["log"] as Array).append({ "by": s.captain_name(), "verb": verb, "what": r["what"], "at": Js.iso(Clock.now_ms()) })
+	(c["log"] as Array).append({ "by": s.captain_name(), "verb": verb, "what": what, "at": Js.iso(Clock.now_ms()) })
 	if (c["log"] as Array).size() > CHEST_LOG_KEEP:
 		c["log"] = (c["log"] as Array).slice((c["log"] as Array).size() - CHEST_LOG_KEEP)
-	_spread("")
+	# Only the actor's own save and the chest changed. The chest reaches the
+	# others in the lent "charter" view (CrewNet's shared slice); the actor's
+	# save goes back in their answer. Spreading as "" sent every crewmate their
+	# whole save on every move.
+	_spread(key)
 	write(key)
-	return { "ok": true, "chest": _chest_view() }
+	return { "ok": true, "chest": _chest_view(), "moved": float(moved) }
 
 
 func _bump(d: Dictionary, id_: String, by: float) -> void:
