@@ -356,6 +356,7 @@ func _ready() -> void:
 	_camera = Camera2D.new()
 	_camera.position_smoothing_enabled = false
 	_zoom_to = clampf(float(Prefs.get_value("sea_zoom_2", ZOOM_DEFAULT)), ZOOM_MIN, ZOOM_MAX)
+	fight_zoom = clampf(float(Prefs.get_value("fight_zoom", 1.0)), FIGHT_ZOOM_MIN, FIGHT_ZOOM_MAX)
 	_camera.zoom = Vector2(_zoom_to, _zoom_to)
 	add_child(_camera)
 	_camera.make_current()
@@ -459,7 +460,9 @@ func _process(delta: float) -> void:
 		var sk: float = _stage_k * _stage_k * (3.0 - 2.0 * _stage_k)
 		if stage != null:
 			_stage_last = stage
-		_camera.position += (_stage_last["shift"] as Vector2) / _camera.zoom.x * sk
+		# The fight's centre, at the fight's own framing (so a nudge of the
+		# zoom keeps it centred).
+		_camera.position += (_stage_last["shift"] as Vector2) / maxf(0.05, float(_stage_last.get("zoom", _camera.zoom.x))) * sk
 	_fight_clear()
 
 	var now: float = Clock.now_ms()
@@ -478,7 +481,7 @@ func _process(delta: float) -> void:
 			stops[k] = stops[k].lerp((th[k] as Color).lerp(Color8(2, 5, 9), float(_theme_last.get("dim", 0.0))), _theme_k)
 	var vp: Vector2 = get_viewport_rect().size
 	_water.set_shader_parameter("u_cam", cam_world)
-	var zt: float = (_zoom_to * (1.0 - 0.04 * _sail_k) * (1.0 - 0.1 * _ship_k) if stage == null else float(stage["zoom"])) * (1.0 - 0.1 * _pass_k)
+	var zt: float = (_zoom_to * (1.0 - 0.04 * _sail_k) * (1.0 - 0.1 * _ship_k) if stage == null else float(stage["zoom"]) * fight_zoom) * (1.0 - 0.1 * _pass_k)
 	# (Read back from the camera, less the last push, so a shot or a film that
 	# snaps the zoom is followed from there.)
 	_zoom_base = lerpf(_camera.zoom.x / (1.0 + _punch_was), zt, 1.0 - exp(-delta * (12.0 if stage == null and _stage_k <= 0.0 else 3.5)))
@@ -1448,6 +1451,11 @@ var _lead: Vector2 = Vector2.ZERO
 var _sail_k: float = 0.0
 var _ship_k: float = 0.0
 var punch: float = 0.0
+## A FIGHT'S ZOOM, NUDGED (Kong, 2026-10-09): the wheel (or - and =) in a fight
+## scales the fight's own framing within these, remembered for the next fight.
+const FIGHT_ZOOM_MIN: float = 0.7
+const FIGHT_ZOOM_MAX: float = 1.45
+var fight_zoom: float = 1.0
 var punch_at: Vector2 = Vector2.ZERO
 var _zoom_base: float = 1.0
 var _punch_was: float = 0.0
@@ -2340,6 +2348,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			zf = 1.12
 		elif k == KEY_MINUS or k == KEY_KP_SUBTRACT:
 			zf = 1.0 / 1.12
+	if zf != 1.0 and stage != null:
+		# In a fight: a nudge on the fight's own framing, kept for the next.
+		fight_zoom = clampf(fight_zoom * zf, FIGHT_ZOOM_MIN, FIGHT_ZOOM_MAX)
+		Prefs.set_value("fight_zoom", fight_zoom)
+		get_viewport().set_input_as_handled()
+		return
 	if zf != 1.0:
 		_zoom_to = clampf(_zoom_to * zf, ZOOM_MIN, ZOOM_MAX)
 		Prefs.set_value("sea_zoom_2", _zoom_to)

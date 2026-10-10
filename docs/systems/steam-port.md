@@ -2292,7 +2292,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   "ambient": wake, ripples, weather, fog, sky; and her wake, sea life, motes, the fog layer), and
   returns at its own alpha as it ends (the campaign then refreshed); in a fight of your own,
   crewmates nearby fade too. THE FIGHT SITS FURTHER BACK: BattleStage.FRAME_FILL 0.56 x 0.47 of
-  the screen (was 0.72 x 0.6, "very zoomed in").
+  the screen (was 0.72 x 0.6, "very zoomed in"). The framing fits every ship in the line and every enemy's mark, so co-op lines
+  and fields sit further out on their own. THE WHEEL NUDGES A FIGHT'S ZOOM (Sea.fight_zoom, 0.7
+  to 1.45 of the framing, - and = too), remembered for the next fight (Prefs "fight_zoom"); the
+  fight stays centred (its offset is taken at the framing's zoom) and what is drawn over the
+  water scales with it (BattleStage._z).
 - PLAYTEST PROGRESS STAYS IN THE PLAYTEST (Kong, 2026-10-09: testers' web captains brought in
   for testing, then wiped "once we do the full production release"; everything is wiped, imported
   or not). game/playtest.gd: the build's channel is game/channel (tools/build.mjs writes it into

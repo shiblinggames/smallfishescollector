@@ -3037,7 +3037,7 @@ func _open_captain_card(i: int) -> void:
 
 ## The camera's zoom on the fight (things drawn over the water scale with it).
 func _z() -> float:
-	return float(Js.obj(sea.stage).get("zoom", 1.0)) if sea != null and sea.stage is Dictionary else 1.0
+	return float(Js.obj(sea.stage).get("zoom", 1.0)) * sea.fight_zoom if sea != null and sea.stage is Dictionary else 1.0
 
 
 ## How far above a hull's keel its plate sits: over the masthead, following
