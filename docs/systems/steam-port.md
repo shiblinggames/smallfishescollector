@@ -2278,6 +2278,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- SMOOTHNESS (Kong, 2026-10-09: "everything feels like there's a slight delay or lag").
+  Measured first (tests/feel_probe.gd, in a window: frame times while idle, sailing and opening
+  menus): sailing held a steady frame with rare 30ms hitches, the GPU at 1.5 to 3ms, every part
+  of the sea's update cheap (about 1.5ms all told); the lag was latency and easing, and the
+  chart's stall. Done: menus readable in 0.1s and settled by 0.22s (Motion PANEL_FADE / PANEL_IN,
+  were 0.18 / 0.34; scrim, arrivals, swaps and release shortened alike); hover settles in about
+  0.08s (HOVER_RATE 26, was 12); the camera's lead keeps up with the helm (rate 3.2, was 1.4,
+  and 9% of the screen, was 12%); one frame less of input delay
+  (rendering_device/vsync/frame_queue_size 1). THE WORLD CHART opened with a stall (about 170ms
+  on a well-sailed captain) and re-stamped every fog cell each second while open (45ms each):
+  its fog masks are now kept across openings and only newly sailed cells are stamped, by the
+  engine's own blend (WorldMap.FogMask); its progress counts every water in one pass. It opens in
+  about 65ms now; the marks still redraw every frame (about 11ms; they animate).
 - FIGHT FEEDBACK (Kong, 2026-10-09). The rack's loaded balls are lit iron (they were near black
   on the dark plate) and a ball just loaded pops in (BattleLook.ball pop). Fire is one of the row,
   not the bigger gold word. A CREW ORDER GIVEN SHOWS AT ONCE (it still goes first in the round,

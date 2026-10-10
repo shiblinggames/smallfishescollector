@@ -354,15 +354,28 @@ func _draw_progress() -> void:
 	var dug: Array = Explore.get_dig_state(sea.session.store, sea.session.uid)["dug"]
 	var ink: Color = Paper.INK
 	Kit.text(_progress, "Charted  %d%%" % int(round(Explore.fog_progress(bits) * 100.0)), "label", ink)
-	for w: Dictionary in Chart.WATERS:
-		var seen: int = 0
-		var total: int = 0
-		for i: int in Explore.water_cells():
-			var r: float = Explore.fog_centre(i).length()
-			if r >= float(w["inner"]) and r < float(w["outer"]):
-				total += 1
-				if Explore.fog_has(bits, i):
-					seen += 1
+	# Every water's cells counted in one pass (the water each cell lies in is
+	# worked out once a session: it was 15,000 steps on every opening).
+	if _cell_water.is_empty():
+		for i0: int in Explore.water_cells():
+			var r0: float = Explore.fog_centre(i0).length()
+			for wi: int in Chart.WATERS.size():
+				if r0 >= float(Chart.WATERS[wi]["inner"]) and r0 < float(Chart.WATERS[wi]["outer"]):
+					_cell_water.append(Vector2i(i0, wi))
+					break
+	var seen_of: Array = []
+	var total_of: Array = []
+	for wi2: int in Chart.WATERS.size():
+		seen_of.append(0)
+		total_of.append(0)
+	for cw: Vector2i in _cell_water:
+		total_of[cw.y] += 1
+		if Explore.fog_has(bits, cw.x):
+			seen_of[cw.y] += 1
+	for wi3: int in Chart.WATERS.size():
+		var w: Dictionary = Chart.WATERS[wi3]
+		var seen: int = seen_of[wi3]
+		var total: int = total_of[wi3]
 		var isles: Array = (Rules.data()["isles"] as Array).filter(func(i: Dictionary) -> bool: return i["band"] == w["id"])
 		var got: int = isles.filter(func(i: Dictionary) -> bool: return Js.includes(landed, i["id"])).size()
 		var sites: Array = (Rules.data()["digSites"] as Array).filter(func(d: Dictionary) -> bool: return d["band"] == w["id"])
@@ -397,6 +410,10 @@ func _draw_progress() -> void:
 			Kit.text(br, "%s  ·  %s" % [b["name"], "charted whole" if whole else "%d%% charted  ·  +%s Nav XP when whole" % [int(floor(sh * 100.0)), Js.thousands(float(Charting.BONUS[str(b["id"])]))]], "small", ink)
 			var bb: Kit.Bar = Kit.bar(br, minf(1.0, sh / Charting.DONE_AT), Color(b["sea"][2]).darkened(0.2), true)
 			bb.custom_minimum_size.x = 240
+
+
+## Each sea cell and the water it lies in (Chart.WATERS index), worked out once.
+static var _cell_water: Array[Vector2i] = []
 
 
 ## A button in the chart's own hand: ink on paper.
@@ -527,53 +544,80 @@ func _draw_bays() -> void:
 func _upload_xfog() -> void:
 	if sea._xfog == null:
 		return
-	var w: int = Explore.xfog_w()
-	var h: int = Explore.xfog_h()
-	const K: int = 4
-	var img: Image = Image.create(w * K, h * K, false, Image.FORMAT_L8)
+	if _xfog_mask == null or _xfog_mask.uid != sea.session.uid:
+		_xfog_mask = FogMask.new(sea.session.uid, Explore.xfog_w(), Explore.xfog_h())
 	var bits: PackedByteArray = sea._xfog.bits
-	var blot: float = K * 1.45
-	for i: int in w * h:
-		if not Explore.xfog_open(bits, i):
-			continue
-		var cx: float = (i % w + 0.5) * K
-		var cy: float = (i / w + 0.5) * K
-		for y: int in range(maxi(0, int(cy - blot - 1)), mini(h * K, int(cy + blot + 2))):
-			for x: int in range(maxi(0, int(cx - blot - 1)), mini(w * K, int(cx + blot + 2))):
-				var d: float = Vector2(x + 0.5 - cx, y + 0.5 - cy).length() / blot
-				if d < 1.0:
-					var v: float = maxf(img.get_pixel(x, y).r, 1.0 - d * d)
-					img.set_pixel(x, y, Color(v, v, v))
+	_xfog_mask.sync(func(i: int) -> bool: return Explore.xfog_open(bits, i))
 	var m: ShaderMaterial = _xcloud.material
-	m.set_shader_parameter("u_fog", ImageTexture.create_from_image(img))
+	m.set_shader_parameter("u_fog", _xfog_mask.tex)
 	m.set_shader_parameter("u_origin", Explore.xfog_box().position)
-	m.set_shader_parameter("u_span", Vector2(w, h) * Explore.XFOG_CELL)
+	m.set_shader_parameter("u_span", Vector2(Explore.xfog_w(), Explore.xfog_h()) * Explore.XFOG_CELL)
 
 
 ## The fog mask at four times the grid, each sailed cell stamped as a soft
 ## round blot, so clearings are rounded and run into each other.
 func _upload_fog() -> void:
-	var w: int = Explore.fog_w()
-	var h: int = Explore.fog_h()
-	const K: int = 4
-	var img: Image = Image.create(w * K, h * K, false, Image.FORMAT_L8)
+	if _fog_mask == null or _fog_mask.uid != sea.session.uid:
+		_fog_mask = FogMask.new(sea.session.uid, Explore.fog_w(), Explore.fog_h())
 	var bits: PackedByteArray = sea._fog
-	var blot: float = K * 1.45
-	for i: int in w * h:
-		if not Explore.fog_has(bits, i):
-			continue
-		var cx: float = (i % w + 0.5) * K
-		var cy: float = (i / w + 0.5) * K
-		for y: int in range(maxi(0, int(cy - blot - 1)), mini(h * K, int(cy + blot + 2))):
-			for x: int in range(maxi(0, int(cx - blot - 1)), mini(w * K, int(cx + blot + 2))):
-				var d: float = Vector2(x + 0.5 - cx, y + 0.5 - cy).length() / blot
-				if d < 1.0:
-					var v: float = maxf(img.get_pixel(x, y).r, 1.0 - d * d)
-					img.set_pixel(x, y, Color(v, v, v))
+	_fog_mask.sync(func(i: int) -> bool: return Explore.fog_has(bits, i))
 	var m: ShaderMaterial = _fog.material
-	m.set_shader_parameter("u_fog", ImageTexture.create_from_image(img))
+	m.set_shader_parameter("u_fog", _fog_mask.tex)
 	m.set_shader_parameter("u_origin", Vector2(-float(Explore._outer()), Explore.NORTH_WALL))
-	m.set_shader_parameter("u_span", Vector2(w, h) * Explore.FOG_CELL)
+	m.set_shader_parameter("u_span", Vector2(Explore.fog_w(), Explore.fog_h()) * Explore.FOG_CELL)
+
+
+## THE FOG MASKS, KEPT (Kong, 2026-10-09: the chart opened with a stall, and
+## re-stamped every cell each second while open: about 45ms each time on a
+## well-sailed captain). Kept across openings for the captain; only cells
+## newly sailed are stamped, by the engine's own blend of one soft blot.
+static var _fog_mask: FogMask = null
+static var _xfog_mask: FogMask = null
+
+
+class FogMask:
+	const K: int = 4
+	var uid: String
+	var w: int
+	var h: int
+	var img: Image
+	var tex: ImageTexture
+	var done: PackedByteArray
+	var _blot: Image
+
+	func _init(id: String, cw: int, ch: int) -> void:
+		uid = id
+		w = cw
+		h = ch
+		img = Image.create(w * K, h * K, false, Image.FORMAT_RGBA8)
+		img.fill(Color(0, 0, 0, 1))
+		done.resize(w * h)
+		tex = ImageTexture.create_from_image(img)
+		# One blot: white, its alpha 1 - d squared out to 1.45 cells.
+		var r: float = K * 1.45
+		var sz: int = int(ceil(r)) * 2 + 2
+		_blot = Image.create(sz, sz, false, Image.FORMAT_RGBA8)
+		for y: int in sz:
+			for x: int in sz:
+				var d: float = Vector2(x + 0.5 - sz / 2.0, y + 0.5 - sz / 2.0).length() / r
+				_blot.set_pixel(x, y, Color(1, 1, 1, maxf(0.0, 1.0 - d * d)))
+
+	## Stamp every cell open now and not stamped before; true when any was.
+	func sync(open: Callable) -> bool:
+		var changed: bool = false
+		var sz: int = _blot.get_width()
+		var full: Rect2i = Rect2i(0, 0, sz, sz)
+		for i: int in w * h:
+			if done[i] != 0 or not open.call(i):
+				continue
+			done[i] = 1
+			changed = true
+			var cx: int = (i % w) * K + K / 2
+			var cy: int = (i / w) * K + K / 2
+			img.blend_rect(_blot, full, Vector2i(cx - sz / 2, cy - sz / 2))
+		if changed:
+			tex.update(img)
+		return changed
 
 
 var _zoom_about: Vector2 = Vector2.INF

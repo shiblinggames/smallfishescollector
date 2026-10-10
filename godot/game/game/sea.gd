@@ -1446,7 +1446,7 @@ func _fight_clear() -> void:
 ## with the rod out or a panel up (fishing stays locked in); it draws back
 ## SAIL_OUT at full sail, and sits SHIP_OUT wider north of the arch for the
 ## bigger hulls. punch: a fight's critical, a small push in (BattleStage).
-const LEAD: float = 0.12
+const LEAD: float = 0.09
 var _lead: Vector2 = Vector2.ZERO
 var _sail_k: float = 0.0
 var _ship_k: float = 0.0
@@ -1472,7 +1472,9 @@ func _cam_lead(delta: float) -> Vector2:
 		var d: Vector2 = v.normalized()
 		var z: float = maxf(0.05, _camera.zoom.x)
 		to = Vector2(d.x * vp.x, d.y * vp.y / Chart.GROUND) * LEAD / z * way
-	var k: float = 1.0 - exp(-delta * 1.4)
+	# Quick enough to keep up with the helm (it trailed her by a second and
+	# made sailing feel floaty).
+	var k: float = 1.0 - exp(-delta * 3.2)
 	_lead = _lead.lerp(to, k)
 	_sail_k = lerpf(_sail_k, 1.0 if (sailing and _boat.cue.get("full", false) == true) else 0.0, 1.0 - exp(-delta * 1.2))
 	_ship_k = lerpf(_ship_k, 1.0 if _boat.on_ship else 0.0, 1.0 - exp(-delta * 1.5))

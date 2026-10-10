@@ -57,27 +57,31 @@ extends RefCounted
 # ── Durations (seconds) ───────────────────────────────────────────────────────
 
 const PRESS: float = 0.06
-const RELEASE: float = 0.18
+const RELEASE: float = 0.12
 const PRESS_SCALE: float = 0.96
-## Exponential approach rate for hover and interaction (settles in ~0.15s).
-## World blends keep their own slow rates (k <= 1.2).
-const HOVER_RATE: float = 12.0
+## Exponential approach rate for hover and interaction (settles in ~0.08s;
+## it was 12, ~0.15s, and read as the button lagging the pointer, Kong
+## 2026-10-09). World blends keep their own slow rates (k <= 1.2).
+const HOVER_RATE: float = 26.0
 
-const PANEL_FADE: float = 0.18
-const PANEL_IN: float = 0.34
+## SNAPPIER (Kong, 2026-10-09: "opening menus ... a slight delay"): a menu is
+## readable within a tenth of a second and settled by a fifth (was 0.18 and
+## 0.34).
+const PANEL_FADE: float = 0.1
+const PANEL_IN: float = 0.22
 const PANEL_RISE: float = 16.0
 const PANEL_SCALE: float = 0.97
 const PANEL_OUT: float = 0.14
 const PANEL_DROP: float = 8.0
 
-const SCRIM_IN: float = 0.2
+const SCRIM_IN: float = 0.12
 const SCRIM_OUT: float = 0.14
 ## Both scrim times, as the spec names them.
 const SCRIM_FADE: Array = [SCRIM_IN, SCRIM_OUT]
 
 ## Arrivals: [fade, starting scale, scale time].
-const ARRIVE_S: Array = [0.15, 0.9, 0.28]
-const ARRIVE_M: Array = [0.18, 0.92, 0.38]
+const ARRIVE_S: Array = [0.1, 0.9, 0.2]
+const ARRIVE_M: Array = [0.12, 0.92, 0.26]
 const ARRIVE_L: Array = [0.3, 0.6, 0.5]
 
 const LEAVE: float = 0.2
@@ -92,9 +96,9 @@ const NOTE_RISE: float = 8.0
 const NOTE_HOLD: float = 2.4
 const NOTE_OUT: float = 0.4
 
-const SWAP_OUT: float = 0.12
-const SWAP_RESIZE: float = 0.22
-const SWAP_IN: float = 0.18
+const SWAP_OUT: float = 0.08
+const SWAP_RESIZE: float = 0.16
+const SWAP_IN: float = 0.12
 
 ## Lettering on the water: alpha moves at this rate per second (0.25s).
 const NEAR_RATE: float = 4.0
