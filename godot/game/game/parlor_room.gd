@@ -28,6 +28,9 @@ var _answering: Callable = Callable()
 # The capstan.
 var _cap_i: int = 0
 var _wheel: CapWheel = null
+## Where the wheel came to rest: the view is rebuilt after every spin, letter
+## and solve, and a fresh wheel would otherwise snap back to 0.
+var _cap_angle: float = 0.0
 
 
 func _init() -> void:
@@ -248,28 +251,10 @@ func _play_card(c: Dictionary) -> void:
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 12)
 	card.add_child(v)
-	var top: HBoxContainer = HBoxContainer.new()
-	v.add_child(top)
-	var cl: Label = Paper.text(top, "%s   ·   %d ⟡" % [cat["label"], int(c["value"])], "eyebrow", Kit.ink(colr))
-	cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_ring = Control.new()
-	_ring.custom_minimum_size = Vector2(54, 54)
-	_ring.draw.connect(_draw_ring)
-	top.add_child(_ring)
+	_q_head(v, "%s   ·   %d ⟡" % [cat["label"], int(c["value"])], Kit.ink(colr))
 	var ql: Label = Paper.text(v, str(c["question"]), "title", Paper.INK, true)
 	ql.add_theme_font_size_override("font_size", 24)
-	var opts: GridContainer = GridContainer.new()
-	opts.columns = 2
-	opts.add_theme_constant_override("h_separation", 12)
-	opts.add_theme_constant_override("v_separation", 12)
-	v.add_child(opts)
-	var buttons: Array = []
-	for i: int in 4:
-		# An answer is a sentence: the quiet large button (Karla), not capitals.
-		var ob: Button = Kit.button(str(c["options"][i]), "quiet")
-		ob.custom_minimum_size = Vector2(340, 56)
-		opts.add_child(ob)
-		buttons.append(ob)
+	var buttons: Array = _q_answers(v, c["options"], 12, Vector2(340, 56))
 	var explain: Label = Paper.text(v, "", "body", Paper.INK_SOFT, true)
 	var next_b: Button = Kit.button("Back to your hand", "primary")
 	next_b.visible = false
@@ -282,23 +267,9 @@ func _play_card(c: Dictionary) -> void:
 	var left: float = maxf(0.0, lim - (Clock.now_ms() - revealed) / 1000.0)
 	_deadline = Time.get_ticks_msec() / 1000.0 + left
 	Motion.arrive(card, "m")
-	var answer: Callable = func(i: int) -> void:
-		if _busy:
-			return
-		_busy = true
-		_answering = Callable()
-		_deadline = -1.0
-		var r: Dictionary = await session.act("boardAnswer", [c["key"], float(i)])
-		_busy = false
-		if r.has("error"):
-			toast(str(r["error"]), WRONG)
-			return
-		session.persist()
-		_judge(buttons, i, r, explain)
-		next_b.visible = true
-	_answering = answer
-	for i: int in 4:
-		(buttons[i] as Button).pressed.connect(func() -> void: answer.call(i))
+	_q_bind(buttons, explain, func(i: int) -> Dictionary:
+		return await session.act("boardAnswer", [c["key"], float(i)]),
+		func(_r: Dictionary) -> void: next_b.visible = true)
 
 
 func _draw_ring() -> void:
@@ -408,8 +379,8 @@ func _king_view() -> void:
 	Kit.text(right, "The Pirate King", "title", Kit.INK)
 	var status: String = str(k["status"])
 	var lines: Dictionary = {
-		"active": "Ten questions, easier to harder. Climb as far as you dare: a wrong answer drops you to the last safe rung (4 and 7), or walk away with what you have climbed to. One 50/50 a run. One run a week.",
-		"crowned": "Crowned. You climbed all ten this week: %d ⟡. A new ladder on Monday." % int(k["awarded"]),
+		"active": "%s questions, easier to harder. Climb as far as you dare: a wrong answer drops you to the last safe rung (%s), or walk away with what you have climbed to. One 50/50 a run. One run a week." % [_count_word(prizes.size()).capitalize(), " and ".join(PackedStringArray(havens.map(func(h: Variant) -> String: return str(int(h)))))],
+		"crowned": "Crowned. You climbed all %s this week: %d ⟡. A new ladder on Monday." % [_count_word(prizes.size()), int(k["awarded"])],
 		"busted": "You fell this week with %d ⟡. A new ladder on Monday." % int(k["awarded"]),
 		"walked": "You walked away this week with %d ⟡. A new ladder on Monday." % int(k["awarded"]),
 	}
@@ -458,27 +429,11 @@ func _king_rung(host: VBoxContainer) -> void:
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 12)
 	card.add_child(v)
-	var top: HBoxContainer = HBoxContainer.new()
-	v.add_child(top)
-	var cl: Label = Paper.text(top, "Rung %d   ·   for %d ⟡   ·   %s" % [rung + 1, int(_st["king"]["prizes"][rung]), cat["label"]], "eyebrow", Paper.RED)
-	cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_ring = Control.new()
-	_ring.custom_minimum_size = Vector2(54, 54)
-	_ring.draw.connect(_draw_ring)
-	top.add_child(_ring)
+	_q_head(v, "Rung %d   ·   for %d ⟡   ·   %s" % [rung + 1, int(_st["king"]["prizes"][rung]), cat["label"]], Paper.RED)
 	Paper.text(v, str(q["question"]), "title", Paper.INK, true).add_theme_font_size_override("font_size", 22)
-	var opts: GridContainer = GridContainer.new()
-	opts.columns = 2
-	opts.add_theme_constant_override("h_separation", 10)
-	opts.add_theme_constant_override("v_separation", 10)
-	v.add_child(opts)
-	var buttons: Array = []
+	var buttons: Array = _q_answers(v, q["options"], 10, Vector2(300, 52))
 	for i: int in 4:
-		var ob: Button = Kit.button(str(q["options"][i]), "quiet")
-		ob.custom_minimum_size = Vector2(300, 52)
-		ob.disabled = Js.includes(q["removed"], float(i))
-		opts.add_child(ob)
-		buttons.append(ob)
+		(buttons[i] as Button).disabled = Js.includes(q["removed"], float(i))
 	var explain: Label = Paper.text(v, "", "body", Paper.INK_SOFT, true)
 	var tools: HBoxContainer = HBoxContainer.new()
 	tools.add_theme_constant_override("separation", 10)
@@ -505,28 +460,76 @@ func _king_rung(host: VBoxContainer) -> void:
 		_refresh()
 		_open("king"))
 	tools.add_child(go_on)
+	_q_bind(buttons, explain, func(i: int) -> Dictionary:
+		return await session.act("kingAnswer", [float(rung), float(i)]),
+		func(r: Dictionary) -> void:
+			if r["status"] == "crowned":
+				Sound.chest(true)
+				explain.text = "Crowned!  +%s ⟡   ·   %s" % [Js.thousands(float(r["doubloonsAwarded"])), str(r["explanation"])]
+			elif r["status"] == "busted":
+				explain.text += "   You keep %d ⟡." % int(r["doubloonsAwarded"])
+			go_on.visible = true)
+
+
+# ── The question card (shared by the Captain's Board and the Pirate King) ──────
+
+## The eyebrow line with the ring of time beside it.
+func _q_head(v: VBoxContainer, eyebrow: String, col: Color) -> void:
+	var top: HBoxContainer = HBoxContainer.new()
+	v.add_child(top)
+	var cl: Label = Paper.text(top, eyebrow, "eyebrow", col)
+	cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ring = Control.new()
+	_ring.custom_minimum_size = Vector2(54, 54)
+	_ring.draw.connect(_draw_ring)
+	top.add_child(_ring)
+
+
+## The four answers, two by two.
+func _q_answers(v: VBoxContainer, options: Array, gap: int, btn: Vector2) -> Array:
+	var opts: GridContainer = GridContainer.new()
+	opts.columns = 2
+	opts.add_theme_constant_override("h_separation", gap)
+	opts.add_theme_constant_override("v_separation", gap)
+	v.add_child(opts)
+	var buttons: Array = []
+	for i: int in 4:
+		# An answer is a sentence: the quiet large button (Karla), not capitals.
+		var ob: Button = Kit.button(str(options[i]), "quiet")
+		ob.custom_minimum_size = btn
+		opts.add_child(ob)
+		buttons.append(ob)
+	return buttons
+
+
+## An answer once: stop the clock, ask the rules (`ask`, the act), judge the
+## buttons, then `after` with the reply. The timeout answers through
+## `_answering`, the same path as a press.
+func _q_bind(buttons: Array, explain: Label, ask: Callable, after: Callable) -> void:
 	var answer: Callable = func(i: int) -> void:
 		if _busy:
 			return
 		_busy = true
 		_answering = Callable()
 		_deadline = -1.0
-		var r: Dictionary = await session.act("kingAnswer", [float(rung), float(i)])
+		var r: Dictionary = await ask.call(i)
 		_busy = false
 		if r.has("error"):
 			toast(str(r["error"]), WRONG)
 			return
 		session.persist()
 		_judge(buttons, i, r, explain)
-		if r["status"] == "crowned":
-			Sound.chest(true)
-			explain.text = "Crowned!  +1,000 ⟡   ·   " + str(r["explanation"])
-		elif r["status"] == "busted":
-			explain.text += "   You keep %d ⟡." % int(r["doubloonsAwarded"])
-		go_on.visible = true
+		after.call(r)
 	_answering = answer
 	for i: int in 4:
 		(buttons[i] as Button).pressed.connect(func() -> void: answer.call(i))
+
+
+## The ladder's length in words for the copy ("ten"), read from the rules'
+## prize list so a retuned ladder keeps the line true.
+static func _count_word(n: int) -> String:
+	var words: Array[String] = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]
+	return words[n] if n >= 0 and n < words.size() else str(n)
 
 
 # ── Spin the Capstan ───────────────────────────────────────────────────────────
@@ -551,6 +554,7 @@ func _capstan_view() -> void:
 	_body.add_child(row)
 	_wheel = CapWheel.new()
 	_wheel.wedges = cs["wheel"]
+	_wheel.angle = _cap_angle
 	_wheel.custom_minimum_size = Vector2(300, 300)
 	row.add_child(_wheel)
 	var right: VBoxContainer = VBoxContainer.new()
@@ -628,6 +632,7 @@ func _cap_spin() -> void:
 	session.persist()
 	Sound.cast()
 	await _wheel.spin_to(int(r["wedgeIndex"]))
+	_cap_angle = _wheel.angle
 	match str(r["outcome"]):
 		"overboard":
 			toast("Overboard! The round's bank is lost.", WRONG)
@@ -694,8 +699,6 @@ class CapWheel:
 		var target: float = -TAU * (float(i) + 0.5) / n
 		var start: float = angle
 		var end: float = target - TAU * 4.0
-		while end > start - TAU * 3.0:
-			end -= TAU
 		var tw: Tween = create_tween()
 		var last: Array = [start]
 		tw.tween_method(func(a: float) -> void:

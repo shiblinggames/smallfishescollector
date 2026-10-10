@@ -11,7 +11,6 @@ const SYMS: Dictionary = {
 	"common": "card-arts/Sardine_v2.webp", "rare": "card-arts/Blue_Marlin.webp", "shark": "card-arts/Great_White_Shark.webp",
 	"legendary": "card-arts/Blue_Whale_v2.webp", "catfish": "card-arts/Catfish.webp", "anchor": "den/hook.png", "wild": "card-arts/Jellyfish.webp",
 }
-const BETS: Array = [10.0, 25.0, 50.0, 100.0, 250.0, 500.0]
 
 var session: Session
 var den: DenRoom
@@ -26,7 +25,7 @@ var _busy: bool = false
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 12)
-	var cab: Pane = Kit.pane(self, { "radius": 16, "fill": [Kit.WOOD_HI, Kit.WOOD_LO], "border": [2, Color(0.25, 0.15, 0.08, 0.9)], "shadow": [Color(0, 0, 0, 0.5), 22, Vector2(0, 8)], "pad": [26, 18, 26, 22], "keep": true, "grain": true })
+	var cab: Pane = DenRoom.table_pane(self, [26, 18, 26, 22])
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 12)
 	cab.add_child(v)
@@ -71,12 +70,9 @@ func _ready() -> void:
 func _paint_bets() -> void:
 	for c: Node in _bets_row.get_children():
 		c.queue_free()
-	for b: float in BETS:
-		var btn: Button = Paper.button("%d" % int(b), b == _bet)
-		btn.pressed.connect(func() -> void:
-			_bet = b
-			_paint_bets())
-		_bets_row.add_child(btn)
+	DenRoom.stake_row(_bets_row, _bet, func(b: float) -> void:
+		_bet = b
+		_paint_bets())
 
 
 ## The pays, small, under the machine.

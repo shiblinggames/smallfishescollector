@@ -89,15 +89,13 @@ func _new_run() -> void:
 	_sel = -1
 	_off = []
 	_scale = []
-	for i: int in _board.size():
-		_off.append(Vector2(0, -CELL * (_rows + 1 - i / _cols) * 0.0))
-		_scale.append(1.0)
 	if _end != null:
 		Motion.leave(_end, true, false)
 		_end = null
 	# The board drops in, column by column.
 	for i: int in _board.size():
-		_off[i] = Vector2(0, -CELL * (_rows + 2))
+		_off.append(Vector2(0, -CELL * (_rows + 2)))
+		_scale.append(1.0)
 	_fall_all(0.5, true)
 	_words()
 

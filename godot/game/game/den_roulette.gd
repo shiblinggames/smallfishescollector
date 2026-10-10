@@ -14,7 +14,6 @@ extends VBoxContainer
 ## whole table; every captain's result is called out after it.
 
 const ORDER: Array = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26]
-const CHIPS: Array = [10.0, 25.0, 50.0, 100.0, 250.0, 500.0]
 const POCKET_RED: Color = Color(0.68, 0.2, 0.15)
 const POCKET_BLACK: Color = Color(0.16, 0.12, 0.1)
 const POCKET_GREEN: Color = Color(0.18, 0.45, 0.36)
@@ -42,7 +41,7 @@ var _phase: String = "betting"
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 12)
-	var table: Pane = Kit.pane(self, { "radius": 16, "fill": [Kit.WOOD_HI, Kit.WOOD_LO], "border": [2, Color(0.25, 0.15, 0.08, 0.9)], "shadow": [Color(0, 0, 0, 0.5), 22, Vector2(0, 8)], "pad": [22, 18, 22, 20], "keep": true, "grain": true })
+	var table: Pane = DenRoom.table_pane(self, [22, 18, 22, 20])
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	table.add_child(v)
@@ -202,12 +201,9 @@ func _send_ready() -> void:
 func _paint_chips() -> void:
 	for c: Node in _chips_row.get_children():
 		c.queue_free()
-	for n: float in CHIPS:
-		var b: Button = Paper.button("%d" % int(n), n == _chip)
-		b.pressed.connect(func() -> void:
-			_chip = n
-			_paint_chips())
-		_chips_row.add_child(b)
+	DenRoom.stake_row(_chips_row, _chip, func(n: float) -> void:
+		_chip = n
+		_paint_chips())
 
 
 ## A spot pressed: a chip of the picked size stacked on it.
@@ -216,7 +212,7 @@ func place(type: String, target: Variant) -> void:
 		return
 	if _shared and (_phase != "betting" or _ready_sent):
 		return
-	var key: String = "%s|%s" % [type, JsJson.stringify(target)]
+	var key: String = Board.key_of(type, target)
 	var cap: float = float(Casino.c()["rlMaxStraight"] if Casino.INSIDE.has(type) else Casino.c()["rlMaxOutside"])
 	var have: float = float((_bets.get(key, {}) as Dictionary).get("amount", 0.0))
 	if have + _chip > cap:
@@ -290,12 +286,12 @@ func spin() -> void:
 	var won: Array = []
 	for pb: Dictionary in r["perBet"]:
 		if pb["won"]:
-			won.append("%s|%s" % [pb["bet"]["type"], JsJson.stringify(pb["bet"]["target"])])
+			won.append(Board.key_of(pb["bet"]["type"], pb["bet"]["target"]))
 	_board.won = won
 	_board.queue_redraw()
 	for pb: Dictionary in r["perBet"]:
 		if pb["won"]:
-			den.fly_chips(_board.cell_center("%s|%s" % [pb["bet"]["type"], JsJson.stringify(pb["bet"]["target"])]), float(pb["payout"]))
+			den.fly_chips(_board.cell_center(Board.key_of(pb["bet"]["type"], pb["bet"]["target"])), float(pb["payout"]))
 	var name: String = _pocket_name(n)
 	if float(r["net"]) > 0.0:
 		_says.text = "%d, %s.  +%s" % [n, name, Js.thousands(float(r["totalPayout"]))]
@@ -444,7 +440,13 @@ class Board:
 	var owner_table: DenRoulette
 	var bets: Dictionary = {}
 	## The other captains' chips at a shared wheel: [{ color, bets }].
-	var others: Array = []
+	var others: Array = []:
+		set(v):
+			others = v
+			_index_others()
+	## The others' chips by spot key, built once per table push so a redraw
+	## looks them up instead of stringifying every bet for every spot.
+	var _others_at: Dictionary = {}
 	var won: Array = []
 	var result: int = -1
 	var _cells: Array = []
@@ -457,6 +459,19 @@ class Board:
 		resized.connect(_layout)
 		_layout()
 		get_tree().process_frame.connect(queue_redraw, CONNECT_ONE_SHOT)
+
+	## A spot's key ("type|target"), as the bets are keyed.
+	static func key_of(type: Variant, target: Variant) -> String:
+		return "%s|%s" % [type, JsJson.stringify(target)]
+
+	func _index_others() -> void:
+		_others_at.clear()
+		for o: Dictionary in others:
+			for ob: Dictionary in o["bets"]:
+				var k: String = key_of(ob["type"], ob["target"])
+				if not _others_at.has(k):
+					_others_at[k] = []
+				(_others_at[k] as Array).append([o["color"], float(ob["amount"])])
 
 	func _layout() -> void:
 		_cells.clear()
@@ -503,12 +518,15 @@ class Board:
 			var o: Array = outs[k]
 			var colr: Color = DenRoulette.POCKET_RED if o[1] == "red" else (DenRoulette.POCKET_BLACK if o[1] == "black" else Color(0, 0, 0, 0))
 			_cells.append({ "r": Rect2(zero_w + k * ow, y3, ow, h - y3), "type": o[0], "target": o[1], "text": o[2], "col": colr })
+		# Each spot's key, once per layout (not once per redraw).
+		for cell: Dictionary in _cells:
+			cell["key"] = key_of(cell["type"], cell["target"])
 		queue_redraw()
 
 	## A spot's middle on the screen, by its key ("type|target").
 	func cell_center(key: String) -> Vector2:
 		for cell: Dictionary in _cells:
-			if "%s|%s" % [cell["type"], JsJson.stringify(cell["target"])] == key:
+			if cell["key"] == key:
 				return get_global_transform() * (cell["r"] as Rect2).get_center()
 		return get_global_rect().get_center()
 
@@ -545,7 +563,7 @@ class Board:
 		var small: Font = Kit.font("karla", 700)
 		for cell: Dictionary in _cells:
 			var r: Rect2 = cell["r"]
-			var key: String = "%s|%s" % [cell["type"], JsJson.stringify(cell["target"])]
+			var key: String = cell["key"]
 			if cell.get("zone", false):
 				continue
 			var colr: Color = cell["col"]
@@ -570,7 +588,7 @@ class Board:
 			if not cell.get("zone", false):
 				continue
 			var zr: Rect2 = cell["r"]
-			var zk: String = "%s|%s" % [cell["type"], JsJson.stringify(cell["target"])]
+			var zk: String = cell["key"]
 			if _hover == cell:
 				draw_circle(zr.get_center(), 6.0, Color(0.85, 0.62, 0.25, 0.9))
 			if won.has(zk):
@@ -581,13 +599,11 @@ class Board:
 	func _chips_at(key: String, r: Rect2, small_spot: bool) -> void:
 		var small: Font = Kit.font("karla", 700)
 		var oi: int = 0
-		for o: Dictionary in others:
-			for ob: Dictionary in o["bets"]:
-				if "%s|%s" % [ob["type"], JsJson.stringify(ob["target"])] == key:
-					var op: Vector2 = r.get_center() + (Vector2(-8.0 + oi * 6.0, 4.0) if small_spot else Vector2(-r.size.x * 0.22 + oi * 6.0, r.size.y * 0.12))
-					draw_circle(op + Vector2(0, 1), 12.0, o["color"])
-					draw_texture_rect(DenRoom.chip_tex(float(ob["amount"])), Rect2(op - Vector2(11, 9.5), Vector2(22, 19)), false)
-					oi += 1
+		for oc: Array in _others_at.get(key, []):
+			var op: Vector2 = r.get_center() + (Vector2(-8.0 + oi * 6.0, 4.0) if small_spot else Vector2(-r.size.x * 0.22 + oi * 6.0, r.size.y * 0.12))
+			draw_circle(op + Vector2(0, 1), 12.0, oc[0])
+			draw_texture_rect(DenRoom.chip_tex(float(oc[1])), Rect2(op - Vector2(11, 9.5), Vector2(22, 19)), false)
+			oi += 1
 		if bets.has(key):
 			var amt: float = float(bets[key]["amount"])
 			var cpos: Vector2 = r.get_center() + (Vector2.ZERO if small_spot else Vector2(r.size.x * 0.22, -r.size.y * 0.18))

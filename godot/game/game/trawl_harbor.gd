@@ -14,6 +14,8 @@ var _picking: String = ""
 ## The last haul brought in, shown until dismissed.
 var _haul: Dictionary = {}
 var _tick: float = 0.0
+## The countdowns on the board, as [Label, endsMs]: refreshed in place.
+var _clocks: Array = []
 var _parts: Dictionary = {}
 var _status: Label
 ## A word for the status line, said on the next paint.
@@ -48,11 +50,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 
 
-## The countdowns move on their own.
+## The countdowns move on their own: their text is refreshed in place, and
+## the board is only rebuilt when a trawl comes due (its row turns to "Bring
+## them in"), so pad focus and hover are not lost every 20 s.
 func _process(delta: float) -> void:
 	_tick += delta
-	if _tick >= 20.0 and _picking == "" and _haul.is_empty():
-		_tick = 0.0
+	if _tick < 20.0:
+		return
+	_tick = 0.0
+	var now: float = Clock.now_ms()
+	var due: bool = false
+	for c: Array in _clocks:
+		var l: Label = c[0]
+		if not is_instance_valid(l):
+			continue
+		var ends: float = float(c[1])
+		if ends <= now:
+			due = true
+		l.text = _back(ends - now)
+		l.tooltip_text = "About %s of real time" % VoyageBoard._left(ends - now)
+	if due and _picking == "" and _haul.is_empty():
 		_paint()
 
 
@@ -61,12 +78,7 @@ static func _back(ms: float) -> String:
 	var days: float = maxf(0.0, ms) / SeaClock.CYCLE_MS
 	if days > 1.0:
 		return "Back within %d sea days" % int(ceil(days))
-	return "Back today, in %s" % _left(ms)
-
-
-static func _left(ms: float) -> String:
-	var mins: int = int(ceil(maxf(0.0, ms) / 60000.0))
-	return "%dm" % mins if mins < 60 else "%dh %dm" % [mins / 60, mins % 60]
+	return "Back today, in %s" % VoyageBoard._left(ms)
 
 
 func _paint() -> void:
@@ -85,6 +97,7 @@ func _paint() -> void:
 		Paper.night = false
 		return
 	var st: Dictionary = RulesApi.run(session.store, session.uid, "trawlState", [])
+	_clocks = []
 	var out: int = (st["zones"] as Array).filter(func(z: Dictionary) -> bool: return z["trawl"] != null).size()
 	var slots: int = int(st["unlockedSlots"])
 	Paper.text(_body, "Send a hand to fish a water for you. Their Savvy brings in fishing XP, their Fortune doubloons. They stay out for the whole run; one hand to a water.", "small", Paper.ink_soft(), true)
@@ -122,7 +135,7 @@ func _paint() -> void:
 		var t: Variant = z["trawl"]
 		if t != null:
 			var td: Dictionary = t
-			mid.add_child(_face(str(td["crew"]["filename"]), 52))
+			mid.add_child(VoyageBoard._face(str(td["crew"]["filename"]), 52))
 			var cv: VBoxContainer = VBoxContainer.new()
 			cv.add_theme_constant_override("separation", 0)
 			cv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -137,7 +150,8 @@ func _paint() -> void:
 			else:
 				var bl: Label = Paper.text(row, _back(float(td["endsMs"]) - now), "small", Paper.ink_soft())
 				bl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-				bl.tooltip_text = "About %s of real time" % _left(float(td["endsMs"]) - now)
+				bl.tooltip_text = "About %s of real time" % VoyageBoard._left(float(td["endsMs"]) - now)
+				_clocks.append([bl, float(td["endsMs"])])
 			continue
 		if _picking == key:
 			var pl: Label = Paper.text(mid, "Who goes? Pick a hand below.", "small", Paper.ink())
@@ -164,17 +178,6 @@ func _paint() -> void:
 	Paper.night = false
 
 
-func _face(filename: String, px: float) -> TextureRect:
-	var pic: TextureRect = TextureRect.new()
-	pic.custom_minimum_size = Vector2(px, px)
-	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if filename != "":
-		pic.texture = Skipper.tex("card_thumbs/%s.png" % filename.get_basename())
-	return pic
-
-
 ## The free hands for the water being picked for, best trawlers first, each
 ## with the haul they would bring.
 func _paint_picker(free: Array) -> void:
@@ -196,7 +199,7 @@ func _paint_picker(free: Array) -> void:
 		row.add_theme_constant_override("separation", 10)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(row)
-		row.add_child(_face(str(c["filename"]), 44))
+		row.add_child(VoyageBoard._face(str(c["filename"]), 44))
 		var v: VBoxContainer = VBoxContainer.new()
 		v.add_theme_constant_override("separation", 0)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL

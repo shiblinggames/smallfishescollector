@@ -12,7 +12,7 @@ extends Control
 ##                edge like wet paint.
 ##   LIVE         her (heading and wake), crewmates, the regulars where they
 ##                are now, the buyers, strangers she can see, today's hotspots
-##                with their time left, squalls drifting with their heading,
+##                with their time left, the weather fronts on the move,
 ##                the currents flowing, kelp, the portal, buried sites she
 ##                holds a bearing for, and her own pins.
 ##   GPS          click open water and the course is set there; click any mark
@@ -715,6 +715,20 @@ func _dismiss_card() -> void:
 
 # ── What is on the chart ───────────────────────────────────────────────────────
 
+## The marks as read once this frame: drawing and every pointer move in the
+## same frame share the one list, not a fresh build of every dictionary each.
+var _marks_now: Array = []
+var _marks_frame: int = -1
+
+
+func _marks_this_frame() -> Array:
+	var f: int = Engine.get_process_frames()
+	if f != _marks_frame:
+		_marks_frame = f
+		_marks_now = _all_marks()
+	return _marks_now
+
+
 ## Every mark, as { kind, at (world), name, color, data }.
 func _all_marks() -> Array:
 	var out: Array = []
@@ -795,9 +809,9 @@ func _seen(w: Vector2) -> bool:
 func _pick(s: Vector2) -> Dictionary:
 	var best: Dictionary = {}
 	var bd: float = 20.0
-	for m: Dictionary in _all_marks():
+	for m: Dictionary in _marks_this_frame():
 		var d: float = to_screen(m["at"]).distance_to(s)
-		var r: float = 20.0 if m["kind"] in ["port", "isle", "hotspot", "squall"] else 14.0
+		var r: float = 20.0 if m["kind"] in ["port", "isle", "hotspot"] else 14.0
 		if d < minf(bd, r):
 			bd = d
 			best = m
@@ -863,7 +877,7 @@ func _draw_marks() -> void:
 		_marks.draw_string(small, d + Vector2(10, -28), info, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, ink)
 	# Every mark (names that would land on another are left off).
 	_taken.clear()
-	for m: Dictionary in _all_marks():
+	for m: Dictionary in _marks_this_frame():
 		var at: Vector2 = to_screen(m["at"])
 		if at.x < -60 or at.y < -60 or at.x > size.x + 60 or at.y > size.y + 60:
 			continue

@@ -26,9 +26,8 @@ extends RefCounted
 ##   Motion.rise_word(c, delay)
 ##                             words and lettering in: fade 0.2, rise 6px. Never
 ##                             arrive/Kit.pop on text.
-##   Motion.note_in(c) / note_out(c, free) / note(c, hold)
-##                             a toast or notification in, out, or the whole
-##                             in, hold 2.4s, out.
+##   Motion.note_in(c) / note_out(c, free)
+##                             a toast or notification in, or out.
 ##   Motion.swap(c, rebuild)   crossfade a panel body that changes (tabs).
 ##   Motion.stagger(c, i)      tile i of a grid fading in a beat after i-1.
 ##   Motion.count(node, from, to, fn, bar)
@@ -76,8 +75,6 @@ const PANEL_DROP: float = 8.0
 
 const SCRIM_IN: float = 0.12
 const SCRIM_OUT: float = 0.14
-## Both scrim times, as the spec names them.
-const SCRIM_FADE: Array = [SCRIM_IN, SCRIM_OUT]
 
 ## Arrivals: [fade, starting scale, scale time].
 const ARRIVE_S: Array = [0.1, 0.9, 0.2]
@@ -104,7 +101,6 @@ const SWAP_IN: float = 0.12
 const NEAR_RATE: float = 4.0
 const COUNT: float = 0.7
 const VEIL: float = 0.48
-const BARS_IN: float = 0.7
 const BARS_OUT: float = 0.5
 ## Pulses, in radians a second.
 const PULSE_CALL: float = 2.4
@@ -371,19 +367,6 @@ static func note_out(c: CanvasItem, free: bool = true) -> Tween:
 			if is_instance_valid(c):
 				c.visible = false)
 	return tw
-
-
-## A whole note: in, hold, out.
-static func note(c: CanvasItem, hold: float = NOTE_HOLD, free: bool = true) -> void:
-	c.visible = true
-	await note_in(c)
-	if not is_instance_valid(c) or not c.is_inside_tree():
-		return
-	var tw: Tween = _own(c, c.create_tween())
-	tw.tween_interval(NOTE_IN + hold)
-	await tw.finished
-	if is_instance_valid(c) and c.is_inside_tree():
-		note_out(c, free)
 
 
 ## Crossfade a body that changes: out, rebuild, in.

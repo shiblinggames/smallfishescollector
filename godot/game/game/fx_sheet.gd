@@ -37,10 +37,6 @@ static func status_color(id: String) -> Color:
 static var _glow: Texture2D
 
 
-static func has(_k: String) -> bool:
-	return true
-
-
 static func glow() -> Texture2D:
 	if _glow == null:
 		_glow = Glow.radial(128, Color.WHITE)

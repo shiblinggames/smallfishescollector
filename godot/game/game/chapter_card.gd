@@ -67,7 +67,7 @@ func _ready() -> void:
 		var xp: float = 0.0
 		for q: Dictionary in qs:
 			xp += float(q["xp"])
-		body = "Complete. %d jobs for Finn, %s XP." % [qs.size(), JobSlip._n(xp)]
+		body = "Complete. %d jobs for Finn, %s XP." % [qs.size(), Js.thousands(xp)]
 	var sub: Label = Paper.text(col, body, "body", Paper.INK_SOFT, true)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.custom_minimum_size = Vector2(520, 0)

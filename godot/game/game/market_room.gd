@@ -249,32 +249,31 @@ func _hero(held: Array, total: float, count: float) -> void:
 	p.add_child(v)
 	Kit.text(v, "Hold value", "eyebrow", Color(Kit.SAND, Kit.EYEBROW_ALPHA))
 	Kit.text(v, "%s ⟡" % Js.thousands(total), "display", GOLD)
-	if _advanced:
-		var base: float = 0.0
+	var base: float = 0.0
+	for e: Dictionary in held:
+		var ref: float = 1.0 if _mode == "normal" else float(e["prev"])
+		base += Market.price_each(float(e["value"]), ref) * float(e["qty"])
+	var d: float = total - base
+	var dp: float = d / maxf(1.0, base) * 100.0
+	Kit.text(v, "%s%s ⟡ (%s)  %s" % ["+" if d >= 0 else "-", Js.thousands(absf(d)), pct_text(dp), "vs normal value" if _mode == "normal" else ("vs yesterday" if Market.daily() else "vs last tick")], "small", UP if d >= 0 else DOWN)
+	var line: Array = []
+	var n: int = 0
+	for e: Dictionary in held:
+		n = maxi(n, (e["history"] as Array).size())
+	for i: int in n:
+		var sum: float = 0.0
 		for e: Dictionary in held:
-			var ref: float = 1.0 if _mode == "normal" else float(e["prev"])
-			base += Market.price_each(float(e["value"]), ref) * float(e["qty"])
-		var d: float = total - base
-		var dp: float = d / maxf(1.0, base) * 100.0
-		Kit.text(v, "%s%s ⟡ (%s)  %s" % ["+" if d >= 0 else "-", Js.thousands(absf(d)), pct_text(dp), "vs normal value" if _mode == "normal" else ("vs yesterday" if Market.daily() else "vs last tick")], "small", UP if d >= 0 else DOWN)
-		var line: Array = []
-		var n: int = 0
-		for e: Dictionary in held:
-			n = maxi(n, (e["history"] as Array).size())
-		for i: int in n:
-			var sum: float = 0.0
-			for e: Dictionary in held:
-				var h: Array = e["history"]
-				var k: int = i - (n - h.size())
-				var m: float = float(h[k]) if k >= 0 else 1.0
-				sum += Market.price_each(float(e["value"]), m) * float(e["qty"])
-			line.append(sum)
-		line.append(total)
-		var s: Spark = Spark.new()
-		s.points = line
-		s.color = UP if d >= 0 else DOWN
-		s.custom_minimum_size = Vector2(0, 56)
-		v.add_child(s)
+			var h: Array = e["history"]
+			var k: int = i - (n - h.size())
+			var m: float = float(h[k]) if k >= 0 else 1.0
+			sum += Market.price_each(float(e["value"]), m) * float(e["qty"])
+		line.append(sum)
+	line.append(total)
+	var s: Spark = Spark.new()
+	s.points = line
+	s.color = UP if d >= 0 else DOWN
+	s.custom_minimum_size = Vector2(0, 56)
+	v.add_child(s)
 	Kit.text(v, "%d fish  ·  %d species" % [int(count), held.size()], "small", SUB)
 	if not _confirm_all:
 		var b: Button = Kit.button("Sell all %d fish   ·   %s ⟡" % [int(count), Js.thousands(total)], "primary")
@@ -390,32 +389,25 @@ func _holding_row(e: Dictionary) -> Control:
 	names.add_theme_constant_override("separation", 0)
 	h.add_child(names)
 	Kit.text(names, e["name"], "name", INK).clip_text = true
-	Kit.text(names, (("×%d" + Kit.SEP + "%s ⟡") % [int(e["qty"]), Js.thousands(stack)]) if _advanced else "%d aboard" % int(e["qty"]), "small", SUB)
-	if _advanced:
-		var sp: Spark = Spark.new()
-		var pts: Array = (e["history"] as Array).duplicate()
-		pts.append(e["m"])
-		sp.points = pts
-		var sg: Array = _signal(e)
-		sp.color = UP if sg[0] else DOWN
-		sp.custom_minimum_size = Vector2(50, 26)
-		sp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		h.add_child(sp)
+	Kit.text(names, ("×%d" + Kit.SEP + "%s ⟡") % [int(e["qty"]), Js.thousands(stack)], "small", SUB)
+	# Only the advanced view lists holdings (_build), so no simple-mode branch.
+	var sg: Array = _signal(e)
+	var sp: Spark = Spark.new()
+	var pts: Array = (e["history"] as Array).duplicate()
+	pts.append(e["m"])
+	sp.points = pts
+	sp.color = UP if sg[0] else DOWN
+	sp.custom_minimum_size = Vector2(50, 26)
+	sp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(sp)
 	var right: VBoxContainer = VBoxContainer.new()
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_theme_constant_override("separation", 0)
 	h.add_child(right)
-	if _advanced:
-		var sg: Array = _signal(e)
-		var a: Label = Kit.text(right, "%s ⟡" % Js.thousands(price), "name", INK)
-		a.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		var b: Label = Kit.text(right, "%s %s" % ["▲" if sg[0] else "▼", pct_text(sg[1])], "small", UP if sg[0] else DOWN)
-		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	else:
-		var a: Label = Kit.text(right, "%s ⟡" % Js.thousands(stack), "name", GOLD)
-		a.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		var b: Label = Kit.text(right, "%s each" % Js.thousands(price), "small", SUB)
-		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var a: Label = Kit.text(right, "%s ⟡" % Js.thousands(price), "name", INK)
+	a.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var b: Label = Kit.text(right, "%s %s" % ["▲" if sg[0] else "▼", pct_text(sg[1])], "small", UP if sg[0] else DOWN)
+	b.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	var sell: Button = Kit.button("Sell", "primary", "small")
 	sell.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sell.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -611,12 +603,7 @@ var _all_armed: float = 0.0
 
 
 func _counter(held: Array, total: float, count: float) -> void:
-	var sheet: Control = Control.new()
-	sheet.custom_minimum_size = Vector2(0, 0)
-	sheet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(sheet)
 	var pane: Pane = Kit.pane(col, { "radius": 10, "fill": [Kit.PAPER], "border": [1, Color(Kit.PAPER_INK, 0.3)], "shadow": [Color(0, 0, 0, 0.45), 20, Vector2(0, 6)], "pad": [28, 22, 28, 24], "paper": true })
-	sheet.queue_free()
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 16)
 	pane.add_child(v)
@@ -638,7 +625,6 @@ func _counter(held: Array, total: float, count: float) -> void:
 				Motion.count(pl, from, now_purse, func(x: float) -> void:
 					if is_instance_valid(pl):
 						pl.text = "%s ⟡" % Js.thousands(round(x))))
-	_purse_from = -1.0
 	if held.is_empty():
 		Paper.text(v, "Sail out and catch something worth selling.", "body", Paper.INK_SOFT)
 		var go: Button = _go_fishing()

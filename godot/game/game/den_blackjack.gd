@@ -7,7 +7,6 @@ extends VBoxContainer
 ## Hit, Stand, Double and Split are buttons and H, S, D and P; an Ace up offers
 ## insurance first. Blackjack pays 3 to 2; the dealer hits a soft 17.
 
-const BETS: Array = [10.0, 25.0, 50.0, 100.0, 250.0, 500.0]
 const DEAL_GAP: float = 0.22
 
 var session: Session
@@ -29,7 +28,7 @@ var _view: Dictionary = {}
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 12)
-	var table: Pane = Kit.pane(self, { "radius": 16, "fill": [Kit.WOOD_HI, Kit.WOOD_LO], "border": [2, Color(0.25, 0.15, 0.08, 0.9)], "shadow": [Color(0, 0, 0, 0.5), 22, Vector2(0, 8)], "pad": [26, 18, 26, 22], "keep": true, "grain": true })
+	var table: Pane = DenRoom.table_pane(self, [26, 18, 26, 22])
 	table.custom_minimum_size = Vector2(0, 470)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
@@ -86,12 +85,9 @@ func _paint_controls() -> void:
 	var active: bool = _view.get("kind") == "active"
 	_bets_row.visible = not active
 	if not active:
-		for b: float in BETS:
-			var btn: Button = Paper.button("%d" % int(b), b == _bet)
-			btn.pressed.connect(func() -> void:
-				_bet = b
-				_paint_controls())
-			_bets_row.add_child(btn)
+		DenRoom.stake_row(_bets_row, _bet, func(b: float) -> void:
+			_bet = b
+			_paint_controls())
 		_move_button("Deal   ·   Space", "primary", deal)
 		return
 	var s: Dictionary = _view["state"]
@@ -172,7 +168,6 @@ func _act(op: String) -> void:
 		return
 	_busy = true
 	_paint_controls()
-	var before: float = Js.num(session.profile().get("casino_chips"))
 	var r: Dictionary = await session.act(op)
 	if r.has("error"):
 		den.toast(str(r["error"]), DenRoom.RED)
@@ -181,8 +176,20 @@ func _act(op: String) -> void:
 		return
 	session.persist()
 	if op in ["doubleDown", "split", "acceptInsurance"]:
-		den.paint_purse(Js.num(session.profile().get("casino_chips")))
+		## A double that ends the hand has already been paid in the store, so the
+		## strip shows the chips before the payout and the settle counts it up.
+		den.paint_purse(_staked_chips(r["result"]) if r.get("kind") == "settled" else Js.num(session.profile().get("casino_chips")))
 	await _render(r, true)
+
+
+## The purse once every stake is down and before anything comes back: the
+## settled chips less what the hands and the insurance returned. The count-up
+## at the end of a hand runs from here (the store already holds the payout).
+static func _staked_chips(res: Dictionary) -> float:
+	var back: float = float(Js.obj(res.get("insurance")).get("paid", 0.0))
+	for h: Dictionary in res["hands"]:
+		back += float(h["payout"])
+	return float(res["newChips"]) - back
 
 
 func _clear_table() -> void:
@@ -306,7 +313,7 @@ func _render(r: Dictionary, animate: bool) -> void:
 	var ins: Dictionary = res.get("insurance", {})
 	if ins.get("taken", false):
 		_says.text += ("   Insurance paid %s" % Js.thousands(float(ins["paid"]))) if ins.get("win", false) else "   Insurance lost"
-	den.roll_chips(Js.num(session.profile().get("casino_chips")) - maxf(0.0, float(res["newChips"]) - Js.num(session.profile().get("casino_chips"))), float(res["newChips"]))
+	den.roll_chips(_staked_chips(res), float(res["newChips"]))
 	_busy = false
 	_paint_controls()
 

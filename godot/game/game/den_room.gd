@@ -33,10 +33,25 @@ var _table: Control
 var _tabs: HBoxContainer
 var _stack: TextureRect
 var _stack_tier: int = -1
-var _shown_chips: float = 0.0
 
 const DENOMS: Array = [500.0, 250.0, 100.0, 50.0, 25.0, 10.0]
 const STACK_H: Array = [0.0, 46.0, 66.0, 80.0, 92.0]
+## The stakes every Den game offers, one button each.
+const STAKES: Array = [10.0, 25.0, 50.0, 100.0, 250.0, 500.0]
+
+
+## A game's wooden table: one look for every game, only the padding differs.
+static func table_pane(parent: Node, pad: Array) -> Pane:
+	return Kit.pane(parent, { "radius": 16, "fill": [Kit.WOOD_HI, Kit.WOOD_LO], "border": [2, Color(0.25, 0.15, 0.08, 0.9)], "shadow": [Color(0, 0, 0, 0.5), 22, Vector2(0, 8)], "pad": pad, "keep": true, "grain": true })
+
+
+## The stake buttons, added to `row` (the caller clears it); the current one
+## lit, and `on_pick(stake)` on a press (the caller repaints).
+static func stake_row(row: Node, current: float, on_pick: Callable) -> void:
+	for b: float in STAKES:
+		var btn: Button = Paper.button("%d" % int(b), b == current)
+		btn.pressed.connect(func() -> void: on_pick.call(b))
+		row.add_child(btn)
 
 
 func _init() -> void:
@@ -177,7 +192,6 @@ static func tier_of(chips: float) -> int:
 func _paint_stack(chips: float) -> void:
 	if _stack == null:
 		return
-	_shown_chips = chips
 	var t: int = tier_of(chips)
 	if t == _stack_tier:
 		return
@@ -286,7 +300,13 @@ func _open(which: String) -> void:
 		var block: String = Rules.gate_block("feature", t[2], xp) if t[2] != "" else ""
 		opts.append([t[0], t[1] if block == "" else t[1] + Kit.SEP + block])
 		shut.append(block != "")
-	var row: HBoxContainer = Kit.tabs(_tabs, opts, which, accent, func(k: Variant) -> void: _open(String(k)))
+	var row: HBoxContainer = Kit.tabs(_tabs, opts, which, accent, func(k: Variant) -> void:
+		## A game mid-play (awaiting its spin, deal or settle) keeps the table:
+		## freeing it would strand its coroutine and leave the purse on chips
+		## less the stake.
+		if _table.get_child_count() > 0 and _table.get_child(0).get("_busy") == true:
+			return
+		_open(String(k)))
 	# A game still closed says when, and does not open.
 	for i: int in row.get_child_count():
 		var b: Button = row.get_child(i)

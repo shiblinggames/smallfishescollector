@@ -129,21 +129,27 @@ func _ladder(kind: String) -> Control:
 			Sound.chest(true)
 			Rumble.buzz([0, 30, 30, 50])
 			hall._draw_room()
-			_flourish(art))
+			_flourish(hall))
 	v.add_child(b)
 	return box
 
 
-## A bought tier: the painting swells and settles with a ring of gold.
-func _flourish(old_art: TextureRect) -> void:
-	pass_on_next(func() -> void:
-		var tw: Tween = create_tween()
-		tw.tween_property(self, "modulate", Color(1.15, 1.1, 0.95), 0.15)
-		tw.tween_property(self, "modulate", Color.WHITE, 0.4))
+## A bought tier: the redrawn bunks room warms gold for a beat and settles.
+## Static, and every callback and tween is owned by the hall: the redraw has
+## already pulled this HallBunks out of the tree and queued it free, so
+## nothing after it may run on self.
+static func _flourish(h: CrewHall) -> void:
+	pass_on_next(h, func() -> void:
+		for n: Node in h.find_children("", "HallBunks", true, false):
+			var tw: Tween = h.create_tween()
+			tw.tween_property(n, "modulate", Color(1.15, 1.1, 0.95), 0.15)
+			tw.tween_property(n, "modulate", Color.WHITE, 0.4))
 
 
-func pass_on_next(f: Callable) -> void:
-	get_tree().process_frame.connect(f, CONNECT_ONE_SHOT)
+## Runs `f` on the next frame through the hall's tree (this sheet may already
+## be out of it, see _flourish).
+static func pass_on_next(h: CrewHall, f: Callable) -> void:
+	h.get_tree().process_frame.connect(f, CONNECT_ONE_SHOT)
 
 
 # ── The deep's offer ──────────────────────────────────────────────────────────
@@ -326,11 +332,18 @@ func _put_in(tile: BunkTile, crew_id: float, hours: int) -> void:
 		return
 	Sound.seal(false)
 	Rumble.tap(14)
-	hall._draw_room()
-	# The new tile tucks its hand in (a drop and a settle).
-	pass_on_next(func() -> void:
-		for t: BunkTile in hall.find_children("", "BunkTile", true, false):
-			if t.slot == tile.slot:
+	var h: CrewHall = hall
+	var slot: int = tile.slot
+	h._draw_room()
+	_tuck_next(h, slot)
+
+
+## The new tile tucks its hand in (a drop and a settle). Static so the frame
+## callback is not bound to this HallBunks, which the redraw just freed.
+static func _tuck_next(h: CrewHall, slot: int) -> void:
+	pass_on_next(h, func() -> void:
+		for t: BunkTile in h.find_children("", "BunkTile", true, false):
+			if t.slot == slot:
 				t.tuck_in())
 
 
@@ -359,12 +372,22 @@ func collect(tile: BunkTile) -> void:
 	wake.hall = hall
 	hall.add_child(wake)
 	await wake.done
-	hall._state = res["state"]
-	hall._draw_room()
-	for p: Variant in Js.list(promos):
+	var h: CrewHall = hall
+	h._state = res["state"]
+	h._draw_room()
+	_promote(h, Js.list(promos))
+
+
+## Any promotions, one card after another. Static so the coroutine outlives
+## this HallBunks, which the redraw above freed: awaiting on self would drop
+## every card after the first.
+static func _promote(h: CrewHall, promos: Array) -> void:
+	for p: Variant in promos:
+		if not is_instance_valid(h):
+			return
 		var pc: PromotionCard = PromotionCard.new()
 		pc.promo = p
-		hall.add_child(pc)
+		h.add_child(pc)
 		await pc.done
 
 

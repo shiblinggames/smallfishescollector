@@ -787,21 +787,8 @@ func _draw_detail() -> void:
 			var row: HBoxContainer = HBoxContainer.new()
 			row.add_theme_constant_override("separation", 6)
 			_detail.add_child(row)
-			var field: LineEdit = LineEdit.new()
+			var field: LineEdit = Paper.night_field(30)
 			field.placeholder_text = "Give them a name (once)"
-			field.max_length = 30
-			field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var fsb: StyleBoxFlat = StyleBoxFlat.new()
-			fsb.bg_color = Color(0.13, 0.105, 0.09)
-			fsb.border_color = Color(Paper.NIGHT_INK, 0.35)
-			fsb.set_border_width_all(1)
-			fsb.set_corner_radius_all(6)
-			fsb.content_margin_left = 10
-			fsb.content_margin_right = 10
-			for st: String in ["normal", "focus"]:
-				field.add_theme_stylebox_override(st, fsb)
-			field.add_theme_color_override("font_color", Paper.NIGHT_INK)
-			field.add_theme_color_override("font_placeholder_color", Paper.NIGHT_INK_FAINT)
 			row.add_child(field)
 			var nb: Pane.PaneButton = Paper.button("Name")
 			nb.pressed.connect(func() -> void:

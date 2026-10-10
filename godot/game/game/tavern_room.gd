@@ -73,7 +73,7 @@ func _build() -> void:
 			if right:
 				_avatar(row, faces[1], 44.0)
 		var from: Label = Kit.text(block, "%s" % heard["from"], "small", Kit.PAPER_INK_SOFT)
-		from.add_theme_font_override("font", BuyerPanel._italic())
+		from.add_theme_font_override("font", Kit.italic())
 		Paper.rule(ov)
 	Kit.text(ov, "The room turns over on the hour.", "small", Kit.PAPER_INK_SOFT)
 	# YOUR CREW.

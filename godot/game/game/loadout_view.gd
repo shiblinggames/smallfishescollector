@@ -13,9 +13,9 @@ signal changed
 
 const HOW_TO_GET: Dictionary = {
 	"rod": "Buy new rods at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.",
-	"skin": "Looks are earned by levels and achievements, or found in crates.",
+	"skin": "Looks unlock with achievement points (see the Fishing Guide), and come from nowhere else.",
 	"hat": "Hats are bought with doubloons. A few only come out of crates.",
-	"boat": "Boats are earned by levels and achievements, or found in crates.",
+	"boat": "Boats come only from fishing crates.",
 	"pet": "Pets come out of supply crates.",
 }
 const TABS: Array = [["rod", "Rod"], ["skin", "Look"], ["hat", "Hat"], ["boat", "Boat"], ["pet", "Pet"]]
@@ -260,7 +260,7 @@ func _try_on(slot: String, o: Array) -> void:
 		var r: Dictionary = Rules.rod(tier)
 		var mine: Dictionary = Rules.rod(Js.num(session.profile().get("rod_tier")))
 		var delta: float = Js.num(r.get("catchZoneBonus")) - Js.num(mine.get("catchZoneBonus"))
-		_card_body.text = "%s\n%s" % [r.get("description", ""), "Same catch zone as yours" if delta == 0.0 else "%+d° catch zone vs yours" % int(delta)]
+		_card_body.text = "%s\n%s" % [Kit.clean_copy(str(r.get("description", ""))), "Same catch zone as yours" if delta == 0.0 else "%+d° catch zone vs yours" % int(delta)]
 	else:
 		_card_body.text = "A look, not a stat. It changes how you appear on the water and nothing about the catch."
 

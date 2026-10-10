@@ -737,6 +737,8 @@ class DiceFace:
 				_done = true
 				Rumble.tap(16)
 				landed.emit()
+				# Landed: draw the final face once more and stop; it is still.
+				set_process(false)
 		queue_redraw()
 
 	func _draw() -> void:

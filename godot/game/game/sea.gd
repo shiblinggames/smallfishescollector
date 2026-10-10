@@ -57,7 +57,6 @@ var _squall: SquallFx
 var _sound: SeaSound
 var _wfx: WeatherFx
 var _course: Course
-var _course_mark: Course.CourseMark
 var _compass: CompassRibbon
 var _pings: CrewPings = null
 ## What this captain is doing, for the crew (their name plate, their compass
@@ -389,8 +388,6 @@ func _ready() -> void:
 	_hud.fishing_changed.connect(func(active: bool) -> void:
 		_boat.locked = active
 		_boat.set_pose("wait" if active else "rest"))
-	_hud.leave_label = "Leave the Charter" if net != null else "Captains"
-	_hud.leave.connect(func() -> void: left.emit())
 	_hud.menu_pressed.connect(func() -> void: menu_wanted.emit())
 	_hud.recall_pressed.connect(_press_recall)
 	_course.hud = _hud
@@ -402,9 +399,6 @@ func _ready() -> void:
 	hud_layer.add_child(_hud)
 	_chart_fx = ChartGainFx.new()
 	hud_layer.add_child(_chart_fx)
-	_course_mark = Course.CourseMark.new()
-	_course_mark.visible = false
-	hud_layer.add_child(_course_mark)
 	# THE COMPASS: a heading ribbon under the level bar.
 	_compass = CompassRibbon.new()
 	_compass.sea = self
@@ -446,11 +440,6 @@ func _process(delta: float) -> void:
 		_course_t = 0.0
 		_course_chip()
 	var cam_world: Vector2 = _boat.position + _cam_lead(delta)
-	if _course_mark != null:
-		_course_mark.offset = null
-		if _course.active():
-			_course_mark.offset = Vector2(_course.dest.x - cam_world.x, (_course.dest.y - cam_world.y) * Chart.GROUND) * _camera.zoom.x
-			_course_mark.text = "%s  ·  %s" % [_course.label, Course.eta_text(_course.eta())]
 	_camera.position = Vector2(cam_world.x, cam_world.y * Chart.GROUND)
 	if stage != null:
 		_stage_k = minf(1.0, _stage_k + delta * 2.2)
@@ -552,7 +541,7 @@ func _process(delta: float) -> void:
 	var half: Vector2 = Vector2(vp.x / 2.0 / _camera.zoom.x, vp.y / 2.0 / _camera.zoom.x / Chart.GROUND)
 	_life.step(delta, cam_world, half, _boat.position, _boat.velocity.length(), dark, clock["warmth"], now)
 	_sky.step(delta, cam_world, _camera.zoom.x, vp, dark, warm, stops[2])
-	_weather(delta, now, cam_world)
+	_weather(delta, now, cam_world, dark)
 	_ship_side()
 	_passage(delta)
 	_finn_tick(delta)
@@ -584,7 +573,8 @@ func _process(delta: float) -> void:
 		_recall_t = 0.0
 		_hud.set_recall(Portal.recall_left_ms(session.profile(), "fishing"))
 		_crew_morning(now)
-		_hud.set_stir(FishBias.stirring(session.save.get("species", []), str(Chart.water_at(_boat.position).get("id", "")), _boat.position, now) if not Chart.water_at(_boat.position).is_empty() else "")
+		var in_water: Dictionary = Chart.water_at(_boat.position)
+		_hud.set_stir(FishBias.stirring(session.save.get("species", []), str(in_water.get("id", "")), _boat.position, now) if not in_water.is_empty() else "")
 		# A stone opened (or a crewmate built a rung): the well catches up.
 		var live: bool = Portal.has_stone_for(1, session.save.get("discoveries", [])) or Js.num(session.profile().get("portal_tier")) > 1.0
 		if live != _portal.live or int(Js.num(Js.nz(session.profile().get("portal_tier"), 1.0))) != _portal.tier:
@@ -607,7 +597,9 @@ func _process(delta: float) -> void:
 		for k: String in _mates:
 			(_mates[k] as Shipmate).lift = lift
 
-	_hud.set_water(Chart.water_at(cam_world))
+	# The water she is IN (her hull, not the camera's lead ahead of her): the
+	# cast fishes this band, so it must be the one under her.
+	_hud.set_water(Chart.water_at(_boat.position))
 	_hud.set_clock(SeaClock.time_label(now), sky)
 	if _music_started:
 		Sound.music_for(clock["phase"])
@@ -732,9 +724,13 @@ func _on_proposed(n: int, by: String, text: String) -> void:
 	yes.pressed.connect(func() -> void:
 		net.vote(n, true)
 		p.queue_free())
+	# Esc / B is "Not now".
+	SeaFinds.back_closes(p, func() -> void:
+		net.vote(n, false)
+		p.queue_free())
 	_hud.hold_for(p)
 	_room_layer.add_child(p)
-	card.ready.connect(func() -> void: Kit.modal_in(card))
+	Kit.modal_in(card)
 	no.grab_focus.call_deferred()
 
 
@@ -846,8 +842,6 @@ func _night_water(dark: float, at: Vector2) -> void:
 	_water.set_shader_parameter("u_beam_len", 280.0 + 520.0 * _boat.lantern_glow)
 	_water.set_shader_parameter("u_beam_k", 0.6 + 0.4 * _boat.lantern_glow)
 	add_lamp.call(_town_light.position + Vector2(0, 260), 46.0, 0.45, Kit.LAMP)
-	for bid: String in _berths:
-		pass
 	for list: Dictionary in [_regulars, _strangers]:
 		for k: String in list:
 			var w: Wanderer = list[k]
@@ -893,9 +887,14 @@ func _chapter(delta: float, at: Vector2) -> void:
 		_ch_atmos.set_look(ChapterLook.atmos(_ch_look, _ch_k))
 
 
+## The shores the sea's sound listens for (the ports and the isles), joined
+## once: neither moves.
+var _shores: Array = []
+
+
 ## The weather (core/weather.gd's fronts): on the water, in the air, on the
-## hull and in how she sails.
-func _weather(delta: float, now: float, at: Vector2) -> void:
+## hull and in how she sails. dark: the sea clock's darkness this frame.
+func _weather(delta: float, now: float, at: Vector2, dark: float) -> void:
 	var fx: Dictionary = Weather.effect(at, now, _boat.heading)
 	var f: Dictionary = fx["front"]
 	if not f.is_empty():
@@ -942,7 +941,7 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 		var murk: Color = Color(str(_ch_look["murk"]))
 		var top: float = maxf(0.001, maxf(murk.r, maxf(murk.g, murk.b)))
 		fog_tint = Color.WHITE.lerp(Color(murk.r / top, murk.g / top, murk.b / top), _ch_k * 0.6)
-	_squall.night(float(SeaClock.at(now)["darkness"]), fog_tint)
+	_squall.night(dark, fog_tint)
 	_squall.step_air(delta, fog_amt, _boat.get_global_transform_with_canvas().origin, wind, f.get("dir", Vector2.RIGHT), get_viewport_rect().size)
 	_water.set_shader_parameter("u_flash", _squall.flash)
 	# The chart is paper over the sea: no rain or fog on it.
@@ -966,7 +965,9 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 	var depth: float = clampf((at.y - 1400.0) / 21200.0, 0.0, 1.0)
 	var land: float = 0.0
 	var shore: Vector2 = at
-	for p: Dictionary in Chart.ports() + (Rules.data()["isles"] as Array):
+	if _shores.is_empty():
+		_shores = Chart.ports() + (Rules.data()["isles"] as Array)
+	for p: Dictionary in _shores:
 		var c: Vector2 = Vector2(float(p["x"]), float(p["y"]))
 		var edge: float = c.distance_to(at) - float(p["r"])
 		var l: float = clampf(1.0 - edge / 900.0, 0.0, 1.0)
@@ -977,7 +978,7 @@ func _weather(delta: float, now: float, at: Vector2) -> void:
 		land = maxf(land, clampf(1.0 - _life.flock_at.distance_to(at) / 1600.0, 0.0, 1.0))
 		shore = _life.flock_at
 	var shore_canvas: Vector2 = _world.get_global_transform() * shore
-	_sound.step(delta, spd, turn, depth, land, _squall.rain, SeaClock.at(now)["darkness"], _hud.busy(), shore_canvas)
+	_sound.step(delta, spd, turn, depth, land, _squall.rain, dark, _hud.busy(), shore_canvas)
 
 
 ## The moorings near the view, for the water to paint.
@@ -1087,10 +1088,13 @@ func _finds(delta: float, now: float, lift: Color) -> void:
 	for id: String in _digs:
 		var h: SeaFinds.DigHint = _digs[id]
 		var d: float = at.distance_to(h.position)
-		h.strength = clampf((Explore.DIG_HINT_RANGE - d) / 480.0, 0.0, 1.0) if not _dug(id) else 0.0
-		# A buried site shows itself only to a hunt that points at it.
-		if Clues.on() and Clues.dig_open(session.profile(), id) == "":
-			h.strength = 0.0
+		h.strength = 0.0
+		# Out of range it is 0 whatever: the save is only read for the near.
+		if d < Explore.DIG_HINT_RANGE:
+			h.strength = clampf((Explore.DIG_HINT_RANGE - d) / 480.0, 0.0, 1.0) if not _dug(id) else 0.0
+			# A buried site shows itself only to a hunt that points at it.
+			if Clues.on() and Clues.dig_open(session.profile(), id) == "":
+				h.strength = 0.0
 		# Something on the bottom: bubbles breaking the surface over it, more
 		# of them and stronger the closer she is.
 		if h.strength > 0.0:
@@ -1180,7 +1184,7 @@ func _clue_search(tier: String) -> void:
 	var r: Variant = await session.act("clueSearch", [tier])
 	session.persist()
 	if not r is Dictionary or not (r as Dictionary).get("ok", false):
-		_hud.toast(str((r as Dictionary).get("error", "Nothing here.")) if r is Dictionary else "Nothing here.")
+		_hud.toast(_err(r, "Nothing here."))
 		return
 	var res: Dictionary = r
 	if res.get("done", false):
@@ -1212,7 +1216,7 @@ func _land(isle: Dictionary) -> void:
 	var r: Variant = await session.act("goAshore", [isle["id"]])
 	session.persist()
 	if not r is Dictionary or not (r as Dictionary).get("ok", false):
-		_hud.toast(str((r as Dictionary).get("error", "The sea took that one. Try again.")) if r is Dictionary else "The sea took that one. Try again.")
+		_hud.toast(_err(r, "The sea took that one. Try again."))
 		return
 	var res: Dictionary = r
 	var note: Variant = res.get("note")
@@ -1243,7 +1247,7 @@ func _dig(site: Dictionary) -> void:
 	var r: Variant = await session.act("digHere", [site["id"]])
 	session.persist()
 	if not r is Dictionary or not (r as Dictionary).get("ok", false):
-		_hud.toast(str((r as Dictionary).get("error", "The spade turned nothing up. Try again.")) if r is Dictionary else "The spade turned nothing up. Try again.")
+		_hud.toast(_err(r, "The spade turned nothing up. Try again."))
 		return
 	Sound.chest(true)
 	_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Hauled up from the bottom", r["name"], [[str(r["found"]), "note"]], [[r["doubloons"], "doubloons"]]))
@@ -1259,12 +1263,16 @@ func _bottle(b: Dictionary) -> void:
 	if r is Dictionary and (r as Dictionary).get("held", false):
 		_hud.toast(str(r["error"]))
 		return
-	_taken[b["key"]] = true
-	if _bottles.has(b["key"]):
-		(_bottles[b["key"]] as Node).queue_free()
-		_bottles.erase(b["key"])
+	# The rules answered (opened, or the tide took it): it is gone. No answer
+	# at all (a Charter's line timed out, no peer: { error } with no "ok"):
+	# it stays floating, so "try again" can be done.
+	if r is Dictionary and (r as Dictionary).has("ok"):
+		_taken[b["key"]] = true
+		if _bottles.has(b["key"]):
+			(_bottles[b["key"]] as Node).queue_free()
+			_bottles.erase(b["key"])
 	if not r is Dictionary or not (r as Dictionary).get("ok", false):
-		_hud.toast(str((r as Dictionary).get("error", "It slipped out of your hands. Try that one again.")) if r is Dictionary else "It slipped out of your hands. Try that one again.")
+		_hud.toast(_err(r, "It slipped out of your hands. Try that one again."))
 		return
 	if Clues.on():
 		var hunt: Dictionary = r["hunt"]
@@ -1365,8 +1373,6 @@ func _finn_tick(delta: float) -> void:
 	if _finn_t >= 1.0:
 		_finn_t = 0.0
 		_finn_refresh()
-	var xf: Transform2D = _world.get_global_transform_with_canvas()
-	_hud.finn_arrow(null if North.is_north(_boat.position) else xf * _finn.position, _finn.mark)
 
 
 func _finn_refresh() -> void:
@@ -1420,6 +1426,11 @@ var _pass_k: float = 0.0
 ## meta "fight") and the sea's own life (the wake, the ripples, weather, fog,
 ## the sky: meta "ambient"), and comes back as it ends at the alpha it had.
 var _fight_alpha: Dictionary = {}
+## Set once the first pass of a fight has taken its snapshot. A node first seen
+## after that (a stranger spawned mid-fight, still at its fade-in's 0) or a
+## Wanderer (they own their fade tweens) comes back at full, not at the
+## near-0 alpha it happened to have when it was first seen.
+var _fight_snapped: bool = false
 
 
 func _fight_clear() -> void:
@@ -1434,10 +1445,12 @@ func _fight_clear() -> void:
 		var ci: CanvasItem = n
 		var id: int = ci.get_instance_id()
 		if not _fight_alpha.has(id):
-			_fight_alpha[id] = ci.modulate.a
+			_fight_alpha[id] = 1.0 if (_fight_snapped or ci is Wanderer) else ci.modulate.a
 		ci.modulate.a = float(_fight_alpha[id]) * (1.0 - sk)
+	_fight_snapped = true
 	if sk <= 0.0:
 		_fight_alpha.clear()
+		_fight_snapped = false
 		# The campaign's marks and islands as the fight left them.
 		if _campaign != null:
 			_campaign.refresh()
@@ -1735,79 +1748,64 @@ func refresh_home() -> void:
 	_home_house.position = c + Vector2(-r + float(bd["x"]) / 100.0 * d, -r + float(bd["y"]) / 100.0 * d)
 
 
+## The bell and the buzz of tying up.
+func _dock_bell() -> void:
+	Rumble.buzz([18, 40, 24])
+	Sound.bell()
+
+
+## A room over the sea from a mooring: it gets the session, holds the HUD
+## while it is up, and on_closed runs as it closes.
+func _open_room(room: Control, on_closed: Callable) -> void:
+	room.set("session", session)
+	room.connect("closed", on_closed)
+	_hud.hold_for(room)
+	_room_layer.add_child(room)
+
+
+## A rules answer's error for a toast, or fallback when there is none (or no
+## answer at all).
+static func _err(r: Variant, fallback: String) -> String:
+	return str((r as Dictionary).get("error", fallback)) if r is Dictionary else fallback
+
+
 ## Tying up: the bell, then whatever the port opens.
 func _dock(id: String) -> void:
 	match id:
 		"home":
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
-			var hr: HomesteadRoom = HomesteadRoom.new()
-			hr.session = session
-			hr.closed.connect(func() -> void:
+			_dock_bell()
+			_open_room(HomesteadRoom.new(), func() -> void:
 				refresh_home()
 				_hud.refresh())
-			_hud.hold_for(hr)
-			_room_layer.add_child(hr)
 		"mainland":
 			_go_ashore()
 		"shipyard":
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
+			_dock_bell()
 			_enter_room("shipyard")
 		"crew_hall":
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
-			var ch: CrewHall = CrewHall.new()
-			ch.session = session
-			ch.closed.connect(func() -> void: _hud.refresh())
-			_hud.hold_for(ch)
-			_room_layer.add_child(ch)
+			_dock_bell()
+			_open_room(CrewHall.new(), _hud.refresh)
 		"forge_isle":
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
-			var fb: ForgeBench = ForgeBench.new()
-			fb.session = session
-			fb.closed.connect(func() -> void: _hud.refresh())
-			_hud.hold_for(fb)
-			_room_layer.add_child(fb)
+			_dock_bell()
+			_open_room(ForgeBench.new(), _hud.refresh)
 		"posting_house":
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
-			var bb: BountyBoard = BountyBoard.new()
-			bb.session = session
-			bb.closed.connect(func() -> void: _hud.refresh())
-			_hud.hold_for(bb)
-			_room_layer.add_child(bb)
+			_dock_bell()
+			_open_room(BountyBoard.new(), _hud.refresh)
 		"charterhouse":
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
-			var vb: VoyageBoard = VoyageBoard.new()
-			vb.session = session
-			vb.closed.connect(func() -> void: _hud.refresh())
-			_hud.hold_for(vb)
-			_room_layer.add_child(vb)
+			_dock_bell()
+			_open_room(VoyageBoard.new(), _hud.refresh)
 		"trawl_fleet":
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
-			var th: TrawlHarbor = TrawlHarbor.new()
-			th.session = session
-			th.closed.connect(func() -> void: _hud.refresh())
-			_hud.hold_for(th)
-			_room_layer.add_child(th)
+			_dock_bell()
+			_open_room(TrawlHarbor.new(), _hud.refresh)
 		"trawl_docks":
 			# The Tally House: the day's orders, in the Locker.
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
+			_dock_bell()
 			_open_locker("orders", "")
 		"gunwharf":
-			Rumble.buzz([18, 40, 24])
-			Sound.bell()
-			var gw: GunwharfSheet = GunwharfSheet.new()
-			gw.session = session
-			gw.closed.connect(_open_sea_gate)
-			gw.closed.connect(_reship)
-			_hud.hold_for(gw)
-			_room_layer.add_child(gw)
+			_dock_bell()
+			_open_room(GunwharfSheet.new(), func() -> void:
+				_open_sea_gate()
+				_reship())
 		_:
 			Rumble.tap(10)
 			var p: Dictionary = Chart.port(id)

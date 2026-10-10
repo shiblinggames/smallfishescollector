@@ -329,21 +329,8 @@ func _item_tile(id: Variant, mounted: bool, eq: Array, n: int = 1) -> Control:
 # ── Her hull ──────────────────────────────────────────────────────────────────
 
 func _field(text: String) -> LineEdit:
-	var field: LineEdit = LineEdit.new()
+	var field: LineEdit = Paper.night_field(32)
 	field.text = text
-	field.max_length = 32
-	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var fsb: StyleBoxFlat = StyleBoxFlat.new()
-	fsb.bg_color = Color(0.13, 0.105, 0.09)
-	fsb.border_color = Color(Paper.NIGHT_INK, 0.35)
-	fsb.set_border_width_all(1)
-	fsb.set_corner_radius_all(6)
-	fsb.content_margin_left = 10
-	fsb.content_margin_right = 10
-	for st: String in ["normal", "focus"]:
-		field.add_theme_stylebox_override(st, fsb)
-	field.add_theme_color_override("font_color", Paper.NIGHT_INK)
-	field.add_theme_color_override("font_placeholder_color", Paper.NIGHT_INK_FAINT)
 	return field
 
 
@@ -703,8 +690,7 @@ func _ultimate() -> void:
 
 ## The web's copy, without its dashes (house rule: no em-dashes).
 static func _clean(t: String) -> String:
-	t = t.strip_edges().trim_prefix("— ").trim_prefix("—")
-	return t.replace(" — ", ", ").replace(" —", ",").replace("— ", ", ").replace("—", ", ").strip_edges()
+	return Kit.clean_copy(t)
 
 
 static func _hm(ms: float) -> String:

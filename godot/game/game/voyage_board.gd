@@ -21,6 +21,10 @@ var _seat: int = -1
 var _haul: Dictionary = {}
 var _log: bool = false
 var _tick: float = 0.0
+## Whether the painted view has a countdown in it (a voyage out, not yet
+## home): only then does the 20 s repaint run, so browsing the routes or the
+## crew never loses pad focus or hover to it.
+var _ticking: bool = false
 
 const RED: Color = Paper.NIGHT_RED
 const GREEN: Color = Paper.NIGHT_GREEN
@@ -60,11 +64,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_tick += delta
-	if _tick >= 20.0 and _chosen == "" and _seat < 0 and _haul.is_empty():
+	if _tick >= 20.0 and _ticking and _chosen == "" and _seat < 0 and _haul.is_empty():
 		_tick = 0.0
 		_paint()
 
 
+## Time left, in minutes or hours. Static: the Trawl Harbor uses it too.
 static func _left(ms: float) -> String:
 	var mins: int = int(ceil(maxf(0.0, ms) / 60000.0))
 	return "%dm" % mins if mins < 60 else "%dh %dm" % [mins / 60, mins % 60]
@@ -81,6 +86,7 @@ func _paint() -> void:
 		_body.remove_child(c)
 		c.queue_free()
 	var st: Dictionary = RulesApi.run(session.store, session.uid, "voyageState", [])
+	_ticking = false
 	# THE shared header: the Charterhouse over the title; Past voyages and
 	# Close on the right; the rule.
 	var hd: Dictionary = Paper.header(_body, "The voyage board", "The Charterhouse", close)
@@ -96,6 +102,7 @@ func _paint() -> void:
 	elif _log:
 		_paint_log(st["history"])
 	elif not (st["voyage"] as Dictionary).is_empty():
+		_ticking = not bool(st["home"])
 		_paint_out(st)
 	else:
 		_paint_crew(st)
@@ -108,7 +115,8 @@ func _paint() -> void:
 
 # ── The crew ─────────────────────────────────────────────────────────────────
 
-func _face(filename: String, px: float) -> TextureRect:
+## A crewmate's face. Static: the Trawl Harbor uses it too.
+static func _face(filename: String, px: float) -> TextureRect:
 	var pic: TextureRect = TextureRect.new()
 	pic.custom_minimum_size = Vector2(px, px)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

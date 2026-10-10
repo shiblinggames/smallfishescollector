@@ -68,12 +68,9 @@ func _ends() -> Dictionary:
 				k = k * k * (3.0 - 2.0 * k)
 				var held_at: Vector2 = (skipper.line_from as Vector2).lerp(rest_end, k)
 				return { "tip": tip, "len": tip.distance_to(held_at) * 1.02, "held": held_at }
-			# ON A SOFT LEASH, not free (Kong, 2026-10-02: hanging free it
-			# flailed like a ragdoll as she sailed): held where it hangs, let
-			# trail a little behind her way (smoothed) and sway gently.
-			var sway: Vector2 = Vector2(sin(now * 1.3) * 1.6, sin(now * 0.9 + 1.0) * 0.6) * absf(global_scale.x)
-			var held_rest: Vector2 = rest_end + _trail + sway
-			return { "tip": tip, "len": tip.distance_to(held_rest) * 1.03, "held": held_rest }
+			# Otherwise at rest the line is laid by _rest_line, not simulated:
+			# only the tip is read from here.
+			return { "tip": tip, "len": tip.distance_to(rest_end) * 1.03, "held": rest_end }
 		"cast":
 			var water: Vector2 = to_global(skipper.sheet_point("wait", PTS["wait"][1]))
 			var start: Vector2 = skipper.line_from if skipper.line_from != null else tip
@@ -95,34 +92,11 @@ func _ends() -> Dictionary:
 			return { "tip": tip, "len": tip.distance_to(end) * 1.04, "held": end }
 
 
-## How far the resting hook trails behind her way: her rod tip's speed,
-## smoothed hard, turned into a small backward lean, capped. (Not used at rest
-## now: see _rest_line.)
-var _trail: Vector2 = Vector2.ZERO
-var _tip_last: Vector2 = Vector2.INF
-var _vel: Vector2 = Vector2.ZERO
-
-
-func _follow(dt: float) -> void:
-	if skipper == null or skipper._roles.get("skin") == null or dt <= 0.0:
-		return
-	var tip: Vector2 = to_global(_sheet(PTS[skipper.frame][0]))
-	if _tip_last != Vector2.INF and tip.distance_to(_tip_last) < 120.0 * absf(global_scale.x):
-		_vel = _vel.lerp((tip - _tip_last) / dt, 1.0 - exp(-dt * 2.5))
-	_tip_last = tip
-	var lean: Vector2 = -_vel * 0.035
-	var cap: float = 14.0 * absf(global_scale.x)
-	if lean.length() > cap:
-		lean = lean.normalized() * cap
-	_trail = _trail.lerp(lean, 1.0 - exp(-dt * 3.0))
-
-
 func _step(dt: float) -> void:
 	if skipper == null or not PTS.has(skipper.frame) or skipper._roles.get("skin") == null:
 		return
 	if skipper.line_snap_t >= 0.0:
 		return
-	_follow(dt)
 	var e: Dictionary = _ends()
 	var tip: Vector2 = e["tip"]
 	# AT REST THE LINE RIDES WITH HER (Kong, 2026-10-05: sailing, the line

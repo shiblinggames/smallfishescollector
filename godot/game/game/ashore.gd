@@ -21,6 +21,8 @@ const ROWS: Array = [
 		["chart_room", "The Chart Room", "Weekly puzzles that uncover the World Chart", "Study", "sea/charting.png", "#6fc4b4"],
 	]],
 ]
+## Every door above is built today, so the "NOT BUILT YET" door below never
+## shows; it stays for a door added to ROWS before its room exists.
 const BUILT: Array[String] = ["tavern", "market", "tackle", "den", "parlor", "chart_room"]
 
 var _card: Pane

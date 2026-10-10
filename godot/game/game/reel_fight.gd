@@ -16,8 +16,6 @@ extends Node2D
 ## Presentation only: the result was decided by the press, and the rules run
 ## after it as before.
 
-signal done
-
 var boat: Boat
 var result: String = "catch"
 var fish_art: Texture2D
@@ -135,7 +133,6 @@ func _process(delta: float) -> void:
 		# A crate's splash is CrateSurface's own, as it breaks the surface.
 		if result == "catch" and not crate:
 			boat.splash(false, _shadow.position)
-		done.emit()
 		queue_free()
 
 

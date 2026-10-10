@@ -17,7 +17,6 @@ signal finished(solved: bool)
 
 const GOLD: Color = Color(0.98, 0.76, 0.33)
 const HOT: Color = Color(1.0, 0.92, 0.7)
-const STEEL: Color = Color(0.62, 0.71, 0.82)
 ## Sized to sit clear of the sea's HUD (the top bar, the pills, the dock).
 const SHEET: Vector2 = Vector2(1160, 690)
 
@@ -304,12 +303,16 @@ func glow(c: Vector2, r: float, col: Color, strength: float) -> void:
 
 
 ## A rounded box (fill, and an edge when edge_w > 0).
+## One box reused for every call: the boards redraw every frame, and
+## draw_style_box records the box's values as it is called, so mutating it is
+## safe and saves dozens of allocations a frame.
+var _sb: StyleBoxFlat = StyleBoxFlat.new()
+
+
 func box(r: Rect2, fill: Color, radius: float, edge: Color = Color(0, 0, 0, 0), edge_w: float = 0.0) -> void:
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = fill
-	sb.set_corner_radius_all(int(radius))
-	sb.anti_aliasing = true
-	if edge_w > 0.0:
-		sb.set_border_width_all(int(edge_w))
-		sb.border_color = edge
-	canvas.draw_style_box(sb, r)
+	_sb.bg_color = fill
+	_sb.set_corner_radius_all(int(radius))
+	_sb.anti_aliasing = true
+	_sb.set_border_width_all(int(edge_w) if edge_w > 0.0 else 0)
+	_sb.border_color = edge
+	canvas.draw_style_box(_sb, r)

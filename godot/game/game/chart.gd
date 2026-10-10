@@ -9,9 +9,8 @@ extends RefCounted
 
 const GROUND: float = 0.58
 const HOME: Vector2 = Vector2(260, 560)
-## The Mainland (chart.ts PLACES 'mainland'): r 500. Every port's plate, town
-## and berth come from the rules (ports(), exported from chart.ts).
-const MAINLAND_R: float = 500.0
+## Every port's plate, town and berth come from the rules (ports(), exported
+## from chart.ts).
 ## The hull stops at r x SHORE + HULL from an island's centre (SeaMap.tsx).
 const SHORE: float = 0.72
 const HULL: float = 55.0

@@ -117,16 +117,6 @@ static func gold(n: Node = null) -> Color:
 	return NIGHT_GOLD if is_night(n) else MONEY
 
 
-## A hairline on either paper.
-static func hair(n: Node = null) -> Color:
-	return NIGHT_HAIR if is_night(n) else Color(INK, 0.15)
-
-
-## The eyebrow's ink on either paper.
-static func eyebrow_ink(n: Node = null) -> Color:
-	return Color(CHOSEN, Kit.EYEBROW_ALPHA + 0.2) if is_night(n) else EYEBROW
-
-
 ## The ring round what is chosen: red ink by day, CHOSEN by night.
 static func chosen(n: Node = null) -> Color:
 	return CHOSEN if is_night(n) else RED
@@ -311,6 +301,27 @@ static func header(parent: Control, title: String, eyebrow: String = "", on_clos
 		tab_row.add_child(tb)
 	var ru: Control = rule(head, nt)
 	return { "head": head, "titles": titles, "title": tl, "right": right, "close": x, "tabs": tab_row, "rule": ru }
+
+
+## A text field on the night paper: a dark well, a faint cream hairline,
+## cream ink. THE one style for typing on the night paper (the Crew Hall's
+## rename, the Gunwharf's ship name).
+static func night_field(max_len: int) -> LineEdit:
+	var field: LineEdit = LineEdit.new()
+	field.max_length = max_len
+	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var fsb: StyleBoxFlat = StyleBoxFlat.new()
+	fsb.bg_color = Color(0.13, 0.105, 0.09)
+	fsb.border_color = Color(NIGHT_INK, 0.35)
+	fsb.set_border_width_all(1)
+	fsb.set_corner_radius_all(6)
+	fsb.content_margin_left = 10
+	fsb.content_margin_right = 10
+	for st: String in ["normal", "focus"]:
+		field.add_theme_stylebox_override(st, fsb)
+	field.add_theme_color_override("font_color", NIGHT_INK)
+	field.add_theme_color_override("font_placeholder_color", NIGHT_INK_FAINT)
+	return field
 
 
 ## THE FEEDBACK LINE: an 18px line reserved under the header (so a message
@@ -519,7 +530,12 @@ static func ring(ci: CanvasItem, c: Vector2, r: Vector2, t: float = 0.0, col: Co
 ## takes its paper's side (night or day) when it lands.
 class Tile:
 	extends Button
-	var on: bool = false
+	## The worn one: its ring wobbles, so it keeps the tile processing.
+	var on: bool = false:
+		set(v):
+			on = v
+			if v:
+				set_process(true)
 	var pigment: Color = Color(0.4, 0.55, 0.62)
 	var art: Texture2D
 	var label: String = ""
@@ -581,11 +597,18 @@ class Tile:
 			c.offset_top = 2
 			c.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		mouse_entered.connect(func() -> void: _hot = 1.0)
-		mouse_exited.connect(func() -> void: _hot = 0.0)
-		focus_entered.connect(func() -> void: _hot = 1.0)
-		focus_exited.connect(func() -> void: _hot = 0.0)
+		mouse_entered.connect(_heat.bind(1.0))
+		mouse_exited.connect(_heat.bind(0.0))
+		focus_entered.connect(_heat.bind(1.0))
+		focus_exited.connect(_heat.bind(0.0))
 		Kit.tap(self)
+		# Idle tiles do not process (a sheet can hold a hundred): only the
+		# hovered or focused one, one still settling, and the worn one.
+		set_process(on)
+
+	func _heat(v: float) -> void:
+		_hot = v
+		set_process(true)
 
 	func _process(delta: float) -> void:
 		_t += delta
@@ -596,6 +619,11 @@ class Tile:
 		_pic.rotation = lerpf(_pic.rotation, sin(_t * 2.2) * 0.035 * _hot, k)
 		if on:
 			queue_redraw()
+		elif _hot == 0.0 and absf(s - 1.0) < 0.001 and absf(_pic.rotation) < 0.001:
+			# At rest: snap and stop until the next hover or focus.
+			_pic.scale = Vector2.ONE
+			_pic.rotation = 0.0
+			set_process(false)
 
 	## The worn one is circled in ink, by hand (Paper.ring).
 	func _draw() -> void:

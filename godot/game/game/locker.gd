@@ -6,9 +6,8 @@ extends Control
 ##
 ## The sea does not go away: the camera pushes in on HER boat and sets it to
 ## the left (Sea.stage), the world dims round it, and the right of the screen
-## is a sheet of paper. LOADOUT: the slots (Rod, Bait, Look, Hat, Boat, Pet),
-## each also a paper tag inked to the part it changes on the boat; what you
-## own as tiles on watercolour blots, the worn one circled in red; hover to
+## is a sheet of paper. LOADOUT: the slots (Rod, Bait, Look, Hat, Boat, Pet);
+## what you own as tiles on watercolour blots, the worn one circled in red; hover to
 ## try it on the real boat, press to wear it. Rods and bait show what they
 ## do to the dial against what you have now, on a small painted dial. HOLD:
 ## one pip per space in the hold, coloured by what fills it; every fish
@@ -19,14 +18,11 @@ extends Control
 signal closed
 
 const SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["special", "Special"], ["skin", "Look"], ["hat", "Hat"], ["pet", "Pet"]]
-## Every slot a tag can point at (the Boat has its own tab).
-const ALL_SLOTS: Array = [["rod", "Rod"], ["bait", "Bait"], ["skin", "Look"], ["hat", "Hat"], ["pet", "Pet"], ["boat", "Boat"]]
 const HOW_TO_GET: Dictionary = {
 	"rod": "New rods are sold at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.",
 	"bait": "Bait is sold at the Tackle Shop, by the traders out on the water, and found in crates.",
-	"skin": "Looks are bought with doubloons, earned by levels and achievements, or found in crates.",
+	"skin": "Looks unlock with achievement points (see the Fishing Guide), and come from nowhere else.",
 	"hat": "Hats are bought with doubloons. A few only come out of crates.",
-	"boat": "Boats are bought with doubloons, earned by levels and achievements, or found in crates.",
 	"pet": "Pets come out of supply crates.",
 	"special": "One special rides with you. The Auto Caster is sold at the Tackle Shop; the others come back from voyages.",
 }
@@ -41,7 +37,6 @@ var slot: String = "rod"
 var _body: VBoxContainer
 var _tabs: HBoxContainer
 var _veil: ColorRect
-var _callouts: Callouts
 var _card: Control
 var _card_eyebrow: Label
 var _card_title: Label
@@ -73,9 +68,6 @@ func _ready() -> void:
 	vm.shader = load("res://game/fx/locker_veil.gdshader")
 	_veil.material = vm
 	add_child(_veil)
-	_callouts = Callouts.new()
-	_callouts.locker = self
-	add_child(_callouts)
 	_build_card()
 	# The sheet.
 	var panel: Control = Control.new()
@@ -179,8 +171,6 @@ func _show_tab(t: String) -> void:
 	for c: Node in _body.get_children():
 		c.queue_free()
 	_gauge = null
-	# No tags or lines on her (Kong): the tiles say plainly what each thing is.
-	_callouts.visible = false
 	_card.visible = t == "loadout" or t == "boat"
 	_widen(t == "log")
 	if t == "boat":
@@ -334,15 +324,8 @@ func _build_boat() -> void:
 		pips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var nxt: String = "Fully fitted"
 		if cur < mx:
-			var free_lv: int = 0
-			if l[0] == "hold":
-				var lr: Dictionary = Rules.data()["levelRewards"]
-				for k: Variant in lr:
-					if (lr[k] as Dictionary).get("holdFloor") != null and int(lr[k]["holdFloor"]) == cur + 1:
-						free_lv = int(k)
-			else:
-				free_lv = Shipyard.free_at(col, float(cur + 1))
-			var gate_lv: int = Rules.gate("hold", str(cur + 1)) if l[0] == "hold" else int(Js.num(Js.obj(Js.obj(Js.obj(Rules.data().get("levelGates")).get("ship")).get(col)).get(str(cur + 1))))
+			var free_lv: int = ShipyardRoom._free_at(l, cur + 1)
+			var gate_lv: int = ShipyardRoom._gate_at(l, cur + 1)
 			if free_lv > 0:
 				nxt = "Next free at Fishing %d" % free_lv
 			elif gate_lv > lvl:
@@ -605,19 +588,30 @@ func _open_crate(tier: String) -> void:
 	cs.side = -1.0
 	sea._boat.get_parent().add_child(cs)
 	_show_tab("crates")
+	_after_crate(cs, hud, r, self)
+
+
+## Waits out the crate on the sea, then posts what was found in it. Static, and
+## nothing here runs on the Locker unless it is still open: the Locker can be
+## shut (Esc, I) while the crate plays, and a coroutine on a freed Locker would
+## be dropped with the notices unsent.
+static func _after_crate(cs: CrateSurface, h: FishingHud, r: Dictionary, lk: Locker) -> void:
 	await cs.done
-	_opening = false
+	if is_instance_valid(lk):
+		lk._opening = false
+	if not is_instance_valid(h):
+		return
 	# A notice for the Crew Hall in the crate (port rules, core/crew.gd).
 	for nt: Variant in Js.obj(r.get("notices")):
-		hud.notify("FOUND IN THE CRATE", "A %s" % Js.obj(Crew.notice_defs().get(nt)).get("name", nt), "Post it at the Crew Hall for a fresh board of hopefuls.", Skipper.tex("crew/hall_1.png"))
+		h.notify("FOUND IN THE CRATE", "A %s" % Js.obj(Crew.notice_defs().get(nt)).get("name", nt), "Post it at the Crew Hall for a fresh board of hopefuls.", Skipper.tex("crew/hall_1.png"))
 	# A skin voucher (core/skins.gd): opened in the Crew Hall's Trunk.
 	for kv: Variant in Js.obj(r.get("vouchers")):
 		var vd: Dictionary = Skins.kind_def(str(kv))
 		Sound.chest(kv == "captain")
-		hud.notify("FOUND IN THE CRATE", "A %s!" % vd.get("name", kv), "Open it in the Crew Hall's Trunk for a crew skin you do not own yet.", Skipper.tex(str(vd.get("art", ""))))
-	hud.refresh()
-	if is_inside_tree() and tab == "crates":
-		_show_tab("crates")
+		h.notify("FOUND IN THE CRATE", "A %s!" % vd.get("name", kv), "Open it in the Crew Hall's Trunk for a crew skin you do not own yet.", Skipper.tex(str(vd.get("art", ""))))
+	h.refresh()
+	if is_instance_valid(lk) and lk.is_inside_tree() and lk.tab == "crates":
+		lk._show_tab("crates")
 
 
 # ── Log ────────────────────────────────────────────────────────────────────────
@@ -850,7 +844,7 @@ func _blurb(s: String, o: Array) -> String:
 	match s:
 		"rod":
 			var tier: float = float(o[0]) if not o.is_empty() else Js.num(session.profile().get("rod_tier"))
-			return str(Rules.rod(tier).get("description", ""))
+			return Kit.clean_copy(str(Rules.rod(tier).get("description", "")))
 		"bait":
 			var id: String = str(o[0]) if not o.is_empty() else hud._bait
 			var bonus: float = Js.num(Rules.bait(id).get("catchZoneBonus"))
@@ -860,7 +854,7 @@ func _blurb(s: String, o: Array) -> String:
 		if sid == null:
 			return "No special in the slot."
 		var e: Dictionary = Locker.special_def(str(sid), session.profile())
-		return "%s. %s" % [e.get("effect", ""), e.get("description", "")]
+		return "%s. %s" % [e.get("effect", ""), Kit.clean_copy(str(e.get("description", "")))]
 	if s == "boat":
 		return "A look, not a stat: her fittings are what make her faster. Boats come only from fishing crates."
 	return "A look, not a stat. It changes how you appear on the water and nothing about the catch."
@@ -1255,83 +1249,3 @@ class ZoneGauge:
 		var s2: String = "catch zone"
 		var w2: float = f2.get_string_size(s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 		draw_string(f2, c + Vector2(-w2 / 2.0, 48.0), s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Paper.INK_SOFT)
-
-
-## THE TAGS ON THE BOAT: one paper tag per slot, inked by a line to the part
-## it changes (the rod, the hook for bait, the captain for the look, the hat,
-## the hull, the pet). Press one to open that slot.
-class Callouts:
-	extends Control
-	var locker: Locker
-	var _tags: Dictionary = {}
-	const OUT: Dictionary = {
-		"rod": Vector2(-190, -150), "bait": Vector2(-200, 70), "skin": Vector2(-30, -250),
-		"hat": Vector2(170, -200), "boat": Vector2(10, 150), "pet": Vector2(230, -40),
-	}
-
-	func _ready() -> void:
-		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		for s: Array in Locker.ALL_SLOTS:
-			var b: Pane.PaneButton = Paper.button("")
-			b.custom_minimum_size = Vector2(0, 30)
-			b.pressed.connect(func() -> void: locker.pick_slot(s[0]))
-			add_child(b)
-			_tags[s[0]] = b
-
-	func _point(s: String) -> Vector2:
-		var boat: Boat = locker.sea._boat
-		if s == "bait":
-			return boat.get_parent().get_global_transform_with_canvas() * boat.hook_at()
-		var a: Vector2 = boat.skipper.anchor(s)
-		if a == Vector2.INF and s == "hat":
-			# Where a hat would sit: over the captain's head.
-			a = boat.skipper.anchor("skin") + Vector2(0, -34)
-		if a == Vector2.INF and s == "pet":
-			a = boat.skipper.anchor("boat") + Vector2(70, -18)
-		if a == Vector2.INF:
-			a = boat.skipper.anchor("boat")
-		if a == Vector2.INF:
-			return boat.get_global_transform_with_canvas().origin
-		return boat.skipper.get_global_transform_with_canvas() * a
-
-	func _process(_delta: float) -> void:
-		if not visible:
-			return
-		var centre: Vector2 = locker.sea._boat.get_global_transform_with_canvas().origin
-		for s: Array in Locker.ALL_SLOTS:
-			var b: Pane.PaneButton = _tags[s[0]]
-			# Only the slot you are on is tagged (Kong: the lines everywhere
-			# were too much).
-			b.visible = locker.slot == s[0]
-			if not b.visible:
-				continue
-			var label: String = "%s  ·  %s" % [s[1], locker._name_for(s[0])]
-			if b.text != label.to_upper():
-				b.text = label.to_upper()
-				b.size = b.get_combined_minimum_size()
-			var on: bool = locker.slot == s[0]
-			b.modulate = Color(1, 1, 1, 1.0 if on else 0.82)
-			var at: Vector2 = centre + OUT[s[0]] - b.size / 2.0
-			b.position = b.position.lerp(at, 0.25) if b.position != Vector2.ZERO else at
-		queue_redraw()
-
-	func _draw() -> void:
-		for s: Array in Locker.ALL_SLOTS:
-			if locker.slot != s[0]:
-				continue
-			var b: Pane.PaneButton = _tags[s[0]]
-			var p: Vector2 = _point(s[0])
-			var t: Vector2 = b.position + b.size / 2.0
-			# Leave the tag from its nearer side.
-			t.x = clampf(p.x, b.position.x + 6.0, b.position.x + b.size.x - 6.0)
-			t.y = b.position.y + (b.size.y if p.y > b.position.y + b.size.y else 0.0)
-			var on: bool = locker.slot == s[0]
-			var ink: Color = Color(Paper.RED if on else Color(0.95, 0.92, 0.84), 0.9 if on else 0.6)
-			var mid: Vector2 = (p + t) / 2.0 + (t - p).orthogonal().normalized() * 10.0
-			var pts: PackedVector2Array = PackedVector2Array()
-			for i: int in 13:
-				var k: float = i / 12.0
-				pts.append(p.lerp(mid, k).lerp(mid.lerp(t, k), k))
-			draw_polyline(pts, ink, 2.0 if on else 1.4, true)
-			draw_circle(p, 4.0 if on else 3.0, ink)

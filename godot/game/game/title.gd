@@ -396,6 +396,8 @@ func _charters(v: VBoxContainer) -> void:
 						var why: String = ch.release(str(keys[i]))
 						if why != "":
 							note = why
+						# Opened only to free the berth: let it go again.
+						ch.close()
 					_build())
 				m.add_child(rel)
 		for i: int in range(names.size(), Charter.BERTHS):
@@ -447,7 +449,7 @@ func _found_form(v: VBoxContainer) -> void:
 			_build())
 		modes.add_child(b)
 	Kit.text(col, "Hardcore: the crew shares a pool of lives, one per captain and one spare. A sunk ship spends one. At none, the Charter is gone for good. Chosen now and never changed." if _hardcore else "Normal: sail as long as you like. Hardcore can only be chosen at founding.", "note", Kit.PAPER_INK_SOFT, true)
-	var made: LineEdit = _creator(col, "Your Charter captain", "Found it", func(n: String) -> void:
+	_creator(col, "Your Charter captain", "Found it", func(n: String) -> void:
 		if cname.text.strip_edges() == "":
 			cname.placeholder_text = "Name the Charter first"
 			cname.grab_focus()
@@ -456,8 +458,6 @@ func _found_form(v: VBoxContainer) -> void:
 		_founding = false
 		_build())
 	cname.grab_focus.call_deferred()
-	if made != null:
-		pass
 
 
 func _join_form(v: VBoxContainer) -> void:

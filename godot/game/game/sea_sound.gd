@@ -33,6 +33,9 @@ var _creak_t: float = 0.0
 var _lp: AudioEffectLowPassFilter
 var _hull_bp: AudioEffectBandPassFilter
 var _wind_bp: AudioEffectBandPassFilter
+## The rendered sounds, kept for the whole run (about 1 MB): rendering them is
+## a per-sample loop in GDScript, a stall each time the sea opened when this
+## was cleared on leaving it.
 static var _made: Dictionary = {}
 
 
@@ -190,6 +193,8 @@ static func _surf() -> AudioStreamWAV:
 
 ## A gull: two falling cries, "kee-ow", with a rough throat.
 static func _gull_cry() -> AudioStreamWAV:
+	if _made.has("gull"):
+		return _made["gull"]
 	var n: int = int(RATE * 0.9)
 	var s: PackedFloat32Array = PackedFloat32Array()
 	s.resize(n)
@@ -202,11 +207,14 @@ static func _gull_cry() -> AudioStreamWAV:
 		var env: float = sin(clampf(call, 0.0, 1.0) * PI) * (1.0 if t < 0.45 else 0.75)
 		var v: float = sin(ph) * 0.6 + sin(ph * 2.0) * 0.25 + sin(ph * 3.0) * 0.12 + (randf() - 0.5) * 0.08
 		s[i] = v * env * 0.5
-	return _wav(s, false)
+	_made["gull"] = _wav(s, false)
+	return _made["gull"]
 
 
 ## A creak of timber: a low rasp sliding in pitch.
 static func _creak_wav() -> AudioStreamWAV:
+	if _made.has("creak"):
+		return _made["creak"]
 	var n: int = int(RATE * 0.7)
 	var s: PackedFloat32Array = PackedFloat32Array()
 	s.resize(n)
@@ -219,11 +227,14 @@ static func _creak_wav() -> AudioStreamWAV:
 		var grit: float = (randf() - 0.5) * 0.4 * (0.5 + 0.5 * sin(t * 160.0))
 		var env: float = minf(1.0, t / 0.06) * exp(-t * 3.2)
 		s[i] = (saw * 0.5 + grit) * env * 0.45
-	return _wav(s, false)
+	_made["creak"] = _wav(s, false)
+	return _made["creak"]
 
 
 ## Thunder: a crack, then a long low roll.
 static func _thunder_wav() -> AudioStreamWAV:
+	if _made.has("thunder"):
+		return _made["thunder"]
 	var n: int = int(RATE * 4.0)
 	var s: PackedFloat32Array = PackedFloat32Array()
 	s.resize(n)
@@ -237,7 +248,8 @@ static func _thunder_wav() -> AudioStreamWAV:
 		var roll: float = exp(-t * 0.9) * (0.7 + 0.3 * sin(t * 5.0 + sin(t * 1.3) * 3.0))
 		var crack: float = exp(-t * 18.0) * w * 0.6
 		s[i] = (lp2 * 5.0 * roll + crack) * 0.8
-	return _wav(s, false)
+	_made["thunder"] = _wav(s, false)
+	return _made["thunder"]
 
 
 # ── Each frame ─────────────────────────────────────────────────────────────────
@@ -281,6 +293,3 @@ func thunder(strength: float) -> void:
 		_thunder.pitch_scale = randf_range(0.85, 1.1)
 		_thunder.play())
 
-
-func _exit_tree() -> void:
-	_made.clear()

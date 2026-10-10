@@ -18,9 +18,6 @@ extends Control
 signal finished(read: bool)
 
 const GOLD: Color = Color(1.0, 0.82, 0.38)
-const TYPE_MS: float = 22.0
-const PUNCT_MS: float = 190.0
-const COMMA_MS: float = 80.0
 
 var node: Dictionary = {}
 ## Replays can be skipped; a first read cannot.
@@ -276,13 +273,7 @@ func _next() -> void:
 	var raw: String = str(l.get("text", ""))
 	var shown: String = _bb(raw)
 	_text.text = ("[i]%s[/i]" % shown) if speaker == null else shown
-	var plain: String = raw.replace("*", "")
-	_at.resize(plain.length())
-	var t: float = 0.0
-	for i: int in plain.length():
-		_at[i] = t
-		var ch: String = plain[i]
-		t += PUNCT_MS if ".!?".contains(ch) else (COMMA_MS if ",;:".contains(ch) else TYPE_MS)
+	_at = TypedLine.schedule(raw.replace("*", ""))
 	_t = 0.0
 	_text.visible_characters = 0
 	_typing = true

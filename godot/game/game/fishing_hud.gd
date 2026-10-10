@@ -24,8 +24,6 @@ extends Control
 ## no fishing to be had.
 
 signal fishing_changed(active: bool)
-## The captain asks to leave the sea (for the captains, or out of a Charter).
-signal leave
 ## The recall pill was pressed (the sea asks the rules and takes her home).
 signal recall_pressed
 ## The settings button at the top right (Kong, 2026-10-09): the Esc menu.
@@ -56,7 +54,6 @@ const TOAST_MAX: int = 3
 
 var session: Session
 var boat: Boat
-var leave_label: String = "Captains"
 var water: Dictionary = {}
 ## Past the arch's sign, on the expedition side (the Sea sets it with the
 ## change of boat): the level bar reads Navigation and the bottom row is the
@@ -64,7 +61,6 @@ var water: Dictionary = {}
 var expedition: bool = false
 var _story: StoryLine
 var _story_st: Dictionary = {}
-var _finn_arrow: FinnArrow
 var _bottom_fish: HBoxContainer
 var _orders_val: Label
 var _bottom_exp: HBoxContainer
@@ -183,16 +179,12 @@ func _ready() -> void:
 	_place(_xp, Vector2(0.5, 0.0), Vector2(-320, 12), Vector2(640, 40))
 	add_child(_xp)
 	_xp.pressed.connect(open_guide)
-	# The story line under it (The Long Cast), and the arrow to Finn.
+	# The story line under it (The Long Cast). Finn is on the compass ribbon
+	# (game/compass_ribbon.gd).
 	_story = StoryLine.new()
 	_place(_story, Vector2(0.5, 0.0), Vector2(-StoryLine.W / 2.0, 160), Vector2(StoryLine.W, 52))
 	add_child(_story)
 	_story.pressed.connect(func() -> void: open_journal("story"))
-	_finn_arrow = FinnArrow.new()
-	# Finn is on the compass ribbon now (game/compass_ribbon.gd).
-	_finn_arrow.visible = false
-	add_child(_finn_arrow)
-	move_child(_finn_arrow, 0)
 	var purse_row: HBoxContainer = HBoxContainer.new()
 	purse_row.add_theme_constant_override("separation", 10)
 	purse_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -303,8 +295,8 @@ func _ready() -> void:
 	var bottom: HBoxContainer = HBoxContainer.new()
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
 	bottom.add_theme_constant_override("separation", 8)
-	# ONE ROW (Kong, 2026-10-01): the bait on the line (a press puts on the
-	# next one; Q for the wheel), the Locker (gear, hold, crates, log: I), and
+	# ONE ROW (Kong, 2026-10-01): the bait on the line (a press opens the
+	# picker; Q for the wheel), the Locker (gear, hold, crates, log: I), and
 	# the hold (a press opens it in the Locker).
 	_place(bottom, Vector2(0.5, 1.0), Vector2(-460, -72), Vector2(920, 54))
 	add_child(bottom)
@@ -1096,13 +1088,6 @@ func set_story(st: Dictionary) -> void:
 	_story.apply(st)
 
 
-## Finn's place on the screen (null when there is none to point at) and his
-## mark: the arrow at the edge when he has something and is off the screen.
-func finn_arrow(at: Variant, mark: String) -> void:
-	_finn_arrow.target = null if expedition or _modal != null else at
-	_finn_arrow.mark = mark
-
-
 ## Charting the northern water: its XP pours into the Navigation bar from
 ## the water that lifted (a bay charted whole pours big).
 func nav_gain(xp: float, from: Vector2, strength: float = 0.4) -> void:
@@ -1167,7 +1152,6 @@ func open_log(view: String = "captain") -> CaptainsLog:
 	return g
 
 
-## The Fishing Guide, over the sea (pressing the level bar).
 ## THE JOURNAL (the story and the people you know): from the story line, or J.
 func open_journal(tab: String = "story") -> Journal:
 	if _modal != null:
@@ -1183,6 +1167,7 @@ func open_journal(tab: String = "story") -> Journal:
 	return j
 
 
+## The Fishing Guide, over the sea (pressing the level bar).
 func open_guide(view: String = "levels") -> LevelsSheet:
 	if _modal != null:
 		return null
@@ -1212,10 +1197,6 @@ func _open_sheet(s: Sheet) -> void:
 		_modal = null
 		refresh())
 	add_child(s)
-
-
-func _open_bait() -> void:
-	locker_wanted.emit("loadout", "bait")
 
 
 ## The Orders button: how many are ready to claim, else the board's count.
@@ -1333,25 +1314,6 @@ func _pop_bait() -> void:
 	Motion.ease_pop(_bait_icon.create_tween(), _bait_icon, "scale", Vector2.ONE, 0.22)
 
 
-## Put on the next bait held.
-func _cycle_bait() -> void:
-	if phase != "idle" and phase != "result":
-		toast("Bait goes on before the cast")
-		return
-	var held: Array = session.baits()
-	if held.size() < 2:
-		toast("No other bait aboard" if held.size() == 1 else "No bait aboard")
-		return
-	var i: int = 0
-	for n: int in held.size():
-		if held[n][0] == _bait:
-			i = n
-	var nxt: Array = held[(i + 1) % held.size()]
-	set_bait(nxt[0])
-	Rumble.tap(8)
-	_pop_bait()
-
-
 ## The bait on the line (the Locker's Bait slot).
 func set_bait(t: String) -> void:
 	_bait = t
@@ -1376,17 +1338,6 @@ func _paint_log_dot() -> void:
 	if _log_dot_c != null:
 		_log_dot_c.set_meta("on", _log_dot)
 		_log_dot_c.queue_redraw()
-
-
-## The Almanac on its own (no sea under it).
-func _open_almanac() -> void:
-	var a: Almanac = Almanac.new()
-	a.session = session
-	_modal = a
-	a.closed.connect(func() -> void:
-		_modal = null
-		refresh())
-	get_parent().add_child(a)
 
 
 # ── The Auto Caster and Auto Catcher ───────────────────────────────────────────
@@ -2278,13 +2229,6 @@ func _catch_note(r: Dictionary, perfect: bool) -> void:
 	tw.chain().tween_callback(note.queue_free)
 
 
-func _note_card(title: String, body: String) -> void:
-	var card: ResultCard = ResultCard.new()
-	_mount_card(card)
-	card.show_note(title, body)
-	_wire(card)
-
-
 ## HoldFlight: the fish, as a dark shape, thrown from where it came up to
 ## the hold; the count there changes only when it lands. False when there is
 ## no art to throw (the count then changes at once).
@@ -2398,15 +2342,20 @@ func _ceremony(r: Dictionary) -> void:
 ## and it is put on the screen when its moment comes.
 func _after_catch(from_catch: bool, shiny: bool = false, wait_bar: bool = false) -> void:
 	if session.level() > _level_seen or not from_catch:
-		var claim: Dictionary = await session.act("claimFishingLevelRewards")
-		# Navigation levels raise the ship's upgrades for free (port rules).
+		# In a Charter act() can come back as { error } (no peer, or the line
+		# timed out): that is told, never read as a claim or a golden.
+		var got: Variant = await session.act("claimFishingLevelRewards")
+		var claim: Dictionary = got if got is Dictionary else { "error": "The level rewards did not come through." }
+		# Fishing levels raise the ship's upgrades for free (port rules).
 		var floors: Variant = await session.act("levelFloors")
 		if floors is Array and not (floors as Array).is_empty():
 			for f: Array in floors:
 				toast("Fishing %d: %s upgraded for free" % [int(f[2]), { "hull_speed_tier": "Hull", "hull_handling_tier": "Rudder", "hull_accel_tier": "Rig" }.get(f[0], f[0])], "good")
 		session.persist()
 		_level_seen = session.level()
-		if float(claim["to"]) > float(claim["from"]):
+		if claim.has("error"):
+			toast(str(claim["error"]), "danger")
+		elif Js.num(claim.get("to")) > Js.num(claim.get("from")):
 			var lu: LevelUp = LevelUp.new()
 			lu.claim = claim
 			_modal = lu
@@ -2419,8 +2368,11 @@ func _after_catch(from_catch: bool, shiny: bool = false, wait_bar: bool = false)
 			_modal = null
 			refresh()
 	var held: Variant = await session.act("heldGolden")
+	if held is Dictionary and (held as Dictionary).has("error"):
+		toast(str((held as Dictionary)["error"]), "danger")
+		return
 	var first: bool = true
-	while held != null:
+	while held is Dictionary and not (held as Dictionary).has("error"):
 		var g: GoldenChoice = GoldenChoice.new()
 		g.session = session
 		g.golden = held

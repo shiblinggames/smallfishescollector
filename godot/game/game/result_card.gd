@@ -254,18 +254,6 @@ func show_fish(r: Dictionary, perfect: bool, shot: Dictionary) -> void:
 	_arrive(perfect)
 
 
-## A crate's loot, or a miss, told plainly.
-func show_note(title: String, body: String) -> void:
-	_accent = Paper.INK_SOFT
-	_wave = Kit.DIM
-	var v: VBoxContainer = _section([18, 16, 18, 8])
-	v.add_theme_constant_override("separation", 6)
-	_beats.append(_centred(v, title, "title", Kit.PAPER_INK))
-	_beats.append(_centred(v, body, "body", Kit.PAPER_INK_SOFT, true))
-	_buttons(false)
-	_arrive(false)
-
-
 ## The wormhole's answer, under the card (the card itself stays as it was).
 func set_note(text: String) -> void:
 	_note.text = text

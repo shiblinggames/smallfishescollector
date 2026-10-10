@@ -5,8 +5,8 @@ extends Node
 ## route with SeaRoute and then, every frame:
 ##   - draws it on the water ahead of her (CourseLine): soft dashes flowing
 ##     toward the destination, and a mark breathing on the water there;
-##   - points to it from the screen's edge when it is off screen, with how far
-##     and how long at her speed (the HUD's course chip says the same);
+##   - the compass ribbon marks it when it is off screen, with how long at her
+##     speed (game/compass_ribbon.gd; the HUD's course chip says the same);
 ##   - follows her: waypoints she has passed drop off; stray more than a
 ##     cable's length off it and it plans again ("Recalculating");
 ##   - on AUTOPILOT, sails it for her (a point a little way along the route,
@@ -22,7 +22,6 @@ var path: PackedVector2Array = PackedVector2Array()
 var dest: Vector2 = Vector2.ZERO
 var label: String = ""
 var autopilot: bool = false
-var line: CourseLine
 var _check_t: float = 0.0
 
 
@@ -153,46 +152,6 @@ func _ahead(at: Vector2, d: float) -> Vector2:
 		left -= seg
 		from = path[k]
 	return path[path.size() - 1]
-
-
-## THE POINTER at the screen's edge toward the destination when it is off
-## screen, with its name and time to go (drawn in the HUD).
-class CourseMark:
-	extends Control
-	var offset: Variant = null
-	var text: String = ""
-	var _t: float = 0.0
-
-	func _ready() -> void:
-		set_anchors_preset(Control.PRESET_FULL_RECT)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func _process(delta: float) -> void:
-		_t += delta
-		queue_redraw()
-
-	func _draw() -> void:
-		if offset == null:
-			return
-		var c: Vector2 = size / 2.0
-		var o: Vector2 = offset
-		var margin: Vector2 = c - Vector2(70, 90)
-		if absf(o.x) < margin.x and absf(o.y) < margin.y:
-			return
-		var k: float = minf(margin.x / maxf(absf(o.x), 0.001), margin.y / maxf(absf(o.y), 0.001))
-		var at: Vector2 = c + o * k
-		var d: Vector2 = o.normalized()
-		var col: Color = Color(1.0, 0.92, 0.72)
-		var pulse: float = 0.8 + 0.2 * sin(_t * 3.0)
-		var tip: Vector2 = at + d * 16.0
-		var pts: PackedVector2Array = PackedVector2Array([tip, at - d * 6.0 + d.orthogonal() * 11.0, at - d * 2.0, at - d * 6.0 - d.orthogonal() * 11.0])
-		draw_colored_polygon(pts, Color(col, 0.85 * pulse))
-		var font: Font = Kit.font("karla", 700)
-		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
-		var lp: Vector2 = at - d * 30.0 - Vector2(w / 2.0, -4.0)
-		lp.x = clampf(lp.x, 8.0, size.x - w - 8.0)
-		draw_string(font, lp + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0, 0, 0, 0.7))
-		draw_string(font, lp, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
 
 
 ## THE COURSE ON THE WATER: soft dashes of light from her bow flowing toward

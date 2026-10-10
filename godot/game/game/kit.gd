@@ -22,7 +22,6 @@ const FAINT: Color = Color("#6a6764")
 ## Doubloons (⟡) and good-news toasts ONLY. On paper, money is Paper.MONEY.
 const GOLD: Color = Color("#f0c040")
 const GOLD_HI: Color = Color("#f5cf6a")
-const GOLD_INK: Color = Color("#1a1508")
 const SAND: Color = Color("#ffce8a")
 const BRONZE: Color = Color("#c4a96a")
 const VIOLET: Color = Color("#a78bfa")
@@ -87,7 +86,6 @@ const SEP: String = "  ·  "
 const EYEBROW_ALPHA: float = 0.72
 ## Small-caps tracking (em): eyebrows, and buttons/chips/tags. Two values only.
 const TRACK_EYEBROW: float = 0.16
-const TRACK_SMALL: float = 0.08
 
 ## The base every panel stands on (opaque: panels sit over art).
 const BASE: Color = Color("#0a1016")
@@ -267,11 +265,6 @@ static func role_font(role: String) -> Font:
 ## A role's size in px.
 static func role_px(role: String) -> int:
 	return int(ROLES[role][2])
-
-
-## Whether a role is set in capitals (draw_string callers upper-case the text).
-static func role_caps(role: String) -> bool:
-	return bool(ROLES[role][4])
 
 
 ## The role nearest a hand-picked pixel size (for screens that size type by
@@ -694,6 +687,15 @@ static func section(parent: Node, title: String, note: String = "", _accent: Col
 		var n: Label = text(v, note, "note", DIM, true)
 		n.add_theme_font_override("font", italic())
 	return v
+
+
+## Rule text shown as written, with its em-dashes turned to commas. The
+## rod, hook and gear descriptions come from content/rules.json, which is
+## re-exported from the web for parity and cannot be hand-edited, so the
+## dashes are taken out where the text is shown.
+static func clean_copy(t: String) -> String:
+	t = t.strip_edges().trim_prefix("— ").trim_prefix("—")
+	return t.replace(" — ", ", ").replace(" —", ",").replace("— ", ", ").replace("—", ", ").strip_edges()
 
 
 static var _italic: FontVariation = null

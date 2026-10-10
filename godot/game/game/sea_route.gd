@@ -7,35 +7,92 @@ extends RefCounted
 ## pulled taut by line of sight so it reads as a course a captain would sail,
 ## not a staircase. A destination on land is moved to the water: a port's
 ## berth, an isle's landing, or the nearest open water.
+##
+## The water follows the same lines the hull is held by (North.hold,
+## CampaignWater.hold): the fishing grounds out to Chart.LAST_OUTER (widened by
+## SeaScale), the reef crossed only in the arch, the anchorage's wall passed
+## only in the Sea Gate's mouth, and the campaign's water out to
+## North.RAID_EDGE. Built 2026-10-01 before the reef existed, it once treated
+## all of that as open sea and drove courses into the rock.
 
 const CELL: float = 160.0
-const X0: float = -22800.0
-const Y0: float = -6600.0
-const X1: float = 22800.0
-const Y1: float = 22800.0
 ## How far from a shore a course keeps (on top of the hull's own clearance).
 const KEEP_OFF: float = 70.0
 
+## The grid's bounds, set by _bounds() when the grid is built (after the rules
+## have widened the chart, so they follow LAST_OUTER).
+static var _x0: float = -22800.0
+static var _y0: float = -6600.0
+static var _x1: float = 22800.0
+static var _y1: float = 22800.0
+
 static var _grid: AStarGrid2D
+## The Sea Gate's mouth: open water in the grid, shut while the gate is
+## (North.gate_open changes as a crew is seated, so it is laid per plan).
+static var _gate_cells: Array[Vector2i] = []
+## Cells made solid by what changes as the campaign goes (its shown isles, its
+## shut bays, the gate): undone and laid again before each plan.
+static var _live: Array[Vector2i] = []
+
+
+static func _bounds() -> void:
+	var half: float = maxf(Chart.LAST_OUTER, North.RAID_EDGE + absf(North.EXP_ORIGIN.x)) + CELL
+	_x0 = -half
+	_x1 = half
+	_y0 = North.EXP_ORIGIN.y - North.RAID_EDGE - CELL
+	_y1 = Chart.LAST_OUTER + CELL
 
 
 static func _cell(p: Vector2) -> Vector2i:
-	return Vector2i(int(floor((p.x - X0) / CELL)), int(floor((p.y - Y0) / CELL)))
+	return Vector2i(int(floor((p.x - _x0) / CELL)), int(floor((p.y - _y0) / CELL)))
 
 
 static func _centre(c: Vector2i) -> Vector2:
-	return Vector2(X0 + (c.x + 0.5) * CELL, Y0 + (c.y + 0.5) * CELL)
+	return Vector2(_x0 + (c.x + 0.5) * CELL, _y0 + (c.y + 0.5) * CELL)
 
 
-## Open sea: inside the chart's rim (the fishing water's outer edge, or the
-## anchorage north of the reef) and clear of every island.
-static func open_at(p: Vector2) -> bool:
-	var in_sea: bool = p.length() < 22500.0 or p.distance_to(Vector2(0, -3000)) < 3500.0
-	if not in_sea:
+## In the Sea Gate's mouth, across the anchorage's wall (the part of it a
+## hull may pass while the gate is open).
+static func _mouth(p: Vector2) -> bool:
+	var m: float = CELL * 0.5
+	return p.distance_to(North.SEA_GATE) < North.SEA_GATE_HALF + North.KEEP + m and absf(p.x - North.SEA_GATE.x) < North.SEA_GATE_HALF - North.KEEP * 0.5 - m
+
+
+## On the anchorage's wall (either side of it), north of the reef.
+static func _on_wall(p: Vector2) -> bool:
+	return p.y < Explore.NORTH_WALL and absf(p.distance_to(North.EXP_ORIGIN) - North.EXP_EDGE) < North.KEEP + CELL * 0.5
+
+
+## The sea before any island: inside the fishing water's rim south of the
+## reef, inside the campaign's edge north of it, and off the reef (but for the
+## arch) and the anchorage's wall (but for the Sea Gate's mouth). Kept half a
+## cell in from every line so a course along cell centres clears it.
+static func _sea(p: Vector2) -> bool:
+	var m: float = CELL * 0.5
+	var nw: float = Explore.NORTH_WALL
+	if absf(p.y - nw) < North.KEEP * 0.5 + m and absf(p.x - North.GATE_X) > North.GATE_HALF - 60.0 - m:
 		return false
-	for isl: Dictionary in Chart.ports() + (Rules.data()["isles"] as Array):
+	if p.y >= nw:
+		return p.length() < Chart.LAST_OUTER - 100.0
+	if _on_wall(p) and not _mouth(p):
+		return false
+	return p.distance_to(North.EXP_ORIGIN) < North.RAID_EDGE - m
+
+
+## Open sea: on the water (_sea), through the Sea Gate only while it is open,
+## and clear of every island and shut bay.
+static func open_at(p: Vector2) -> bool:
+	if not _sea(p):
+		return false
+	if not North.gate_open and _on_wall(p):
+		return false
+	for isl: Dictionary in Chart.ports() + (Rules.data()["isles"] as Array) + CampaignWater.solid:
 		var c: Vector2 = Vector2(float(isl["x"]), float(isl["y"]))
 		if p.distance_to(c) < float(isl["r"]) * Chart.SHORE + Chart.HULL + KEEP_OFF:
+			return false
+	for b: Dictionary in CampaignWater.shut:
+		var bc: Vector2 = Vector2(float(b["centre"]["x"]), float(b["centre"]["y"]))
+		if p.distance_to(bc) < float(b["r"]) + CampaignWater.SKIN + KEEP_OFF:
 			return false
 	return true
 
@@ -43,19 +100,27 @@ static func open_at(p: Vector2) -> bool:
 static func grid() -> AStarGrid2D:
 	if _grid != null:
 		return _grid
+	# The rules first: reading them applies SeaScale, which widens LAST_OUTER.
+	Rules.data()
+	_bounds()
 	_grid = AStarGrid2D.new()
-	_grid.region = Rect2i(0, 0, int(ceil((X1 - X0) / CELL)), int(ceil((Y1 - Y0) / CELL)))
+	_grid.region = Rect2i(0, 0, int(ceil((_x1 - _x0) / CELL)), int(ceil((_y1 - _y0) / CELL)))
 	_grid.cell_size = Vector2(CELL, CELL)
 	_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	_grid.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
 	_grid.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
 	_grid.update()
-	# The rim: everything outside the sea.
+	_gate_cells.clear()
+	_live.clear()
+	# The rim, the reef and the anchorage's wall: everything that is not sea.
 	for y: int in _grid.region.size.y:
 		for x: int in _grid.region.size.x:
-			var at: Vector2 = _centre(Vector2i(x, y))
-			if not (at.length() < 22500.0 or at.distance_to(Vector2(0, -3000)) < 3500.0):
-				_grid.set_point_solid(Vector2i(x, y), true)
+			var cell: Vector2i = Vector2i(x, y)
+			var at: Vector2 = _centre(cell)
+			if not _sea(at):
+				_grid.set_point_solid(cell, true)
+			elif _on_wall(at):
+				_gate_cells.append(cell)
 	# Each island stamps out its own shore; each kelp bed weighs its cells.
 	for isl: Dictionary in Chart.ports() + (Rules.data()["isles"] as Array):
 		_stamp(Vector2(float(isl["x"]), float(isl["y"])), float(isl["r"]) * Chart.SHORE + Chart.HULL + KEEP_OFF, -1.0)
@@ -64,8 +129,27 @@ static func grid() -> AStarGrid2D:
 	return _grid
 
 
+## What changes as the campaign goes, laid fresh on the grid: the Sea Gate
+## shut while no crew is seated, the campaign's shown isles and its shut bays.
+static func _lay_live() -> void:
+	var g: AStarGrid2D = grid()
+	for c: Vector2i in _live:
+		g.set_point_solid(c, false)
+	_live.clear()
+	if not North.gate_open:
+		for c: Vector2i in _gate_cells:
+			if not g.is_point_solid(c):
+				g.set_point_solid(c, true)
+				_live.append(c)
+	for isl: Dictionary in CampaignWater.solid:
+		_stamp(Vector2(float(isl["x"]), float(isl["y"])), float(isl["r"]) * Chart.SHORE + Chart.HULL + KEEP_OFF, -1.0, true)
+	for b: Dictionary in CampaignWater.shut:
+		_stamp(Vector2(float(b["centre"]["x"]), float(b["centre"]["y"])), float(b["r"]) + CampaignWater.SKIN + KEEP_OFF, -1.0, true)
+
+
 ## Every cell whose centre is within `r` of `c`: solid (weight < 0) or weighted.
-static func _stamp(c: Vector2, r: float, weight: float) -> void:
+## A `live` stamp records the cells it shut so _lay_live can open them again.
+static func _stamp(c: Vector2, r: float, weight: float, live: bool = false) -> void:
 	var lo: Vector2i = _cell(c - Vector2(r, r))
 	var hi: Vector2i = _cell(c + Vector2(r, r))
 	for y: int in range(lo.y, hi.y + 1):
@@ -74,7 +158,12 @@ static func _stamp(c: Vector2, r: float, weight: float) -> void:
 			if not _grid.region.has_point(cell) or _centre(cell).distance_to(c) > r:
 				continue
 			if weight < 0.0:
-				_grid.set_point_solid(cell, true)
+				if live:
+					if not _grid.is_point_solid(cell):
+						_grid.set_point_solid(cell, true)
+						_live.append(cell)
+				else:
+					_grid.set_point_solid(cell, true)
 			elif not _grid.is_point_solid(cell):
 				_grid.set_point_weight_scale(cell, weight)
 
@@ -112,6 +201,7 @@ static func _clear_line(a: Vector2, b: Vector2) -> bool:
 ## no way through.
 static func plan(from: Vector2, to: Vector2) -> PackedVector2Array:
 	var g: AStarGrid2D = grid()
+	_lay_live()
 	var a: Vector2i = _cell(from)
 	var b: Vector2i = _cell(landfall(to))
 	if not g.region.has_point(a) or not g.region.has_point(b):

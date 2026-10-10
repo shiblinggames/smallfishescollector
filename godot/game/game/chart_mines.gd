@@ -39,7 +39,7 @@ func _ready() -> void:
 	_canvas.custom_minimum_size = Vector2(CELL * _cols, CELL * _rows)
 	_canvas.mouse_filter = Control.MOUSE_FILTER_STOP
 	_canvas.draw.connect(_draw_board)
-	_canvas.gui_input.connect(_input)
+	_canvas.gui_input.connect(_board_input)
 	wrap.add_child(_canvas)
 	var side: VBoxContainer = room.sheet(self, 18)
 	side.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -72,7 +72,7 @@ func _words() -> void:
 		_info.text = "%d of %d safe tiles sounded  ·  %d mines  ·  %d flagged  ·  %d strike%s" % [_adj.size(), safe, int(_st["mineCount"]), _flags.size(), int(_st["busts"]), "" if int(_st["busts"]) == 1 else "s"]
 
 
-func _input(e: InputEvent) -> void:
+func _board_input(e: InputEvent) -> void:
 	if _busy or _st["status"] == "cleared":
 		return
 	if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:

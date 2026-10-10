@@ -13,7 +13,7 @@ const KINDS: Array = [
 	["look", "Look", Kit.SEA_INK],
 ]
 const LIFE: float = 12.0
-const GROUND: float = 0.58
+const GROUND: float = Chart.GROUND
 ## Where each of the four sits on the wheel (up, right, down, left).
 const DIRS: Array = [Vector2(0, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0)]
 ## The wheel opens and closes over this long.

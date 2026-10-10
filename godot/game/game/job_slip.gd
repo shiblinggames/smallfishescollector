@@ -85,13 +85,9 @@ static func chapter_of(q: Dictionary) -> Dictionary:
 	return {}
 
 
+## Thousands with commas (the one formatter, Js.thousands).
 static func _n(v: float) -> String:
-	var s: String = str(int(v))
-	var out: String = ""
-	while s.length() > 3:
-		out = "," + s.substr(s.length() - 3) + out
-		s = s.substr(0, s.length() - 3)
-	return s + out
+	return Js.thousands(v)
 
 
 func set_have(v: float) -> void:

@@ -61,7 +61,8 @@ var cue: Dictionary = { "current": "", "full": false, "kelp": false, "weather": 
 signal cue_changed(cue: Dictionary)
 ## She caught a lane or her sails filled: a splash, a buzz.
 signal surged
-## At the Sea Gate, which holds her back (the campaign is not built yet).
+## At the Sea Gate, which holds her back until a raid party is seated at the
+## Gunwharf.
 signal held_at_gate
 ## Held on a shut bay's rim; the line says which, and what opens it.
 signal held_at_bay(line: String)

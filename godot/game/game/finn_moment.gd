@@ -15,7 +15,7 @@ extends Node2D
 ## drawn flat (so it is foreshortened), what stands up out of it is drawn in
 ## `_up`, which undoes the squash. Nothing here touches a rule.
 
-const GROUND: float = 0.58
+const GROUND: float = Chart.GROUND
 
 var chapter: int = 1
 var field: SeaField = null

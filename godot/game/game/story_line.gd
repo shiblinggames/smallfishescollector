@@ -28,6 +28,9 @@ var _id: String = ""
 var _have: float = -1.0
 var _t: float = 0.0
 var _bump: float = 0.0
+## Until when (in _t) a tween is moving the bar or the seal: the line only
+## redraws while something moves, not every frame of a fishing session.
+var _anim_until: float = 0.0
 
 
 func _ready() -> void:
@@ -61,6 +64,7 @@ func _gui_input(event: InputEvent) -> void:
 
 ## From finnState (or {} for nothing to show). Animates what moved.
 func apply(st: Dictionary) -> void:
+	queue_redraw()
 	if st.is_empty():
 		visible = false
 		return
@@ -100,6 +104,7 @@ func apply(st: Dictionary) -> void:
 			var to: float = clampf(have / maxf(1.0, target), 0.0, 1.0)
 			if grew:
 				_tick(have, target)
+				_anim_until = _t + 0.5
 				create_tween().tween_method(func(f: float) -> void: _fill = f, _fill, to, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			else:
 				_fill = to
@@ -171,6 +176,7 @@ func _mote() -> void:
 func _complete() -> void:
 	_seal_k = 0.0
 	_bump = 1.4
+	_anim_until = _t + 0.3
 	var tw: Tween = create_tween()
 	tw.tween_method(func(k: float) -> void: _seal_k = k, 0.0, 1.0, 0.22).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
 	tw.tween_callback(func() -> void:
@@ -180,6 +186,9 @@ func _complete() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	# Still: nothing pulses, bumps or tweens, so the last frame stands.
+	if _bump <= 0.0 and not _ready_state and _t >= _anim_until:
+		return
 	_bump = maxf(0.0, _bump - delta * 3.0)
 	scale = Vector2.ONE * (1.0 + 0.06 * _bump)
 	pivot_offset = size / 2.0

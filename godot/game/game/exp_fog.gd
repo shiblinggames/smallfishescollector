@@ -19,11 +19,14 @@ var fresh: Array = []
 ## Patches lifting for the first time this frame (the charting moment).
 signal lifted(cells: Array)
 var _alpha: PackedFloat32Array = PackedFloat32Array()
+## The cover texture's bytes (one per cell), written cell by cell as the fog
+## lifts and handed to the image whole, so a frame of lifting is one upload,
+## not a set_pixel per cell.
+var _cover: PackedByteArray = PackedByteArray()
 var _img: Image
 var _tex: ImageTexture
 var _quad: ColorRect
 var _mat: ShaderMaterial
-var _fading: bool = true
 
 
 func _ready() -> void:
@@ -31,11 +34,12 @@ func _ready() -> void:
 	var w: int = Explore.xfog_w()
 	var h: int = Explore.xfog_h()
 	_alpha.resize(w * h)
+	_cover.resize(w * h)
 	for i: int in w * h:
 		_alpha[i] = 0.0 if Explore.xfog_open(bits, i) else 1.0
-	_img = Image.create(w, h, false, Image.FORMAT_R8)
+		_cover[i] = _byte(_alpha[i])
+	_img = Image.create_from_data(w, h, false, Image.FORMAT_R8, _cover)
 	_tex = ImageTexture.create_from_image(_img)
-	_upload()
 	var box: Rect2 = Explore.xfog_box()
 	_quad = ColorRect.new()
 	_quad.position = box.position
@@ -90,13 +94,16 @@ void fragment() {
 	return s
 
 
+static func _byte(a: float) -> int:
+	return clampi(int(round(a * 255.0)), 0, 255)
+
+
 func _upload() -> void:
-	for i: int in _alpha.size():
-		_img.set_pixel(i % _img.get_width(), i / _img.get_width(), Color(_alpha[i], 0, 0))
+	_img.set_data(_img.get_width(), _img.get_height(), false, Image.FORMAT_R8, _cover)
 	_tex.update(_img)
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if sea == null:
 		return
 	_mat.set_shader_parameter("u_time", Time.get_ticks_msec() / 1000.0)
@@ -110,30 +117,21 @@ func _process(delta: float) -> void:
 			var want: float = Explore.xfog_cover(i, at)
 			if want < _alpha[i]:
 				_alpha[i] = want
-				changed = true
+				var b: int = _byte(want)
+				if b != _cover[i]:
+					_cover[i] = b
+					changed = true
 			if want <= 0.0 and not Explore.xfog_has(bits, i):
 				Explore.xfog_set(bits, i)
 				fresh.append(i)
 				now_lifted.append(i)
 	if not now_lifted.is_empty():
 		lifted.emit(now_lifted)
-	if _fading:
-		# Only ever down: lifting is the only way anything here may go.
-		var k: float = 1.0 - exp(-2.6 * delta)
-		var live: bool = false
-		for i: int in _alpha.size():
-			var target: float = 0.0 if Explore.xfog_open(bits, i) else 1.0
-			if _alpha[i] <= target:
-				continue
-			_alpha[i] += (target - _alpha[i]) * k
-			if _alpha[i] - target < 0.01:
-				_alpha[i] = target
-			else:
-				live = true
-			changed = true
-		_fading = live
+	# Only ever down: lifting is the only way anything here may go. The cover
+	# starts at each cell's target (read from the bits in _ready, which Sea sets
+	# before adding the fog) and only the loop above lowers it, so there is no
+	# fade left for a whole-grid pass to find.
 	if changed:
-		_fading = true
 		_upload()
 
 

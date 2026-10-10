@@ -89,7 +89,7 @@ func step(delta: float, cam: Vector2, zoom: float, screen: Vector2, dark: float,
 			var w: float = randf_range(380.0, 760.0)
 			var par: float = randf_range(1.14, 1.42)
 			var hw: float = screen.x / 2.0 / zoom / par
-			var hh: float = screen.y / 2.0 / zoom / 0.58 / par
+			var hh: float = screen.y / 2.0 / zoom / Chart.GROUND / par
 			c["on"] = true
 			c["frame"] = FRAMES[randi() % FRAMES.size()]
 			c["w"] = w
@@ -116,7 +116,7 @@ func step(delta: float, cam: Vector2, zoom: float, screen: Vector2, dark: float,
 		var w: float = float(c["w"])
 		var par: float = float(c["par"])
 		var sx: float = screen.x / 2.0 + zoom * (float(c["x"]) - cam.x) * par
-		var sy: float = screen.y / 2.0 + zoom * 0.58 * (float(c["y"]) - cam.y) * par
+		var sy: float = screen.y / 2.0 + zoom * Chart.GROUND * (float(c["y"]) - cam.y) * par
 		var draw_w: float = w * zoom
 		var draw_h: float = draw_w * fr.size.y / fr.size.x
 		if sx > screen.x + draw_w * 1.2 or sy < -draw_h * 2.0 or sy > screen.y + draw_h * 2.0:

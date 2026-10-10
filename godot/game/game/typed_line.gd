@@ -16,14 +16,23 @@ var _at: PackedFloat32Array = PackedFloat32Array()
 var _t: float = 0.0
 
 
+## When each character of a plain line shows, in ms from the line's start: the
+## one cadence every typed line shares (StoryScene and the Ancient Deep's Finn
+## drive their own labels from it).
+static func schedule(plain: String) -> PackedFloat32Array:
+	var at: PackedFloat32Array = PackedFloat32Array()
+	at.resize(plain.length())
+	var t: float = 0.0
+	for i: int in plain.length():
+		at[i] = t
+		var ch: String = plain[i]
+		t += PUNCT_MS if ".!?".contains(ch) else (COMMA_MS if ",;:".contains(ch) else TYPE_MS)
+	return at
+
+
 func say(line: String) -> void:
 	text = line
-	_at.resize(line.length())
-	var t: float = 0.0
-	for i: int in line.length():
-		_at[i] = t
-		var ch: String = line[i]
-		t += PUNCT_MS if ".!?".contains(ch) else (COMMA_MS if ",;:".contains(ch) else TYPE_MS)
+	_at = schedule(line)
 	_t = 0.0
 	visible_characters = 0
 	typing = line.length() > 0

@@ -20,6 +20,8 @@ var _hot: float = 0.0
 var _hovered: bool = false
 var _since: float = 9.0
 var _t: float = 0.0
+## The key's box, made once (the button redraws every frame).
+static var _key_box: StyleBoxFlat
 
 
 func _init(_diameter: float = 0.0) -> void:
@@ -106,10 +108,11 @@ func _draw() -> void:
 		var kx: float = c.x + tw / 2.0 + 14.0
 		var ky: float = c.y + 4.0
 		var box: Rect2 = Rect2(kx - 6.0, ky - 11.0, kw + 12.0, 16.0)
-		var sb: StyleBoxFlat = StyleBoxFlat.new()
-		sb.bg_color = Color(0, 0, 0, 0.22)
-		sb.border_color = Color(1, 1, 1, 0.28)
-		sb.set_border_width_all(1)
-		sb.set_corner_radius_all(4)
-		draw_style_box(sb, box)
+		if _key_box == null:
+			_key_box = StyleBoxFlat.new()
+			_key_box.bg_color = Color(0, 0, 0, 0.22)
+			_key_box.border_color = Color(1, 1, 1, 0.28)
+			_key_box.set_border_width_all(1)
+			_key_box.set_corner_radius_all(4)
+		draw_style_box(_key_box, box)
 		draw_string(kf, Vector2(kx, ky + 1.0), KEY_HINT, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.6))

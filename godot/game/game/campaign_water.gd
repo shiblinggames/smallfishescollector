@@ -586,8 +586,18 @@ class Ship:
 		_t += delta
 		_face.position.y = (-_w * 0.74 + sin(_t * TAU / 6.8) * 6.0) / Chart.GROUND
 		_glyph.modulate = lift
-		queue_redraw()
+		# The dock rings pulse, so they are drawn again each frame, but only
+		# while she is near enough to see them; a ship that goes locked or to a
+		# fight is drawn once more (empty) wherever she is.
+		var shows: bool = _st != "locked" and not fighting
+		if (shows and boat_at.distance_to(position) < DRAW_NEAR) or shows != _shown:
+			queue_redraw()
+		_shown = shows
 
+	## How near the hull must be for the dock rings to be redrawn each frame
+	## (well past a screen at the widest zoom).
+	const DRAW_NEAR: float = 4500.0
+	var _shown: bool = false
 	## The dock: the patch of water you fight from, gold when you are in it.
 	var fighting: bool = false
 	## The tiers of this raid beaten (gold seals under the hull).

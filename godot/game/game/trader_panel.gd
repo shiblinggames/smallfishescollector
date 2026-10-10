@@ -128,6 +128,9 @@ func _ready() -> void:
 	_foot.add_theme_constant_override("separation", 10)
 	_col.add_child(_foot)
 	_draw_foot()
+	# The card is readied inside add_child (this is the panel's own _ready),
+	# so its entrance starts here, not on its ready signal.
+	Kit.modal_in(_card)
 
 	if not _folk.is_empty():
 		var rows: Variant = await session.act("folkState", [])
@@ -139,7 +142,6 @@ func _ready() -> void:
 			(_card.find_child("Role", true, false) as Label).text = _role()
 			_draw_rod()
 			_draw_foot()
-	_card.ready.connect(func() -> void: Kit.modal_in(_card))
 
 
 func _role() -> String:

@@ -189,10 +189,11 @@ func _draw() -> void:
 	var total: float = w_name + 8.0 + w_num + 12.0 + bar_w + 14.0 + w_togo + (14.0 + w_rw if rw != "" else 0.0) + (16.0 + w_flame if w_flame > 0.0 else 0.0)
 	var x: float = (size.x - total) / 2.0
 	# A soft dark pool behind the words, so they read over any water.
+	var sb: StyleBoxFlat = _box()
+	sb.anti_aliasing = true
+	sb.bg_color = Color(0.01, 0.03, 0.05, 0.045)
 	for g: int in 8:
 		var grow: float = 4.0 + g * 6.0
-		var sb: StyleBoxFlat = StyleBoxFlat.new()
-		sb.bg_color = Color(0.01, 0.03, 0.05, 0.045)
 		sb.set_corner_radius_all(int(size.y / 2.0 + grow))
 		draw_style_box(sb, Rect2(Vector2(x - grow, cy - 14.0 - grow * 0.5), Vector2(total + grow * 2.0, 28.0 + grow)))
 	_ink(small, Vector2(x, cy + 5), name, 12, cream, shade)
@@ -293,8 +294,20 @@ func _ink(f: Font, at: Vector2, t: String, px: int, col: Color, _shade: Color, m
 	Kit.sea_string(self, f, at, t, px, col, HORIZONTAL_ALIGNMENT_LEFT, max_w)
 
 
+## One box for every pool and pill, made once: the bar redraws every frame
+## (the bead breathes), and draw_style_box takes the box's values as it is
+## drawn, so it is only restyled between draws, not built anew.
+static var _sb: StyleBoxFlat
+
+
+static func _box() -> StyleBoxFlat:
+	if _sb == null:
+		_sb = StyleBoxFlat.new()
+	return _sb
+
+
 func _pill(r: Rect2, c: Color) -> void:
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
+	var sb: StyleBoxFlat = _box()
 	sb.bg_color = c
 	sb.set_corner_radius_all(int(r.size.y / 2.0) + 1)
 	sb.anti_aliasing = true

@@ -32,6 +32,7 @@ func leave() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	var was: float = _fade
 	_fade = move_toward(_fade, 0.0 if _leaving else 1.0, delta / 1.2)
 	if _leaving and _fade <= 0.0:
 		queue_free()
@@ -45,7 +46,10 @@ func _process(delta: float) -> void:
 	var c: Color = Color(Hotspots.DEFS[spot["kind"]]["color"])
 	_pool.scale = Vector2.ONE * (r * 2.0 * (0.8 + float(g[2]) * 0.4) / 256.0)
 	_pool.modulate = Color(c, minf(1.0, float(g[0]) * 2.2) * (0.75 + 0.25 * breath) * _fade)
-	queue_redraw()
+	# The rim depends only on the fade (the breathing is the pool's), so it
+	# is redrawn only while that moves.
+	if _fade != was:
+		queue_redraw()
 
 
 func _draw() -> void:

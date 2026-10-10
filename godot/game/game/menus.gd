@@ -63,6 +63,10 @@ static func purse_sheet(session: Session, hand: Callable = Callable(), aboard: A
 			db_.pressed.connect(func() -> void:
 				db_.disabled = true
 				var r: Variant = await session.act("crewDerby", ["start", kind])
+				# A crewmate's start is a round trip: the sheet may have been
+				# shut meanwhile.
+				if not is_instance_valid(s) or Motion.closing(s) or not is_instance_valid(db_):
+					return
 				if r is Dictionary and (r as Dictionary).has("error"):
 					db_.text = str(r["error"])
 				else:

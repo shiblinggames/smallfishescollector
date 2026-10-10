@@ -129,7 +129,8 @@ func _open() -> void:
 			_choice("Hand it over", "The job is done", true, _turn_in))
 		return
 	var r: Variant = await session.act("speakToFinn", [Js.num(st.get("encounters"))])
-	if not (r is Dictionary):
+	## A Charter timeout answers { error }, which has no lines to say.
+	if not (r is Dictionary) or (r as Dictionary).has("error"):
 		_say(["..."], _farewell)
 		return
 	var before_id: Variant = (q as Dictionary).get("id") if q is Dictionary else null
@@ -280,6 +281,8 @@ func _turn_in() -> void:
 		_busy = false
 		_err.text = str((r as Dictionary).get("error", "")) if r is Dictionary else ""
 		_err.visible = true
+		## The error says try again, so the hand-over stays on offer.
+		_choice("Hand it over", "The job is done", true, _turn_in)
 		return
 	paid.emit(float((r as Dictionary)["xp"]), _slip.get_global_rect().get_center())
 	await get_tree().create_timer(0.5).timeout

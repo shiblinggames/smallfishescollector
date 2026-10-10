@@ -3,7 +3,7 @@ extends Control
 ## THE COMPLETIONIST'S CLAIM (Godot port of the claim reveal in
 ## TackleShopClient.tsx, docking): full screen, a prism fan of rays turning
 ## slowly behind the rod (one turn in 30s), three rings spreading out, the
-## rod, its name in the prism's colours, the line, and its gifts arriving one
+## rod, its name in the prism's gold, the line, and its gifts arriving one
 ## by one. A press anywhere, or any key, once they are in, continues.
 
 const PRISM: Array[Color] = [Color("#f26d6d"), Color("#f2c14e"), Color("#57d06a"), Color("#5aa9f0")]
@@ -33,7 +33,6 @@ func _ready() -> void:
 	Room.picture(v, "rod_completionist_thumb.png", Vector2(0, 230))
 	var n: Label = Room.text(v, rod_name, 30, PRISM[1], true)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	n.set_meta("prism", true)
 	var line: Label = Room.text(v, "You have seen every fish the sea holds. Every gift it gave you now folds into one rod, yours to forge as you please.", 15, Color("#d8d2c4"), false, true)
 	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var flow: HFlowContainer = HFlowContainer.new()

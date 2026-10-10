@@ -41,8 +41,13 @@ func _ready() -> void:
 	_canvas.custom_minimum_size = Vector2(CELL * _cols, CELL * _rows)
 	_canvas.mouse_filter = Control.MOUSE_FILTER_STOP
 	_canvas.draw.connect(_draw_board)
-	_canvas.gui_input.connect(_input)
+	_canvas.gui_input.connect(_board_input)
 	wrap.add_child(_canvas)
+	## Leaving the room inside the save debounce would drop the last rope.
+	tree_exiting.connect(func() -> void:
+		if _save_t > 0.0 and not _done:
+			_save_t = -1.0
+			_save())
 	var side: VBoxContainer = room.sheet(self, 18)
 	side.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	Paper.text(side, "LAY THE RIGGING", "eyebrow", Paper.RED)
@@ -111,7 +116,7 @@ func _cell(p: Vector2) -> int:
 	return r * _cols + c
 
 
-func _input(e: InputEvent) -> void:
+func _board_input(e: InputEvent) -> void:
 	if _done:
 		return
 	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
@@ -189,6 +194,11 @@ func _changed() -> void:
 		_submit()
 
 
+func _save() -> void:
+	room.session.act("saveRiggingPaths", [_wire()])
+	room.session.persist()
+
+
 func _wire() -> Dictionary:
 	var out: Dictionary = {}
 	for col: int in _paths:
@@ -216,8 +226,7 @@ func _process(delta: float) -> void:
 	if _save_t > 0.0:
 		_save_t -= delta
 		if _save_t <= 0.0 and not _done:
-			room.session.act("saveRiggingPaths", [_wire()])
-			room.session.persist()
+			_save()
 	_canvas.queue_redraw()
 
 

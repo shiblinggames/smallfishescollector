@@ -8,7 +8,6 @@ extends VBoxContainer
 ## come up (H, S, D, P), with 30 seconds before a stand is taken for you.
 ## Everyone sees every card dealt, the hole card turn over and the dealer draw.
 
-const BETS: Array = [10.0, 25.0, 50.0, 100.0, 250.0, 500.0]
 
 var session: Session
 var den: DenRoom
@@ -27,11 +26,14 @@ var _deadline: float = -1.0
 var _queue: Array = []
 var _draining: bool = false
 var _paid_round: int = -1
+## A move or ready is on its way to the founder: a second press would hit twice
+## (or land on the next split hand after a 21 auto-stands).
+var _sending: bool = false
 
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 12)
-	var table: Pane = Kit.pane(self, { "radius": 16, "fill": [Kit.WOOD_HI, Kit.WOOD_LO], "border": [2, Color(0.25, 0.15, 0.08, 0.9)], "shadow": [Color(0, 0, 0, 0.5), 22, Vector2(0, 8)], "pad": [22, 16, 22, 18], "keep": true, "grain": true })
+	var table: Pane = DenRoom.table_pane(self, [22, 16, 22, 18])
 	table.custom_minimum_size = Vector2(0, 470)
 	var v: VBoxContainer = VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
@@ -112,7 +114,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _ready_up() -> void:
+	if _sending:
+		return
+	_sending = true
 	var r: Dictionary = await session.act("denTable", ["blackjack", "ready", _bet])
+	_sending = false
 	if r.has("error"):
 		den.toast(str(r["error"]), DenRoom.RED)
 		return
@@ -122,7 +128,11 @@ func _ready_up() -> void:
 
 
 func _move(m: String) -> void:
+	if _sending:
+		return
+	_sending = true
 	var r: Dictionary = await session.act("denTable", ["blackjack", m])
+	_sending = false
 	if r.has("error"):
 		den.toast(str(r["error"]), DenRoom.RED)
 	else:
@@ -297,12 +307,9 @@ func _paint_controls(st: Dictionary) -> void:
 		if seat["ready"]:
 			Kit.text(_ctl, "Ready. Waiting for the others.", "label", Kit.INK)
 			return
-		for b: float in BETS:
-			var btn: Button = Paper.button("%d" % int(b), b == _bet)
-			btn.pressed.connect(func() -> void:
-				_bet = b
-				_paint_controls(_state))
-			_ctl.add_child(btn)
+		DenRoom.stake_row(_ctl, _bet, func(b: float) -> void:
+			_bet = b
+			_paint_controls(_state))
 		var go: Button = Kit.button("Ready   ·   Space", "primary")
 		go.custom_minimum_size = Vector2(200, 50)
 		go.pressed.connect(_ready_up)

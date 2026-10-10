@@ -14,6 +14,9 @@ var gather: bool = false
 var lift: Color = Color.WHITE
 var _t: float = 0.0
 var _g: float = 0.0
+## Whether the last drawing was the live well: dead water is still, so it is
+## drawn once (and again only when the well wakes or dies), not every frame.
+var _drawn_live: bool = false
 var _board: Node2D
 var _name: Label
 var _line: Label
@@ -56,7 +59,9 @@ func _process(delta: float) -> void:
 	_t += delta
 	_g = move_toward(_g, 1.0 if gather else 0.0, delta * 2.0)
 	_board.modulate = lift
-	queue_redraw()
+	if live or live != _drawn_live:
+		queue_redraw()
+		_drawn_live = live
 
 
 func _draw() -> void:

@@ -112,29 +112,37 @@ class BottleNode:
 			_collar.rotation = _spr.rotation
 
 
-## A DIG's tell: the water looks odd over a buried site (a slow, faint swirl
-## that brightens as you close in), whether or not you hold its bearing.
+## A DIG's tell: the water looks odd over a buried site (bubbles that come
+## faster as you close in), whether or not you hold its bearing. The bubbles
+## are drawn by the sea's reactive water (see Sea._finds); this only holds
+## the site's place and its bubble clock, and paints nothing.
 class DigHint:
 	extends Node2D
 	var site: Dictionary = {}
 	var strength: float = 0.0
 	var bubble_t: float = 0.0
-	var _t: float = 0.0
 
 	func _ready() -> void:
 		position = Vector2(float(site["x"]), float(site["y"]))
-		var add: CanvasItemMaterial = CanvasItemMaterial.new()
-		add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		material = add
 
-	func _process(delta: float) -> void:
-		_t += delta
-		queue_redraw()
 
-	## The tell itself is bubbles breaking the surface, drawn by the sea's
-	## reactive water (see Sea._finds): nothing is painted here any more.
-	func _draw() -> void:
-		pass
+## Esc / B on a bare panel (the find panel, the crew vote): runs on_back, the
+## same as the panel's own way out, before the pause menu can take the press.
+class Back:
+	extends Node
+	var on_back: Callable
+
+	func _unhandled_input(event: InputEvent) -> void:
+		if event.is_action_pressed("fish_back"):
+			get_viewport().set_input_as_handled()
+			on_back.call()
+
+
+## Hangs a Back on `panel` that runs `on_back`.
+static func back_closes(panel: Node, on_back: Callable) -> void:
+	var b: Back = Back.new()
+	b.on_back = on_back
+	panel.add_child(b)
 
 
 ## A REFLECTION for something floating (Godot over the web baseline): the
@@ -203,6 +211,9 @@ static func panel(parent: Node, art: String, eyebrow: String, title: String, lin
 	ok.pressed.connect(root.queue_free)
 	v.add_child(ok)
 	ok.grab_focus.call_deferred()
+	back_closes(root, root.queue_free)
 	parent.add_child(root)
-	card.ready.connect(func() -> void: Kit.modal_in(card))
+	# The card is already ready once it is in the tree, so its entrance is
+	# started here, not on its ready signal.
+	Kit.modal_in(card)
 	return root

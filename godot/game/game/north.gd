@@ -147,11 +147,6 @@ static func rocks() -> Array:
 	return out
 
 
-## Is this point in the Sea Gate's mouth (inSeaGate)?
-static func in_sea_gate(p: Vector2) -> bool:
-	return p.distance_to(SEA_GATE) < SEA_GATE_HALF
-
-
 ## Whether the Sea Gate lets her out: only with somebody seated to fight
 ## (the Sea sets it from the raid party).
 static var gate_open: bool = true
@@ -201,9 +196,6 @@ const COMING: Dictionary = {
 }
 
 
-## A captain's expedition ship as the web's chart draws it (lib/ships.ts; a
-## skin's hull if worn): the rules' row, the picture, how much wider a skin's
-## padded plate is drawn.
 ## Whether a hull painting has her bow to the LEFT (Kong, 2026-10-05: every
 ## ship is painted bow-right but the Man-o-War and its skins, and the
 ## Man-o-War hulls the enemies sail). seaFlip on the ship tiers says the same
@@ -270,6 +262,9 @@ static func fleet_art(image: Variant, bay: String) -> String:
 	return path
 
 
+## A captain's expedition ship as the web's chart draws it (lib/ships.ts; a
+## skin's hull if worn): the rules' row, the picture, how much wider a skin's
+## padded plate is drawn.
 static func ship_art(ship_tier: Variant, skin: Variant) -> Dictionary:
 	var tier: int = clampi(int(Js.num(ship_tier)), 2, 6)
 	var def: Dictionary = {}

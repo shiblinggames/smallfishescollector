@@ -180,11 +180,6 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ── Pieces (on the style kit) ─────────────────────────────────────────────────
 
-## THE back pill (Kit).
-static func back_pill(label: String) -> Button:
-	return Kit.back_pill(label)
-
-
 ## A flat style, for the few places that set a stylebox directly. Panels made
 ## with panel() become Kit panes from it.
 static func box(bg: Color, border: Color, radius: int = 14, pad: int = 14, border_w: int = 1) -> StyleBoxFlat:
@@ -220,11 +215,6 @@ static func chip(parent: Control, t: String, fg: Color, bg: Color, _border: Colo
 ## A small upper-case heading: the kit's eyebrow.
 static func heading(parent: Control, t: String, c: Color = Color(Kit.DIM, Kit.EYEBROW_ALPHA), _px: int = 12) -> Label:
 	return Kit.text(parent, t, "eyebrow", c)
-
-
-## A button in one colour: the kit's accent button (small under 44 tall).
-static func tinted(t: String, c: Color, _px: int = 14, h: float = 38.0) -> Button:
-	return Kit.button(t, "accent", "large" if h >= 44.0 else "small", c)
 
 
 ## An image, fitted inside a box of this size, centred.

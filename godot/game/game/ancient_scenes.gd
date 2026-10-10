@@ -23,7 +23,11 @@ var data: Dictionary = {}
 var _t: float = 0.0
 var _lines: Array = []
 var _line_i: int = 0
-var _typed: float = 0.0
+var _typed: int = 0
+## Time on the current line (s): its pause and its typing count from here, not
+## from the scene's start.
+var _line_t: float = 0.0
+var _at: PackedFloat32Array = PackedFloat32Array()
 var _text: Label
 var _col: VBoxContainer
 var _closable: bool = false
@@ -139,8 +143,7 @@ func _finn() -> void:
 	_text.custom_minimum_size = Vector2(minf(640.0, size.x * 0.5), 0)
 	var hint: Label = _label("Press to continue", 12, Color(1, 1, 1, 0.45), false)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_line_i = 0
-	_typed = 0.0
+	_start_line(0)
 
 
 ## Emphasis in the lines is *starred*; drawn plain, the stars dropped.
@@ -148,13 +151,19 @@ static func _plain(t: String) -> String:
 	return t.replace("*", "")
 
 
+func _start_line(i: int) -> void:
+	_line_i = i
+	_typed = 0
+	_line_t = 0.0
+	if i < _lines.size():
+		_at = TypedLine.schedule(_plain(String((_lines[i] as Dictionary)["text"])))
+
+
 func _advance() -> void:
-	var line: String = _plain(String((_lines[_line_i] as Dictionary)["text"]))
-	if _typed < line.length():
-		_typed = float(line.length())
+	if _typed < _at.size():
+		_typed = _at.size()
 		return
-	_line_i += 1
-	_typed = 0.0
+	_start_line(_line_i + 1)
 	if _line_i >= _lines.size():
 		_finish()
 
@@ -243,11 +252,12 @@ func _capstone() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	if kind == "finn" and _text != null and _line_i < _lines.size():
+		_line_t += delta
 		var line: String = _plain(String((_lines[_line_i] as Dictionary)["text"]))
-		var pause: float = float((_lines[_line_i] as Dictionary).get("pause", 0.0)) / 1000.0
-		if _t > pause:
-			_typed = minf(float(line.length()), _typed + delta * 42.0)
-		_text.text = line.substr(0, int(_typed))
+		var ms: float = (_line_t - Js.num((_lines[_line_i] as Dictionary).get("pause")) / 1000.0) * 1000.0
+		while _typed < _at.size() and _at[_typed] <= ms:
+			_typed += 1
+		_text.text = line.substr(0, _typed)
 	queue_redraw()
 
 

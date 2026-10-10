@@ -48,7 +48,7 @@ func _ready() -> void:
 	_pins.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_pins.mouse_filter = Control.MOUSE_FILTER_STOP
 	_pins.draw.connect(_draw_pins)
-	_pins.gui_input.connect(_input)
+	_pins.gui_input.connect(_board_input)
 	_map.add_child(_pins)
 	var side: VBoxContainer = room.sheet(self, 18)
 	side.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -119,7 +119,7 @@ func _push_holes() -> void:
 	_mat.set_shader_parameter("holes", holes)
 
 
-func _input(e: InputEvent) -> void:
+func _board_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		var p: Vector2 = (e as InputEventMouseButton).position
 		for l: Dictionary in ChartRoom.landmarks():

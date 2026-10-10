@@ -58,7 +58,7 @@ func _ready() -> void:
 	col.add_child(cross)
 	var crossing: Button = _node("Anchorage", Color("#d9a45a"), _cross_art(), false, false, false, "Locked", func() -> void:
 		_sel = "cross"
-		_draw())
+		_paint())
 	crossing.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	crossing.custom_minimum_size.x = 116
 	cross.add_child(crossing)
@@ -67,7 +67,7 @@ func _ready() -> void:
 	col.add_child(_foot)
 	_err = Kit.text(col, "", "small", Kit.DANGER_INK, true)
 	_err.visible = false
-	_draw()
+	_paint()
 	card.ready.connect(func() -> void: Kit.modal_in(card))
 
 
@@ -87,7 +87,9 @@ func _cross_art() -> Texture2D:
 	return null
 
 
-func _draw() -> void:
+## Rebuilds the board and foot. Not named _draw: that is the CanvasItem draw
+## virtual, and the engine would rebuild the board on every redraw and resize.
+func _paint() -> void:
 	for c: Node in _board.get_children():
 		c.queue_free()
 	var tier: int = _tier()
@@ -103,7 +105,7 @@ func _draw() -> void:
 					_go(t)
 				else:
 					_sel = t
-					_draw())
+					_paint())
 		_board.add_child(b)
 		if first == null:
 			first = b
@@ -208,7 +210,7 @@ func _build() -> void:
 		return
 	_busy = true
 	_err.visible = false
-	_draw()
+	_paint()
 	var r: Variant = await session.act("buyPortalTier", [])
 	_busy = false
 	if not r is Dictionary or (r as Dictionary).has("error"):
@@ -220,7 +222,7 @@ func _build() -> void:
 		Sound.chest(true)
 		_sel = null
 		built.emit()
-	_draw()
+	_paint()
 
 
 func close() -> void:

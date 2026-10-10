@@ -69,7 +69,10 @@ func _paint() -> void:
 	if not news.is_empty():
 		var nl: String = ("The bounty board is open: %d order on it. Every chapter you clear adds another." % int(news["orders"])) if news["first"] else ("%s is behind you: the board now posts %d orders." % [news["boss"], int(news["orders"])])
 		Paper.text(_body, nl, "body_strong", GOLD, true)
-		RulesApi.run(session.store, session.uid, "markBountyRungSeen", [float(news["chapter"])])
+		# Through the session (fire and forget, like Almanac.mark_read), so a
+		# Charter crewmate's flag goes to the founder and is not undone by the
+		# next save the founder sends.
+		session.act("markBountyRungSeen", [float(news["chapter"])])
 		session.persist()
 	var cols: HBoxContainer = HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 30)

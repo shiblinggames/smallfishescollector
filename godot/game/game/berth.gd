@@ -17,9 +17,5 @@ var lit: float = 0.0
 var field: SeaField
 
 
-func lamp_points() -> Array[Vector2]:
-	return []
-
-
 func _process(delta: float) -> void:
 	lit = move_toward(lit, 1.0 if inside else 0.0, delta * 3.0)

@@ -34,6 +34,9 @@ var _fx: Control
 var _name: Label
 var _sub: Label
 var _was_ready: bool = false
+## The hover the fx layer was last drawn with (an empty bunk's plus only
+## changes with it).
+var _drawn_hover: float = -1.0
 
 
 func _ready() -> void:
@@ -108,6 +111,9 @@ func _ready() -> void:
 	pressed.connect(_press)
 	Kit.tap(self)
 	disabled = not open
+	# A shut bunk is a still painting: nothing to animate, nothing to redraw.
+	if not open:
+		set_process(false)
 
 
 func leviathan() -> bool:
@@ -193,7 +199,11 @@ func _process(delta: float) -> void:
 				Sound.bell()
 	if int(_t * 2.0) != int((_t - delta) * 2.0):
 		_words()
-	_fx.queue_redraw()
+	# The fx move only for a sleeper, a waker, the Leviathan's glow, or an
+	# empty bunk's plus as the hover changes; otherwise they are left drawn.
+	if not member.is_empty() or (leviathan() and open) or _hover != _drawn_hover:
+		_drawn_hover = _hover
+		_fx.queue_redraw()
 
 
 func _draw_fx() -> void:

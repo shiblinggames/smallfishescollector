@@ -83,3 +83,21 @@ func _ready() -> void:
 	ring.size = Vector2(px, px)
 	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ring)
+
+
+## A portrait as a texture (a fight's plates, the muster's seats): a 128 px
+## SubViewport under `parent`, drawn on the fight's dark ground with no ring.
+## The portrait is static and its art loads synchronously in _ready, so the
+## viewport renders once and then holds the image (UPDATE_ONCE), rather than
+## re-rendering every frame. Callers cache the texture by face or seat.
+static func texture_of(face: Dictionary, parent: Node) -> Texture2D:
+	var sv: SubViewport = SubViewport.new()
+	sv.size = Vector2i(128, 128)
+	sv.transparent_bg = true
+	sv.render_target_update_mode = SubViewport.UPDATE_ONCE
+	var av: Avatar = Avatar.new()
+	av.px = 128.0
+	av.face = face.merged({ "bg": "#2a1f17", "ring": "#00000000" })
+	sv.add_child(av)
+	parent.add_child(sv)
+	return sv.get_texture()

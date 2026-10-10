@@ -66,8 +66,8 @@ static func pill(parent: Control, text: String, at: Vector2, fg: Color, bg: Colo
 	tw.tween_callback(p.queue_free)
 
 
-## THE FULL-SCREEN PERFECT (1.4s): an amber wash, two rings thrown out from the
-## middle, and the word itself on a spring.
+## THE PERFECT (1.4s): a warm glow about the dial, two rings thrown out from
+## it, and the word itself on a spring.
 class PerfectFlash:
 	extends Control
 	var t: float = 0.0
@@ -83,10 +83,8 @@ class PerfectFlash:
 		_word = Label.new()
 		_word.text = "Perfect"
 		_word.add_theme_font_override("font", UiTheme.title_font())
-		_word.add_theme_font_size_override("font_size", 34)
 		_word.add_theme_color_override("font_color", Color("#fde68a"))
 		_word.add_theme_color_override("font_shadow_color", Color(0.96, 0.62, 0.04, 0.9))
-		_word.add_theme_constant_override("shadow_outline_size", 14)
 		_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_word.add_theme_font_size_override("font_size", 28)
 		_word.add_theme_constant_override("shadow_outline_size", 10)

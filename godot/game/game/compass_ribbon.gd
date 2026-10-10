@@ -53,6 +53,15 @@ var _folk_t: float = 99.0
 var _folk: Dictionary = {}
 var _road: Node2D
 var _road_to: Variant = null
+## The marks are gathered GATHER_EVERY, not every frame (the ports sorted, the
+## regulars looked up, the waters read): only positions move faster than that,
+## and a mark on something that moves holds the node, so it is read live.
+const GATHER_EVERY: float = 0.15
+var _gather_t: float = 99.0
+var _gathered_pin: String = ""
+var _pin_mark: Dictionary = {}
+## FILM_QUIET is fixed for the run: read once.
+static var _film_quiet: int = -1
 
 
 func _ready() -> void:
@@ -100,8 +109,20 @@ func _time(d: float) -> String:
 	return "%d min" % int(round(s / 60.0))
 
 
-func _mark(id: String, name: String, at: Vector2, col: Color, sub: String = "") -> Dictionary:
-	return { "id": id, "name": name, "at": at, "col": col, "sub": sub }
+## at: a place (Vector2) or the Node2D the mark follows.
+func _mark(id: String, name: String, at: Variant, col: Color, sub: String = "") -> Dictionary:
+	return { "id": id, "name": name, "at": at, "last": (at as Node2D).position if at is Node2D else at, "col": col, "sub": sub }
+
+
+## Where a mark is now: its node's live position, or where it was last seen
+## if the node has gone.
+static func _at(m: Dictionary) -> Vector2:
+	var a: Variant = m["at"]
+	if a is Vector2:
+		return a
+	if is_instance_valid(a):
+		m["last"] = (a as Node2D).position
+	return m["last"]
 
 
 ## The regulars' state (who waits on a fish, who has a word), read now and
@@ -142,7 +163,7 @@ func _gather() -> Array:
 	for k: String in sea._mates:
 		var m: Shipmate = sea._mates[k]
 		if North.is_north(m.position) == north and m.mate_name != "":
-			always.append(_mark("mate:" + k, m.mate_name, m.position, TEAL, m.status))
+			always.append(_mark("mate:" + k, m.mate_name, m, TEAL, m.status))
 	if north:
 		var anch: bool = at.distance_to(North.EXP_ORIGIN) <= North.EXP_EDGE
 		if not anch:
@@ -162,9 +183,9 @@ func _gather() -> Array:
 		var w: Dictionary = Chart.water_at(at)
 		for b: Buyer in sea._buyers:
 			if not w.is_empty() and b.info["zoneId"] == w["id"]:
-				roles.append(_mark("buyer:" + str(w["id"]), str(b.info.get("name", "The buyer")), b.position, GOLD, "buys here"))
+				roles.append(_mark("buyer:" + str(w["id"]), str(b.info.get("name", "The buyer")), b, GOLD, "buys here"))
 		if sea._finn != null and sea._finn.mark != "":
-			roles.append(_mark("finn", "Finn", sea._finn.position, AMBER, "a job done" if sea._finn.mark == "!" else "has work"))
+			roles.append(_mark("finn", "Finn", sea._finn, AMBER, "a job done" if sea._finn.mark == "!" else "has work"))
 		for k2: String in sea._regulars:
 			var wn: Wanderer = sea._regulars[k2]
 			var fid: String = str(wn.info.get("folkId", ""))
@@ -173,9 +194,9 @@ func _gather() -> Array:
 				continue
 			var nm: String = str(Js.obj(Folk.by_id(fid)).get("short", wn.info.get("name", "")))
 			if r.get("want") != null:
-				roles.append(_mark("folk:" + fid, nm, wn.position, AMBER, "wants a %s" % r["want"]["name"]))
+				roles.append(_mark("folk:" + fid, nm, wn, AMBER, "wants a %s" % r["want"]["name"]))
 			elif r.get("chattedToday") != true:
-				roles.append(_mark("folk:" + fid, nm, wn.position, AMBER.lerp(INK, 0.4), "has a word"))
+				roles.append(_mark("folk:" + fid, nm, wn, AMBER.lerp(INK, 0.4), "has a word"))
 		# The next water out and in, at their nearest edge.
 		var i: int = -1
 		for j: int in Chart.WATERS.size():
@@ -199,25 +220,34 @@ func _gather() -> Array:
 	# noise), keep a pinned one whatever.
 	var out: Array = []
 	var seen: Dictionary = {}
-	for m2: Dictionary in always + roles:
+	var always_ids: Dictionary = {}
+	for a0: Dictionary in always:
+		always_ids[a0["id"]] = true
+	var every: Array = always + roles
+	for m2: Dictionary in every:
 		if seen.has(m2["id"]):
 			continue
 		seen[m2["id"]] = true
-		if m2["id"] != pinned and _on_screen(m2["at"]):
+		if m2["id"] != pinned and _on_screen(_at(m2)):
 			continue
 		out.append(m2)
 	# The role marks capped; the always-marks and a pin are free.
 	var kept: Array = []
 	var n: int = 0
 	for m3: Dictionary in out:
-		var free: bool = m3["id"] == pinned or always.any(func(a: Dictionary) -> bool: return a["id"] == m3["id"])
+		var free: bool = m3["id"] == pinned or always_ids.has(m3["id"])
 		if free or n < SLOTS:
 			kept.append(m3)
 			if not free:
 				n += 1
 	# A pinned mark that has gone (a crewmate left, the stop was cleared).
-	if pinned != "" and not (always + roles).any(func(a: Dictionary) -> bool: return a["id"] == pinned):
+	if pinned != "" and not seen.has(pinned):
 		pinned = ""
+	_pin_mark = {}
+	for m4: Dictionary in every:
+		if m4["id"] == pinned:
+			_pin_mark = m4
+			break
 	return kept
 
 
@@ -243,24 +273,31 @@ func _on_screen(p: Vector2) -> bool:
 
 func _process(delta: float) -> void:
 	_folk_rows(delta)
-	var hide: bool = sea.stage != null or OS.get_environment("FILM_QUIET") != "" or (sea._hud != null and sea._hud._modal != null)
+	if _film_quiet < 0:
+		_film_quiet = 1 if OS.get_environment("FILM_QUIET") != "" else 0
+	var hide: bool = sea.stage != null or _film_quiet == 1 or (sea._hud != null and sea._hud._modal != null)
 	# Dims with the HUD's focus while the dial is up (the dial has the
 	# screen), to the weight the focus dim leaves everything else at; it sits
 	# above the HUD, so the dim itself never covers it.
 	var dial_up: bool = sea._hud != null and sea._hud._dial != null and sea._hud._dial.visible
 	var want: float = 0.0 if hide else ((1.0 - Kit.SCRIM_FOCUS / 0.6) if dial_up else 1.0)
 	_alpha = move_toward(_alpha, want, delta * 3.0)
+	var was: bool = visible
 	visible = _alpha > 0.01
-	_marks = _gather() if visible else []
-	# The pinned road; arriving lets go of it.
+	_gather_t += delta
+	if _gather_t >= GATHER_EVERY or pinned != _gathered_pin or visible != was:
+		_gather_t = 0.0
+		_gathered_pin = pinned
+		if visible or pinned != "":
+			var g: Array = _gather()
+			_marks = g if visible else []
+		else:
+			_marks = []
+			_pin_mark = {}
+	# The pinned road (its mark read live); arriving lets go of it.
 	_road_to = null
-	for m: Dictionary in _marks:
-		if m["id"] == pinned:
-			_road_to = m["at"]
-	if pinned != "" and _road_to == null:
-		for m2: Dictionary in (_gather() if not visible else []):
-			if m2["id"] == pinned:
-				_road_to = m2["at"]
+	if pinned != "" and not _pin_mark.is_empty() and _pin_mark["id"] == pinned:
+		_road_to = _at(_pin_mark)
 	if _road_to != null and sea._boat.position.distance_to(_road_to) < ARRIVE:
 		pinned = ""
 		_road_to = null
@@ -313,23 +350,19 @@ func _draw() -> void:
 	var placed: Array = []
 	var rows: Array = []
 	for m: Dictionary in _marks:
-		var v: Vector2 = (m["at"] as Vector2) - sea._boat.position
+		var v: Vector2 = _at(m) - sea._boat.position
 		var rel2: float = wrapf(bearing(v) - up, -PI, PI)
-		var behind: bool = false
 		var x2: float = clampf(rel2 / SPAN, -1.0, 1.0) * (half - 6.0)
-		rows.append([absf(rel2), m, x2, behind, v.length()])
+		rows.append([absf(rel2), m, x2, v.length()])
 	rows.sort_custom(func(p: Array, q: Array) -> bool: return float(p[0]) > float(q[0]))
 	for r: Array in rows:
 		var m2: Dictionary = r[1]
 		var x3: float = r[2]
-		var behind2: bool = r[3]
 		var pin: bool = m2["id"] == pinned
 		var col: Color = m2["col"]
-		var k: float = (0.55 if behind2 else 1.0) * a
+		var k: float = a
 		var name: String = str(m2["name"])
-		if behind2:
-			name = ("‹ " + name) if x3 < 0.0 else (name + " ›")
-		var line2: String = _time(float(r[4]))
+		var line2: String = _time(float(r[3]))
 		if str(m2["sub"]) != "":
 			line2 = "%s  ·  %s" % [m2["sub"], line2]
 		var nw: float = f_name.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x

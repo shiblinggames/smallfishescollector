@@ -54,7 +54,7 @@ func _ready() -> void:
 	x.pressed.connect(close)
 	head.add_child(x)
 	var line: Label = Sheet.text(col, info["line"], 15, Color("#c9d6de"), false, true)
-	line.add_theme_font_override("font", _italic())
+	line.add_theme_font_override("font", Kit.italic())
 
 	var offer: Pane = Pane.new(Kit.inset(14))
 	col.add_child(offer)
@@ -88,13 +88,6 @@ func _ready() -> void:
 	tw.tween_property(_card, "modulate:a", 1.0, 0.15)
 	tw.tween_property(_card, "offset_top", _card.offset_top - 24, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_card, "offset_bottom", _card.offset_bottom - 24, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-
-static func _italic() -> Font:
-	var f: FontVariation = FontVariation.new()
-	f.base_font = ThemeDB.fallback_font if UiTheme.make().default_font == null else UiTheme.make().default_font
-	f.variation_transform = Transform2D(Vector2(1, 0), Vector2(0.2, 1), Vector2.ZERO)
-	return f
 
 
 func _do_sell() -> void:

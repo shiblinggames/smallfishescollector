@@ -518,7 +518,7 @@ func _specials() -> void:
 		Kit.text(top, d["name"], "heading", INK if have else Kit.INK_2)
 		if have:
 			_status_pill(top, "Owned", Kit.HELP)
-		Kit.text(v, str(info.get("description", "")), "small", SUB, true).custom_minimum_size = Vector2(0, 0)
+		Kit.text(v, Kit.clean_copy(str(info.get("description", ""))), "small", SUB, true).custom_minimum_size = Vector2(0, 0)
 		var chips: HBoxContainer = HBoxContainer.new()
 		chips.add_theme_constant_override("separation", 6)
 		v.add_child(chips)
@@ -577,7 +577,7 @@ func _bait() -> void:
 		if b.get("hint") != null:
 			var hint: Label = Kit.text(v, b["hint"], "small", SUB, true)
 			hint.custom_minimum_size = Vector2(0, 0)
-			hint.add_theme_font_override("font", BuyerPanel._italic())
+			hint.add_theme_font_override("font", Kit.italic())
 		var cost: float = float(b["shopCost"])
 		if cost <= 0.0:
 			var how: String = "Voyages, or buy with Fathoms in the Locker" if Js.includes(b["acquisition"], "fathoms") else "Earned from voyages"
@@ -644,7 +644,7 @@ func _ladder_list(kind: String) -> void:
 			_status_pill(top, "Owned", Kit.HELP)
 		elif locked:
 			_status_pill(top, "Locked", Kit.FAINT)
-		Kit.text(v, item.get("description", ""), "small", SUB if owned else Kit.FAINT, true).custom_minimum_size = Vector2(0, 0)
+		Kit.text(v, Kit.clean_copy(str(item.get("description", ""))), "small", SUB if owned else Kit.FAINT, true).custom_minimum_size = Vector2(0, 0)
 		var chips: HBoxContainer = HBoxContainer.new()
 		chips.add_theme_constant_override("separation", 6)
 		v.add_child(chips)
@@ -706,7 +706,7 @@ func _lines() -> void:
 			_status_pill(top, "Owned", Kit.HELP)
 		else:
 			_status_pill(top, "Locked", Kit.FAINT)
-		Kit.text(v, line.get("description", ""), "small", SUB if owned else Kit.FAINT, true).custom_minimum_size = Vector2(0, 0)
+		Kit.text(v, Kit.clean_copy(str(line.get("description", ""))), "small", SUB if owned else Kit.FAINT, true).custom_minimum_size = Vector2(0, 0)
 		var chips: HBoxContainer = HBoxContainer.new()
 		chips.add_theme_constant_override("separation", 6)
 		v.add_child(chips)

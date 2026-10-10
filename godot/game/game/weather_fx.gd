@@ -152,25 +152,47 @@ func _spawn(delta: float, cam: Vector2) -> void:
 	_spray_acc = minf(_spray_acc, 3.0)
 
 
+## Each list is aged and its spent ones dropped in place (a write index, the
+## order kept), so a frame allocates nothing and an empty list costs nothing.
 func _age(delta: float) -> void:
+	var n: int = 0
 	for r: Array in _rings:
 		r[1] = float(r[1]) + delta
-	_rings = _rings.filter(func(r: Array) -> bool: return float(r[1]) < 0.55)
+		if float(r[1]) < 0.55:
+			_rings[n] = r
+			n += 1
+	_rings.resize(n)
+	n = 0
 	for s: Array in _streaks:
 		s[1] = float(s[1]) + delta
 		s[0] = (s[0] as Vector2) + _wind_dir * 70.0 * delta
-	_streaks = _streaks.filter(func(s: Array) -> bool: return float(s[1]) < float(s[3]))
+		if float(s[1]) < float(s[3]):
+			_streaks[n] = s
+			n += 1
+	_streaks.resize(n)
+	n = 0
 	for c: Array in _caps:
 		c[1] = float(c[1]) + delta
-	_caps = _caps.filter(func(c: Array) -> bool: return float(c[1]) < 1.1)
+		if float(c[1]) < 1.1:
+			_caps[n] = c
+			n += 1
+	_caps.resize(n)
+	n = 0
 	for p: Array in _spray:
 		p[2] = float(p[2]) + delta
 		# Thrown up, falling back: the height kept apart from the water.
 		p[0] = (p[0] as Vector2) + (p[1] as Vector2) * delta
-	_spray = _spray.filter(func(p: Array) -> bool: return float(p[2]) < 0.6)
+		if float(p[2]) < 0.6:
+			_spray[n] = p
+			n += 1
+	_spray.resize(n)
+	n = 0
 	for bo: Dictionary in _bolts:
 		bo["t"] = float(bo["t"]) + delta
-	_bolts = _bolts.filter(func(bo: Dictionary) -> bool: return float(bo["t"]) <= SquallFx.STRIKE_LIFE)
+		if float(bo["t"]) <= SquallFx.STRIKE_LIFE:
+			_bolts[n] = bo
+			n += 1
+	_bolts.resize(n)
 
 
 ## A front on its way (or going): its curtain at that side of the screen.

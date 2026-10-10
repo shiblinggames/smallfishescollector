@@ -189,18 +189,23 @@ var line_end_ok: bool = false
 var line_from: Variant = null
 
 
+## The captain's sheet name in their colour, with a %s for the pose (an
+## unknown colour is the default's).
+static func _sheet_stem(color: String) -> String:
+	if color != "default":
+		for c: Dictionary in Rules.data()["characterColors"]:
+			if c["id"] == color:
+				return "fishing_" + color + "_%s.png"
+	return "fishing_%s.png"
+
+
 ## How far a pose's sheet is moved to hold the hull still (as _build does).
 func shift_for(f: String) -> Vector2:
 	if f == "rest":
 		return Vector2.ZERO
 	var w: float = W * box_scale
 	var h: float = H * box_scale
-	var color0: String = look.get("color", "default")
-	var known0: bool = false
-	for c: Dictionary in Rules.data()["characterColors"]:
-		if c["id"] == color0:
-			known0 = true
-	var stem: String = "fishing_%s.png" if (color0 == "default" or not known0) else "fishing_" + color0 + "_%s.png"
+	var stem: String = _sheet_stem(look.get("color", "default"))
 	var a: Vector2 = _hull_mark(tex(stem % "rest"))
 	var b: Vector2 = _hull_mark(tex(stem % f))
 	if a == Vector2.INF or b == Vector2.INF:
@@ -237,26 +242,10 @@ func _build() -> void:
 	# (and wait 32 px higher), so the whole boat jumped when she cast. Each
 	# pose is moved by its own measured hull shift, and the parts placed on it
 	# move with it.
-	pose_shift = Vector2.ZERO
-	if frame != "rest":
-		var color0: String = look.get("color", "default")
-		var known0: bool = false
-		for c: Dictionary in Rules.data()["characterColors"]:
-			if c["id"] == color0:
-				known0 = true
-		var stem: String = "fishing_%s.png" if (color0 == "default" or not known0) else "fishing_" + color0 + "_%s.png"
-		var a: Vector2 = _hull_mark(tex(stem % "rest"))
-		var b: Vector2 = _hull_mark(tex(stem % frame))
-		if a != Vector2.INF and b != Vector2.INF:
-			pose_shift = Vector2((a.x - b.x) * w, (a.y - b.y) * h)
+	pose_shift = shift_for(frame)
 	origin += pose_shift
 	# The character, in their color (an unknown color is the default).
-	var color: String = look.get("color", "default")
-	var known: bool = false
-	for c: Dictionary in Rules.data()["characterColors"]:
-		if c["id"] == color:
-			known = true
-	var base: String = "fishing_%s.png" % frame if (color == "default" or not known) else "fishing_%s_%s.png" % [color, frame]
+	var base: String = _sheet_stem(look.get("color", "default")) % frame
 	_roles = {}
 	_roles["skin"] = _part(tex(base), origin, [0.0, 0.0, 100.0, 0.0], w, h, false)
 	var hat: Dictionary = _find("hats", look.get("hat"))

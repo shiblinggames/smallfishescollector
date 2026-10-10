@@ -75,6 +75,8 @@ func _ready() -> void:
 	var tally: Button = Paper.button("Tally (spends the clean bonus)")
 	tally.pressed.connect(_tally)
 	row.add_child(tally)
+	## Leaving the room inside the save debounce would drop the last edit.
+	tree_exiting.connect(_flush_save)
 	_open(_first_open())
 
 
@@ -93,6 +95,8 @@ func _puz(d: String) -> Dictionary:
 
 
 func _open(d: String) -> void:
+	## A pending save belongs to the board being left, so it goes now, before _d changes.
+	_flush_save()
 	_d = d
 	var p: Dictionary = _puz(d)
 	_givens = p["givens"]
@@ -193,6 +197,7 @@ func _put(n: int) -> void:
 					_notes[j] = (_notes[j] as String).replace(str(n), "")
 		_wrong.erase(_sel)
 	Sound.plip()
+	_keep()
 	_save_t = 0.8
 	_canvas.queue_redraw()
 	if n > 0 and not _entries.has(0):
@@ -205,6 +210,25 @@ static func _sort_digits(s: String) -> String:
 		a.append(ch)
 	a.sort()
 	return "".join(PackedStringArray(a))
+
+
+## Mirrors the board into the snapshot fetched at open, so a tab revisit (or the
+## redraw after a solve) shows the work instead of the board as it was at open.
+func _keep() -> void:
+	var p: Dictionary = _puz(_d)
+	p["progress"] = _board_str()
+	p["notes"] = ",".join(PackedStringArray(_notes))
+
+
+func _flush_save() -> void:
+	if _save_t > 0.0 and _solved.is_empty():
+		_save_t = -1.0
+		_save()
+
+
+func _save() -> void:
+	room.session.act("saveHoldProgress", [_d, _board_str(), ",".join(PackedStringArray(_notes))])
+	room.session.persist()
 
 
 func _board_str() -> String:
@@ -250,6 +274,7 @@ func _submit() -> void:
 		_words()
 		room.toast("Not quite: the wrong lots are marked (that counts as a tally)")
 		return
+	_keep()
 	_solved = { "doubloons": res["doubloonsWon"], "clean": res["clean"] }
 	_puz(_d)["solved"] = _solved
 	_stamp_t = _t
@@ -265,9 +290,10 @@ func _process(delta: float) -> void:
 	if _save_t > 0.0:
 		_save_t -= delta
 		if _save_t <= 0.0 and _solved.is_empty():
-			room.session.act("saveHoldProgress", [_d, _board_str(), ",".join(PackedStringArray(_notes))])
-			room.session.persist()
-	_canvas.queue_redraw()
+			_save()
+	## The board is still between edits; it only moves while a tally fades or the stamp lands.
+	if _t - _wrong_t < 3.1 or _t - _stamp_t < 0.3:
+		_canvas.queue_redraw()
 
 
 func _draw_board() -> void:

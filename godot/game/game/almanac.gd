@@ -493,7 +493,7 @@ static func _flat(b: Button) -> void:
 		b.add_theme_stylebox_override(st, empty)
 
 
-## One specimen, frameless: its halo, the art, its floor shadow, the name on
+## One specimen, frameless: its halo, the art, the name on
 ## one line, and in a sorted view the thing it was sorted by. A trophy-sized
 ## catch wears a cup in the corner (gold if a golden is mounted).
 func _card(e: Dictionary) -> Control:
@@ -974,14 +974,22 @@ func _giant(id: float, name: String, rank: int, released: bool) -> void:
 	b.grab_focus.call_deferred()
 
 
-## vigilChanges: what gets harder at the next rank.
+## How often the light fails, by the rank being fought for: the one column
+## of the web's VIGIL_SCALE that BossFight.VIGIL_SCALE does not carry.
+const VIGIL_LIGHT: Dictionary = { 2: 0.0, 3: 0.03, 4: 0.05, 5: 0.08 }
+
+
+## vigilChanges: what gets harder at the next rank. The phases, window and
+## needle columns are read from BossFight.VIGIL_SCALE so a retune there is
+## described here too.
 static func vigil_changes(attempting: int) -> Array[String]:
-	var scale: Dictionary = { 2: [0, -6, 2.5, 1.06, 0.0], 3: [1, -9, 3.0, 1.09, 0.03], 4: [1, -12, 3.5, 1.12, 0.05], 5: [2, -15, 4.0, 1.15, 0.08] }
 	var out: Array[String] = []
-	if not scale.has(attempting):
+	if not BossFight.VIGIL_SCALE.has(attempting):
 		return out
-	var nxt: Array = scale[attempting]
-	var prev: Array = scale.get(attempting - 1, [])
+	var nxt: Array = (BossFight.VIGIL_SCALE[attempting] as Array) + [VIGIL_LIGHT.get(attempting, 0.0)]
+	var prev: Array = []
+	if BossFight.VIGIL_SCALE.has(attempting - 1):
+		prev = (BossFight.VIGIL_SCALE[attempting - 1] as Array) + [VIGIL_LIGHT.get(attempting - 1, 0.0)]
 	var extra: int = int(nxt[0]) - (int(prev[0]) if prev.size() > 0 else 0)
 	if extra > 0:
 		out.append("One more phase to hold." if extra == 1 else "%d more phases to hold." % extra)
@@ -989,7 +997,10 @@ static func vigil_changes(attempting: int) -> Array[String]:
 		out.append("The landing window now closes with every phase.")
 	elif float(nxt[2]) > float(prev[2]):
 		out.append("The window closes faster.")
-	if float(nxt[1]) > (float(prev[1]) if prev.size() > 0 else 0.0):
+	# The window's start is a shrink, negative and falling as it tightens
+	# (-6, -9, ...), so tighter is LESS. The web compares with > here
+	# (lib/ancientVigil.ts) and never shows this line; a port departure.
+	if float(nxt[1]) < (float(prev[1]) if prev.size() > 0 else 0.0):
 		out.append("It starts tighter than before.")
 	if prev.is_empty() or float(nxt[3]) > float(prev[3]):
 		out.append("The needle quickens harder each phase.")

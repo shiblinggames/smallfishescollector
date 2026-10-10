@@ -30,7 +30,6 @@ var _gulls: Node2D
 var _schools: Array = []
 var _f: Array = []
 var _d: Array = []
-var _birds: Array = []
 var _cam_prev: Vector2 = Vector2.INF
 var _cam_speed: float = 0.0
 var _wash: float = 0.0
@@ -265,8 +264,6 @@ func step(delta: float, cam: Vector2, half: Vector2, boat: Vector2, boat_speed: 
 			# On the water plane the fish lies flat: the World squashes it.
 			fm.set_instance_transform_2d(i * 13 + j, Transform2D(rot, Vector2(64.0 * kk * st, 32.0 * kk / st), 0.0, Vector2(fx, fy)))
 			var a: float = minf(0.5, 0.16 + vis * 0.2 + float(sc["bolt"]) * 0.28) if on else 0.0
-			# Godot: under the surface, not on it. By day a fish beneath the
-			# water is a shadow darker than it; at night only a faint pale.
 			# Godot: beneath the surface. In bright shallow water a fish is a
 			# shadow under it; out in dark water it catches what light there is
 			# and shows pale (the web's look). Blended by how far out it is.
@@ -319,7 +316,6 @@ static func _night_tint(dark: float, warm: float) -> Color:
 ## that flaps, with a soft shadow on the water below.
 class Gulls:
 	extends Node2D
-	var birds: Array = []
 	var flocks: Dictionary = {}
 	var nearest: Vector2 = Vector2.INF
 	var _tint: Color = Color.WHITE

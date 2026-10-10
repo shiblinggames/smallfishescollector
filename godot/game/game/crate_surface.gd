@@ -64,7 +64,10 @@ func _ready() -> void:
 	_spr = Sprite2D.new()
 	_spr.texture = CrateMoment._tex("%sclosed.png" % t[2])
 	if _spr.texture == null:
-		_finish()
+		# Deferred: the caller adds it and then awaits done, so a done sent
+		# from inside _ready would be missed and hold the caller forever.
+		set_process(false)
+		_finish.call_deferred()
 		return
 	var sc: float = 80.0 / float(_spr.texture.get_width())
 	_spr.scale = Vector2(sc, sc)
