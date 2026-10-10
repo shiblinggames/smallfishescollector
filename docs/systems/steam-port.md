@@ -2404,6 +2404,51 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   keeps its public API and its parts are preloaded files beside it, no class_name. DEPARTURE:
   the Long Vigil's rank-up shows "It starts tighter than before" when the window's start shrinks
   (game/almanac.gd); the web compares the wrong way (lib/ancientVigil.ts) and never shows it.
+- THE DEN AS A PLACE (Kong, 2026-10-10: the Chart Room, Parlor and Den "were based on being a
+  web app so I feel like animations and visuals and everything were all a bit lacking"; the Den
+  is the PILOT, judged before the Parlor and the Chart Room get the same). APPROVED: every game
+  is a place that fills the screen (no centre column, no header strips or pill rows) and every
+  change of state MOVES. REJECTED: a painted backdrop ("I want to keep it clean") and the faux
+  wood (stained-wood panes, Kit.WOOD_* fills, "grain"). THE LOOK (game/den_room.gd): the room
+  keeps the standard header (title, back pill) with the three games as Paper.tab buttons in
+  its row (closed ones still say "Needs Fishing 10/20"); under it ONE flat felt (DenRoom.FELT, a
+  deep sea green, R_LARGE corners, a 2px darker rim, no texture, gradient or shadow) to the foot
+  of the window, sized from the viewport (never a fixed 1600 x 900). The purse sits on the
+  felt's top edge as words and buttons, not a box: the count inked as money (SEA_GOLD), a pile
+  of the painted chips drawn chip by chip from what you hold (DenRoom.draw_pile: biggest first,
+  columns of six), the day's buy-in line, the +100..+1,000 buy-ins and Cash out as paper
+  buttons. Stakes are the painted chips themselves (DenRoom.ChipPick: the chosen one lifts onto
+  a cream ring; pad focus rings it gold). The one thing to do (Spin, Deal, Ready, Hit) is a flat
+  cream button (DenRoom.primary), not the wooden plank. Words on the felt are cream.
+  THE MOTION: the pile grows and shrinks chip by chip as the count rolls (roll_chips); bets
+  slide out of it (fly_chips, which can now report when the last chip lands), wins slide back
+  with a tick and a give, lost bets are swept flat off the felt (sweep_chips), bigger wins
+  throw a small burst of turning chips drawn in code (DenRoom.Burst), all local. ROULETTE: the
+  wheel is big and flat (rim, ball track, red/black/green pockets in the real order, cream
+  frets and numbers, a felt-green cone, a cream hub); Spin leans the view in (the wheel grows
+  9% in a holder, since a container resets its children's scale) while it turns down and the
+  ball runs the track the other way, drops, skitters over a couple of pockets and settles
+  (the old ball landed on the mirror pocket: fixed); the pocket is ringed gold and its fish
+  rises in the hub. The board is printed on the felt (cream lines, red/black filled numbers,
+  red and black as diamonds); a chip shows on its spot only once it lands, and the spot's pile
+  grows taller; the board total comes off the pile as you place; Clear and Same again slide
+  the chips home and back out; on the result the winning spots pulse gold, losers are swept to
+  the house, winners slide home. BLACKJACK (solo and the crew's table share
+  DenBlackjack.Hand and Card): a flat shoe at the dealer's right; each card flies face down
+  from the shoe to its place in a centred fan (the others make room) and turns up with a quick
+  scale-x flip; the hole card turns at the reveal; "Blackjack pays 3 to 2" is printed on the
+  felt along an arc; the bet slides into a cream bet circle under the hand (a double or a
+  split's hand slides its chips in too); totals tick; a bust shakes that hand's cards and dims
+  it; a split hands each card to its hand and they slide apart; at the end the payout slides
+  home and a loss is swept to the dealer; the next deal slides the old cards off to the
+  discard. The crew's table: up to four seats along the foot, each a Hand with its name in the
+  seat colour; your ready bet leaves your pile, the others' land in their circles. SLOTS: a flat
+  cabinet of the night paper (marquee, coin slot, clean paper windows, a payout tray) with the
+  pays printed on the felt beside it (each fish's picture, name, pays); the stake slides into
+  the slot; each reel kicks back, runs smeared with ghost copies, stops left to right with an
+  overshoot and a clunk; the paying line draws across the windows and pulses, the windows
+  ring gold; wins throw chips from the tray. Unchanged: the rules, payouts, odds, the save,
+  the den_tables protocol, the keys (Space, H, S, D, P), the gates and the daily cap.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

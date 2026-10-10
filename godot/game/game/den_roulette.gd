@@ -1,22 +1,29 @@
 class_name DenRoulette
-extends VBoxContainer
-## FISH ROULETTE (Godot port of app/(app)/tavern/roulette, made to move): a
-## wooden wheel in the real wheel's order, and a paper board. Press a spot on
-## the board to stack a chip of the size you have picked there (a number, a
-## dozen, a column, red or black, even or odd, low or high); Spin, and the
-## wheel turns while the ball runs the other way round the rim, drops, rattles
-## and settles in its pocket. The fish that pocket is named for comes up in
-## the hub, the winning spot lights on the board and the chips come home.
+extends Control
+## FISH ROULETTE (Godot port of app/(app)/tavern/roulette, made to move). On
+## the Den's felt (THE DEN AS A PLACE, 2026-10-10): a big wheel on the left,
+## drawn flat in code (the pockets in the real wheel's order, no wood), and
+## the board on the right printed on the felt in cream lines. Pick a chip,
+## press a spot (a number, a split, a corner, a street, a line, a dozen, a
+## column, red or black, even or odd, low or high): the chip slides out of your
+## pile and stacks on the spot, taller with each one. Spin: the view leans in
+## to the wheel (it grows a little), the wheel turns and slows while the ball
+## runs the rim the other way, drops, skitters across a pocket or two and
+## settles; the fish that pocket is named for rises in the hub. The winning
+## spots light, the losing chips are swept off the felt, and every win slides
+## back to your pile.
 ##
 ## IN A CHARTER THE WHEEL IS SHARED (game/den_tables.gd): everyone at it
-## sees the others' chips on the board in their colours, "Spin" becomes
+## sees the others' chips on the board ringed in their colours, "Spin" becomes
 ## "Ready", a countdown starts with the first ready, and one spin settles the
 ## whole table; every captain's result is called out after it.
 
 const ORDER: Array = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26]
-const POCKET_RED: Color = Color(0.68, 0.2, 0.15)
-const POCKET_BLACK: Color = Color(0.16, 0.12, 0.1)
-const POCKET_GREEN: Color = Color(0.18, 0.45, 0.36)
+const POCKET_RED: Color = Color(0.7, 0.2, 0.16)
+const POCKET_BLACK: Color = Color(0.11, 0.11, 0.11)
+const POCKET_GREEN: Color = Color(0.2, 0.52, 0.4)
+## How far the view leans in to the wheel while it spins.
+const LEAN: float = 1.09
 
 var session: Session
 var den: DenRoom
@@ -25,8 +32,10 @@ var _chip: float = 25.0
 var _bets: Dictionary = {}
 var _last: Dictionary = {}
 var _wheel: Wheel
+var _holder: Control
 var _board: Board
 var _chips_row: HBoxContainer
+var _ctl: HBoxContainer
 var _total: Label
 var _says: Label
 var _spin_b: Button
@@ -40,73 +49,91 @@ var _phase: String = "betting"
 
 
 func _ready() -> void:
-	add_theme_constant_override("separation", 12)
-	var table: Pane = DenRoom.table_pane(self, [22, 18, 22, 20])
-	var v: VBoxContainer = VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	table.add_child(v)
-	var head: HBoxContainer = HBoxContainer.new()
-	v.add_child(head)
-	var t: Label = Kit.text(head, "Fish Roulette", "title", Kit.WOOD_INK)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_says = Kit.text(head, "Place your chips on the board", "label", Kit.SAND)
 	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 18)
-	v.add_child(row)
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.add_theme_constant_override("separation", 28)
+	add_child(row)
+	# The wheel stands in a plain holder: a container resets the scale of
+	# its own children whenever it lays them out, and the wheel leans in.
+	_holder = Control.new()
+	_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(_holder)
 	_wheel = Wheel.new()
-	_wheel.custom_minimum_size = Vector2(330, 330)
-	row.add_child(_wheel)
+	_wheel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_holder.add_child(_wheel)
+	var right: VBoxContainer = VBoxContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.add_theme_constant_override("separation", 8)
+	row.add_child(right)
+	var head: HBoxContainer = HBoxContainer.new()
+	right.add_child(head)
+	var t: Label = DenRoom.says(head, "Fish Roulette", "title")
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_says = DenRoom.says(head, "Place your chips on the board", "body_strong", DenRoom.CREAM_SOFT)
+	_says.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_board = Board.new()
-	_board.custom_minimum_size = Vector2(560, 300)
 	_board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_board.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_board.owner_table = self
-	row.add_child(_board)
+	right.add_child(_board)
 	# The inside bets, said plainly (the edge spots only show when pointed at).
-	var hint: Label = Kit.text(v, "On the lines: between two numbers a split (pays 17 to 1), where four meet a corner (8 to 1), under a column a street of 3 (11 to 1), between two columns at the bottom a line of 6 (5 to 1).", "small", Color(Kit.WOOD_INK, 0.75), true)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var hint: Label = DenRoom.says(right, "On the lines: between two numbers a split (pays 17 to 1), where four meet a corner (8 to 1), under a column a street of 3 (11 to 1), between two columns at the bottom a line of 6 (5 to 1).", "small", DenRoom.CREAM_SOFT)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.custom_minimum_size = Vector2(200, 0)
 	# The chip you are placing, the slip's total, and the wheel.
-	var ctl: HBoxContainer = HBoxContainer.new()
-	ctl.add_theme_constant_override("separation", 10)
-	ctl.alignment = BoxContainer.ALIGNMENT_CENTER
-	add_child(ctl)
+	_ctl = HBoxContainer.new()
+	var ctl: HBoxContainer = _ctl
+	ctl.add_theme_constant_override("separation", 12)
+	right.add_child(ctl)
 	_chips_row = HBoxContainer.new()
-	_chips_row.add_theme_constant_override("separation", 6)
+	_chips_row.add_theme_constant_override("separation", 2)
 	ctl.add_child(_chips_row)
 	_paint_chips()
-	_total = Kit.text(ctl, "", "value", Kit.INK)
+	_total = DenRoom.says(ctl, "", "value", DenRoom.CREAM)
 	_total.custom_minimum_size = Vector2(150, 0)
+	_total.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_total.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var clear: Button = Kit.button("Clear", "secondary", "small")
-	clear.pressed.connect(func() -> void:
-		if not _busy:
-			_bets.clear()
-			_changed())
+	_total.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var clear: Button = Paper.button("Clear")
+	clear.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	clear.pressed.connect(_clear)
 	ctl.add_child(clear)
-	var again: Button = Kit.button("Same again", "secondary", "small")
-	again.pressed.connect(func() -> void:
-		if not _busy and not _last.is_empty():
-			_bets = _last.duplicate(true)
-			_changed())
+	var again: Button = Paper.button("Same again")
+	again.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	again.pressed.connect(_same_again)
 	ctl.add_child(again)
-	_spin_b = Kit.button("Spin   ·   Space", "primary")
-	_spin_b.custom_minimum_size = Vector2(200, 54)
-	_spin_b.add_theme_font_size_override("font_size", 19)
+	_spin_b = DenRoom.primary("Spin   ·   Space")
+	_spin_b.custom_minimum_size = Vector2(210, 54)
+	_spin_b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_spin_b.pressed.connect(spin)
 	ctl.add_child(_spin_b)
+	resized.connect(_fit)
+	_fit()
 	_changed()
 	var rs: Dictionary = Casino.roulette_state(session.store, session.uid)
 	_wheel.recent = (rs["recentSpins"] as Array).map(func(s: Dictionary) -> float: return float(s["winningNumber"]))
 	if DenTables.shared_for(session):
 		_shared = true
 		_spin_b.text = "Ready   ·   Space"
-		_seats_l = Kit.text(self, "", "label", Kit.INK)
-		_seats_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_seats_l = DenRoom.says(right, "", "label", DenRoom.CREAM)
+		right.move_child(_seats_l, 1)
 		DenTables.live.changed.connect(_on_table)
 		tree_exiting.connect(func() -> void: session.act("denTable", ["roulette", "leave"]))
 		var st: Variant = DenTables.live.states.get("roulette")
 		if st is Dictionary:
 			_seen_round = int(Js.obj((st as Dictionary).get("result")).get("round", -1))
 		session.act("denTable", ["roulette", "sit"])
+
+
+## The wheel sized from the felt: as tall as the table allows, never more
+## than about two fifths of its width.
+func _fit() -> void:
+	var right_min: float = _ctl.get_combined_minimum_size().x if _ctl != null else 900.0
+	# Room left over the wheel for it to lean in without touching the purse.
+	var d: float = floorf(minf(minf(size.y - 34.0, size.x * 0.42), size.x - 28.0 - right_min) / LEAN)
+	if d > 40.0:
+		_holder.custom_minimum_size = Vector2(d, d + 34.0)
 
 
 func _process(_delta: float) -> void:
@@ -154,8 +181,7 @@ func _shared_spin(res: Dictionary, st: Dictionary) -> void:
 	var mine: Dictionary = Js.obj(Js.obj(res["by"]).get(me))
 	var before: float = Js.num(session.profile().get("casino_chips"))
 	_says.text = "No more bets"
-	Sound.cast()
-	await _wheel.spin_to(int(res["n"]))
+	await _turn_wheel(int(res["n"]))
 	var n: int = int(res["n"])
 	_board.result = n
 	_board.won = Js.list(mine.get("won"))
@@ -169,10 +195,16 @@ func _shared_spin(res: Dictionary, st: Dictionary) -> void:
 		var net: float = float(r["net"])
 		parts.append("%s %s%s" % [who, "+" if net >= 0.0 else "-", Js.thousands(absf(net))])
 	_says.text = "%d, %s.   %s" % [n, _pocket_name(n), "   ".join(PackedStringArray(parts))]
+	Motion.rise_word(_says)
 	if not mine.is_empty() and not mine.has("error"):
 		var wk: Array = Js.list(mine.get("won"))
+		_sweep_losers(wk)
 		if not wk.is_empty() and float(mine["payout"]) > 0.0:
+			await get_tree().create_timer(0.35).timeout
 			den.fly_chips(_board.cell_center(str(wk[0])), float(mine["payout"]))
+			for k: String in wk:
+				_board.shown.erase(k)
+			_board.queue_redraw()
 		if float(mine["net"]) > 0.0:
 			Sound.chest(false)
 			Rumble.buzz([0, 40, 30, 60])
@@ -180,6 +212,8 @@ func _shared_spin(res: Dictionary, st: Dictionary) -> void:
 	_last = _bets.duplicate(true)
 	await get_tree().create_timer(2.5).timeout
 	_bets.clear()
+	_board.shown.clear()
+	_board.won = []
 	_ready_sent = false
 	_changed()
 	_busy = false
@@ -206,7 +240,8 @@ func _paint_chips() -> void:
 		_paint_chips())
 
 
-## A spot pressed: a chip of the picked size stacked on it.
+## A spot pressed: a chip of the picked size slides out of the pile and
+## lands on it (the board shows it once it is down).
 func place(type: String, target: Variant) -> void:
 	if _busy:
 		return
@@ -218,18 +253,67 @@ func place(type: String, target: Variant) -> void:
 	if have + _chip > cap:
 		den.toast("%s chips is the most on one spot" % Js.thousands(cap), DenRoom.RED)
 		return
+	if _slip_sum() + _chip > Js.num(session.profile().get("casino_chips")):
+		den.toast("Not enough chips. Buy in above.", DenRoom.RED)
+		return
 	_bets[key] = { "type": type, "target": target, "amount": have + _chip }
-	den.fly_chips(Vector2.ZERO, _chip, false, _board.cell_center(key))
+	var amt: float = _chip
+	den.fly_chips(Vector2.ZERO, amt, false, _board.cell_center(key), func() -> void:
+		if is_instance_valid(_board) and _bets.has(key):
+			_board.shown[key] = float(_board.shown.get(key, 0.0)) + amt
+			_board.land(key))
 	_changed()
 
 
-func _changed() -> void:
+## Clear: every chip on the board slides home.
+func _clear() -> void:
+	if _busy or _bets.is_empty():
+		return
+	for k: String in _bets:
+		den.fly_chips(_board.cell_center(k), float(_bets[k]["amount"]))
+	_bets.clear()
+	_board.shown.clear()
+	_changed()
+
+
+## Same again: last spin's chips go down again, each sliding to its spot.
+func _same_again() -> void:
+	if _busy or _last.is_empty():
+		return
+	if not _bets.is_empty():
+		_clear()
+	var need: float = 0.0
+	for k: String in _last:
+		need += float(_last[k]["amount"])
+	if need > Js.num(session.profile().get("casino_chips")):
+		den.toast("Not enough chips. Buy in above.", DenRoom.RED)
+		return
+	_bets = _last.duplicate(true)
+	for k: String in _bets:
+		var key: String = k
+		var amt: float = float(_bets[k]["amount"])
+		den.fly_chips(Vector2.ZERO, amt, false, _board.cell_center(key), func() -> void:
+			if is_instance_valid(_board) and _bets.has(key):
+				_board.shown[key] = amt
+				_board.land(key))
+	_changed()
+
+
+func _slip_sum() -> float:
 	var sum: float = 0.0
 	for k: String in _bets:
 		sum += float(_bets[k]["amount"])
+	return sum
+
+
+func _changed() -> void:
+	var sum: float = _slip_sum()
 	_total.text = "On the board: %s" % Js.thousands(sum) if sum > 0.0 else "No chips down"
 	_board.bets = _bets
 	_board.queue_redraw()
+	# The pile shows what is left once these chips are down.
+	if not _busy and den != null:
+		den.paint_purse(maxf(0.0, Js.num(session.profile().get("casino_chips")) - sum))
 
 
 func play_for_shot() -> void:
@@ -239,6 +323,7 @@ func play_for_shot() -> void:
 	place("corner", [13.0, 14.0, 16.0, 17.0])
 	place("street", 6.0)
 	place("dozen", 2.0)
+	await get_tree().create_timer(0.8).timeout
 	spin()
 
 
@@ -258,9 +343,7 @@ func spin() -> void:
 			den.toast("Place a chip on the board first", DenRoom.RED)
 		return
 	var slip: Array = _bets.values()
-	var stake: float = 0.0
-	for b: Dictionary in slip:
-		stake += float(b["amount"])
+	var stake: float = _slip_sum()
 	var chips: float = Js.num(session.profile().get("casino_chips"))
 	if chips < stake:
 		den.toast("Not enough chips. Buy in above.", DenRoom.RED)
@@ -269,6 +352,10 @@ func spin() -> void:
 	_spin_b.disabled = true
 	_board.won = []
 	_board.result = -1
+	# Whatever is still in the air lands now.
+	for k: String in _bets:
+		_board.shown[k] = float(_bets[k]["amount"])
+	_board.queue_redraw()
 	den.paint_purse(chips - stake)
 	var r: Dictionary = await session.act("placeBetsAndSpin", [slip])
 	if r.has("error"):
@@ -279,8 +366,7 @@ func spin() -> void:
 		return
 	session.persist()
 	_says.text = "No more bets"
-	Sound.cast()
-	await _wheel.spin_to(int(r["winningNumber"]))
+	await _turn_wheel(int(r["winningNumber"]))
 	var n: int = int(r["winningNumber"])
 	_board.result = n
 	var won: Array = []
@@ -289,9 +375,6 @@ func spin() -> void:
 			won.append(Board.key_of(pb["bet"]["type"], pb["bet"]["target"]))
 	_board.won = won
 	_board.queue_redraw()
-	for pb: Dictionary in r["perBet"]:
-		if pb["won"]:
-			den.fly_chips(_board.cell_center(Board.key_of(pb["bet"]["type"], pb["bet"]["target"])), float(pb["payout"]))
 	var name: String = _pocket_name(n)
 	if float(r["net"]) > 0.0:
 		_says.text = "%d, %s.  +%s" % [n, name, Js.thousands(float(r["totalPayout"]))]
@@ -302,13 +385,53 @@ func spin() -> void:
 		Sound.plip()
 	else:
 		_says.text = "%d, %s." % [n, name]
+	Motion.rise_word(_says)
+	# The house takes the losers first, then the winners come home.
+	_sweep_losers(won)
+	await get_tree().create_timer(0.4).timeout
+	for pb: Dictionary in r["perBet"]:
+		if pb["won"]:
+			var k: String = Board.key_of(pb["bet"]["type"], pb["bet"]["target"])
+			den.fly_chips(_board.cell_center(k), float(pb["payout"]))
+			_board.shown.erase(k)
+	if float(r["net"]) >= stake * 5.0:
+		den.burst(_board.cell_center(won[0]) if not won.is_empty() else _board.get_global_rect().get_center(), 14)
+	_board.queue_redraw()
 	_last = _bets.duplicate(true)
 	den.roll_chips(chips - stake, float(r["chipsAfter"]))
 	await get_tree().create_timer(1.6).timeout
 	_bets.clear()
+	_board.shown.clear()
+	_board.won = []
+	_board.result = -1
 	_changed()
 	_busy = false
 	_spin_b.disabled = false
+
+
+## The losing chips swept off the felt toward the house (past the board's top
+## edge), and gone from their spots.
+func _sweep_losers(won: Array) -> void:
+	var house: Vector2 = _board.get_global_rect().position + Vector2(_board.size.x * 0.5, -60.0)
+	for k: String in _board.shown.keys():
+		if won.has(k):
+			continue
+		den.sweep_chips(_board.cell_center(k), house, float(_board.shown[k]))
+		_board.shown.erase(k)
+	_board.queue_redraw()
+
+
+## The spin, seen: the view leans in to the wheel while it turns, then eases
+## back once the ball is down.
+func _turn_wheel(n: int) -> void:
+	Sound.cast()
+	_wheel.pivot_offset = Vector2(_wheel.size.x / 2.0, (_wheel.size.y - 34.0) / 2.0)
+	var lean: Tween = _wheel.create_tween()
+	lean.tween_property(_wheel, "scale", Vector2.ONE * LEAN, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await _wheel.spin_to(n)
+	var back: Tween = _wheel.create_tween()
+	back.tween_interval(0.5)
+	back.tween_property(_wheel, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 static func _pocket_name(n: int) -> String:
@@ -323,10 +446,11 @@ static func pocket_color(n: int) -> Color:
 	return POCKET_GREEN if c == "green" else (POCKET_RED if c == "red" else POCKET_BLACK)
 
 
-## THE WHEEL: a wooden bowl, the pockets in the real order round it, and the
-## ball. Spun, it turns down from speed while the ball runs the other way on
-## the rim, drops inward with a rattle and comes to rest in the pocket, and
-## the fish that pocket is named for rises in the brass hub.
+## THE WHEEL, flat: a dark rim and the ball's track, the pockets in the real
+## order round it with cream frets and numbers, the felt-green cone, and a
+## cream hub. Spun, the wheel turns down from speed while the ball runs the
+## other way on the track, drops inward, skitters across a pocket or two and
+## settles; the pocket is ringed and its fish rises in the hub.
 class Wheel:
 	extends Control
 	var angle: float = 0.0
@@ -336,6 +460,10 @@ class Wheel:
 	var _ball_on: bool = false
 	var _hub_fish: Texture2D = null
 	var _hub_k: float = 0.0
+	var _result: int = -1
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _pocket_angle(n: int) -> float:
 		var i: int = DenRoulette.ORDER.find(n)
@@ -344,28 +472,42 @@ class Wheel:
 	func spin_to(n: int) -> void:
 		_hub_k = 0.0
 		_hub_fish = null
+		_result = -1
 		_ball_on = true
 		var a0: float = angle
-		var turns: float = TAU * 3.0
-		var target_rel: float = -_pocket_angle(n)
+		var turns: float = TAU * 2.6
+		var target_rel: float = _pocket_angle(n)
 		var rel0: float = target_rel + TAU * 5.0
-		var dur: float = 4.2
+		var pw: float = TAU / DenRoulette.ORDER.size()
+		var dur: float = 5.2
 		var tw: Tween = create_tween()
-		var clack: Array = [0.0]
+		var clack: Array = [0.0, false]
 		tw.tween_method(func(u: float) -> void:
-			angle = a0 + turns * (1.0 - pow(1.0 - u, 3.0))
-			# The ball runs the other way, slowing, onto its pocket.
-			_ball_rel = target_rel + (rel0 - target_rel) * pow(1.0 - u, 2.4)
-			# On the rim, then dropping inward with a few bounces.
-			var drop: float = clampf((u - 0.62) / 0.3, 0.0, 1.0)
-			var bounce: float = absf(sin(drop * PI * 4.0)) * (1.0 - drop) * 0.12
-			_ball_r = lerpf(1.0, 0.0, drop) + bounce
-			if drop > 0.0 and drop < 1.0 and u - clack[0] > 0.035:
+			angle = a0 + turns * (1.0 - pow(1.0 - u, 2.6))
+			# The ball runs the other way round the track, slowing onto its
+			# pocket's neighbourhood.
+			var v: float = minf(u / 0.78, 1.0)
+			var rel: float = target_rel + (rel0 - target_rel) * pow(1.0 - v, 2.6)
+			# It leaves the track and falls toward the pockets...
+			var drop: float = clampf((u - 0.5) / 0.22, 0.0, 1.0)
+			var r: float = 1.0 - drop * drop
+			# ...and skitters: a hop over two pockets, back one, then rest.
+			var s: float = clampf((u - 0.7) / 0.24, 0.0, 1.0)
+			if s > 0.0:
+				rel += pw * 2.4 * sin(s * PI * 2.5) * pow(1.0 - s, 2.0)
+				r += absf(sin(s * PI * 5.0)) * pow(1.0 - s, 1.5) * 0.28
+			_ball_rel = rel
+			_ball_r = r
+			if s > 0.0 and s < 0.95 and u - float(clack[0]) > 0.03:
 				clack[0] = u
 				Sound.xp_tick()
+			if u > 0.55 and not clack[1]:
+				clack[1] = true
+				Sound.reel_clicks(1.4)
 			queue_redraw(), 0.0, 1.0, dur)
 		await tw.finished
 		Rumble.buzz([0, 30])
+		_result = n
 		_hub_fish = Skipper.fish_thumb(DenRoulette._pocket_name(n)) if n != 0 else null
 		recent.push_front(float(n))
 		if recent.size() > 12:
@@ -376,17 +518,19 @@ class Wheel:
 			queue_redraw(), 0.0, 1.0, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 	func _draw() -> void:
-		var c: Vector2 = size / 2.0
-		var R: float = minf(size.x, size.y) / 2.0 - 4.0
+		var d: float = minf(size.x, size.y - 34.0)
+		var c: Vector2 = Vector2(size.x / 2.0, d / 2.0)
+		var R: float = d / 2.0 - 2.0
 		var f: Font = Kit.font("cinzel", 700)
-		# The bowl and its rim.
-		draw_circle(c + Vector2(0, 6), R, Color(0, 0, 0, 0.35))
-		draw_circle(c, R, Kit.WOOD_LO.darkened(0.15))
-		draw_circle(c, R * 0.93, Kit.WOOD_HI)
-		draw_circle(c, R * 0.86, Color(0.22, 0.14, 0.08))
+		var cream: Color = DenRoom.CREAM
+		# The rim and the ball's track, flat.
+		draw_circle(c, R, Color(0.07, 0.085, 0.085))
+		draw_circle(c, R * 0.955, Color(0.17, 0.19, 0.19))
+		draw_arc(c, R * 0.885, 0.0, TAU, 96, Color(cream, 0.35), 1.5, true)
 		var n: int = DenRoulette.ORDER.size()
-		var r_out: float = R * 0.84
-		var r_in: float = R * 0.58
+		var r_out: float = R * 0.87
+		var r_in: float = R * 0.6
+		var fs: int = clampi(int(R * 0.075), 10, 22)
 		for i: int in n:
 			var a0: float = angle + TAU * i / n - PI / 2.0 - TAU / n / 2.0
 			var a1: float = a0 + TAU / n
@@ -395,50 +539,66 @@ class Wheel:
 				pts.append(c + Vector2.from_angle(lerpf(a0, a1, k / 5.0)) * r_out)
 			for k: int in 6:
 				pts.append(c + Vector2.from_angle(lerpf(a1, a0, k / 5.0)) * r_in)
-			draw_colored_polygon(pts, DenRoulette.pocket_color(int(DenRoulette.ORDER[i])))
-			draw_line(c + Vector2.from_angle(a0) * r_in, c + Vector2.from_angle(a0) * r_out, Color(0.85, 0.7, 0.4, 0.8), 1.5, true)
+			var num: int = int(DenRoulette.ORDER[i])
+			draw_colored_polygon(pts, DenRoulette.pocket_color(num))
+			draw_line(c + Vector2.from_angle(a0) * r_in, c + Vector2.from_angle(a0) * r_out, Color(cream, 0.7), 1.5, true)
 			# The number, upright along its pocket.
 			var am: float = (a0 + a1) / 2.0
-			var label: String = str(DenRoulette.ORDER[i])
-			var at: Vector2 = c + Vector2.from_angle(am) * (r_out - 15.0)
+			var label: String = str(num)
+			var at: Vector2 = c + Vector2.from_angle(am) * (r_out - fs * 1.05)
 			draw_set_transform(at, am + PI / 2.0, Vector2.ONE)
-			var w: float = f.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
-			draw_string(f, Vector2(-w / 2.0, 4.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.98, 0.94, 0.85))
+			var w: float = f.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			draw_string(f, Vector2(-w / 2.0, fs * 0.35), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, cream)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		# The brass hub, with the winning pocket's fish.
-		draw_circle(c, r_in, Color(0.75, 0.58, 0.28))
-		draw_circle(c, r_in * 0.9, Color(0.86, 0.72, 0.42))
-		draw_circle(c, r_in * 0.82, Kit.PAPER)
+			if num == _result:
+				# The pocket that took the ball, ringed in gold.
+				var ring: PackedVector2Array = pts.duplicate()
+				ring.append(pts[0])
+				draw_polyline(ring, DenRoom.WIN, 3.0, true)
+		# The pockets' inner wall, then the cone in the felt's green.
+		draw_arc(c, r_in, 0.0, TAU, 96, Color(cream, 0.7), 2.0, true)
+		draw_circle(c, r_in - 1.0, DenRoom.FELT_DEEP)
+		draw_arc(c, r_in * 0.7, 0.0, TAU, 72, Color(cream, 0.22), 1.5, true)
+		# The turret: four cream spokes turning with the wheel, round a cream hub.
+		var hub: float = r_in * 0.46
 		for k: int in 4:
-			var a: float = angle * 1.0 + k * PI / 2.0
-			draw_line(c + Vector2.from_angle(a) * r_in * 0.82, c + Vector2.from_angle(a) * r_in * 0.95, Color(0.5, 0.36, 0.15), 3.0, true)
+			var a: float = angle + k * PI / 2.0
+			draw_line(c + Vector2.from_angle(a) * hub, c + Vector2.from_angle(a) * r_in * 0.92, Color(cream, 0.6), maxf(2.0, R * 0.012), true)
+		draw_circle(c, hub, Color(0.93, 0.89, 0.8))
 		if _hub_fish != null and _hub_k > 0.0:
 			var sz: Vector2 = _hub_fish.get_size()
-			var sc: float = minf(r_in * 1.4 / sz.x, r_in * 1.2 / sz.y) * _hub_k
+			var sc: float = minf(hub * 1.7 / sz.x, hub * 1.5 / sz.y) * _hub_k
 			draw_texture_rect(_hub_fish, Rect2(c - sz * sc / 2.0, sz * sc), false)
 		# The ball.
 		if _ball_on:
-			var br: float = lerpf(r_in + 12.0, R * 0.9, clampf(_ball_r, 0.0, 1.2))
+			var br: float = lerpf(r_in + (r_out - r_in) * 0.32, R * 0.92, clampf(_ball_r, 0.0, 1.3))
 			var bp: Vector2 = c + Vector2.from_angle(angle + _ball_rel - PI / 2.0) * br
-			draw_circle(bp + Vector2(1.5, 2.5), 7.0, Color(0, 0, 0, 0.35))
-			draw_circle(bp, 7.0, Color(0.97, 0.96, 0.92))
+			var bs: float = maxf(6.0, R * 0.032)
+			draw_circle(bp + Vector2(0, bs * 0.3), bs, Color(0, 0, 0, 0.3))
+			draw_circle(bp, bs, Color(0.98, 0.97, 0.94))
 		# The last numbers, as beads under the wheel.
-		for k: int in mini(recent.size(), 10):
-			var p: Vector2 = Vector2(c.x - 4.5 * 22.0 + k * 22.0, size.y - 2.0)
-			draw_circle(p, 9.0, DenRoulette.pocket_color(int(recent[k])))
+		var shown: int = mini(recent.size(), 10)
+		for k: int in shown:
+			var p: Vector2 = Vector2(c.x - (shown - 1) * 13.0 + k * 26.0, size.y - 13.0)
+			draw_circle(p, 11.0, DenRoulette.pocket_color(int(recent[k])))
+			if k == 0:
+				draw_arc(p, 12.5, 0.0, TAU, 24, Color(cream, 0.8), 1.5, true)
 			var s: String = str(int(recent[k]))
-			var sw: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-			draw_string(f, p + Vector2(-sw / 2.0, 4.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.94, 0.85))
+			var sw: float = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+			draw_string(f, p + Vector2(-sw / 2.0, 4.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, cream)
 
 
-## THE BOARD: the numbers three rows deep like a real table, zero on the
-## left, the columns' "2 to 1" on the right, then the dozens and the even
-## bets. Press to place; chips stack where they lie, and after the spin the
-## winning number and the spots that paid light up.
+## THE BOARD, printed on the felt: the numbers three rows deep like a real
+## table (red and black filled, cream lines), zero on the left, the columns'
+## "2 to 1" on the right, then the dozens and the even bets. Press to place;
+## chips stack where they lie, taller with each; after the spin the winning
+## number and the spots that paid light up gold.
 class Board:
 	extends Control
 	var owner_table: DenRoulette
 	var bets: Dictionary = {}
+	## The chips on each spot as they have landed (bets fly before they show).
+	var shown: Dictionary = {}
 	## The other captains' chips at a shared wheel: [{ color, bets }].
 	var others: Array = []:
 		set(v):
@@ -447,22 +607,42 @@ class Board:
 	## The others' chips by spot key, built once per table push so a redraw
 	## looks them up instead of stringifying every bet for every spot.
 	var _others_at: Dictionary = {}
-	var won: Array = []
+	var won: Array = []:
+		set(v):
+			won = v
+			set_process(not won.is_empty())
 	var result: int = -1
 	var _cells: Array = []
 	## The spot under the pointer: its numbers glow, so an edge bet shows
 	## what it covers before a chip goes down.
 	var _hover: Dictionary = {}
+	## A spot that just took a chip, and how fresh the landing is (it settles).
+	var _landed: String = ""
+	var _land_k: float = 0.0
+	var _t: float = 0.0
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_STOP
+		set_process(false)
 		resized.connect(_layout)
 		_layout()
 		get_tree().process_frame.connect(queue_redraw, CONNECT_ONE_SHOT)
 
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+
 	## A spot's key ("type|target"), as the bets are keyed.
 	static func key_of(type: Variant, target: Variant) -> String:
 		return "%s|%s" % [type, JsJson.stringify(target)]
+
+	## A chip landed on a spot: the pile there gives under it.
+	func land(key: String) -> void:
+		_landed = key
+		var tw: Tween = create_tween()
+		tw.tween_method(func(k: float) -> void:
+			_land_k = k
+			queue_redraw(), 1.0, 0.0, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 	func _index_others() -> void:
 		_others_at.clear()
@@ -492,7 +672,7 @@ class Board:
 		# split on the line between two, a corner where four meet, a street
 		# on the bottom edge under its column, a line where two streets
 		# meet on that edge. Small spots, tested before the numbers.
-		var z: float = 16.0
+		var z: float = clampf(rh * 0.22, 14.0, 26.0)
 		for i: int in 12:
 			var x0: float = zero_w + i * cw
 			for row: int in 3:
@@ -516,8 +696,7 @@ class Board:
 		var outs: Array = [["half", "low", "1 to 18"], ["parity", "even", "Even"], ["color", "red", "Red"], ["color", "black", "Black"], ["parity", "odd", "Odd"], ["half", "high", "19 to 36"]]
 		for k: int in outs.size():
 			var o: Array = outs[k]
-			var colr: Color = DenRoulette.POCKET_RED if o[1] == "red" else (DenRoulette.POCKET_BLACK if o[1] == "black" else Color(0, 0, 0, 0))
-			_cells.append({ "r": Rect2(zero_w + k * ow, y3, ow, h - y3), "type": o[0], "target": o[1], "text": o[2], "col": colr })
+			_cells.append({ "r": Rect2(zero_w + k * ow, y3, ow, h - y3), "type": o[0], "target": o[1], "text": o[2], "col": Color(0, 0, 0, 0) })
 		# Each spot's key, once per layout (not once per redraw).
 		for cell: Dictionary in _cells:
 			cell["key"] = key_of(cell["type"], cell["target"])
@@ -527,8 +706,16 @@ class Board:
 	func cell_center(key: String) -> Vector2:
 		for cell: Dictionary in _cells:
 			if cell["key"] == key:
-				return get_global_transform() * (cell["r"] as Rect2).get_center()
+				return get_global_transform() * _chip_spot(cell)
 		return get_global_rect().get_center()
+
+	## Where a spot's chips stand: the middle of an edge spot; off to the side
+	## of a printed spot's words.
+	func _chip_spot(cell: Dictionary) -> Vector2:
+		var r: Rect2 = cell["r"]
+		if cell.get("zone", false):
+			return r.get_center()
+		return r.get_center() + Vector2(r.size.x * 0.2, r.size.y * 0.12)
 
 	## The spot at a point: the small edge spots first, then the rest.
 	func _cell_at(p: Vector2) -> Dictionary:
@@ -557,60 +744,90 @@ class Board:
 			_hover = {}
 			queue_redraw()
 
+	func _chip_w() -> float:
+		var cw: float = (size.x * 0.85) / 12.0
+		var rh: float = size.y * 0.62 / 3.0
+		return clampf(minf(cw, rh) * 0.62, 20.0, 46.0)
+
 	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Kit.PAPER)
 		var f: Font = Kit.font("cinzel", 700)
 		var small: Font = Kit.font("karla", 700)
+		var line: Color = DenRoom.FELT_LINE
+		var cream: Color = DenRoom.CREAM
+		var rh: float = size.y * 0.62 / 3.0
+		var big_fs: int = clampi(int(rh * 0.3), 14, 30)
+		var small_fs: int = clampi(int(rh * 0.2), 12, 18)
+		var pulse: float = 0.5 + 0.5 * sin(_t * 5.0)
 		for cell: Dictionary in _cells:
-			var r: Rect2 = cell["r"]
-			var key: String = cell["key"]
 			if cell.get("zone", false):
 				continue
+			var r: Rect2 = cell["r"]
+			var key: String = cell["key"]
 			var colr: Color = cell["col"]
 			if colr.a > 0.0:
-				draw_rect(r.grow(-3), Color(colr, 0.85))
+				draw_rect(r.grow(-4), colr)
 			var lit: bool = won.has(key) or (cell["type"] == "straight" and int(cell["target"]) == result)
 			if lit:
-				draw_rect(r.grow(-2), Color(1.0, 0.8, 0.3, 0.55))
+				draw_rect(r.grow(-2), Color(DenRoom.WIN, 0.35 + 0.3 * pulse))
+				draw_rect(r.grow(-2), DenRoom.WIN, false, 2.5)
 			elif not _hover.is_empty() and cell["type"] == "straight" and Casino.is_winner({ "type": _hover["type"], "target": _hover["target"] }, float(cell["target"])):
-				draw_rect(r.grow(-2), Color(1.0, 0.85, 0.45, 0.28))
-			draw_rect(r, Color(Paper.INK, 0.45), false, 1.0)
+				draw_rect(r.grow(-2), Color(cream, 0.18))
+			elif _hover == cell:
+				draw_rect(r.grow(-2), Color(cream, 0.1))
+			draw_rect(r, line, false, 1.5)
 			var big: bool = cell["type"] == "straight"
 			var fnt: Font = f if big else small
-			var fs: int = 15 if big else 12
-			var tcol: Color = Color(0.98, 0.94, 0.85) if colr.a > 0.0 else Paper.INK
-			var tw: float = fnt.get_string_size(str(cell["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-			draw_string(fnt, r.get_center() + Vector2(-tw / 2.0, fs * 0.35), str(cell["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tcol)
-			_chips_at(key, r, false)
-		# The edge spots over the numbers: shown only when pointed at, won,
-		# or holding chips.
+			var fs: int = big_fs if big else small_fs
+			var label: String = str(cell["text"])
+			# Red and black are shown, not written: a diamond of each colour.
+			if cell["type"] == "color":
+				var dc: Vector2 = r.get_center()
+				var dw: float = minf(r.size.x * 0.24, r.size.y * 0.5)
+				var dia: PackedVector2Array = PackedVector2Array([dc + Vector2(-dw, 0), dc + Vector2(0, -dw * 0.55), dc + Vector2(dw, 0), dc + Vector2(0, dw * 0.55)])
+				draw_colored_polygon(dia, DenRoulette.POCKET_RED if cell["target"] == "red" else DenRoulette.POCKET_BLACK)
+				dia.append(dia[0])
+				draw_polyline(dia, line, 1.5, true)
+			else:
+				var tw: float = fnt.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				draw_string(fnt, r.get_center() + Vector2(-tw / 2.0, fs * 0.35), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, cream)
+		# The board's outer line, a little heavier.
+		draw_rect(Rect2(Vector2.ZERO, size), Color(cream, 0.6), false, 2.0)
+		# The chips: on the printed spots, then the edge spots over the lines
+		# (shown only when pointed at, won, or holding chips).
+		for cell: Dictionary in _cells:
+			if not cell.get("zone", false):
+				_chips_at(cell)
 		for cell: Dictionary in _cells:
 			if not cell.get("zone", false):
 				continue
 			var zr: Rect2 = cell["r"]
 			var zk: String = cell["key"]
 			if _hover == cell:
-				draw_circle(zr.get_center(), 6.0, Color(0.85, 0.62, 0.25, 0.9))
+				draw_circle(zr.get_center(), 7.0, Color(cream, 0.85))
 			if won.has(zk):
-				draw_circle(zr.get_center(), 9.0, Color(1.0, 0.8, 0.3, 0.8))
-			_chips_at(zk, zr, true)
+				draw_circle(zr.get_center(), 11.0, Color(DenRoom.WIN, 0.55 + 0.35 * pulse))
+			_chips_at(cell)
 
-	## The chips on a spot: the others' in their colours, then yours.
-	func _chips_at(key: String, r: Rect2, small_spot: bool) -> void:
-		var small: Font = Kit.font("karla", 700)
+	## The chips on a spot: the others' ringed in their colours, then yours as
+	## a pile that grows with every chip, its total over it.
+	func _chips_at(cell: Dictionary) -> void:
+		var key: String = cell["key"]
+		var spot: Vector2 = _chip_spot(cell)
+		var w: float = _chip_w()
 		var oi: int = 0
 		for oc: Array in _others_at.get(key, []):
-			var op: Vector2 = r.get_center() + (Vector2(-8.0 + oi * 6.0, 4.0) if small_spot else Vector2(-r.size.x * 0.22 + oi * 6.0, r.size.y * 0.12))
-			draw_circle(op + Vector2(0, 1), 12.0, oc[0])
-			draw_texture_rect(DenRoom.chip_tex(float(oc[1])), Rect2(op - Vector2(11, 9.5), Vector2(22, 19)), false)
+			var op: Vector2 = spot + Vector2(-w * 0.75 - oi * w * 0.3, 0)
+			draw_circle(op + Vector2(0, w * 0.05), w * 0.46, oc[0])
+			DenRoom.draw_pile(self, op + Vector2(0, w * 0.42), float(oc[1]), w * 0.8, 5, 5)
 			oi += 1
-		if bets.has(key):
-			var amt: float = float(bets[key]["amount"])
-			var cpos: Vector2 = r.get_center() + (Vector2.ZERO if small_spot else Vector2(r.size.x * 0.22, -r.size.y * 0.18))
-			var each: Array = DenRoom.breakdown(amt, 5)
-			for st: int in each.size():
-				var sp: Vector2 = cpos + Vector2(0, -st * 4.0)
-				draw_texture_rect(DenRoom.chip_tex(float(each[st])), Rect2(sp - Vector2(14, 12), Vector2(28, 24)), false)
-			var at: String = Js.thousands(amt)
-			var aw: float = small.get_string_size(at, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-			draw_string(small, cpos + Vector2(-aw / 2.0, -each.size() * 3.0 + 4.0), at, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.25, 0.15, 0.03))
+		var amt: float = float(shown.get(key, 0.0))
+		if amt <= 0.0:
+			return
+		var give: float = _land_k if key == _landed else 0.0
+		var base: Vector2 = spot + Vector2(0, w * 0.42)
+		draw_set_transform(base, 0.0, Vector2(1.0 + give * 0.06, 1.0 - give * 0.08))
+		DenRoom.draw_pile(self, Vector2.ZERO, amt, w, 8, 8)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var at: String = Js.thousands(amt)
+		var top: float = base.y - DenRoom.pile_height(amt, w, 8, 8)
+		Kit.sea_string(self, Kit.font("karla", 800), Vector2(spot.x - 40.0, top + 2.0), at, 12, DenRoom.CREAM, HORIZONTAL_ALIGNMENT_CENTER, 80.0)
