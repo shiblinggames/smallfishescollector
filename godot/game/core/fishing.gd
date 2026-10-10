@@ -321,18 +321,22 @@ static func reel_in(db: CaptainStore, uid: String, fish_id: float, result: Strin
 	if Js.truthy(profile.get("force_shiny_next_perfect")) and is_perfect:
 		db.update_profile(uid, { "force_shiny_next_perfect": false })
 
-	var daily_row: Variant = db.daily_progress(uid, daily_date)
-	var snap_level: float = float(Js.nz((daily_row as Dictionary).get("fishing_level_snapshot") if daily_row != null else null, old_level))
-	var challenges: Array = Daily.with_override(daily_date, db.challenge_override(daily_date), snap_level)
-	var prior: Array = [0.0, 0.0, 0.0, 0.0]
-	if daily_row != null:
-		for n: int in 4:
-			prior[n] = Js.num((daily_row as Dictionary).get("p%d" % (n + 1)))
+	# The web's per-date daily challenge rows: for the parity run only. The
+	# port's Orders replaced them, and nothing reads the rows, so a port save
+	# would only gain one for every day fished.
 	var new_p: Array = []
-	for n: int in challenges.size():
-		var c: Dictionary = challenges[n]
-		new_p.append(minf(float(prior[n]) + Daily.increment(c, fish["habitat"], float(fish["bite_rarity"]), Js.num(fish.get("sell_value")), catch_qty, is_perfect), float(c["target"])))
-	db.save_daily_progress(uid, daily_date, new_p, snap_level)
+	if Rules.web_only:
+		var daily_row: Variant = db.daily_progress(uid, daily_date)
+		var snap_level: float = float(Js.nz((daily_row as Dictionary).get("fishing_level_snapshot") if daily_row != null else null, old_level))
+		var challenges: Array = Daily.with_override(daily_date, db.challenge_override(daily_date), snap_level)
+		var prior: Array = [0.0, 0.0, 0.0, 0.0]
+		if daily_row != null:
+			for n: int in 4:
+				prior[n] = Js.num((daily_row as Dictionary).get("p%d" % (n + 1)))
+		for n: int in challenges.size():
+			var c: Dictionary = challenges[n]
+			new_p.append(minf(float(prior[n]) + Daily.increment(c, fish["habitat"], float(fish["bite_rarity"]), Js.num(fish.get("sell_value")), catch_qty, is_perfect), float(c["target"])))
+		db.save_daily_progress(uid, daily_date, new_p, snap_level)
 	# THE DAY'S ORDERS (the port): the board that resets on completion.
 	var orders_done: Array = []
 	if not Rules.web_only:

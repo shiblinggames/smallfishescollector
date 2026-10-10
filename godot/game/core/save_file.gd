@@ -45,13 +45,18 @@ static func serialize(save: Dictionary, carried: Dictionary = {}, saved_at: Stri
 
 
 ## Write atomically: the whole text to a temp file, then renamed over the save,
-## so a crash mid-write leaves the old save whole.
+## so a crash mid-write leaves the old save whole. A write that fails part way
+## (a full disk, a locked file) is thrown away and never renamed over the save.
 static func write_file(file_path: String, text: String) -> Error:
 	var tmp: String = file_path + ".tmp"
 	var f: FileAccess = FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
 		return FileAccess.get_open_error()
-	f.store_string(text)
+	var stored: bool = f.store_string(text)
 	f.flush()
+	var err: Error = f.get_error()
 	f.close()
+	if not stored or err != OK:
+		DirAccess.remove_absolute(tmp)
+		return err if err != OK else ERR_FILE_CANT_WRITE
 	return DirAccess.rename_absolute(tmp, file_path)

@@ -26,17 +26,6 @@ static func expand(p: Vector2) -> Vector2:
 	return q
 
 
-## The other way (a widened point back to the web's): inside the new calm
-## water, onto the old edge of it.
-static func contract(p: Vector2) -> Vector2:
-	if d <= 0.0 or p.y <= Explore.NORTH_WALL:
-		return p
-	var r: float = p.length()
-	if r <= HARBOUR:
-		return p
-	return p * (maxf(HARBOUR, r - d) / r)
-
-
 static func _xy(o: Dictionary) -> void:
 	var q: Vector2 = expand(Vector2(float(o["x"]), float(o["y"])))
 	o["x"] = q.x

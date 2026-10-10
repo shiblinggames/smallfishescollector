@@ -58,6 +58,9 @@ static func iso(ms: float) -> String:
 	return "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ" % [d["year"], d["month"], d["day"], d["hour"], d["minute"], d["second"], milli]
 
 
+static var _iso_re: RegEx = null
+
+
 ## Milliseconds since the epoch for an ISO date the game wrote
 ## ("2026-09-30T12:00:00.000Z", or without the milliseconds), NAN otherwise.
 static func parse_ms(text: Variant) -> float:
@@ -93,15 +96,6 @@ static func ids(obj: Dictionary) -> Array:
 		out.append(float(str(k).to_int()))
 	out.sort()
 	return out
-
-
-## structuredClone: a deep copy of a JSON value.
-static func clone(v: Variant) -> Variant:
-	if typeof(v) == TYPE_DICTIONARY:
-		return (v as Dictionary).duplicate(true)
-	if typeof(v) == TYPE_ARRAY:
-		return (v as Array).duplicate(true)
-	return v
 
 
 ## Array.includes, with numbers compared by value (5 and 5.0 are one number).

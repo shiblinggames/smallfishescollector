@@ -16,6 +16,7 @@ const CAPTAIN_CHAPTERS: Array = ["the_last_fathom", "one_last_ride"]
 const CAPTAIN_WATER: String = "Captain's water"
 
 static var _by_id: Dictionary = {}
+static var _chapter_of: Dictionary = {}
 
 
 static func nodes() -> Array:
@@ -46,11 +47,19 @@ static func _index(id: String) -> int:
 
 
 ## chapterForNode: the first chapter whose last node is at or after this one.
+## Built once into _chapter_of (every map read asks it of every node), as
+## node() caches _by_id.
 static func chapter_for(id: String) -> Dictionary:
-	var at: int = _index(id)
-	for c: Dictionary in chapters():
-		if at >= 0 and at <= _index(str(c["lastNodeId"])):
-			return c
+	if _chapter_of.is_empty():
+		var lasts: Array = chapters().map(func(c: Dictionary) -> int: return _index(str(c["lastNodeId"])))
+		var all: Array = nodes()
+		for k: int in all.size():
+			for ci: int in lasts.size():
+				if k <= int(lasts[ci]):
+					_chapter_of[all[k]["id"]] = chapters()[ci]
+					break
+	if _chapter_of.has(id):
+		return _chapter_of[id]
 	return chapters()[chapters().size() - 1]
 
 
@@ -742,8 +751,9 @@ static func dps_preview(db: CaptainStore, uid: String, nid: String) -> Dictionar
 		return { "error": "Invalid node" }
 	var s: Dictionary = Battle.seat_for(db, uid)
 	var smin: float = float(s["shipMin"])
-	var pmax: float = maxf(smin, float(Js.round(smin + 2.0 + floor(float(s["power"]) / 4.0))))
-	var lo: float = maxf(smin, floor(pmax * 0.4))
+	var rg: Dictionary = Battle.shot_range(smin, float(s["power"]))
+	var pmax: float = rg["pmax"]
+	var lo: float = rg["hitMin"]
 	var mult: float = float(class_effects(db.me(uid).get("ship_classes"))["damageMult"])
 	# The raid items that touch one straight opening shot at a ship that is no
 	# boss (the port; the web counted the non-crit cost alone): the non-crit

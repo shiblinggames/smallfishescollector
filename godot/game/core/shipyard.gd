@@ -45,11 +45,11 @@ static func level_floors(db: CaptainStore, uid: String) -> Array:
 			if not cols.has(c):
 				cols.append(c)
 	var p: Dictionary = db.profile(uid, ", ".join(PackedStringArray(cols)))
-	var nav: int = Rules.level_from_xp(Js.num(p.get("fishing_xp")))
+	var fishing: int = Rules.level_from_xp(Js.num(p.get("fishing_xp")))
 	var patch: Dictionary = {}
 	var raised: Array = []
 	for lv: Variant in ups:
-		if nav < int(lv):
+		if fishing < int(lv):
 			continue
 		for c: Variant in ups[lv]:
 			var t: float = float(ups[lv][c])
@@ -62,7 +62,7 @@ static func level_floors(db: CaptainStore, uid: String) -> Array:
 	return raised
 
 
-## The Navigation level that gives a tier for free, or 0.
+## The Fishing level that gives a tier for free, or 0.
 static func free_at(col: String, tier: float) -> int:
 	var ups: Dictionary = Js.obj(Rules.data().get("shipUpgrades"))
 	for lv: Variant in ups:

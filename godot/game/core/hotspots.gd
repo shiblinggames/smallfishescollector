@@ -56,11 +56,27 @@ class Stream:
 		return float(s) / 4294967296.0
 
 
-## The three patches standing at this moment.
+## The last window's patches, kept: the sea asks every frame and the answer
+## only changes once in ten minutes (or when the waters are widened).
+static var _memo_key: String = ""
+static var _memo: Array = []
+
+
+## The three patches standing at this moment. The array and its patches are
+## shared between callers: read them, never change them (copy first).
 static func at_time(now: float) -> Array:
 	var win: int = int(floor(now / WINDOW_MS))
-	var ends_at: float = float(win + 1) * WINDOW_MS
 	var zones: Array = Chart.WATERS
+	var mk: String = "%d|%s" % [win, str(zones[0]["inner"]) if not zones.is_empty() else ""]
+	if mk == _memo_key:
+		return _memo
+	_memo = _derive(win, zones)
+	_memo_key = mk
+	return _memo
+
+
+static func _derive(win: int, zones: Array) -> Array:
+	var ends_at: float = float(win + 1) * WINDOW_MS
 	var pick: Stream = Stream.new(_hash(win, 0x5eed))
 	var pool: Array = range(zones.size())
 	var chosen: Array = []

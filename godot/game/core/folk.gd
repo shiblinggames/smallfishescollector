@@ -39,11 +39,6 @@ static func tier_for(points: float) -> int:
 	return 0
 
 
-static func to_next(points: float) -> Variant:
-	var t: int = tier_for(points)
-	return null if t == 4 else TIER_AT[t + 1] - points
-
-
 static func role_for(f: Dictionary, tier: int) -> String:
 	return TIER_NAME[4] if tier == 4 else str(f["role"])
 
@@ -78,26 +73,6 @@ static func favourite_by_id(f: Dictionary, fish_id: Variant) -> Dictionary:
 		if float(fav["id"]) == float(fish_id):
 			return fav
 	return {}
-
-
-static func favourites_known(f: Dictionary, seen: Array) -> Array:
-	var known: Dictionary = {}
-	for key: Variant in seen:
-		var parts: PackedStringArray = str(key).split(":")
-		if parts.size() < 3 or parts[0] != f["id"]:
-			continue
-		if parts[1] == "want":
-			known[float(parts[2])] = true
-			continue
-		var pool: Array = pool_for(f, parts[1].to_int())
-		var i: int = parts[2].to_int()
-		if i < 0 or i >= pool.size():
-			continue
-		var hay: String = str(pool[i]).to_lower()
-		for fav: Dictionary in f["favourites"]:
-			if hay.contains(str(fav["name"]).to_lower()):
-				known[float(fav["id"])] = true
-	return (f["favourites"] as Array).filter(func(fav: Dictionary) -> bool: return known.has(float(fav["id"])))
 
 
 # ── The store's side (lib/data/local/seaLocal) ─────────────────────────────────

@@ -20,6 +20,10 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 	# the patch at that spot). Port rules; never under the parity run.
 	if op == "castLine" and not Rules.web_only and a.size() > 2 and a[2] is Dictionary:
 		db.me(uid)["finn_cast_at"] = { "x": Js.num((a[2] as Dictionary).get("x")), "y": Js.num((a[2] as Dictionary).get("y")) }
+	## The badges held before the call: many are granted inline by the rules
+	## (a land badge, a trophy, a moment), which the sweep then sees as held and
+	## never returns, so they are queued for the toast here (port rules).
+	var held_before: Array = [] if Rules.web_only else Js.list(db.me(uid).get("unlocked_badges")).duplicate()
 	var out: Variant = _run(db, uid, op, a)
 	if op == "reelIn" and out is Dictionary and (out as Dictionary).get("caught") == true and not Rules.web_only:
 		Finn.on_catch(db, uid, out)
@@ -32,14 +36,33 @@ static func run(db: CaptainStore, uid: String, op: String, a: Array) -> Variant:
 				(out as Dictionary)["clueSteps"] = steps
 	# Achievements are earned on state: check after anything that may have
 	# changed it (port rules; never under the parity run).
+	if not Rules.web_only:
+		var inline: Array = []
+		for id: Variant in Js.list(db.me(uid).get("unlocked_badges")):
+			if not held_before.has(id):
+				inline.append(id)
+		_queue_badges(db, inline)
 	if not READS.has(op):
-		var got: Array = Achievements.sweep(db, uid)
-		if not got.is_empty():
-			db.save["badges_new"] = Js.list(db.save.get("badges_new")) + got
+		_queue_badges(db, Achievements.sweep(db, uid))
 	return out
 
 
-## Calls that change nothing.
+## Add badges to the toast queue once each: a few rules (the Parlor's clean
+## sweep, the raid feats) queue their own, and those must not toast twice.
+static func _queue_badges(db: CaptainStore, ids: Array) -> void:
+	if ids.is_empty():
+		return
+	var q: Array = Js.list(db.save.get("badges_new")).duplicate()
+	for id: Variant in ids:
+		if not q.has(id):
+			q.append(id)
+	db.save["badges_new"] = q
+
+
+## Calls that need no achievement check after them. Not all are pure reads:
+## parlorState deals the hand and rolls the King and Capstan weeks,
+## getCrewState fills the free recruit board and marketRefresh catches the
+## market up, but none of those writes can earn a badge.
 const READS: Array = ["parlorState", "getCasinoState", "getSlotStats", "getSlotsJackpot", "getRouletteState", "resumeHand", "finnState", "folkState", "dealtToday", "getDigState", "marketRefresh", "heldGolden", "getCrewState", "skinsState", "getRaidMapView", "campaignView", "getDpsCheckPreview"]
 
 

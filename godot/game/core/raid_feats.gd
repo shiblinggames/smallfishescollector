@@ -4,6 +4,7 @@ extends RefCounted
 ## captain did over a raid, read off the battle's events as they are played,
 ## and the badges it earns when the raid is cleared.
 ##   iron_ruse         the Admiral Ruse raid (coffers_fleet) taking no damage
+##                     (any hull lost, as the web's onDamageTaken)
 ##   tight_quarters    the Quartermaster raid using no crew order
 ##   dead_reckoning    the Cartographer raid with every shot a critical
 ##   not_a_shot_fired  a boss fight won without a shot or a crew order
@@ -37,8 +38,19 @@ static func feed(st: Dictionary, ev: Array, seat: int, fight: int) -> void:
 			"eShot":
 				if int(Js.nz(x.get("target"), -1.0)) == seat and Js.num(x.get("dmg")) > 0.0 and x.get("dodged") != true:
 					st["hurt"] = true
-			"flareHit":
-				if int(Js.nz(x.get("seat"), -1.0)) == seat and Js.num(x.get("dmg")) > 0.0:
+			"bossAbility":
+				for h: Dictionary in Js.list(x.get("hits")):
+					if int(Js.nz(h.get("seat"), -1.0)) == seat and Js.num(h.get("dmg")) > 0.0:
+						st["hurt"] = true
+			"checkFail":
+				if Js.list(x.get("hurt")).has(float(seat)) or Js.list(x.get("hurt")).has(seat):
+					st["hurt"] = true
+			_:
+				# Any other blow on this ship's hull (the web counts every
+				# drop): a flare, a riposte or reflection, a burn, Volatile, a
+				# fumble's chip, a flee's parting shot. A hull hit carries the
+				# seat's hp ("reflect" back at the enemy carries enemyHp).
+				if int(Js.nz(x.get("seat"), -1.0)) == seat and x.has("hp") and (Js.num(x.get("dmg")) > 0.0 or Js.num(x.get("chip")) > 0.0):
 					st["hurt"] = true
 
 

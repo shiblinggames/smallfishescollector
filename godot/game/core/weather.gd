@@ -13,9 +13,9 @@ extends RefCounted
 ##
 ## The kinds: three storms (a Rain Squall, a Gale, a Tempest), each heavier
 ## than the last; Fog; and a Fair Wind that blows the way the front travels.
-## A front changes how the sea looks and how a hull sails, NOTHING else: no
-## bite, rarity, crate or price. (That may change; Kong wants to talk about
-## weather and the time of day nudging which fish bite. Not yet.)
+## A front changes how the sea looks and how a hull sails, and (through
+## core/fish_bias.gd) which fish of a rarity bite best; never the rarity odds,
+## crates or prices.
 ##
 ## The forecast (the Storm Glass and Sky Reader skills) reads these same rolls
 ## ahead of time.

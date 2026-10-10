@@ -54,10 +54,6 @@ static func open_slots(h: Dictionary) -> Array:
 	return (data()["furniture"] as Array).slice(0, n).map(func(f: Dictionary) -> String: return f["slot"])
 
 
-static func open_rooms(h: Dictionary) -> Array:
-	return (data()["rooms"] as Array).filter(func(r: Dictionary) -> bool: return tier(h) >= int(r["needsHouse"]))
-
-
 static func slot_def(slot: String) -> Dictionary:
 	for f: Dictionary in data()["furniture"]:
 		if f["slot"] == slot:

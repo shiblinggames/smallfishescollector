@@ -47,7 +47,8 @@ extends RefCounted
 ## THE MEGA (a Man-o-War's ultimate, lib/shipAugments): a full magazine of four
 ## (the Rack's fourth ball) for megaMult: the Railgun pierces shields and a
 ## clean dodge only grazes it; the Barrage's four blows each roll the on-hit
-## gear; the Nuke leaves the wreck burning. It alone breaks the Last Wall.
+## gear; the Nuke leaves the wreck burning. It breaks the Last Wall at once
+## (other shots and crew orders only crack it, down to its last blow).
 ## FLEE (the web's riskyFlee): a d20 plus the hull's speed against 10 plus the
 ## enemy's (and 3 more for a boss); a natural 20 always gets away, a natural 1
 ## never; a miss takes a parting shot. A ship that gets away is out of the
@@ -59,6 +60,8 @@ const MAX_CHARGES: int = 3
 const VOLLEY_COST: int = 3
 const FEINT_CHANCE: float = 0.30
 const VENGEANCE_WARD_TURNS: int = 3
+## On only inside resolve(): tide_agg keeps each seat's sum on the seat.
+static var _ta_memo: bool = false
 
 
 static func d20() -> int:
@@ -89,7 +92,11 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 	var dg: float = 0.0
 	var ft: float = 0.0
 	var crew: Array = []
-	for c: Dictionary in seated.slice(0, int(hull["crewSlots"])):
+	# The seats the party fills (raidLoadout): the hull's berths, a class
+	# pick's extra seat (Expanded Quarters) and the Sixth Berth.
+	var cls_fx: Dictionary = Campaign.class_effects(prof.get("ship_classes"))
+	var slots: int = int(hull["crewSlots"]) + int(cls_fx["crewSlots"]) + (1 if prof.get("has_sixth_berth") == true else 0)
+	for c: Dictionary in seated.slice(0, slots):
 		var st: Dictionary = Crew.leveled_stats(c)
 		var mult: float = 1.0 if float(c["raid_slot"]) == 0.0 else 0.8
 		pw += float(Js.round(float(st["power"]) * mult))
@@ -104,8 +111,8 @@ static func seat_for(db: CaptainStore, uid: String, name: String = "") -> Dictio
 			"filename": Skins.filename_for(prof, slug, str(card.get("filename", ""))), "cls": cls_id,
 			"ms": _milestone(cls, Crew.level(Js.num(c.get("xp")))),
 		})
-	# The chapters' class picks (raidLoadout): hull, speed and damage.
-	var cls_fx: Dictionary = Campaign.class_effects(prof.get("ship_classes"))
+	# The chapters' class picks (raidLoadout): hull, speed and damage (cls_fx,
+	# read above).
 	# The raid items on the hull (the loadout's cap, and the finale's mount).
 	var items: Array = Armory.live_items(prof)
 	var grades: Dictionary = {} if Rules.web_only else Js.obj(prof.get("raid_item_grades"))
@@ -319,6 +326,16 @@ static func _out(s: Dictionary) -> bool:
 	return s.get("sunk", false) == true or s.get("fled", false) == true
 
 
+## Where a ship sits in its line, by identity. Godot's find() and == compare
+## Dictionaries by content, and two fresh escorts of one kind are equal until
+## one is hit, so find() would hand back the first one's index.
+static func _idx(arr: Array, d: Dictionary) -> int:
+	for i: int in arr.size():
+		if is_same(arr[i], d):
+			return i
+	return -1
+
+
 static func alive(b: Dictionary) -> Array:
 	return (b["seats"] as Array).filter(func(s: Dictionary) -> bool: return not s.get("sunk", false) and not s.get("fled", false))
 
@@ -493,7 +510,7 @@ static func begin_gauntlet(seats: Array, field: Dictionary, variant: String) -> 
 ## The next field: { enemy, isBoss, isElite, isApex, affix, depth, escorts }.
 static func gauntlet_fight(b: Dictionary, field: Dictionary, variant: String) -> void:
 	var n: int = maxi(1, alive(b).size())
-	var pc: Dictionary = Js.obj(Js.obj(cfg().get("gauntlet")).get("party"))
+	var pc: Dictionary = Gauntlet.party_cfg()
 	var hp_scale: float = 1.0
 	for s0: Dictionary in b["seats"]:
 		hp_scale *= float(tide_agg(s0)["enemyHpScale"])
@@ -632,12 +649,20 @@ static func judge(pos: float, zone: float, crit_w: float = CRIT_W, scale: float 
 	return "miss"
 
 
-## raidDamageProfile + rollShotDamage.
+## raidDamageProfile: a straight hit's top (pmax) and floor (hitMin), and a
+## crit's top (critMax). The one source for the shot, the crew orders and
+## the DPS gate's preview.
+static func shot_range(ship_min: float, power: float) -> Dictionary:
+	var pmax: float = maxf(ship_min, float(Js.round(ship_min + 2.0 + floor(power / 4.0))))
+	return { "pmax": pmax, "hitMin": maxf(ship_min, floor(pmax * 0.4)), "critMax": float(Js.round(pmax * 1.5)) }
+
+
+## rollShotDamage over raidDamageProfile.
 static func roll_shot(res: String, ship_min: float, power: float) -> float:
-	var base: float = ship_min + 2.0 + floor(power / 4.0)
-	var pmax: float = maxf(ship_min, float(Js.round(base)))
-	var hit_min: float = maxf(ship_min, floor(pmax * 0.4))
-	var crit_max: float = float(Js.round(pmax * 1.5))
+	var rg: Dictionary = shot_range(ship_min, power)
+	var pmax: float = rg["pmax"]
+	var hit_min: float = rg["hitMin"]
+	var crit_max: float = rg["critMax"]
 	match res:
 		"critical":
 			return floor(Dice.next() * (crit_max - 2.0 * ship_min + 1.0)) + 2.0 * ship_min
@@ -649,15 +674,15 @@ static func roll_shot(res: String, ship_min: float, power: float) -> float:
 
 
 static func crit_max(ship_min: float, power: float) -> float:
-	var pmax: float = maxf(ship_min, float(Js.round(ship_min + 2.0 + floor(power / 4.0))))
-	return float(Js.round(pmax * 1.5))
+	return float(shot_range(ship_min, power)["critMax"])
 
 
 ## What a captain's aim bar does this pass (RaidCombat's aim set-up): the
 ## zone's speed stack (the enemy, an affix, capped at 4), the needle's speed,
 ## a drifting crit seam, the fog over the bar, the crit band (a tide), and an
 ## affliction the enemy laid on this ship (a false court of decoys, iron
-## shutters that take a first knock, a squall), which spends one pass.
+## shutters that take a first knock, a squall). A read only: resolve spends
+## the pass (_spend_afflict).
 static func aim_for(b: Dictionary, si: int, target: int = -1) -> Dictionary:
 	if target >= 0 and target < foes(b).size():
 		var keep: Dictionary = b["enemy"]
@@ -685,7 +710,7 @@ static func aim_for(b: Dictionary, si: int, target: int = -1) -> Dictionary:
 	# Signal Flags: a crewmate's reload last round widens this ship's crit zone.
 	var sig: float = 0.0
 	for o: Dictionary in b["seats"]:
-		if o != s:
+		if not is_same(o, s):
 			sig = maxf(sig, Js.num(o.get("signalLive")))
 	if sig > 0.0:
 		out["critZone"] = float(out["critZone"]) * (1.0 + sig)
@@ -696,10 +721,20 @@ static func aim_for(b: Dictionary, si: int, target: int = -1) -> Dictionary:
 		out["afflict"] = af["kind"]
 		if af["kind"] == "decoys" and float(ta["clarity"]) < 1.0:
 			out["decoys"] = 2
-		af["passes"] = float(af["passes"]) - 1.0
-		if float(af["passes"]) <= 0.0:
-			s["afflict"] = {}
 	return out
+
+
+## An aimed shot taken spends one pass of the seat's affliction. Done in
+## resolve, on the battle that is the truth, never in aim_for: a co-op screen
+## reads aim_for on a copy, and a bar reopened on the same plan must not
+## spend two.
+static func _spend_afflict(s: Dictionary) -> void:
+	var af: Dictionary = Js.obj(s.get("afflict"))
+	if af.is_empty():
+		return
+	af["passes"] = float(af["passes"]) - 1.0
+	if float(af["passes"]) <= 0.0:
+		s["afflict"] = {}
 
 
 # ══ Statuses (lib/statuses) ═══════════════════════════════════════════════════
@@ -738,7 +773,6 @@ static func mods(st: Dictionary) -> Dictionary:
 
 # ══ Planning ══════════════════════════════════════════════════════════════════
 
-## What a seat may do this round (the web's legality rules).
 ## The repair kit a seat carries (its captain's equipped one), or {}.
 static func repair_kit(s: Dictionary) -> Dictionary:
 	var id: String = str(s.get("repairKit", ""))
@@ -759,6 +793,7 @@ static func repair_range(s: Dictionary) -> Vector2:
 	return Vector2(float(k["baseMin"]), float(k["baseMax"]) + bonus)
 
 
+## What a seat may do this round (the web's legality rules).
 static func legal(b: Dictionary, s: Dictionary) -> Dictionary:
 	var c: float = float(s.get("charges", 0.0))
 	var mg: Dictionary = Js.obj(s.get("mega"))
@@ -814,14 +849,14 @@ static func use_order(b: Dictionary, si: int, ally: int, ev: Array) -> void:
 				var got: float = _heal_m(t2, float(Js.round(float(t2["max"]) * float(cf["surgeryPct"]) * power)))
 				if float(cf.get("surgeryShield", 0.0)) > 0.0:
 					t2["shield"] = float(t2["shield"]) + float(Js.round(float(t2["max"]) * float(cf["surgeryShield"]) * power))
-				healed.append({ "seat": (b["seats"] as Array).find(t2), "heal": got })
+				healed.append({ "seat": _idx(b["seats"], t2), "heal": got })
 			out["healed"] = healed
 		"full_sail":
 			var loaded: Array = []
 			for t3: Dictionary in alive(b):
 				if Dice.next() < float(cf["sail"]) and float(t3["charges"]) < float(t3["maxCharges"]):
 					t3["charges"] = float(t3["charges"]) + 1.0
-					loaded.append((b["seats"] as Array).find(t3))
+					loaded.append(_idx(b["seats"], t3))
 			out["loaded"] = loaded
 	ev.append(out)
 
@@ -862,8 +897,10 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 		t = s
 	var e: Dictionary = b["enemy"]
 	var ms: Dictionary = c["ms"]
-	var out: Dictionary = { "t": "ability", "seat": si, "crew": c["id"], "cls": c["cls"], "name": c["name"], "target": (b["seats"] as Array).find(t) }
+	var out: Dictionary = { "t": "ability", "seat": si, "crew": c["id"], "cls": c["cls"], "name": c["name"], "target": _idx(b["seats"], t) }
 	var flags: Array = []
+	## The Last Wall's crack or break from this order, played after it.
+	var wall_ev: Array = []
 	match str(c["cls"]):
 		"mender":
 			var heal: float = float(Js.round(float(t["max"]) * float(ms["pctMaxHp"]) * (1.0 + float(Js.obj(s.get("cls")).get("heal", 0.0)))))
@@ -903,7 +940,7 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 			var dmg: float = floor(crit_max(float(s["shipMin"]), float(s["power"])) * float(ms["dmgMult"]))
 			dmg = floor(dmg * (1.0 + float(ms["bossBonusPct"])) if big else dmg * (1.0 - float(ms["mobPenaltyPct"])))
 			dmg = maxf(1.0, floor(dmg * _ability_mult(b, s)))
-			out["dmg"] = _ability_damage(b, dmg)
+			out["dmg"] = _ability_damage(b, dmg, wall_ev)
 			flags = ["burst", "snare"]
 		"blitz":
 			var hits: Array = []
@@ -917,7 +954,7 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 				hits.append(d)
 			var tot: float = 0.0
 			for d: float in hits:
-				tot += _ability_damage(b, d)
+				tot += _ability_damage(b, d, wall_ev)
 			out["hits"] = hits
 			out["dmg"] = tot
 			flags = ["burst", "snare"]
@@ -943,6 +980,7 @@ static func use_ability(b: Dictionary, si: int, crew_id: Variant, target: int, e
 		(s["used"] as Array).erase(c["id"])
 		out["refund"] = true
 	ev.append(out)
+	ev.append_array(wall_ev)
 	if float(e["hp"]) <= 0.0:
 		_enemy_down(b, ev, true)
 
@@ -981,10 +1019,10 @@ static func _ability_mult(b: Dictionary, s: Dictionary) -> float:
 
 ## Ability damage: soaked by the shield (without corrode) unless marked to
 ## pierce; no dodge, no ward.
-static func _ability_damage(b: Dictionary, dmg: float) -> float:
+static func _ability_damage(b: Dictionary, dmg: float, ev: Array) -> float:
 	var e: Dictionary = b["enemy"]
 	if not (e["aegis"] as Dictionary).is_empty():
-		_aegis_hit(b, 1.0, [])
+		_aegis_hit(b, 1.0, ev)
 		return 0.0
 	var to_hull: float = dmg
 	if float(e["markPierce"]) <= 0.0 and float(e["shield"]) > 0.0:
@@ -1056,7 +1094,21 @@ static func pick_enemy(b: Dictionary) -> String:
 
 ## plans: one per seat: { action, aim ("critical"/"hit"/"graze"/"miss"),
 ## ability: { crew, target } or null }. Returns the round's events.
+## Each seat's run effects are added up once for the round (_ta_memo): a
+## co-op round asks tide_agg hundreds of times, and nothing it reads (tfx,
+## runKills, runDepth, raidStreak) changes inside a resolve. It rolls no dice,
+## so the outcome is the same.
 static func resolve(b: Dictionary, plans: Array) -> Array:
+	_ta_memo = true
+	var ev: Array = _resolve_round(b, plans)
+	_ta_memo = false
+	for s: Dictionary in b["seats"]:
+		s.erase("_ta")
+		s.erase("_taBoss")
+	return ev
+
+
+static func _resolve_round(b: Dictionary, plans: Array) -> Array:
 	var ev: Array = []
 	var fs: Array = foes(b)
 	for f0: Dictionary in fs:
@@ -1067,6 +1119,7 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 		f0["hitBy"] = []
 		f0["volleyBy"] = []
 		f0["boarded"] = false
+		f0["boardedJam"] = false
 		f0.erase("xfSeats")
 	_bond_round_start(b)
 	# Crew orders first, in seat order (one aimed at an enemy goes at the
@@ -1086,12 +1139,17 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 			b.erase("revived")
 	# The class orders (a turn spent; Powder Keg with no turn rides beside an
 	# attack as "keg").
+	## The seats whose order went this round: the order is spent by now, so
+	## legal() calls it used, and the plan must not fall back to a reload.
+	var ordered: Dictionary = {}
 	for i2: int in plans.size():
 		var pl2: Dictionary = Js.obj(plans[i2])
 		if _out(b["seats"][i2]):
 			continue
 		if str(pl2.get("action", "")) == "order" or (pl2.get("keg", false) == true and Js.obj(b["seats"][i2].get("cls")).get("kegFree", false)):
 			use_order(b, i2, int(Js.nz(pl2.get("ally"), float(i2))), ev)
+			if str(pl2.get("action", "")) == "order":
+				ordered[i2] = true
 	if first_foe(b) < 0 or b["state"] != "plan":
 		return _finish(b, ev)
 	# Each ship's action as it will be taken (an illegal pick falls back), so
@@ -1103,9 +1161,11 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 		var p0: Dictionary = Js.obj(plans[i]).duplicate()
 		var lg0: Dictionary = legal(b, s0)
 		var act0: String = str(p0.get("action", "reload"))
-		if not lg0.get(act0, false):
+		if not lg0.get(act0, false) and not (act0 == "order" and ordered.has(i)):
 			act0 = "reload" if lg0["reload"] else ("fire" if lg0["fire"] else "dodge")
 			p0["aim"] = "miss"
+		elif act0 in ["fire", "volley", "mega"]:
+			_spend_afflict(s0)
 		p0["action"] = act0
 		plans[i] = p0
 	# Every enemy's move; freezes take hold, burns tick.
@@ -1291,6 +1351,13 @@ static func resolve(b: Dictionary, plans: Array) -> Array:
 					b["enemy"] = fs[j5]
 					var n5: int = ev.size()
 					_seat_act(b, who, Js.obj(plans[who]), str(fs[j5]["action"]), e_mods[j5], ev)
+					# A crit refund (the Primeval Maw) left the lent balls in
+					# the rack: take them back, so an extra attack is free
+					# either way and never lifts the rack past its size.
+					for k5: int in range(n5, ev.size()):
+						if str(Js.obj(ev[k5]).get("t", "")) == "refund" and int(Js.obj(ev[k5]).get("seat", -1)) == who:
+							s2["charges"] = maxf(0.0, float(s2["charges"]) - cost4)
+							break
 					_tag(ev, n5, j5)
 					if float(fs[j5]["hp"]) <= 0.0 and not b.get("revived", false):
 						fs[j5]["down"] = true
@@ -1437,7 +1504,8 @@ static func _seat_act(b: Dictionary, si: int, plan: Dictionary, e_act: String, e
 			if ph.get("damageTakenMult") != null and dmg > 0.0 and not (ph.get("damageTakenVolleyBypass") == true and act == "volley") and Dice.next() < float(Js.nz(ph.get("damageTakenChance"), 1.0)):
 				dmg = maxf(1.0, float(Js.round(dmg * float(ph["damageTakenMult"]))))
 			var walled: bool = not (e["aegis"] as Dictionary).is_empty()
-			# Only a Mega breaks the Last Wall, and its blow comes through.
+			# A Mega breaks the Last Wall at once, and its blow comes through
+			# (any other blow only cracks it, _aegis_hit).
 			if walled and act == "mega":
 				e["aegis"] = {}
 				walled = false
@@ -1586,7 +1654,7 @@ static func _enemy_act(b: Dictionary, act: String, e_mods: Dictionary, plans: Ar
 		act = "reload"
 	# Counter-Battery: a ship that rolled it smashes this shot out of the air.
 	if act in ["fire", "volley"]:
-		var me_j: int = foes(b).find(e)
+		var me_j: int = _idx(foes(b), e)
 		for ci: int in (b["seats"] as Array).size():
 			var cs: Dictionary = b["seats"][ci]
 			if _out(cs) or int(Js.nz(cs.get("counterOn"), -1.0)) != me_j:
@@ -1732,13 +1800,13 @@ static func _enemy_shot(b: Dictionary, act: String, ti: int, e_mods: Dictionary,
 	if not Js.obj(e.get("combo")).is_empty() and str(e["combo"].get("half", "")) == "partner":
 		var st: Dictionary = t["statuses"]
 		if combo_partner(b, e, "hammer_anvil") >= 0 and (st.has("blinded") or st.has("narrowed")):
-			dmg = maxf(1.0, floor(dmg * (1.0 + float(Js.nz(combo_def(e, "hammer_anvil").get("pct"), 0.25)))))
+			dmg = maxf(1.0, floor(dmg * (1.0 + float(Js.nz(Gauntlet.combo_def("hammer_anvil").get("pct"), 0.25)))))
 			combo_ev = "Hammer and Anvil"
 		if combo_partner(b, e, "called_shot") >= 0 and st.has("marked") and act != "ultimate":
-			eff_crit = minf(1.0, eff_crit + float(Js.nz(combo_def(e, "called_shot").get("crit"), 0.2)))
+			eff_crit = minf(1.0, eff_crit + float(Js.nz(Gauntlet.combo_def("called_shot").get("crit"), 0.2)))
 			combo_ev = "Called Shot"
 	if combo_ev != "":
-		ev.append({ "t": "comboNote", "foe": foes(b).find(e), "seat": ti, "text": combo_ev })
+		ev.append({ "t": "comboNote", "foe": _idx(foes(b), e), "seat": ti, "text": combo_ev })
 	if not frenzy and float(ta["inCritCut"]) != 0.0 and act != "ultimate":
 		eff_crit = clampf(eff_crit - float(ta["inCritCut"]), 0.0, 1.0)
 	var crit: bool = Dice.next() < eff_crit
@@ -1897,7 +1965,7 @@ static func _enemy_down(b: Dictionary, ev: Array, by_ability: bool) -> void:
 	if not cb.is_empty():
 		var j: int = int(cb["with"])
 		if j >= 0 and j < foes(b).size() and foe_up(foes(b)[j]):
-			ev.append({ "t": "comboBroken", "foe": j, "name": str(combo_def(e, str(cb["id"])).get("name", "")) })
+			ev.append({ "t": "comboBroken", "foe": j, "name": str(Gauntlet.combo_def(str(cb["id"])).get("name", "")) })
 
 
 # ══ Mechanic checks (BossMechanicCheck) ═══════════════════════════════════════
@@ -1936,7 +2004,13 @@ static func _check_met(b: Dictionary) -> bool:
 static func _check_fail(b: Dictionary, ev: Array) -> void:
 	var e: Dictionary = b["enemy"]
 	var c: Dictionary = e["check"]["def"]["consequence"]
-	for s: Dictionary in alive(b):
+	## The seats whose hull the failure cost (the feats read it).
+	var hurt: Array = []
+	for si: int in (b["seats"] as Array).size():
+		var s: Dictionary = b["seats"][si]
+		if _out(s):
+			continue
+		var hp0: float = float(s["hp"])
 		match str(c["kind"]):
 			"damagePctMaxHp":
 				s["hp"] = maxf(0.0, float(s["hp"]) - maxf(1.0, float(Js.round(float(s["max"]) * float(c["value"])))))
@@ -1946,9 +2020,11 @@ static func _check_fail(b: Dictionary, ev: Array) -> void:
 				seat_status(s, str(c["status"]), float(c["magnitude"]), float(c["turns"]))
 				if c.get("dmgPct") != null:
 					s["hp"] = maxf(0.0, float(s["hp"]) - maxf(1.0, float(Js.round(float(s["max"]) * float(c["dmgPct"])))))
+		if float(s["hp"]) < hp0:
+			hurt.append(si)
 	if str(c["kind"]) == "enemyHealPctMaxHp":
 		e["hp"] = minf(float(e["max"]), float(e["hp"]) + maxf(1.0, float(Js.round(float(e["max"]) * float(c["value"])))))
-	ev.append({ "t": "checkFail", "line": e["check"]["def"].get("failLine", "") })
+	ev.append({ "t": "checkFail", "line": e["check"]["def"].get("failLine", ""), "hurt": hurt })
 	e["check"] = {}
 
 
@@ -2038,6 +2114,16 @@ static func _round_end(b: Dictionary, ev: Array) -> Array:
 			}
 			ev.append({ "t": "flares", "name": e["decoyName"], "count": b["flares"]["count"] })
 		_tag(ev, n0, j)
+	# A failed check can take a ship to nothing: the ward, the Anchor or the
+	# deep has it now (before the ward's turns tick), and a line with no ship
+	# left is lost this round.
+	_deaths(b, ev)
+	if alive(b).is_empty():
+		var lead0: int = first_foe(b)
+		b["enemy"] = fs[lead0] if lead0 >= 0 else fs[0]
+		b["state"] = "lost"
+		ev.append({ "t": "lost" })
+		return ev
 	_bond_round_end(b, ev)
 	# The turn's change on the ships: orders, regen, statuses, wards.
 	for s: Dictionary in b["seats"]:
@@ -2339,6 +2425,9 @@ static func expire_tides(fx: Array) -> Array:
 ## bonuses add, the strongest of a kind wins where the web takes the max. The
 ## momentum axes (kills, depth) fold in once, off s.runKills and s.runDepth.
 static func tide_agg(s: Dictionary, boss: bool = false) -> Dictionary:
+	var memo_key: String = "_taBoss" if boss else "_ta"
+	if _ta_memo and s.has(memo_key):
+		return s[memo_key]
 	var a: Dictionary = {
 		"dmgMult": 1.0, "fireMult": 1.0, "volleyMult": 1.0, "megaMult": 1.0, "bossMult": 1.0, "bossVolMult": 1.0, "critBonus": 0.0, "critZone": 1.0,
 		"inDmg": 1.0, "speed": 0.0, "reloadChance": 0.0, "reloadBonus": 0.0, "dodgeBonus": 0.0, "startHpPct": 0.0, "startHealPct": 0.0,
@@ -2497,6 +2586,8 @@ static func tide_agg(s: Dictionary, boss: bool = false) -> Dictionary:
 		a["dmgMult"] = float(a["dmgMult"]) * (1.0 + minf(kill_cap, kill_rate * kills))
 	if depth_rate > 0.0:
 		a["dmgMult"] = float(a["dmgMult"]) * (1.0 + minf(depth_cap, depth_rate * depth))
+	if _ta_memo:
+		s[memo_key] = a
 	return a
 
 
@@ -2867,13 +2958,14 @@ static func _role_turn(b: Dictionary, e: Dictionary, ev: Array) -> bool:
 	e["roleTurn"] = float(e.get("roleTurn", 0.0)) + 1.0
 	if int(e["roleTurn"]) % int(Js.nz(rc.get("every"), 3.0)) != 2 % int(Js.nz(rc.get("every"), 3.0)):
 		return false
-	# Boarded: its crew are busy repelling boarders, and the turn is lost.
-	if e.get("jammed", false):
-		e.erase("jammed")
-		ev.append({ "t": "comboNote", "foe": foes(b).find(e), "text": "Boarders! No %s this turn" % str(Js.obj(rc.get(str(e["role"]))).get("name", "")) })
+	# Boarded: its crew are busy repelling boarders, and the turn is lost
+	# (its own flag: "jammed" is the snare's, on a dodge).
+	if e.get("boardedJam", false):
+		e["boardedJam"] = false
+		ev.append({ "t": "comboNote", "foe": _idx(foes(b), e), "text": "Boarders! No %s this turn" % str(Js.obj(rc.get(str(e["role"]))).get("name", "")) })
 		return false
 	var fs: Array = foes(b)
-	var me_j: int = fs.find(e)
+	var me_j: int = _idx(fs, e)
 	var r: String = str(e["role"])
 	var def: Dictionary = Js.obj(rc.get(r))
 	match r:
@@ -2945,11 +3037,11 @@ static func breakwater(b: Dictionary, si: int, tj: int, ev: Array) -> int:
 			continue
 		var c2: float = ch
 		if combo_partner(b, fs[j], "shield_sword") == tj:
-			c2 += float(Js.nz(combo_def(fs[j], "shield_sword").get("chance"), 0.25))
+			c2 += float(Js.nz(Gauntlet.combo_def("shield_sword").get("chance"), 0.25))
 		if Dice.next() < c2:
 			ev.append({ "t": "intercept", "foe": j, "from": tj, "seat": si })
 			if combo_partner(b, fs[j], "field_surgeon") >= 0:
-				var amt: float = minf(float(fs[j]["max"]) - float(fs[j]["hp"]), maxf(1.0, float(Js.round(float(fs[j]["max"]) * float(Js.nz(combo_def(fs[j], "field_surgeon").get("pct"), 0.06))))))
+				var amt: float = minf(float(fs[j]["max"]) - float(fs[j]["hp"]), maxf(1.0, float(Js.round(float(fs[j]["max"]) * float(Js.nz(Gauntlet.combo_def("field_surgeon").get("pct"), 0.06))))))
 				if amt > 0.0:
 					fs[j]["hp"] = float(fs[j]["hp"]) + amt
 					ev.append({ "t": "comboNote", "foe": j, "text": "Field Surgeon  +%d" % int(amt), "hp": fs[j]["hp"] })
@@ -2970,11 +3062,10 @@ static func combo_partner(b: Dictionary, e: Dictionary, id: String) -> int:
 	return j
 
 
+## A pack combo's definition: Gauntlet.combo_def is the one owner. The first
+## argument is unused, kept while game/ callers still pass a foe.
 static func combo_def(_e: Dictionary, id: String) -> Dictionary:
-	for c: Dictionary in Js.list(Js.obj(Js.obj(cfg().get("gauntlet")).get("packs")).get("combos")):
-		if c["id"] == id:
-			return c
-	return {}
+	return Gauntlet.combo_def(id)
 
 
 
@@ -3116,7 +3207,7 @@ static func _bond_landed(b: Dictionary, si: int, e: Dictionary, act: String, cri
 				e["boarded"] = true
 				e["charges"] = maxf(0.0, float(e["charges"]) - 1.0)
 				if str(e.get("role", "")) != "":
-					e["jammed"] = true
+					e["boardedJam"] = true
 				apply_status(e["statuses"], "marked", best, 2.0)
 				_el(b, e, "marked", si)
 				_bond_note(ev, si, -1, "Boarded!")
@@ -3133,13 +3224,13 @@ static func _bond_landed(b: Dictionary, si: int, e: Dictionary, act: String, cri
 				splash = float(Js.round(splash * float(rb["mult"])))
 			if splash > 0.0:
 				for f: Dictionary in foes(b):
-					if f == e or not foe_up(f):
+					if is_same(f, e) or not foe_up(f):
 						continue
 					# It rakes, it never sinks a ship.
 					var hit: float = minf(splash, float(f["hp"]) - 1.0)
 					if hit > 0.0:
 						f["hp"] = float(f["hp"]) - hit
-						ev.append({ "t": "rake", "seat": si, "foe": foes(b).find(f), "dmg": hit, "enemyHp": f["hp"] })
+						ev.append({ "t": "rake", "seat": si, "foe": _idx(foes(b), f), "dmg": hit, "enemyHp": f["hp"] })
 
 
 ## A reload: Powder Runner hands a ball along; Signal Flags go up.
@@ -3394,7 +3485,7 @@ static func _reactions(b: Dictionary, si: int, e: Dictionary, act: String, dmg: 
 	var r: Dictionary = reaction_def(id)
 	var pct: float = float(Js.nz(r.get("pct"), 0.0))
 	var fs: Array = foes(b)
-	var me_j: int = fs.find(e)
+	var me_j: int = _idx(fs, e)
 	var x: Dictionary = { "t": "reaction", "id": id, "name": r.get("name", ""), "seat": si, "foe": me_j, "others": [] }
 	match id:
 		"fog_bank":
@@ -3403,9 +3494,9 @@ static func _reactions(b: Dictionary, si: int, e: Dictionary, act: String, dmg: 
 			e["frozenNow"] = false
 		"greek_fire":
 			for f: Dictionary in fs:
-				if f != e and foe_up(f) and Js.obj(f.get("burn")).is_empty():
+				if not is_same(f, e) and foe_up(f) and Js.obj(f.get("burn")).is_empty():
 					f["burn"] = Js.obj(e["burn"]).duplicate()
-					(x["others"] as Array).append({ "foe": fs.find(f), "burn": true })
+					(x["others"] as Array).append({ "foe": _idx(fs, f), "burn": true })
 			(e["statuses"] as Dictionary).erase("corrode")
 		"powder_keg":
 			_splash_others(b, e, float(Js.round(dmg * pct)), x)
@@ -3419,8 +3510,8 @@ static func _reactions(b: Dictionary, si: int, e: Dictionary, act: String, dmg: 
 			var crush: float = float(Js.round(dmg * pct * coils))
 			_react_hit(b, si, e, crush, false, x, ev)
 			for f2: Dictionary in fs:
-				if f2 != e and foe_up(f2):
-					_splash_one(f2, float(Js.round(crush * 0.5)), fs.find(f2), x)
+				if not is_same(f2, e) and foe_up(f2):
+					_splash_one(f2, float(Js.round(crush * 0.5)), _idx(fs, f2), x)
 					break
 			e["grip"][str(el["coils"])] = 0.0
 		"boiling_sea":
@@ -3471,8 +3562,8 @@ static func _react_hit(b: Dictionary, si: int, e: Dictionary, amt: float, pierce
 static func _splash_others(b: Dictionary, e: Dictionary, amt: float, x: Dictionary) -> void:
 	var fs: Array = foes(b)
 	for f: Dictionary in fs:
-		if f != e and foe_up(f):
-			_splash_one(f, amt, fs.find(f), x)
+		if not is_same(f, e) and foe_up(f):
+			_splash_one(f, amt, _idx(fs, f), x)
 
 
 static func _splash_one(f: Dictionary, amt: float, j: int, x: Dictionary) -> void:

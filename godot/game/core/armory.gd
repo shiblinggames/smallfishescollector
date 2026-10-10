@@ -22,13 +22,6 @@ static func item(id: String) -> Dictionary:
 	return Js.obj(_by_id.get(id.split("#")[0]))
 
 
-static func recipe(result: String) -> Dictionary:
-	for r: Dictionary in Js.list(Rules.data().get("forgeRecipes")):
-		if r["result"] == result:
-			return r
-	return {}
-
-
 ## raidItemSlotsForTier + class itemSlots + the Expanded Armory.
 static func slots(prof: Dictionary) -> int:
 	var tier: int = clampi(int(Js.nz(prof.get("ship_tier"), 0.0)), 2, 6)
@@ -44,7 +37,7 @@ static func finale_mount(prof: Dictionary) -> bool:
 ## fusionExcludedItems: every ingredient up a forged item's tree, and every
 ## grade of each ingredient's family.
 static func fusion_excluded(result: String) -> Array:
-	var r: Dictionary = recipe(result)
+	var r: Dictionary = Forge.recipe(result)
 	if r.is_empty():
 		return []
 	var ids: Array = []
@@ -54,7 +47,7 @@ static func fusion_excluded(result: String) -> Array:
 		if ids.has(id):
 			continue
 		ids.append(id)
-		var sub: Dictionary = recipe(id)
+		var sub: Dictionary = Forge.recipe(id)
 		if not sub.is_empty():
 			queue.append_array(Js.list(sub.get("components")))
 	var out: Array = ids.duplicate()

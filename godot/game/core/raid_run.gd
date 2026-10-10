@@ -128,9 +128,7 @@ static func record_clear(db: CaptainStore, uid: String, raid_id: String, ms: Var
 
 
 
-## One roll's chance at a crate item (0 for coin rows and owned skins): its
-## rarity's odds (a challenge raid's doubled), Fortune's lift, a co-op tier's
-## rarityMult. The web's crate for Normal.
+## Whether a crate row can be rolled at all (no coin rows, no owned skins).
 static func rollable(row: Dictionary, owned_skins: Array) -> bool:
 	var rid: String = str(row["id"])
 	if rid.begins_with("doubloons") or rid.begins_with("gems") or rid.begins_with("pack"):
@@ -138,6 +136,9 @@ static func rollable(row: Dictionary, owned_skins: Array) -> bool:
 	return not (row.get("shipSkinId") != null and owned_skins.has(row["shipSkinId"]))
 
 
+## One roll's chance at a crate item (0 for coin rows and owned skins): its
+## rarity's odds (a challenge raid's doubled), Fortune's lift, a co-op tier's
+## rarityMult. The web's crate for Normal.
 static func item_chance(raid: Dictionary, row: Dictionary, fortune: float, tier: Dictionary = {}, owned_skins: Array = [], legend_mult: float = 1.0) -> float:
 	if not rollable(row, owned_skins):
 		return 0.0

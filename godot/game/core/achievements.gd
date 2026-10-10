@@ -164,7 +164,7 @@ static func earned(id: String, db: CaptainStore, uid: String) -> bool:
 				"every_last_rock": return landed >= (Rules.data()["isles"] as Array).size()
 				_: return notes >= all_notes
 		"wake_behind_you", "home_waters", "no_blank_spaces":
-			var f: float = Explore.fog_progress(Explore.fog_decode(p.get("sea_explored")))
+			var f: float = _fog(p.get("sea_explored"), false)
 			return f >= { "wake_behind_you": 0.25, "home_waters": 0.6, "no_blank_spaces": 0.9 }[id]
 		# The treasure hunts (core/clues.gd) took the digs' badges.
 		"first_spade": return n.call("clues_done") >= 1
@@ -222,12 +222,16 @@ static func sweep(db: CaptainStore, uid: String) -> Array:
 		return []
 	var have: Array = Js.list(db.me(uid).get("unlocked_badges"))
 	var out: Array = []
+	_sweeping = true
+	_sweep_voyages = -1
 	for id: String in CHECKED + EXPEDITION:
 		if MOMENTS.has(id) or Js.includes(have, id):
 			continue
 		if earned(id, db, uid):
 			db.grant_badge(uid, id)
 			out.append(id)
+	_sweeping = false
+	_sweep_voyages = -1
 	# The colours the points have reached.
 	var owned: Array = Js.list(db.me(uid).get("unlocked_character_colors"))
 	for c: Variant in colors_for(db.achievement_points(uid)):
@@ -328,12 +332,46 @@ static func _confluences_seen(p: Dictionary) -> int:
 	return Js.list(Gauntlet.t().get("confluences")).filter(func(c: Dictionary) -> bool: return seen.has(c["id"])).size()
 
 
+## A fog column's progress, kept for the last mask seen: a sweep asks up to
+## five times after every action (the position save included), and the mask
+## only changes when new water is seen. Keyed on the stored text itself.
+static var _fog_raw: Array = [null, null]
+static var _fog_at: Array = [0.0, 0.0]
+
+
+static func _fog(raw: Variant, exp_side: bool) -> float:
+	var i: int = 1 if exp_side else 0
+	if _fog_raw[i] != null and typeof(raw) == typeof(_fog_raw[i]) and raw == _fog_raw[i]:
+		return float(_fog_at[i])
+	var f: float = Explore.xfog_progress(Explore.xfog_decode(raw)) if exp_side else Explore.fog_progress(Explore.fog_decode(raw))
+	_fog_raw[i] = raw
+	_fog_at[i] = f
+	return f
+
+
+## The revealed voyages, counted once per sweep (the history is never trimmed,
+## and _exp runs for every expedition badge still to earn).
+static var _sweep_voyages: int = -1
+
+
+static func _revealed_voyages(db: CaptainStore) -> int:
+	if _sweep_voyages >= 0:
+		return _sweep_voyages
+	var c: int = Js.list(db.save.get("voyages")).filter(func(v: Dictionary) -> bool: return v.get("status") == "revealed").size()
+	if _sweeping:
+		_sweep_voyages = c
+	return c
+
+
+static var _sweeping: bool = false
+
+
 static func _exp(id: String, db: CaptainStore, uid: String) -> bool:
 	var p: Dictionary = db.me(uid)
 	var n: Callable = func(col: String) -> float: return Js.num(p.get(col))
 	var nav: int = Loadout.nav_level_from_xp(n.call("expedition_xp"))
 	var crew: Array = Js.list(db.save.get("crew"))
-	var voyages: int = Js.list(db.save.get("voyages")).filter(func(v: Dictionary) -> bool: return v.get("status") == "revealed").size()
+	var voyages: int = _revealed_voyages(db)
 	var clears: Array = Js.list(db.save.get("raidClears"))
 	var skins: Array = Js.list(p.get("owned_crew_skins"))
 	var hulls: Array = Js.list(p.get("owned_ship_skins"))
@@ -486,6 +524,6 @@ static func _exp(id: String, db: CaptainStore, uid: String) -> bool:
 				"furnished": return (h["owned"] as Array).size() >= 10
 				"every_comfort": return (h["owned"] as Array).size() >= every
 				_: return (h["pinned"] as Array).size() >= int(Homestead.data()["pinnedMax"])
-		"into_the_fog": return Explore.xfog_progress(Explore.xfog_decode(p.get("sea_explored_exp"))) >= 0.5
-		"fog_burned_off": return Explore.xfog_progress(Explore.xfog_decode(p.get("sea_explored_exp"))) >= 0.9
+		"into_the_fog": return _fog(p.get("sea_explored_exp"), true) >= 0.5
+		"fog_burned_off": return _fog(p.get("sea_explored_exp"), true) >= 0.9
 	return false

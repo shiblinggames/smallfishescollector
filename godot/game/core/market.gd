@@ -149,5 +149,19 @@ static func multiplier(save: Dictionary, fish_id: float) -> float:
 	return float((f as Dictionary)["m"]) if f != null else 1.0
 
 
+## The captain's market as last stored, for a screen to show (port only).
+## Never caught up: it rolls no dice and writes nothing, so a crewmate's
+## screen cannot roll a market of its own that differs from the founder's
+## (current() is for the rules, or for a screen that is not remote).
+static func read(save: Dictionary) -> Dictionary:
+	return Js.obj(save.get("market"))
+
+
+## A fish's multiplier from the stored market (read()), 1.0 when none.
+static func read_multiplier(save: Dictionary, fish_id: float) -> float:
+	var f: Variant = Js.obj(read(save).get("fish")).get(Js.key(fish_id))
+	return float((f as Dictionary)["m"]) if f != null else 1.0
+
+
 static func price_each(sell_value: float, mult: float) -> float:
 	return floor(sell_value * mult * 1.0)

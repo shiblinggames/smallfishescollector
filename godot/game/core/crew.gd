@@ -5,7 +5,8 @@ extends RefCounted
 ## (getCrewState, recruitCrew, upgradeCrewHall, dismissCrew, renameCrew) over
 ## the save's crew, recruits and bunks (lib/data/local/crewLocal), with the
 ## rolls of lib/crewRules and lib/crewGen and the tables the rules export
-## (rules.json "crew"). Bunks, seats, skins and promotions come later.
+## (rules.json "crew"). Bunks, skins and promotions live in their own files
+## (Bunks, Skins); the seats are assign() below.
 ##
 ## The state returned is the web's CrewState cut to what the port has: the
 ## board, the roster, the roster's capacity, the hall's tier, the purse and
@@ -501,16 +502,9 @@ static func dismiss(db: CaptainStore, uid: String, crew_id: float) -> Dictionary
 			c = x
 	if c.is_empty():
 		return { "error": "Crew not found" }
-	if c.get("voyage_slot") != null:
-		for v: Dictionary in Js.list(db.save.get("voyages")):
-			if v.get("status") == "pending" and Js.list(v.get("crew_variant_ids")).has(crew_id):
-				return { "error": "This crew is at sea right now. Wait for their voyage to return." }
-	for tr: Dictionary in Js.list(db.save.get("trawls")):
-		if float(tr["crew_id"]) == crew_id:
-			return { "error": "This crew is out on a trawl. Collect it first to free them up." }
-	var held: String = Bunks.hold_error(db, db.me(uid), crew_id)
-	if held != "":
-		return { "error": held }
+	var err: String = _reassign_error(db, uid, c)
+	if err != "":
+		return { "error": err }
 	db.save["crew"] = (db.save["crew"] as Array).filter(func(x: Dictionary) -> bool: return not (float(x["id"]) == crew_id and x.get("died_at") == null))
 	return _after(db, uid)
 
@@ -528,8 +522,7 @@ static func _reassign_error(db: CaptainStore, uid: String, c: Dictionary) -> Str
 	return Bunks.hold_error(db, db.me(uid), crew_id)
 
 
-## The seats a ship has for a party (hull berths; class picks and the sixth
-## berth come with the campaign).
+## The seats a ship has for a party: the hull's berths and the Sixth Berth.
 static func party_slots(prof: Dictionary) -> int:
 	var tier: int = int(Js.nz(prof.get("ship_tier"), 0.0))
 	var row: Dictionary = Js.obj(Js.obj(Rules.data().get("shipCombat")).get(str(tier)))

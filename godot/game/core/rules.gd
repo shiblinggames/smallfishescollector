@@ -69,6 +69,7 @@ static func data() -> Dictionary:
 		if not web_only and FileAccess.file_exists("res://content/port_rules.json"):
 			_merge(_d, JsJson.parse(FileAccess.get_file_as_string("res://content/port_rules.json")))
 			_campaign_text(_d)
+			_text_edits(_d)
 			_retire_nodes(_d)
 			SeaScale.apply(_d)
 	return _d
@@ -87,6 +88,25 @@ static func _campaign_text(d: Dictionary) -> void:
 	for n: Dictionary in Js.list(Js.obj(d.get("campaign")).get("nodes")):
 		if edits.has(n["id"]):
 			_merge(n, edits[n["id"]])
+
+
+## THE WEB'S WORDING WITHOUT ITS EM-DASHES (the house rule): port_rules
+## textEdits { list: { index: { field: text } } } (or { index: text } for a
+## list of strings, like shinyMessages) laid over the web's tables, which the
+## merge would otherwise replace whole. The parity run keeps the web's words.
+static func _text_edits(d: Dictionary) -> void:
+	var edits: Dictionary = Js.obj(d.get("textEdits"))
+	for list: Variant in edits:
+		var rows: Array = Js.list(d.get(list))
+		var by_index: Dictionary = Js.obj(edits[list])
+		for k: Variant in by_index:
+			var i: int = str(k).to_int()
+			if i < 0 or i >= rows.size():
+				continue
+			if rows[i] is Dictionary and by_index[k] is Dictionary:
+				_merge(rows[i], by_index[k])
+			elif rows[i] is String and by_index[k] is String:
+				rows[i] = by_index[k]
 
 
 ## CAMPAIGN NODES CUT IN THE PORT (port_rules retiredNodes; Kong, 2026-10-06:
@@ -209,13 +229,6 @@ static func rod_by_id(id: String) -> Dictionary:
 		if r["id"] == id:
 			return r
 	return {}
-
-
-static func rod_id_for_tier(tier: float) -> String:
-	for r: Dictionary in data()["rods"]:
-		if float(r["tier"]) == tier:
-			return r["id"]
-	return ""
 
 
 static func rod_has_unique_effect(r: Dictionary) -> bool:
@@ -374,8 +387,8 @@ static func fishing_colors_to_grant(level: int, unlocked: Array) -> Array:
 
 # ── Hotspots (lib/seaHotspots) ─────────────────────────────────────────────────
 
-## hotspotEffect for no hotspot. The chart's hotspots (hotspotAt) come with the
-## sea screen; until then every cast is in open water.
+## hotspotEffect for no hotspot: the effect of open water. Hotspots.effect
+## returns it for a cast outside any patch.
 static func no_hotspot() -> Dictionary:
 	return { "waitMult": 1.0, "rarityBonus": 0.0, "crateChanceMult": 1.0 }
 

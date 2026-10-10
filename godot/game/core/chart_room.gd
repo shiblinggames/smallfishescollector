@@ -732,7 +732,6 @@ static func submit_match(db: CaptainStore, uid: String, moves: Variant) -> Dicti
 	_ch(db)["match"] = _trim(ms)
 	var np: float = old_points + delta
 	db.update_profile(uid, { "puzzle_points": np })
-	_after_points(db, uid)
 	return { "bestScore": best, "tier": float(tier), "pointsWon": float(delta), "maxed": maxed, "newPuzzlePoints": np }
 
 
@@ -814,7 +813,6 @@ static func reveal_cell(db: CaptainStore, uid: String, index: Variant) -> Dictio
 			won = float(c()["minefield"]["points"])
 			np = _points(db, uid) + won
 			db.update_profile(uid, { "puzzle_points": np })
-			_after_points(db, uid)
 	else:
 		if cleared:
 			a["status"] = "cleared"
@@ -1008,7 +1006,6 @@ static func submit_hold(db: CaptainStore, uid: String, d: String, entries: Varia
 		db.grant_badge(uid, "fully_laden")
 	if solved.size() == HOLD_DIFFS.size():
 		db.grant_badge(uid, "clean_manifest")
-	_after_points(db, uid)
 	return { "correct": true, "doubloonsWon": won, "clean": clean, "newDoubloons": nd, "pointsWon": pts, "newPuzzlePoints": old_points + pts }
 
 
@@ -1071,7 +1068,6 @@ static func submit_rigging(db: CaptainStore, uid: String, paths: Variant) -> Dic
 	var pts: float = float(c()["rigging"]["points"])
 	_ch(db)["rigging"][wk] = { "paths": pd.duplicate(true), "status": "cleared", "points_awarded": pts }
 	db.update_profile(uid, { "puzzle_points": old_points + pts })
-	_after_points(db, uid)
 	return { "solved": true, "pointsWon": pts, "newPuzzlePoints": old_points + pts }
 
 
@@ -1137,12 +1133,6 @@ static func claim_landmark(db: CaptainStore, uid: String, id: Variant) -> Dictio
 	if completed:
 		db.grant_badge(uid, "master_cartographer")
 	return out
-
-
-## Points just banked (port only): nothing to do yet but keep the hook (the
-## Den's purse once read them on the web).
-static func _after_points(_db: CaptainStore, _uid: String) -> void:
-	pass
 
 
 static func mark_guide_seen(db: CaptainStore, uid: String) -> Dictionary:
