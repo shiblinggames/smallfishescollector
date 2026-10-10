@@ -168,10 +168,6 @@ func _next_toast() -> void:
 		_next_toast()
 
 
-func _process(_delta: float) -> void:
-	pass
-
-
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()

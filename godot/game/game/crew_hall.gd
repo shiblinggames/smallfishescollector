@@ -172,7 +172,7 @@ func _build_room() -> void:
 		# are a dot beside its count, not a second chosen tab.
 		var b: Pane.PaneButton = Paper.tab(o[1], o[0] == room, true)
 		if o[0] == "trunk" and waiting > 0 and room != "trunk":
-			_dot(b)
+			notice_dot(b)
 		b.pressed.connect(func() -> void:
 			if room == o[0]:
 				return
@@ -211,7 +211,8 @@ func _build_room() -> void:
 
 
 ## Something waiting behind a tab: a small CHOSEN dot at its top right.
-static func _dot(b: Control) -> void:
+## Public: the Chart Room's tabs wear the same dot.
+static func notice_dot(b: Control) -> void:
 	var d: Control = Control.new()
 	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	d.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

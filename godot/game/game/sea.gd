@@ -12,6 +12,44 @@ extends Node2D
 ##     solid things at night, with 2D lights (the boat's lantern, the town)
 ##     pooling on them;
 ##   the HUD.
+##
+## This file builds the scene, drives it each frame, holds every piece of the
+## sea's state, and takes the input. Its systems live in parts beside it
+## (split out 2026-10-10 for size), each a set of static functions taking the
+## Sea: game/sea_camera.gd (the view, the zoom, the fight's stage, the arch),
+## game/sea_atmos.gd (light, grade, weather, the chapters' seas),
+## game/sea_hunts.gd (isles, digs, bottles, treasure hunts),
+## game/sea_ports.gd (ports, docking, rooms, the north, the Sea Gate),
+## game/sea_battles.gd (raids, dives, campaign nodes), game/sea_folk.gd
+## (regulars, traders, buyers, Finn, the crew) and game/sea_portal.gd (the
+## portal, the passage, the recall). What other files call stays here, as
+## one-line forwarders where the work moved.
+
+const SeaCamera = preload("res://game/sea_camera.gd")
+const SeaAtmos = preload("res://game/sea_atmos.gd")
+const SeaHunts = preload("res://game/sea_hunts.gd")
+const SeaPorts = preload("res://game/sea_ports.gd")
+const SeaBattles = preload("res://game/sea_battles.gd")
+const SeaFolk = preload("res://game/sea_folk.gd")
+const SeaPortal = preload("res://game/sea_portal.gd")
+
+## Leaving the sea: back to the captains (or out of the Charter).
+signal left
+## The HUD's settings button: the Esc menu (Main opens it).
+signal menu_wanted
+
+## THE WHEEL ZOOM (SeaMap.tsx): 0.35 to 1.6 of the chart's own scale, eased,
+## and remembered on this machine (a number tuned on one screen is wrong on
+## another, so it is not in the save; "sea_zoom_2", since the default moved).
+const ZOOM_MIN: float = 0.35
+## The sea's own zoom, shown as 100% (Kong, 2026-10-02: what read 63% is the
+## default; the old 100%, 0.87, was too close).
+const ZOOM_DEFAULT: float = 0.55
+const ZOOM_MAX: float = 1.6
+## A FIGHT'S ZOOM, NUDGED (Kong, 2026-10-09): the wheel (or - and =) in a fight
+## scales the fight's own framing within these, remembered for the next fight.
+const FIGHT_ZOOM_MIN: float = 0.7
+const FIGHT_ZOOM_MAX: float = 1.45
 
 var session: Session
 ## In a Charter, the crew's line (null when sailing alone), and the crewmates'
@@ -40,10 +78,6 @@ var _spots: Dictionary = {}
 var _spot_t: float = 99.0
 var _look_t: float = 0.0
 var _last_look: Dictionary = {}
-## Leaving the sea: back to the captains (or out of the Charter).
-signal left
-## The HUD's settings button: the Esc menu (Main opens it).
-signal menu_wanted
 var _water: ShaderMaterial
 var _world: Node2D
 var _boat: Boat
@@ -64,60 +98,12 @@ var _pings: CrewPings = null
 var _status: String = ""
 var _status_t: float = 0.0
 var _input_ms: int = 0
-
-
-## CREWMATE STATUS (Kong, 2026-10-06): in a raid (which fight), diving (how
-## deep), ashore, fishing (which water), away (nothing pressed for three
-## minutes), or where she is sailing.
-func _status_text() -> String:
-	var at: Vector2 = _boat.position
-	for c: Node in _hud_layer.get_children():
-		if c is BattleStage and not (c as BattleStage).is_queued_for_deletion():
-			var bs: BattleStage = c
-			if bs.gauntlet != "":
-				var dep: int = int(Js.num(bs.b.get("depth")))
-				return "diving  ·  depth %d" % dep if dep > 0 else "diving"
-			var raid: Dictionary = Battle.raid_def(bs.raid_id)
-			if raid.is_empty() or bs.b.is_empty():
-				return "in a fight"
-			return "in a raid  ·  fight %d of %d" % [int(Js.num(bs.b.get("fight"))) + 1, int(Battle.fight_at(raid, 0)["of"])]
-	if _input_ms > 0 and Time.get_ticks_msec() - _input_ms > 180000:
-		return "away"
-	var port: Dictionary = Chart.berth_at(at)
-	if _room_layer.get_child_count() > 0:
-		return "ashore at %s" % port["name"] if not port.is_empty() else "ashore"
-	if _hud.phase != "idle":
-		var w: Dictionary = Chart.water_at(at)
-		return "fishing  ·  %s" % w["name"] if not w.is_empty() else "fishing"
-	if not port.is_empty():
-		return "in port at %s" % port["name"]
-	if North.is_north(at):
-		if at.distance_to(North.EXP_ORIGIN) <= North.EXP_EDGE:
-			return "in the anchorage"
-		var ch: Dictionary = ChapterLook.at(at)
-		if not ch.is_empty() and float(ch["k"]) > 0.5:
-			return "sailing  ·  %s" % Charting.bay_name(str(ch["bay"]))
-		return "sailing north"
-	var w2: Dictionary = Chart.water_at(at)
-	return "sailing  ·  %s" % w2["name"] if not w2.is_empty() else "sailing"
 var _course_t: float = 0.0
 var _life: SeaLife
 var _sky: SeaSky
 var _snd_heading: float = 0.0
 ## How far into a squall the view is, eased (dims the scene, roughs the hulls).
 var _storm: float = 0.0
-const BLOOMS: Array = [
-	[8269.0, 3010.0, 1100.0], [-732.0, 8368.0, 1100.0], [-5500.0, 6900.0, 1000.0],
-	[10739.0, 6200.0, 1400.0], [300.0, 14400.0, 1400.0], [-11085.0, 6400.0, 1400.0],
-]
-## THE WHEEL ZOOM (SeaMap.tsx): 0.35 to 1.6 of the chart's own scale, eased,
-## and remembered on this machine (a number tuned on one screen is wrong on
-## another, so it is not in the save; "sea_zoom_2", since the default moved).
-const ZOOM_MIN: float = 0.35
-## The sea's own zoom, shown as 100% (Kong, 2026-10-02: what read 63% is the
-## default; the old 100%, 0.87, was too close).
-const ZOOM_DEFAULT: float = 0.55
-const ZOOM_MAX: float = 1.6
 var _zoom_to: float = 1.0
 ## THE STAGE (the Locker): the camera pushed in on her and set off to one
 ## side, { "zoom": float, "shift": Vector2 screen px }; null for the sea's own
@@ -130,19 +116,8 @@ var _night: CanvasModulate
 ## sea clock: high and white by day, low, warm and grazing at dusk and dawn,
 ## faint and blue at night. The land's normal maps take it from its side.
 var _sun: DirectionalLight2D
-## THE GRADE: glow on whatever burns past white, and each water's own colour
-## (bright and warm in the Shallows, colder and harder down through the Deep
-## and the Abyss, drained and green-black in the Ancient Deep). Post stops at
-## the world's layer, so the HUD is never graded.
+## The grade (SeaAtmos.GRADES).
 var _env: Environment
-const GRADES: Dictionary = {
-	"": [1.0, 1.0, 1.0, Color(1, 1, 1)],
-	"shallows": [1.03, 1.02, 1.10, Color(1.0, 1.0, 0.98)],
-	"open_waters": [1.0, 1.04, 1.04, Color(0.98, 1.0, 1.02)],
-	"deep": [0.97, 1.07, 0.96, Color(0.94, 0.98, 1.04)],
-	"abyss": [0.93, 1.10, 0.86, Color(0.9, 0.95, 1.06)],
-	"ancient_deep": [0.90, 1.14, 0.70, Color(0.86, 1.0, 0.94)],
-}
 var _town_light: PointLight2D
 var _hud: FishingHud
 var _hud_layer: CanvasLayer
@@ -172,6 +147,74 @@ var _warping: bool = false
 var _save_t: float = 0.0
 ## Music starts on the first key or press, as on the web.
 var _music_started: bool = false
+## THE NORTHERN CHAPTERS' OWN SEAS (ChapterLook): how far into a bay's water
+## the camera is (eased, and set aside while a dive has its own water), and
+## its haze, dark and drifting things (a DeepAtmos of its own).
+var _ch_k: float = 0.0
+var _ch_look: Dictionary = {}
+var _ch_atmos: DeepAtmos = null
+## The shores the sea's sound listens for (the ports and the isles), joined
+## once: neither moves.
+var _shores: Array = []
+var _chart_fx: ChartGainFx
+## FINN (The Long Cast): his state read off the save each second (a pure
+## read of the local copy, so a crewmate's Charter never sends it), the mark
+## over him, the story line and the arrow to him.
+var _finn: FinnHull
+var _finn_st: Dictionary = {}
+var _finn_t: float = 99.0
+var _finn_ring: float = 0.0
+## THROUGH THE ARCH (Kong, 2026-10-02: make the crossing feel great), by
+## where she is, not by a timer, so turning back runs it backward: the view
+## eases out as she enters the passage (the stone's scale), and under the span
+## the music closes in to a muffle and opens again beyond.
+var _pass_k: float = 0.0
+## THE WATER CLEARS FOR A FIGHT (Kong, 2026-10-09: other ships, NPCs, home
+## portals, islands and the campaign's marks behind a fight were "weird"): while
+## a fight has the stage, everything on the water fades out with the cut but
+## the fight itself (her ship, the line's, the enemy, the battle's effects:
+## meta "fight") and the sea's own life (the wake, the ripples, weather, fog,
+## the sky: meta "ambient"), and comes back as it ends at the alpha it had.
+var _fight_alpha: Dictionary = {}
+## Set once the first pass of a fight has taken its snapshot. A node first seen
+## after that (a stranger spawned mid-fight, still at its fade-in's 0) or a
+## Wanderer (they own their fade tweens) comes back at full, not at the
+## near-0 alpha it happened to have when it was first seen.
+var _fight_snapped: bool = false
+## THE CAMERA UNDER WAY (SeaCamera.LEAD): the lead eased, how far into full
+## sail and onto the ship. punch: a fight's critical, a small push in
+## (BattleStage), toward punch_at.
+var _lead: Vector2 = Vector2.ZERO
+var _sail_k: float = 0.0
+var _ship_k: float = 0.0
+var punch: float = 0.0
+var fight_zoom: float = 1.0
+var punch_at: Vector2 = Vector2.ZERO
+var _zoom_base: float = 1.0
+var _punch_was: float = 0.0
+## The arch's picture: thinned while she is behind its span, so the stone
+## never hides her (she shows through it).
+var _arch: Sprite2D
+## The Sea Gate's name on the water (lifted out of the night each frame).
+var _gate_sign: Label = null
+var _gate_note_t: float = -99.0
+var _sided: bool = false
+var _crew_key: String = ""
+var _bay_note_t: float = -99.0
+var _home_house: Sprite2D
+var _solo_dive: GauntletTable = null
+## THE WORLD CHART, over everything; the sea runs on under it (the autopilot
+## keeps sailing).
+var _chart: WorldMap
+## THE LOCKER, over the sea with the camera pushed in on her; the HUD steps
+## aside while it is up.
+var _locker: Locker
+## THE QUICK-SWAP WHEEL: bait and rods round her, while Q is held.
+var _wheel: SwapWheel
+## Holding the mouse down on the water: she keeps sailing toward the pointer
+## (and on past it, so a held press never runs out under her).
+var _holding: bool = false
+var _held_t: float = 0.0
 
 
 func _ready() -> void:
@@ -198,20 +241,9 @@ func _ready() -> void:
 	# the way down it, painted in perspective so it stands un-squashed; what
 	# stands on it, feet first; and its berth on the water.
 	for port: Dictionary in Chart.ports():
-		_draw_port(port)
-	_draw_north()
-	for i: Dictionary in Rules.data()["isles"]:
-		var n: SeaFinds.IsleNode = SeaFinds.IsleNode.new()
-		n.isle = i
-		n.found = Js.includes(session.save.get("discoveries", []), i["id"])
-		_world.add_child(n)
-		_isles[i["id"]] = n
-	for d: Dictionary in Rules.data()["digSites"]:
-		var h: SeaFinds.DigHint = SeaFinds.DigHint.new()
-		h.site = d
-		h.z_index = -1
-		_world.add_child(h)
-		_digs[d["id"]] = h
+		SeaPorts.draw_port(self, port)
+	SeaPorts.draw_north(self)
+	SeaHunts.build(self)
 	_fog = Explore.fog_decode(session.profile().get("sea_explored"))
 	for info: Dictionary in Chart.residents():
 		var b: Buyer = Buyer.new()
@@ -219,15 +251,7 @@ func _ready() -> void:
 		_world.add_child(b)
 		_buyers.append(b)
 	_moor_regulars()
-	_finn = FinnHull.new()
-	for sp: Dictionary in session.save["species"]:
-		if sp["habitat"] == "shallows":
-			_finn.catch_names.append(sp["name"])
-	_finn.splashed.connect(func(at: Vector2) -> void:
-		_field.ring(at, 90.0, 1.2, 0.7)
-		if at.distance_to(_boat.position) < 900.0:
-			Sound.plip())
-	_world.add_child(_finn)
+	SeaFolk.build_finn(self)
 	_portal = PortalWell.new()
 	_world.add_child(_portal)
 	_portal_state()
@@ -262,7 +286,7 @@ func _ready() -> void:
 		_sound.add_surf(_world, Vector2(float(port["x"]), float(port["y"])), float(port["r"]))
 	for i: Dictionary in Rules.data()["isles"]:
 		_sound.add_surf(_world, Vector2(float(i["x"]), float(i["y"])), float(i["r"]))
-	_motes = _mote_layer()
+	_motes = SeaAtmos.mote_layer()
 	_world.add_child(_motes)
 	_field = SeaField.new()
 	add_child(_field)
@@ -272,8 +296,6 @@ func _ready() -> void:
 	_water.set_shader_parameter("u_flow", _field.flow.get_texture())
 	_water.set_shader_parameter("u_flow_on", 1.0)
 	_life.sink_fish(_field.under_world)
-	for bid: String in _berths:
-		(_berths[bid] as Berth).field = _field
 	_water.set_shader_parameter("u_field_on", 1.0)
 	_boat = Boat.new()
 	_boat.field = _field
@@ -327,30 +349,7 @@ func _ready() -> void:
 	Skipper.warm_fish_thumbs(names)
 	session.changed.connect(func() -> void: _boat.set_fit(session.profile()))
 
-	_night = CanvasModulate.new()
-	add_child(_night)
-	var we: WorldEnvironment = WorldEnvironment.new()
-	_env = Environment.new()
-	_env.background_mode = Environment.BG_CANVAS
-	_env.background_canvas_max_layer = 0
-	_env.glow_enabled = true
-	# No HDR 2D (it moves the whole canvas into linear colour, and every
-	# painting and shader here was made for sRGB): the glow takes what is
-	# nearly white instead.
-	_env.glow_hdr_threshold = 0.94
-	_env.glow_hdr_scale = 2.0
-	_env.glow_intensity = 0.6
-	_env.glow_strength = 1.0
-	_env.glow_bloom = 0.0
-	_env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
-	for lv: int in 7:
-		_env.set_glow_level(lv, 1.0 if lv in [1, 2, 3, 4] else 0.0)
-	_env.adjustment_enabled = true
-	we.environment = _env
-	add_child(we)
-	_sun = DirectionalLight2D.new()
-	_sun.blend_mode = Light2D.BLEND_MODE_ADD
-	add_child(_sun)
+	SeaAtmos.build(self)
 
 	_camera = Camera2D.new()
 	_camera.position_smoothing_enabled = false
@@ -405,24 +404,7 @@ func _ready() -> void:
 	FishingHud._place(_compass, Vector2(0.5, 0.0), Vector2(-CompassRibbon.W / 2.0 - 60.0, 56), Vector2(CompassRibbon.W + 120.0, 100))
 	hud_layer.add_child(_compass)
 	if net != null:
-		net.mate_boat.connect(_on_mate_boat)
-		net.mate_look.connect(_on_mate_look)
-		net.mate_left.connect(func(k: String) -> void:
-			if _mates.has(k):
-				var gone: Shipmate = _mates[k]
-				_hud.toast("%s has left port" % gone.mate_name)
-				gone.leave()
-				_mates.erase(k))
-		_send_look()
-		net.proposed.connect(_on_proposed)
-		_pings = CrewPings.new()
-		_pings.sea = self
-		hud_layer.add_child(_pings)
-		var cw: CrewWatersView = CrewWatersView.new()
-		cw.sea = self
-		cw.fishing = net.fishing
-		cw.my_key = net.key
-		hud_layer.add_child(cw)
+		SeaFolk.join_crew(self)
 
 
 func _process(delta: float) -> void:
@@ -439,113 +421,38 @@ func _process(delta: float) -> void:
 	if _course_t > 0.5:
 		_course_t = 0.0
 		_course_chip()
-	var cam_world: Vector2 = _boat.position + _cam_lead(delta)
-	_camera.position = Vector2(cam_world.x, cam_world.y * Chart.GROUND)
-	if stage != null:
-		_stage_k = minf(1.0, _stage_k + delta * 2.2)
-	else:
-		_stage_k = maxf(0.0, _stage_k - delta * 2.8)
-	if _stage_k > 0.0:
-		var sk: float = _stage_k * _stage_k * (3.0 - 2.0 * _stage_k)
-		if stage != null:
-			_stage_last = stage
-		# The fight's centre, at the fight's own framing (so a nudge of the
-		# zoom keeps it centred).
-		_camera.position += (_stage_last["shift"] as Vector2) / maxf(0.05, float(_stage_last.get("zoom", _camera.zoom.x))) * sk
-	_fight_clear()
+	var cam_world: Vector2 = SeaCamera.follow(self, delta)
 
 	var now: float = Clock.now_ms()
 	var clock: Dictionary = SeaClock.at(now)
 	var dark: float = clock["darkness"]
 	var stops: Array[Color] = Chart.sea_at(cam_world, dark)
-	_chapter(delta, cam_world)
-	# A gauntlet's water (BattleStage sets it for a dive's fights): the sea in
-	# that descent's own colours, eased in and out.
-	_theme_k = move_toward(_theme_k, 1.0 if not water_theme.is_empty() else 0.0, delta * 0.8)
-	if not water_theme.is_empty():
-		_theme_last = water_theme
-	if _theme_k > 0.0 and not _theme_last.is_empty():
-		var th: Array = _theme_last["sea"]
-		for k: int in 3:
-			stops[k] = stops[k].lerp((th[k] as Color).lerp(Color8(2, 5, 9), float(_theme_last.get("dim", 0.0))), _theme_k)
+	SeaAtmos.chapter(self, delta, cam_world)
+	SeaAtmos.theme(self, delta, stops)
 	var vp: Vector2 = get_viewport_rect().size
 	_water.set_shader_parameter("u_cam", cam_world)
-	var zt: float = (_zoom_to * (1.0 - 0.04 * _sail_k) * (1.0 - 0.1 * _ship_k) if stage == null else float(stage["zoom"]) * fight_zoom) * (1.0 - 0.1 * _pass_k)
-	# (Read back from the camera, less the last push, so a shot or a film that
-	# snaps the zoom is followed from there.)
-	_zoom_base = lerpf(_camera.zoom.x / (1.0 + _punch_was), zt, 1.0 - exp(-delta * (12.0 if stage == null and _stage_k <= 0.0 else 3.5)))
-	# The critical's push in, on top of the eased zoom and a touch toward
-	# the ship it struck.
-	var z: float = _zoom_base * (1.0 + punch)
-	_punch_was = punch
-	_camera.zoom = Vector2(z, z)
-	if punch > 0.0:
-		_camera.position = _camera.position.lerp(Vector2(punch_at.x, punch_at.y * Chart.GROUND), punch * 2.0)
+	SeaCamera.zoom_step(self, delta)
 	_water.set_shader_parameter("u_zoom", _camera.zoom.x)
 	_water.set_shader_parameter("u_res", vp)
 	_water.set_shader_parameter("u_deep", stops[0])
 	_water.set_shader_parameter("u_mid", stops[1])
 	_water.set_shader_parameter("u_shallow", stops[2])
-	# The sun's (or the moon's) place in the sky: where the light comes from,
-	# how high, and how low and golden the sun is (SeaClock.sky).
-	var sky: Dictionary = SeaClock.sky(now)
-	var toward: Vector2 = sky["toward"]
-	var elev: float = sky["elev"]
-	var warm: float = maxf(float(clock["warmth"]), float(sky["low"]) * 0.55)
-	# Shadows: full by day, fading as the sun or moon nears the horizon (so
-	# the hand-over at dusk and dawn, sun to moon, is never seen), faint by
-	# moonlight.
-	var shadow_k: float = smoothstep(0.02, 0.2, elev) * (0.4 if sky["moon"] else 1.0)
-	_water.set_shader_parameter("u_dark", dark)
-	_water.set_shader_parameter("u_shelf", Chart.SHELF)
-	_water.set_shader_parameter("u_sand", Vector2(3000.0, 6200.0) + Vector2.ONE * SeaScale.d)
-	_water.set_shader_parameter("u_warm", warm)
-	_water.set_shader_parameter("u_light", toward)
-	_water.set_shader_parameter("u_sun_h", elev)
-	_water.set_shader_parameter("u_shadow", shadow_k)
-	Skipper.sun(-toward * lerpf(30.0, 5.0, elev), shadow_k)
-	_water.set_shader_parameter("u_rush", clampf(_boat.velocity.length() / Boat.MAX_SPEED, 0.0, 1.0) * 0.6)
-	_water.set_shader_parameter("u_swell", lerpf(1.0, float(_ch_look.get("swell", 1.0)), _ch_k))
-	_water.set_shader_parameter("u_lantern", dark)
-
-	# Night on the solid world: dim and cool it, and let the lights pool.
-	# The world sits a little under full by day so the sun has room to model
-	# it: lit faces come up to full, the far sides stay soft.
-	# By day: brightest at noon, warmer and a touch dimmer as the sun lowers.
-	var day_col: Color = Color(0.9, 0.9, 0.9).lerp(Color(0.9, 0.82, 0.74), float(sky["low"]) * 0.8)
-	_night.color = day_col.lerp(Color(0.40, 0.46, 0.64), dark)
-	# Under a squall the light goes grey; a strike lights it all.
-	_night.color = _night.color.lerp(Color(0.6, 0.64, 0.7), _storm * 0.55).lerp(Color(0.84, 0.86, 0.88), _squall.fog * 0.5).lerp(Color(1.0, 1.0, 1.0), _squall.flash * 0.6)
-	# A northern chapter's own light, less of it by night.
-	if _ch_k > 0.0:
-		_night.color = _night.color.lerp(Color(str(_ch_look["light"])), _ch_k * 0.55 * (1.0 - dark * 0.6))
-	if _theme_k > 0.0 and not _theme_last.is_empty():
-		_night.color = _night.color.lerp(_theme_last["light"], _theme_k * 0.9)
-	_sun.rotation = (-toward).angle() - PI / 2.0
-	_sun.height = lerpf(0.15, 0.85, elev)
-	var sun_col: Color = Color(1.0, 0.62, 0.32).lerp(Color(1.0, 0.97, 0.9), smoothstep(0.0, 0.55, elev))
-	_sun.color = sun_col.lerp(Color(0.55, 0.66, 1.0), dark)
-	_sun.energy = lerpf(0.22 + 0.12 * float(sky["low"]), 0.06 + 0.12 * elev, dark)
-	_grade(delta, cam_world, dark)
-	_boat.lantern.energy = dark * 1.1 * (0.5 + 0.5 * _boat.lantern_glow)
-	_town_light.energy = dark * 1.4
-	# Light and lettering are not dimmed by the night: undo it for them.
-	var lift: Color = Color(1.0 / _night.color.r, 1.0 / _night.color.g, 1.0 / _night.color.b)
-	for bid: String in _berths:
-		var bt: Berth = _berths[bid]
-		bt.darkness = dark
+	var lit: Dictionary = SeaAtmos.light(self, delta, now, clock, cam_world)
+	var sky: Dictionary = lit["sky"]
+	var warm: float = lit["warm"]
+	var lift: Color = lit["lift"]
 	for b: Buyer in _buyers:
 		b.lift = lift
-	_wanderers(now, clock, lift)
-	_night_water(dark, cam_world)
+	SeaFolk.wanderers(self, now, clock, lift)
+	SeaAtmos.night_water(self, dark, cam_world)
 	var half: Vector2 = Vector2(vp.x / 2.0 / _camera.zoom.x, vp.y / 2.0 / _camera.zoom.x / Chart.GROUND)
 	_life.step(delta, cam_world, half, _boat.position, _boat.velocity.length(), dark, clock["warmth"], now)
 	_sky.step(delta, cam_world, _camera.zoom.x, vp, dark, warm, stops[2])
 	_weather(delta, now, cam_world, dark)
-	_ship_side()
-	_passage(delta)
-	_finn_tick(delta)
-	_feed_berths(cam_world)
+	SeaPorts.ship_side(self)
+	SeaCamera.passage(self, delta)
+	SeaFolk.finn_tick(self, delta)
+	SeaAtmos.feed_berths(self, cam_world)
 	# Every hull's wake, laid on the water.
 	var contacts: Array = [_boat.wake_contact()]
 	for list: Dictionary in [_regulars, _strangers]:
@@ -572,7 +479,7 @@ func _process(delta: float) -> void:
 	if _recall_t > 1.0:
 		_recall_t = 0.0
 		_hud.set_recall(Portal.recall_left_ms(session.profile(), "fishing"))
-		_crew_morning(now)
+		SeaPorts.crew_morning(self, now)
 		var in_water: Dictionary = Chart.water_at(_boat.position)
 		_hud.set_stir(FishBias.stirring(session.save.get("species", []), str(in_water.get("id", "")), _boat.position, now) if not in_water.is_empty() else "")
 		# A stone opened (or a crewmate built a rung): the well catches up.
@@ -627,7 +534,7 @@ func _reach(at: Vector2) -> void:
 	if docked.is_empty():
 		var found: Variant = _campaign.reach(at) if at.y < Explore.NORTH_WALL else null
 		if found == null:
-			found = _find_in_reach(at)
+			found = SeaHunts.find_in_reach(self, at)
 		if found != null:
 			_hud.set_reach(found[0], found[1])
 			return
@@ -662,82 +569,11 @@ func _reach(at: Vector2) -> void:
 	_hud.set_reach("", Callable())
 
 
-# ── The crew ───────────────────────────────────────────────────────────────────
-
-func _mate(k: String) -> Shipmate:
-	if not _mates.has(k):
-		var m: Shipmate = Shipmate.new()
-		_world.add_child(m)
-		_mates[k] = m
-	return _mates[k]
-
-
-func _on_mate_boat(k: String, st: Dictionary) -> void:
-	if k == net.key:
-		return
-	_mate(k).state(st)
-
-
-func _on_mate_look(k: String, mate_name: String, look: Dictionary) -> void:
-	if k == net.key:
-		return
-	var m: Shipmate = _mate(k)
-	var fresh: bool = m.mate_name == ""
-	m.set_mate_name(mate_name)
-	m.set_look(look)
-	if fresh:
-		_hud.toast("%s is on the water" % mate_name)
-
-
-## The crew is asked to agree to something: a small panel over the sea,
-## Agree or Not now.
-func _on_proposed(n: int, by: String, text: String) -> void:
-	var p: Control = Control.new()
-	p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	p.mouse_filter = Control.MOUSE_FILTER_STOP
-	p.theme = UiTheme.make()
-	Kit.scrim(p)
-	var center: CenterContainer = CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	p.add_child(center)
-	var card: Pane = Kit.pane(center, Kit.modal(Kit.GOLD, 22))
-	card.custom_minimum_size = Vector2(480, 0)
-	var v: VBoxContainer = VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	card.add_child(v)
-	Kit.text(v, "A crew vote", "eyebrow", Kit.a(Kit.GOLD, 0.8))
-	Kit.text(v, "%s asks the crew" % by, "title")
-	Kit.text(v, text, "body", Kit.INK_2, true)
-	Kit.text(v, "It goes ahead only if everyone aboard agrees.", "note", Kit.DIM, true)
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	v.add_child(row)
-	var no: Button = Kit.button("Not now", "secondary")
-	no.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(no)
-	var yes: Button = Kit.button("Agree", "primary")
-	yes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(yes)
-	no.pressed.connect(func() -> void:
-		net.vote(n, false)
-		p.queue_free())
-	yes.pressed.connect(func() -> void:
-		net.vote(n, true)
-		p.queue_free())
-	# Esc / B is "Not now".
-	SeaFinds.back_closes(p, func() -> void:
-		net.vote(n, false)
-		p.queue_free())
-	_hud.hold_for(p)
-	_room_layer.add_child(p)
-	Kit.modal_in(card)
-	no.grab_focus.call_deferred()
-
-
-func _send_look() -> void:
-	if net != null:
-		_last_look = Skipper.look_of(session.profile())
-		net.send_look(Skipper.look_of(session.profile()), session.captain_name())
+## A panel over the sea on the given layer, holding the HUD while it is up
+## (FishingHud.hold_for): the one way every sea panel is opened.
+func _hold(c: Control, layer: CanvasLayer) -> void:
+	_hud.hold_for(c)
+	layer.add_child(c)
 
 
 ## The hotspots: re-derived every 15 seconds (never while a fish is on), drawn
@@ -766,263 +602,6 @@ func _hotspots(delta: float, now: float) -> void:
 		if _boat.position.distance_to(Vector2(float(h["x"]), float(h["y"]))) <= float(h["r"]):
 			inside = h
 	_hud.set_spot(inside)
-
-
-func _mote_layer() -> GPUParticles2D:
-	var p: GPUParticles2D = GPUParticles2D.new()
-	p.amount = 190
-	p.lifetime = 14.0
-	p.preprocess = 14.0
-	p.local_coords = false
-	p.texture = Glow.radial(32, Color.WHITE)
-	var m: ParticleProcessMaterial = ParticleProcessMaterial.new()
-	m.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-	m.emission_box_extents = Vector3(1100, 1100, 0)
-	m.gravity = Vector3.ZERO
-	m.direction = Vector3(0, -1, 0)
-	m.spread = 25.0
-	m.initial_velocity_min = 4.0
-	m.initial_velocity_max = 9.0
-	m.scale_min = 0.07
-	m.scale_max = 0.22
-	var g: Gradient = Gradient.new()
-	g.set_color(0, Color(Kit.GLOW_TEAL, 0.0))
-	g.add_point(0.3, Color(Kit.GLOW_TEAL, 0.75))
-	g.add_point(0.7, Color(Kit.GLOW_TEAL, 0.55))
-	g.set_color(g.get_point_count() - 1, Color(Kit.GLOW_TEAL, 0.0))
-	var ramp: GradientTexture1D = GradientTexture1D.new()
-	ramp.gradient = g
-	m.color_ramp = ramp
-	m.turbulence_enabled = true
-	m.turbulence_noise_strength = 0.6
-	m.turbulence_noise_scale = 4.0
-	p.process_material = m
-	var add: CanvasItemMaterial = CanvasItemMaterial.new()
-	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	add.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-	p.material = add
-	p.z_index = 4
-	return p
-
-
-## Lamps on the water, the blooms in view, the motes, the wanderers' lanterns.
-func _night_water(dark: float, at: Vector2) -> void:
-	var r: float = at.length()
-	# Thickening smoothly with distance (a step would pop a third of the
-	# motes in or out at once).
-	var glow: float = 0.6 * smoothstep(10400.0, 11400.0, r) + 0.4 * smoothstep(15200.0, 16800.0, r)
-	_motes.position = at
-	_motes.amount_ratio = clampf(dark * glow, 0.0, 1.0)
-	_motes.emitting = dark * glow > 0.02
-	for list: Dictionary in [_regulars, _strangers]:
-		for k: String in list:
-			(list[k] as Wanderer).night = dark
-	for b: Buyer in _buyers:
-		b.night = dark
-	if dark < 0.05:
-		_water.set_shader_parameter("u_lamp_n", 0)
-		return
-	var xf: Transform2D = _world.get_global_transform_with_canvas()
-	var vp: Vector2 = get_viewport_rect().size
-	var lamps: Array[Vector4] = []
-	var cols: Array[Vector4] = []
-	var add_lamp: Callable = func(p: Vector2, wid: float, strength: float, c: Color) -> void:
-		if lamps.size() >= 16:
-			return
-		var s: Vector2 = xf * p
-		if s.x < -200.0 or s.x > vp.x + 200.0 or s.y < -300.0 or s.y > vp.y + 50.0:
-			return
-		lamps.append(Vector4(s.x / vp.x, s.y / vp.y, wid, strength))
-		cols.append(Vector4(c.r, c.g, c.b, 1.0))
-	var keel: Vector2 = Vector2(0, 34.0 / Chart.GROUND)
-	# Her lantern is a beam ahead of the bow, not a reflection (water shader).
-	var bs: Vector2 = xf * (_boat.position + Vector2.from_angle(_boat.heading) * 30.0)
-	var bdir: Vector2 = xf.basis_xform(Vector2.from_angle(_boat.heading))
-	_water.set_shader_parameter("u_beam", Vector4(bs.x / vp.x, bs.y / vp.y, bdir.x, bdir.y))
-	_water.set_shader_parameter("u_beam_len", 280.0 + 520.0 * _boat.lantern_glow)
-	_water.set_shader_parameter("u_beam_k", 0.6 + 0.4 * _boat.lantern_glow)
-	add_lamp.call(_town_light.position + Vector2(0, 260), 46.0, 0.45, Kit.LAMP)
-	for list: Dictionary in [_regulars, _strangers]:
-		for k: String in list:
-			var w: Wanderer = list[k]
-			add_lamp.call(w.position + keel, 12.0, 0.18, Kit.LAMP)
-	if _portal.live:
-		add_lamp.call(_portal.position + Vector2(0, 120), 60.0, 0.22, Color(str(Portal.tier_def(_portal.tier).get("accent", "#7fc8de"))))
-	_water.set_shader_parameter("u_lamps", lamps)
-	_water.set_shader_parameter("u_lamp_cols", cols)
-	_water.set_shader_parameter("u_lamp_n", lamps.size())
-	var blooms: Array[Vector4] = []
-	for b: Array in BLOOMS:
-		var bp: Vector2 = SeaScale.expand(Vector2(float(b[0]), float(b[1])))
-		if blooms.size() < 4 and bp.distance_to(at) < float(b[2]) + 2600.0:
-			blooms.append(Vector4(bp.x, bp.y, b[2], 1.0))
-	while blooms.size() < 4:
-		blooms.append(Vector4(0, 0, 0, 0))
-	_water.set_shader_parameter("u_blooms", blooms)
-
-
-## THE NORTHERN CHAPTERS' OWN SEAS (ChapterLook): how far into a bay's water
-## the camera is (eased, and set aside while a dive has its own water), and
-## its haze, dark and drifting things (a DeepAtmos of its own).
-var _ch_k: float = 0.0
-var _ch_look: Dictionary = {}
-var _ch_atmos: DeepAtmos = null
-
-
-func _chapter(delta: float, at: Vector2) -> void:
-	var ch: Dictionary = ChapterLook.at(at)
-	if not ch.is_empty():
-		_ch_look = ch["look"]
-	var to: float = float(ch.get("k", 0.0)) * (1.0 - _theme_k)
-	_ch_k = lerpf(_ch_k, to, 1.0 - exp(-delta * 1.2))
-	if _ch_k < 0.002 and to <= 0.0:
-		_ch_k = 0.0
-	if _ch_look.is_empty():
-		return
-	if _ch_atmos == null and _ch_k > 0.01:
-		_ch_atmos = DeepAtmos.new()
-		_ch_atmos.sea = self
-		add_child(_ch_atmos)
-	if _ch_atmos != null:
-		_ch_atmos.set_look(ChapterLook.atmos(_ch_look, _ch_k))
-
-
-## The shores the sea's sound listens for (the ports and the isles), joined
-## once: neither moves.
-var _shores: Array = []
-
-
-## The weather (core/weather.gd's fronts): on the water, in the air, on the
-## hull and in how she sails. dark: the sea clock's darkness this frame.
-func _weather(delta: float, now: float, at: Vector2, dark: float) -> void:
-	var fx: Dictionary = Weather.effect(at, now, _boat.heading)
-	var f: Dictionary = fx["front"]
-	if not f.is_empty():
-		var e: Vector2 = Weather.edges(f, now)
-		var dir: Vector2 = f["dir"]
-		_water.set_shader_parameter("u_front", Vector4(dir.x, dir.y, e.x, e.y))
-		_water.set_shader_parameter("u_front_c", Weather.centre())
-		_water.set_shader_parameter("u_front_w", float(Weather.KINDS[f["kind"]].get("cloud", 0.0)))
-	else:
-		_water.set_shader_parameter("u_front_w", 0.0)
-	var cloud: float = float(fx["cloud"])
-	var rain: float = float(fx["rain"])
-	var power: float = 1.0 if fx["lightning"] else 0.5
-	var fog_amt: float = float(fx["fog"])
-	var wind: float = float(fx["k"]) if not f.is_empty() and f["kind"] == "wind" else 0.0
-	# A northern chapter's own weather, over the sea's (ChapterLook).
-	if _ch_k > 0.0:
-		rain = maxf(rain, float(_ch_look["rain"]) * _ch_k)
-		cloud = maxf(cloud, float(_ch_look["rain"]) * 0.8 * _ch_k)
-		fog_amt = maxf(fog_amt, float(_ch_look["fog"]) * _ch_k)
-		if _ch_look.get("storm", false):
-			power = lerpf(power, 1.0, _ch_k)
-	# Recording a film (tests/shot.gd, FILM_CLEAR): a fair sky.
-	if OS.get_environment("FILM_CLEAR") != "":
-		rain = 0.0
-		cloud = 0.0
-		fog_amt = 0.0
-		wind = 0.0
-	# A dive has its own weather (DeepLook): the sea's is set aside for it.
-	if _theme_k > 0.0 and _theme_last.has("rain"):
-		rain = lerpf(rain, float(_theme_last["rain"]), _theme_k)
-		cloud = lerpf(cloud, float(_theme_last["rain"]) * 0.8, _theme_k)
-		power = lerpf(power, 1.0 if _theme_last.get("storm", false) else 0.5, _theme_k)
-		fog_amt *= 1.0 - _theme_k
-		wind *= 1.0 - _theme_k
-	_storm = lerpf(_storm, cloud, 1.0 - exp(-delta * 0.55))
-	# A bay written as a standing storm strikes however light its rain.
-	var storm_floor: float = 0.6 * _ch_k if _ch_k > 0.0 and _ch_look.get("storm", false) else 0.0
-	_squall.step(delta, rain, power, get_viewport_rect().size, storm_floor)
-	# The rain, spray and fog sit above the world's night: they take it
-	# themselves, and a bay's fog its own colour.
-	var fog_tint: Color = Color.WHITE
-	if _ch_k > 0.0:
-		var murk: Color = Color(str(_ch_look["murk"]))
-		var top: float = maxf(0.001, maxf(murk.r, maxf(murk.g, murk.b)))
-		fog_tint = Color.WHITE.lerp(Color(murk.r / top, murk.g / top, murk.b / top), _ch_k * 0.6)
-	_squall.night(dark, fog_tint)
-	_squall.step_air(delta, fog_amt, _boat.get_global_transform_with_canvas().origin, wind, f.get("dir", Vector2.RIGHT), get_viewport_rect().size)
-	_water.set_shader_parameter("u_flash", _squall.flash)
-	# The chart is paper over the sea: no rain or fog on it.
-	_squall.visible = _chart == null
-	if _wfx != null:
-		var vp2: Vector2 = get_viewport_rect().size
-		var half2: Vector2 = Vector2(vp2.x / 2.0 / _camera.zoom.x, vp2.y / 2.0 / _camera.zoom.x / Chart.GROUND)
-		# A dive's own water, or a film's fair sky, sets the sea's front aside.
-		var front: Dictionary = f if _theme_k < 0.5 and OS.get_environment("FILM_CLEAR") == "" else {}
-		_wfx.step(delta, _squall.rain, _storm, front, now, at, half2, _chart == null)
-	_boat.storm = _storm
-	_boat.weather_speed = float(fx["speed"])
-	_boat.weather_turn = float(fx["turn"])
-	_boat.weather_cue = str(fx["cue"])
-	# The sea's sound: her way, a hard turn, how far out, the nearest shore.
-	var spd: float = clampf(_boat.velocity.length() / (300.0 * 1.4), 0.0, 1.0)
-	var turn: float = 0.0
-	if _boat.velocity.length() > 40.0:
-		turn = minf(1.0, absf(wrapf(_boat.heading - _snd_heading, -PI, PI)) / maxf(delta, 0.001) / 0.35 / 10.0)
-	_snd_heading = _boat.heading
-	var depth: float = clampf((at.y - 1400.0) / 21200.0, 0.0, 1.0)
-	var land: float = 0.0
-	var shore: Vector2 = at
-	if _shores.is_empty():
-		_shores = Chart.ports() + (Rules.data()["isles"] as Array)
-	for p: Dictionary in _shores:
-		var c: Vector2 = Vector2(float(p["x"]), float(p["y"]))
-		var edge: float = c.distance_to(at) - float(p["r"])
-		var l: float = clampf(1.0 - edge / 900.0, 0.0, 1.0)
-		if l > land:
-			land = l
-			shore = c
-	if _life.flock_at != Vector2.INF and _life.flock_at.distance_to(at) < 1600.0:
-		land = maxf(land, clampf(1.0 - _life.flock_at.distance_to(at) / 1600.0, 0.0, 1.0))
-		shore = _life.flock_at
-	var shore_canvas: Vector2 = _world.get_global_transform() * shore
-	_sound.step(delta, spd, turn, depth, land, _squall.rain, dark, _hud.busy(), shore_canvas)
-
-
-## The moorings near the view, for the water to paint.
-func _feed_berths(at: Vector2) -> void:
-	var near: Array = []
-	for bid: String in _berths:
-		var b: Berth = _berths[bid]
-		near.append([b.position.distance_to(at), b])
-	near.sort_custom(func(x: Array, y: Array) -> bool: return float(x[0]) < float(y[0]))
-	var out: Array[Vector4] = []
-	for n: Array in near:
-		if out.size() >= 4:
-			break
-		var b: Berth = n[1]
-		out.append(Vector4(b.position.x, b.position.y, b.r, b.lit))
-	while out.size() < 4:
-		out.append(Vector4(0, 0, 0, 0))
-	_water.set_shader_parameter("u_berths", out)
-
-
-## Ease the grade toward the water she is in.
-func _grade(delta: float, at: Vector2, dark: float) -> void:
-	var w: Dictionary = Chart.water_at(at)
-	var g: Array = GRADES.get(str(w.get("id", "")), GRADES[""])
-	var k: float = 1.0 - exp(-delta * 0.8)
-	var gb: float = float(g[0])
-	var gc: float = float(g[1])
-	var gs: float = float(g[2])
-	var glow: float = 0.0
-	# A northern chapter grades the whole screen its own way.
-	if _ch_k > 0.0:
-		var cg: Array = _ch_look["grade"]
-		gb = lerpf(gb, float(cg[0]), _ch_k)
-		gc = lerpf(gc, float(cg[1]), _ch_k)
-		gs = lerpf(gs, float(cg[2]), _ch_k)
-		glow = float(_ch_look.get("glow", 0.0)) * _ch_k
-	_env.adjustment_brightness = lerpf(_env.adjustment_brightness, gb, k)
-	_env.adjustment_contrast = lerpf(_env.adjustment_contrast, gc, k)
-	_env.adjustment_saturation = lerpf(_env.adjustment_saturation, gs * (1.0 - dark * 0.15), k)
-	# Night blooms more: the lights are what is left.
-	_env.glow_intensity = lerpf(_env.glow_intensity, 0.12 + dark * 0.7 + glow, k)
-
-
-var _chart_fx: ChartGainFx
 
 
 ## The northern fog lifting for the first time: what it pays rises off that
@@ -1071,1119 +650,176 @@ func _flush_position() -> void:
 		_hud.refresh()
 
 
-## The isles, the digs' tells and the bottles: what to draw, and how close.
-func _finds(delta: float, now: float, lift: Color) -> void:
-	var at: Vector2 = _boat.position
-	var near_isle: Dictionary = Explore.isle_near(at.x, at.y)
-	var found: Array = session.save.get("discoveries", [])
-	for id: String in _isles:
-		var n: SeaFinds.IsleNode = _isles[id]
-		var was: bool = n.found
-		var was_near: bool = n.near
-		n.found = Js.includes(found, id)
-		n.near = near_isle.get("id") == id
-		n.lift = lift
-		if n.found != was or n.near != was_near:
-			n.refresh()
-	for id: String in _digs:
-		var h: SeaFinds.DigHint = _digs[id]
-		var d: float = at.distance_to(h.position)
-		h.strength = 0.0
-		# Out of range it is 0 whatever: the save is only read for the near.
-		if d < Explore.DIG_HINT_RANGE:
-			h.strength = clampf((Explore.DIG_HINT_RANGE - d) / 480.0, 0.0, 1.0) if not _dug(id) else 0.0
-			# A buried site shows itself only to a hunt that points at it.
-			if Clues.on() and Clues.dig_open(session.profile(), id) == "":
-				h.strength = 0.0
-		# Something on the bottom: bubbles breaking the surface over it, more
-		# of them and stronger the closer she is.
-		if h.strength > 0.0:
-			h.bubble_t -= delta
-			if h.bubble_t <= 0.0:
-				h.bubble_t = randf_range(0.35, 1.1) / (0.4 + h.strength)
-				var off: Vector2 = Vector2(randf_range(-55.0, 55.0), randf_range(-35.0, 35.0))
-				_field.ring(h.position + off, randf_range(26.0, 58.0), 1.2, 0.25 + 0.4 * h.strength)
-	_bottle_t += delta
-	var win: int = Clues.sea_day(now) if Clues.on() else Explore.bottle_window(now)
-	if _bottle_t > 10.0 or win != _bottle_win:
-		_bottle_t = 0.0
-		_bottle_win = win
-		var want: Dictionary = {}
-		var near: Array = Clues.bottles_near(session.profile(), at.x, at.y, 5200.0, now) if Clues.on() else Explore.bottles_around(at.x, at.y, 5200.0, now)
-		for b: Dictionary in near:
-			if not _taken.has(b["key"]):
-				want[b["key"]] = b
-		for k: String in _bottles.keys():
-			if not want.has(k):
-				(_bottles[k] as Node).queue_free()
-				_bottles.erase(k)
-		for k: String in want:
-			if not _bottles.has(k):
-				var bn: SeaFinds.BottleNode = SeaFinds.BottleNode.new()
-				bn.bottle = want[k]
-				_world.add_child(bn)
-				_bottles[k] = bn
-
-
-func _dug(site_id: String) -> bool:
-	for r: Dictionary in session.save.get("digs", []):
-		if r["site_id"] == site_id and r.get("dug_at") != null:
-			return true
-	return false
-
-
-## The nearest thing to do out here: an isle to land on, a site to dig, a
-## bottle to fish out. [label, action] or null.
-func _find_in_reach(at: Vector2) -> Variant:
-	var clue: Variant = _clue_in_reach(at)
-	if clue != null:
-		return clue
-	var isle: Dictionary = Explore.isle_near(at.x, at.y)
-	if not isle.is_empty():
-		var been: bool = Js.includes(session.save.get("discoveries", []), isle["id"])
-		return [("Look again at %s" if been else "Go ashore at %s") % isle["name"], _land.bind(isle)]
-	var site: Dictionary = Explore.dig_at(at.x, at.y)
-	if not site.is_empty() and not Clues.on() and not _dug(site["id"]):
-		return ["Drop the grapple", _dig.bind(site)]
-	for k: String in _bottles:
-		var bn: SeaFinds.BottleNode = _bottles[k]
-		if at.distance_to(bn.position) < Explore.BOTTLE_REACH:
-			return ["Take the bottle", _bottle.bind(bn.bottle)]
-	return null
-
-
-## A treasure hunt's step she has reached: [label, action] or null. A dig is
-## the hunt's last step and the only way a site is found (port rules).
-func _clue_in_reach(at: Vector2) -> Variant:
-	if not Clues.on():
-		return null
-	var p: Dictionary = session.profile()
-	for th: Array in Clues.hunts(p):
-		var tier: String = th[0]
-		var s: Dictionary = Clues.current(p, tier)
-		match s.get("kind", ""):
-			"bearing":
-				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < Clues.SEARCH_RANGE:
-					return ["Search here  ·  %s" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
-			"riddle":
-				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < float(s["r"]) + Clues.SEARCH_RANGE:
-					return ["Search here  ·  %s" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
-			"dig":
-				if at.distance_to(Vector2(float(s["x"]), float(s["y"]))) < Clues.SEARCH_RANGE:
-					return ["Dig here  ·  %s" % Clues.TIER_NAME[tier], _clue_search.bind(tier)]
-			"speak":
-				var w: Variant = _regulars.get("folk:%s" % s["folk"])
-				if w != null and (w as Wanderer).near(at):
-					return ["Ask %s about the clue" % (w as Wanderer).info["name"], _clue_search.bind(tier)]
-	return null
-
-
-func _clue_search(tier: String) -> void:
-	Rumble.tap(14)
-	await _flush_position()
-	var r: Variant = await session.act("clueSearch", [tier])
-	session.persist()
-	if not r is Dictionary or not (r as Dictionary).get("ok", false):
-		_hud.toast(_err(r, "Nothing here."))
-		return
-	var res: Dictionary = r
-	if res.get("done", false):
-		var haul: Array = []
-		if Js.num(res.get("doubloons")) > 0:
-			haul.append([res["doubloons"], "doubloons"])
-		var lines: Array = [["The %s's hunt is done. The casket held:" % Clues.TIER_NAME[tier], "note"]]
-		for b: Variant in Js.obj(res.get("bait")):
-			lines.append(["%d %s" % [int(res["bait"][b]), Rules.bait(str(b)).get("name", b)], "body_strong"])
-		for nt: Variant in Js.obj(res.get("notices")):
-			lines.append(["A %s, for the Crew Hall" % Js.obj(Crew.notice_defs().get(nt)).get("name", nt), "body_strong"])
-		for kv: Variant in Js.obj(res.get("vouchers")):
-			lines.append(["A %s! Open it in the Crew Hall's Trunk" % Skins.kind_def(str(kv)).get("name", kv), "body_strong"])
-		for c: Variant in Js.obj(res.get("crates")):
-			var cname: String = str((CrateMoment.TIERS.get(c, [str(c).capitalize()]) as Array)[0])
-			var cn: int = int(res["crates"][c])
-			lines.append([("%s, stowed in your Locker" % cname) if cn == 1 else ("%d of the %s, stowed in your Locker" % [cn, cname]), "body_strong"])
-		Sound.chest(true)
-		_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Hauled up from the bottom", "%s casket" % Clues.TIER_NAME[tier], lines, haul))
-	else:
-		Sound.bell()
-		_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "%s  ·  step %d of %d" % [Clues.TIER_NAME[tier], int(res["stepNo"]), int(res["of"])], "The next step", [[str(res["next"]["text"]), "body_strong"]], []))
-	_hud.refresh()
-
-
-func _land(isle: Dictionary) -> void:
-	Rumble.buzz([18, 40, 24])
-	await _flush_position()
-	var r: Variant = await session.act("goAshore", [isle["id"]])
-	session.persist()
-	if not r is Dictionary or not (r as Dictionary).get("ok", false):
-		_hud.toast(_err(r, "The sea took that one. Try again."))
-		return
-	var res: Dictionary = r
-	var note: Variant = res.get("note")
-	var lines: Array = []
-	if note != null:
-		lines.append([str(note["title"]), "heading"])
-		lines.append([str(note["body"]), "note"])
-	if res.get("already", false):
-		_show_find(SeaFinds.panel(_room_layer, "sea/isle-note.png" if note != null else "sea/isle-chest-open.png", "Been ashore before", res["name"], lines if not lines.is_empty() else ["Nothing left here but the view."], []))
-		return
-	var haul: Array = []
-	if Js.num(res.get("doubloons")) > 0:
-		haul.append([res["doubloons"], "doubloons"])
-	if Js.num(res.get("gems")) > 0 and Rules.web_only:
-		haul.append([res["gems"], "gems"])
-	if res.get("salvage") != null:
-		lines.append(["Salvaged: %s. Nobody sells one. It is waiting at the Homestead." % res["salvage"]["name"], "body"])
-	if res.get("stone") != null:
-		lines.append(["A portal stone for %s. The Homestead portal will remember the road." % res["stone"]["name"], "body"])
-	Sound.chest(not haul.is_empty())
-	_show_find(SeaFinds.panel(_room_layer, "sea/isle-note.png" if note != null else "sea/isle-chest-open.png", "Ashore", res["name"], lines, haul))
-	_hud.refresh()
-
-
-func _dig(site: Dictionary) -> void:
-	Rumble.buzz([0, 40, 30, 60])
-	await _flush_position()
-	var r: Variant = await session.act("digHere", [site["id"]])
-	session.persist()
-	if not r is Dictionary or not (r as Dictionary).get("ok", false):
-		_hud.toast(_err(r, "The spade turned nothing up. Try again."))
-		return
-	Sound.chest(true)
-	_show_find(SeaFinds.panel(_room_layer, "sea/dig-box.png", "Hauled up from the bottom", r["name"], [[str(r["found"]), "note"]], [[r["doubloons"], "doubloons"]]))
-	_hud.refresh()
-
-
-func _bottle(b: Dictionary) -> void:
-	Rumble.tap(14)
-	await _flush_position()
-	var r: Variant = await session.act("openBottle", [b["key"]])
-	session.persist()
-	# Holding a clue of its tier: it is left where it floats.
-	if r is Dictionary and (r as Dictionary).get("held", false):
-		_hud.toast(str(r["error"]))
-		return
-	# The rules answered (opened, or the tide took it): it is gone. No answer
-	# at all (a Charter's line timed out, no peer: { error } with no "ok"):
-	# it stays floating, so "try again" can be done.
-	if r is Dictionary and (r as Dictionary).has("ok"):
-		_taken[b["key"]] = true
-		if _bottles.has(b["key"]):
-			(_bottles[b["key"]] as Node).queue_free()
-			_bottles.erase(b["key"])
-	if not r is Dictionary or not (r as Dictionary).get("ok", false):
-		_hud.toast(_err(r, "It slipped out of your hands. Try that one again."))
-		return
-	if Clues.on():
-		var hunt: Dictionary = r["hunt"]
-		Sound.bell()
-		_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "Fished out of the water", "A %s" % Clues.TIER_NAME[r["tier"]],
-			[["A treasure hunt: %d steps, then a dig. Your clues are listed at the left of the screen." % (hunt["steps"] as Array).size(), "note"], ["Step 1: %s" % r["step"]["text"], "body_strong"]], []))
-		_hud.refresh()
-		return
-	var lines: Array = [[str(r["text"]), "note"]]
-	var title: String = "A note in a bottle"
-	if r.get("kind") == "bearing":
-		title = "A bearing: %s" % r["name"]
-		lines.append([str(r["bearing"]), "body_strong"])
-		lines.append(["Something lies on the bottom there. Sail over it and drop the grapple.", "small"])
-	_show_find(SeaFinds.panel(_room_layer, "sea/sea-bottle.png", "Fished out of the water", title, lines, []))
-
-
+## A find's panel (SeaFinds.panel, already on the room layer): the HUD held
+## while it is up.
 func _show_find(p: Control) -> void:
 	_hud.hold_for(p)
 
 
-## The reef and the anchorage's wall, rock by rock (North), and the names
-## over the arch and the Sea Gate.
-func _draw_north() -> void:
-	# IN THE WATER, as the boats are (Kong: "the boulders don't look
-	# submerged"): the foot of each rock below a lapping waterline, and the
-	# water it pushes aside ringing it. Each its own material, since the
-	# shader's sizes follow the rock's.
-	for r: Array in North.rocks():
-		var t: Texture2D = Skipper.tex(r[0])
-		if t == null:
-			continue
-		var holder: Node2D = Node2D.new()
-		holder.position = Vector2(float(r[1]), float(r[2]))
-		_world.add_child(holder)
-		var s: Sprite2D = Sprite2D.new()
-		s.texture = t
-		var sc: float = float(r[3]) / float(t.get_width())
-		s.scale = Vector2(sc, sc / Chart.GROUND)
-		# The painted foot, and the water a little up from it.
-		var band: Vector2 = Skipper._band(t)
-		# Standing on the water: the picture's foot at its point (so the
-		# arch's span draws over a boat in the passage behind its front foot).
-		s.offset = Vector2(0, -t.get_height() * (band.y - 0.5))
-		var arch: bool = r[0] == North.ARCH
-		var cut: float = band.y - 0.13
-		var depth: float = 0.12
-		var phase: float = randf() * 6.0
-		if arch:
-			# Its two feet at different heights: the water slopes between them.
-			cut = 0.72
-		var m: ShaderMaterial = Skipper.afloat_mat("res://game/fx/waterline.gdshader", s, cut, depth, phase)
-		m.set_shader_parameter("lap_amp", 0.4)
-		if arch:
-			m.set_shader_parameter("tilt", -0.43)
-		s.material = m
-		# The ring sits behind the rock, from its own shape (not the arch's:
-		# one ring would run across the open passage).
-		if not arch:
-			var ring: Sprite2D = Skipper.collar_of(s, cut, depth, phase)
-			ring.offset = s.offset
-			holder.add_child(ring)
-		holder.add_child(s)
-		if arch:
-			_arch = s
-	for sign: Array in [["The Sea Gate", North.SEA_GATE + Vector2(0, 520.0)]]:
-		var holder: Node2D = Node2D.new()
-		holder.position = sign[1]
-		holder.scale = Vector2(1.0, 1.0 / Chart.GROUND)
-		holder.z_index = 5
-		_world.add_child(holder)
-		# Lettering on the water: the one recipe (the hero role, Kit.lift),
-		# lifted out of the night with the other words on the water.
-		var l: Label = Kit.lift(Kit.text(null, sign[0], "hero", Kit.SEA_INK))
-		holder.add_child(l)
-		l.position = Vector2(-l.get_minimum_size().x / 2.0, -30.0)
-		_gate_sign = l
+# ── The crew ───────────────────────────────────────────────────────────────────
 
-
-## FINN (The Long Cast): his state read off the save each second (a pure
-## read of the local copy, so a crewmate's Charter never sends it), the mark
-## over him, the story line and the arrow to him.
-var _finn: FinnHull
-var _finn_st: Dictionary = {}
-var _finn_t: float = 99.0
-var _finn_ring: float = 0.0
-
-
-func _finn_tick(delta: float) -> void:
-	if _finn == null:
+func _on_mate_boat(k: String, st: Dictionary) -> void:
+	if k == net.key:
 		return
-	# The calm round him: slow rings going out, as off nobody else.
-	_finn_ring += delta
-	if _finn_ring >= 3.2:
-		_finn_ring = 0.0
-		_field.ring(_finn.position, 170.0, 3.2, 0.32)
-	_finn_t += delta
-	if _finn_t >= 1.0:
-		_finn_t = 0.0
-		_finn_refresh()
+	_mate(k).state(st)
 
 
-func _finn_refresh() -> void:
-	var r: Variant = Finn.state(session.store, session.uid)
-	if not (r is Dictionary):
-		return
-	_finn_st = r
-	var q: Variant = _finn_st.get("quest")
-	if _finn_st.get("questReady", false):
-		_finn.mark = "!"
-	elif q == null and not Finn.next_quest(Js.list(_finn_st.get("questsDone")), int(Js.num(_finn_st.get("fishingLevel")))).is_empty():
-		_finn.mark = "?"
-	else:
-		_finn.mark = ""
-	_hud.set_story(_finn_st)
+func _send_look() -> void:
+	if net != null:
+		_last_look = Skipper.look_of(session.profile())
+		net.send_look(Skipper.look_of(session.profile()), session.captain_name())
+
+
+# ── Forwarders to the parts (called from other files, or bound as Callables) ──
+
+func _status_text() -> String:
+	return SeaFolk.status_text(self)
+
+
+func _mate(k: String) -> Shipmate:
+	return SeaFolk.mate(self, k)
+
+
+func _on_mate_look(k: String, mate_name: String, look: Dictionary) -> void:
+	SeaFolk.on_mate_look(self, k, mate_name, look)
+
+
+func _on_proposed(n: int, by: String, text: String) -> void:
+	SeaFolk.on_proposed(self, n, by, text)
+
+
+func _moor_regulars() -> void:
+	SeaFolk.moor_regulars(self)
+
+
+func _hail_wanderer(w: Wanderer) -> void:
+	SeaFolk.hail_wanderer(self, w)
+
+
+func _hail(b: Buyer) -> void:
+	SeaFolk.hail(self, b)
 
 
 func _open_finn() -> void:
-	Rumble.tap(12)
-	_boat.velocity = Vector2.ZERO
-	_boat.target = null
-	_finn_refresh()
-	var sc: FinnScene = FinnScene.new()
-	sc.session = session
-	sc.st = _finn_st
-	sc.changed.connect(func() -> void:
-		session.persist()
-		_finn_refresh())
-	sc.paid.connect(func(xp: float, from: Vector2) -> void: _hud.story_pour(xp, from))
-	var moment: Array = [0]
-	sc.chapter_done.connect(func(n: int) -> void: moment[0] = n)
-	sc.closed.connect(func() -> void:
-		# A chapter closed: the sea round her answers (game/finn_moment.gd).
-		if moment[0] > 0:
-			FinnMoment.play(_world, _boat.position, _field, moment[0], _boat.z_index + 1)
-		_finn_refresh()
-		_hud.after_story.call_deferred())
-	_hud.hold_for(sc)
-	_hud_layer.add_child(sc)
+	SeaFolk.open_finn(self)
 
 
-## THROUGH THE ARCH (Kong, 2026-10-02: make the crossing feel great), by
-## where she is, not by a timer, so turning back runs it backward: the view
-## eases out as she enters the passage (the stone's scale), and under the span
-## the music closes in to a muffle and opens again beyond.
-var _pass_k: float = 0.0
-## THE WATER CLEARS FOR A FIGHT (Kong, 2026-10-09: other ships, NPCs, home
-## portals, islands and the campaign's marks behind a fight were "weird"): while
-## a fight has the stage, everything on the water fades out with the cut but
-## the fight itself (her ship, the line's, the enemy, the battle's effects:
-## meta "fight") and the sea's own life (the wake, the ripples, weather, fog,
-## the sky: meta "ambient"), and comes back as it ends at the alpha it had.
-var _fight_alpha: Dictionary = {}
-## Set once the first pass of a fight has taken its snapshot. A node first seen
-## after that (a stranger spawned mid-fight, still at its fade-in's 0) or a
-## Wanderer (they own their fade tweens) comes back at full, not at the
-## near-0 alpha it happened to have when it was first seen.
-var _fight_snapped: bool = false
+func _weather(delta: float, now: float, at: Vector2, dark: float) -> void:
+	SeaAtmos.weather(self, delta, now, at, dark)
 
 
-func _fight_clear() -> void:
-	var sk: float = _stage_k * _stage_k * (3.0 - 2.0 * _stage_k)
-	if sk <= 0.0 and _fight_alpha.is_empty():
-		return
-	var keep: Array = [_boat, _wake, _life, _motes, _xfog]
-	keep += _mates.values()
-	for n: Node in _world.get_children():
-		if not (n is CanvasItem) or n in keep or n.has_meta("fight") or n.has_meta("ambient") or n is SeaFlow:
-			continue
-		var ci: CanvasItem = n
-		var id: int = ci.get_instance_id()
-		if not _fight_alpha.has(id):
-			_fight_alpha[id] = 1.0 if (_fight_snapped or ci is Wanderer) else ci.modulate.a
-		ci.modulate.a = float(_fight_alpha[id]) * (1.0 - sk)
-	_fight_snapped = true
-	if sk <= 0.0:
-		_fight_alpha.clear()
-		_fight_snapped = false
-		# The campaign's marks and islands as the fight left them.
-		if _campaign != null:
-			_campaign.refresh()
-## THE CAMERA UNDER WAY (Kong, 2026-10-09): it leads the way she is sailing,
-## up to LEAD of the screen at full speed, and settles dead centre at anchor,
-## with the rod out or a panel up (fishing stays locked in); it draws back
-## SAIL_OUT at full sail, and sits SHIP_OUT wider north of the arch for the
-## bigger hulls. punch: a fight's critical, a small push in (BattleStage).
-const LEAD: float = 0.09
-var _lead: Vector2 = Vector2.ZERO
-var _sail_k: float = 0.0
-var _ship_k: float = 0.0
-var punch: float = 0.0
-## A FIGHT'S ZOOM, NUDGED (Kong, 2026-10-09): the wheel (or - and =) in a fight
-## scales the fight's own framing within these, remembered for the next fight.
-const FIGHT_ZOOM_MIN: float = 0.7
-const FIGHT_ZOOM_MAX: float = 1.45
-var fight_zoom: float = 1.0
-var punch_at: Vector2 = Vector2.ZERO
-var _zoom_base: float = 1.0
-var _punch_was: float = 0.0
+func _finds(delta: float, now: float, lift: Color) -> void:
+	SeaHunts.finds(self, delta, now, lift)
 
 
-func _cam_lead(delta: float) -> Vector2:
-	var vp: Vector2 = get_viewport_rect().size
-	var v: Vector2 = _boat.velocity
-	var top: float = maxf(1.0, Boat.SPEED * _boat.hull * _boat.boat_speed)
-	var way: float = clampf(v.length() / top, 0.0, 1.0)
-	var sailing: bool = stage == null and not _boat.hush and not _boat.hold_still and v.length() > 20.0
-	var to: Vector2 = Vector2.ZERO
-	if sailing:
-		var d: Vector2 = v.normalized()
-		var z: float = maxf(0.05, _camera.zoom.x)
-		to = Vector2(d.x * vp.x, d.y * vp.y / Chart.GROUND) * LEAD / z * way
-	# Quick enough to keep up with the helm (it trailed her by a second and
-	# made sailing feel floaty).
-	var k: float = 1.0 - exp(-delta * 3.2)
-	_lead = _lead.lerp(to, k)
-	_sail_k = lerpf(_sail_k, 1.0 if (sailing and _boat.cue.get("full", false) == true) else 0.0, 1.0 - exp(-delta * 1.2))
-	_ship_k = lerpf(_ship_k, 1.0 if _boat.on_ship else 0.0, 1.0 - exp(-delta * 1.5))
-	return _lead
-## The arch's picture: thinned while she is behind its span, so the stone
-## never hides her (she shows through it).
-var _arch: Sprite2D
-## The Sea Gate's name on the water (lifted out of the night each frame).
-var _gate_sign: Label = null
+func _dug(site_id: String) -> bool:
+	return SeaHunts.dug(self, site_id)
 
 
-func _passage(delta: float) -> void:
-	var p: Vector2 = _boat.position
-	var lane: float = 1.0 - smoothstep(North.GATE_HALF + 150.0, North.GATE_HALF + 650.0, absf(p.x - North.GATE_X))
-	var dy: float = absf(p.y - (Explore.NORTH_WALL - 160.0))
-	var near: float = (1.0 - smoothstep(150.0, 900.0, dy)) * lane
-	_pass_k = lerpf(_pass_k, near, 1.0 - exp(-delta * 2.5))
-	var under: float = (1.0 - smoothstep(60.0, 420.0, dy)) * lane
-	Sound.muffle(under)
-	if _arch != null:
-		# The span covers, on screen, the water from about 660 to 1,430 north
-		# of its near foot (the picture stands 895 / Chart.GROUND tall).
-		var foot: float = Explore.NORTH_WALL + 60.0
-		var behind: float = smoothstep(560.0, 760.0, foot - p.y) * (1.0 - smoothstep(1330.0, 1530.0, foot - p.y))
-		behind *= 1.0 - smoothstep(North.ARCH_WIDE * 0.4, North.ARCH_WIDE * 0.55, absf(p.x - North.GATE_X))
-		_arch.modulate.a = lerpf(_arch.modulate.a, 1.0 - 0.55 * behind, 1.0 - exp(-delta * 6.0))
+func _clue_search(tier: String) -> void:
+	await SeaHunts.clue_search(self, tier)
 
 
-## THE CHANGE OF BOAT (North): past the sign in the arch, the ship.
-func _ship_side() -> void:
-	var want: bool = North.ship_water(_boat.position)
-	if want == _boat.on_ship:
-		_sided = true
-		return
-	var sa: Dictionary = North.ship_art(session.profile().get("ship_tier"), session.profile().get("equipped_ship_skin"))
-	var def: Dictionary = sa["def"]
-	var art: String = sa["art"]
-	var wide: float = sa["wide"]
-	# The first time (opening the sea already north) is no crossing.
-	var crossing: bool = _sided
-	_sided = true
-	_boat.set_ship(want, def, Skipper.tex(art), wide, crossing)
-	_hud.set_side(want, crossing)
-	if not crossing:
-		return
-	# The water gives under her: rings running out, one after another.
-	for k: int in 3:
-		get_tree().create_timer(0.12 * k).timeout.connect(func() -> void:
-			if is_instance_valid(_boat):
-				_field.ring(_boat.position, 120.0 + 70.0 * k, 1.6 + 0.3 * k, 0.6 - 0.15 * k))
-	Rumble.buzz([0, 30, 30, 50])
-	if want:
-		Sound.horn()
-	else:
-		Sound.bell()
-	if want:
-		_hud.side_banner("The Anchorage", "Your %s is under you" % str(def.get("name", "ship")))
-	else:
-		_hud.side_banner("The Fishing Grounds", "Back on your boat")
+func _land(isle: Dictionary) -> void:
+	await SeaHunts.land(self, isle)
 
 
-var _gate_note_t: float = -99.0
-var _sided: bool = false
+func _dig(site: Dictionary) -> void:
+	await SeaHunts.dig(self, site)
 
 
-## The expedition row (Crew, Recruits, Ship), north of the arch.
+func _bottle(b: Dictionary) -> void:
+	await SeaHunts.bottle(self, b)
+
+
+func refresh_home() -> void:
+	SeaPorts.refresh_home(self)
+
+
+func _dock(id: String) -> void:
+	SeaPorts.dock(self, id)
+
+
+func _go_ashore() -> void:
+	SeaPorts.go_ashore(self)
+
+
+func _enter_room(door: String) -> void:
+	SeaPorts.enter_room(self, door)
+
+
 func _open_expedition(what: String) -> void:
-	if _hud.busy():
-		return
-	var c: Control
-	if what == "ship":
-		var sh: ShipSheet = ShipSheet.new()
-		sh.session = session
-		sh.closed.connect(func() -> void: _hud.refresh())
-		c = sh
-	else:
-		var ch: CrewHall = CrewHall.new()
-		ch.session = session
-		ch.at_hall = false
-		ch.room = "roster" if what == "crew" else "recruit"
-		ch.closed.connect(func() -> void: _hud.refresh())
-		c = ch
-	_hud.hold_for(c)
-	_room_layer.add_child(c)
-var _crew_key: String = ""
-
-
-## SUNRISE AT THE CREW HALL (Kong, 2026-10-02): a fresh board of hopefuls comes
-## in each sea day; say so when it does, and on coming back to one not yet
-## looked at (the board is stamped when the hall is opened).
-func _crew_morning(now: float) -> void:
-	if Crew.port().is_empty():
-		return
-	var key: String = Crew.board_key(now)
-	if key == _crew_key:
-		return
-	var first: bool = _crew_key == ""
-	_crew_key = key
-	if str(session.profile().get("last_free_recruit_date", "")) == key:
-		return
-	if first and session.profile().get("last_free_recruit_date") == null and Crew.live(session.store).is_empty():
-		# A captain who has never been to the hall hears of it once they have.
-		return
-	_hud.notify("SUNRISE", "New hopefuls at the Crew Hall",
-		"A fresh board of hands is looking for a ship. Moor at the Crew Hall, north through the arch, to meet them.",
-		Skipper.tex("crew/hall_%d.png" % Crew.clamp_hall(session.profile().get("crew_hall_tier"))))
+	SeaPorts.open_expedition(self, what)
 
 
 func _held_at_gate() -> void:
-	var now: float = Time.get_ticks_msec() / 1000.0
-	if now - _gate_note_t < 6.0:
-		return
-	_gate_note_t = now
-	_hud.toast("She sails with nobody aboard. Seat your raid party at the Gunwharf before you go out.")
+	SeaPorts.held_at_gate(self)
 
 
-var _bay_note_t: float = -99.0
-
-
-## Held on a shut bay's rim: the helm says which, and what opens it.
 func _held_at_bay(line: String) -> void:
-	var now: float = Time.get_ticks_msec() / 1000.0
-	if now - _bay_note_t < 4.0:
-		return
-	_bay_note_t = now
-	Rumble.tap(12)
-	_hud.toast(line)
-
-
-## The Sea Gate opens with a captain seated to fight (an empty ship does not
-## go out: every fight past it is fought by the crew in the seats).
-## Out of the Gunwharf: a new hull or paint shows on the water at once.
-func _reship() -> void:
-	_hud.refresh()
-	if not _boat.on_ship:
-		return
-	var sa: Dictionary = North.ship_art(session.profile().get("ship_tier"), session.profile().get("equipped_ship_skin"))
-	_boat.set_ship(true, sa["def"], Skipper.tex(sa["art"]), sa["wide"], false)
+	SeaPorts.held_at_bay(self, line)
 
 
 func _open_sea_gate() -> void:
-	var seated: bool = false
-	for c: Dictionary in Crew.live(session.store):
-		if c.get("raid_slot") != null and float(c["raid_slot"]) == 0.0:
-			seated = true
-	North.gate_open = seated
+	SeaPorts.open_sea_gate(self)
 
 
-## A new chapter's water opened: the parchment, once (markChapterUnlockSeen).
-func celebrate_chapter() -> void:
-	var ch: Dictionary = _campaign.owed_chapter()
-	if ch.is_empty() or _hud.busy():
-		return
-	var prev: Dictionary = Campaign.chapters()[int(ch["number"]) - 2]
-	var card: ChapterCard = ChapterCard.new()
-	card.chapter = ch
-	card.sparks = true
-	card.eyebrow = "CHAPTER %s COMPLETE  ·  NEW CHAPTER UNLOCKED" % str(prev.get("romanNumeral", ""))
-	card.finished.connect(func() -> void:
-		session.act("markChapterUnlockSeen", [ch["id"]])
-		session.persist()
-		_campaign.refresh())
-	_hud.hold_for(card)
-	_hud_layer.add_child(card)
-
-
-## Back to the Gunwharf's berth (a lost fight, a gate that held): the sea
-## dims and she is there.
-func warp_to_gunwharf() -> void:
-	if not _berths.has("gunwharf"):
-		return
-	var at: Vector2 = (_berths["gunwharf"] as Node2D).position
-	_warp(at.x, at.y, Color(0.85, 0.75, 0.6))
-
-
-## A node of the campaign pressed at the helm: a fight is taken on from its
-## dock; anything else opens its sheet (or its scene).
 func open_node(id: String) -> void:
-	var n: Dictionary = Campaign.node(id)
-	var st: String = str(_campaign.status.get(id, "locked"))
-	if n["type"] == "skirmish" and st != "locked" and n.get("raidId") != null:
-		start_battle(str(n["raidId"]), id)
-		return
-	var sheet: NodeSheet = NodeSheet.new()
-	sheet.sea = self
-	sheet.node_id = id
-	sheet.done.connect(func() -> void:
-		_campaign.refresh()
-		_hud.refresh()
-		get_tree().create_timer(0.4).timeout.connect(celebrate_chapter))
-	_hud.hold_for(sheet)
-	_hud_layer.add_child(sheet)
+	SeaBattles.open_node(self, id)
 
 
-func _draw_port(port: Dictionary) -> void:
-	var c: Vector2 = Vector2(float(port["x"]), float(port["y"]))
-	var r: float = float(port["r"])
-	var d: float = r * 2.0
-	var pl: Variant = port.get("plate")
-	if pl != null:
-		var plate: Sprite2D = Sprite2D.new()
-		plate.texture = Lit.tex(String((pl as Dictionary)["art"]))
-		if plate.texture != null:
-			var w: float = d * float(pl.get("width", 1.0))
-			var sc: float = w / float(plate.texture.get_width())
-			plate.scale = Vector2(sc, sc / Chart.GROUND)
-			var h: float = plate.texture.get_height() * sc
-			plate.position = c + Vector2(0, (0.5 - float(pl.get("water", 0.42))) * h / Chart.GROUND)
-			plate.z_index = -2
-			_world.add_child(plate)
-			Shore.trace(plate)
-	var bds: Array = port["buildings"]
-	# The Homestead wears the house that stands (core/homestead.gd).
-	if port["id"] == "home":
-		bds = [Homestead.sea_building(session.store)]
-	for bd: Dictionary in bds:
-		var b: Sprite2D = Sprite2D.new()
-		b.texture = Lit.tex(String(bd["art"]))
-		if b.texture == null:
-			continue
-		var bs: float = d * float(bd["scale"]) / float(b.texture.get_width())
-		b.scale = Vector2(bs, bs / Chart.GROUND)
-		b.offset = Vector2(0, -b.texture.get_height() / 2.0)
-		b.position = c + Vector2(-r + float(bd["x"]) / 100.0 * d, -r + float(bd["y"]) / 100.0 * d)
-		_world.add_child(b)
-		if port["id"] == "home":
-			if _home_house != null and is_instance_valid(_home_house):
-				_home_house.queue_free()
-			_home_house = b
-	var be: Dictionary = port["berth"]
-	var berth: Berth = Berth.new()
-	berth.r = float(be["r"])
-	berth.position = Vector2(float(be["x"]), float(be["y"]))
-	berth.bearing = (berth.position - c).angle()
-	berth.z_index = -1
-	_world.add_child(berth)
-	_berths[port["id"]] = berth
+func celebrate_chapter() -> void:
+	SeaBattles.celebrate_chapter(self)
 
 
-var _home_house: Sprite2D
-
-
-## The house redrawn after a build.
-func refresh_home() -> void:
-	if _home_house == null or not is_instance_valid(_home_house):
-		return
-	var bd: Dictionary = Homestead.sea_building(session.store)
-	var port: Dictionary = Chart.port("home")
-	var c: Vector2 = Vector2(float(port["x"]), float(port["y"]))
-	var r: float = float(port["r"])
-	var d: float = r * 2.0
-	_home_house.texture = Lit.tex(String(bd["art"]))
-	if _home_house.texture == null:
-		return
-	var bs: float = d * float(bd["scale"]) / float(_home_house.texture.get_width())
-	_home_house.scale = Vector2(bs, bs / Chart.GROUND)
-	_home_house.offset = Vector2(0, -_home_house.texture.get_height() / 2.0)
-	_home_house.position = c + Vector2(-r + float(bd["x"]) / 100.0 * d, -r + float(bd["y"]) / 100.0 * d)
-
-
-## The bell and the buzz of tying up.
-func _dock_bell() -> void:
-	Rumble.buzz([18, 40, 24])
-	Sound.bell()
-
-
-## A room over the sea from a mooring: it gets the session, holds the HUD
-## while it is up, and on_closed runs as it closes.
-func _open_room(room: Control, on_closed: Callable) -> void:
-	room.set("session", session)
-	room.connect("closed", on_closed)
-	_hud.hold_for(room)
-	_room_layer.add_child(room)
-
-
-## A rules answer's error for a toast, or fallback when there is none (or no
-## answer at all).
-static func _err(r: Variant, fallback: String) -> String:
-	return str((r as Dictionary).get("error", fallback)) if r is Dictionary else fallback
-
-
-## Tying up: the bell, then whatever the port opens.
-func _dock(id: String) -> void:
-	match id:
-		"home":
-			_dock_bell()
-			_open_room(HomesteadRoom.new(), func() -> void:
-				refresh_home()
-				_hud.refresh())
-		"mainland":
-			_go_ashore()
-		"shipyard":
-			_dock_bell()
-			_enter_room("shipyard")
-		"crew_hall":
-			_dock_bell()
-			_open_room(CrewHall.new(), _hud.refresh)
-		"forge_isle":
-			_dock_bell()
-			_open_room(ForgeBench.new(), _hud.refresh)
-		"posting_house":
-			_dock_bell()
-			_open_room(BountyBoard.new(), _hud.refresh)
-		"charterhouse":
-			_dock_bell()
-			_open_room(VoyageBoard.new(), _hud.refresh)
-		"trawl_fleet":
-			_dock_bell()
-			_open_room(TrawlHarbor.new(), _hud.refresh)
-		"trawl_docks":
-			# The Tally House: the day's orders, in the Locker.
-			_dock_bell()
-			_open_locker("orders", "")
-		"gunwharf":
-			_dock_bell()
-			_open_room(GunwharfSheet.new(), func() -> void:
-				_open_sea_gate()
-				_reship())
-		_:
-			Rumble.tap(10)
-			var p: Dictionary = Chart.port(id)
-			if North.COMING.has(id):
-				Sound.bell()
-				_show_find(SeaFinds.panel(_room_layer, str(Js.obj(p.get("plate")).get("art", "")).trim_prefix("/"), "Moored", str(p.get("name", "")),
-					[[str(p.get("blurb", "")).replace("’", "'"), "body_strong"], [North.COMING[id], "note"], ["Its rooms come in a later build of the port.", "small"]], []))
-			else:
-				_hud.toast("%s is not built yet in this build." % p.get("name", "That port"))
-
-
-## A FIGHT ON THE WATER (game/battle_stage.gd): the sea becomes its stage.
 func start_battle(raid_id: String, node_id: String = "") -> void:
-	# In a Charter every raid goes through the founder's table (the purse is
-	# the crew's): the call goes out, and the line forms when it sails.
-	if raids_shared():
-		var r: Variant = await session.act("raidTable", ["call", { "raidId": raid_id, "nodeId": node_id, "x": _boat.position.x, "y": _boat.position.y }])
-		if r is Dictionary and r.has("error"):
-			_hud.toast(str(r["error"]))
-		return
-	# Alone: the entry screen first (the skirmish, a lesson, sails straight in).
-	if Battle.raid_def(raid_id).get("skirmish", false) != true:
-		var rs: ReadyScreen = ReadyScreen.new()
-		rs.sea = self
-		rs.raid_id = raid_id
-		rs.node_id = node_id
-		rs.sail.connect(func(_tier: String) -> void: _launch(raid_id, node_id))
-		_hud.hold_for(rs)
-		_hud_layer.add_child(rs)
-		return
-	_launch(raid_id, node_id)
+	await SeaBattles.start_battle(self, raid_id, node_id)
 
 
 ## Into the fight, alone.
 func _launch(raid_id: String, node_id: String) -> void:
-	var st: BattleStage = BattleStage.new()
-	st.sea = self
-	st.raid_id = raid_id
-	var mark: CampaignWater.Ship = _campaign.ship(node_id) if node_id != "" else null
-	if mark != null:
-		st.mark = mark
-		st.dock = mark.dock()
-	st.finished.connect(func(_won: bool) -> void:
-		_campaign.refresh()
-		_open_sea_gate()
-		_hud.refresh()
-		get_tree().create_timer(0.4).timeout.connect(celebrate_chapter))
-	_hud.hold_for(st)
-	_hud_layer.add_child(st)
-
-
-## A gauntlet's maelstrom pressed: in a Charter the call goes to the crew's
-## table (the muster opens the entry screen for the line); alone, this game's
-## own table, with its own muster.
-func open_gauntlet(variant: String) -> void:
-	if net != null and net.gauntlets != null:
-		var r: Variant = await session.act("gauntletTable", ["call", { "variant": variant, "x": _boat.position.x, "y": _boat.position.y }])
-		if r is Dictionary and (r as Dictionary).has("error"):
-			_hud.toast(str(r["error"]))
-		return
-	if _solo_dive != null and is_instance_valid(_solo_dive):
-		_solo_dive.queue_free()
-	var t: GauntletTable = GauntletTable.new()
-	t.solo = session
-	add_child(t)
-	_solo_dive = t
-	var gm: GauntletMuster = GauntletMuster.new()
-	gm.sea = self
-	gm.table = t
-	gm.my_key = "me"
-	_hud_layer.add_child(gm)
-	t.changed.connect(func(st: Dictionary) -> void:
-		if str(st.get("phase", "")) in ["idle", "done"] and is_instance_valid(gm):
-			gm.queue_free())
-	var r2: Dictionary = t.handle("me", session, ["call", { "variant": variant }])
-	if r2.has("error"):
-		_hud.toast(str(r2["error"]))
-		gm.queue_free()
-		t.queue_free()
-
-
-var _solo_dive: GauntletTable = null
-
-
-## Into a dive: the fight screen, held for the whole descent, at the maelstrom.
-func open_gauntlet_battle(t: GauntletTable, my_key: String, variant: String) -> void:
-	var st: BattleStage = BattleStage.new()
-	st.sea = self
-	st.raid_id = ""
-	st.table = t
-	st.my_key = my_key
-	st.gauntlet = variant
-	var at: Vector2 = GauntletTable.maelstrom_of(variant)
-	if at != Vector2.INF:
-		st.dock = at + Vector2(-1250, 820)
-	st.finished.connect(func(_won: bool) -> void:
-		_hud.refresh()
-		_campaign.refresh())
-	_hud.hold_for(st)
-	_hud_layer.add_child(st)
-
-
-## Is this captain in a Charter whose raids go through the founder's table?
-func raids_shared() -> bool:
-	if RaidTable.live == null:
-		return false
-	return session.remote != null or (session.charter != null and session.charter.raids != null)
+	SeaBattles.raid_stage(self, raid_id, node_id, false, "")
 
 
 ## The line has formed for a Charter's raid this captain is in: to the fight.
 func open_coop_battle(table_state: Dictionary, my_key: String) -> void:
 	var node_id: String = str(table_state.get("nodeId", ""))
-	var st: BattleStage = BattleStage.new()
-	st.sea = self
-	st.raid_id = str(table_state["raidId"])
-	st.table = RaidTable.live
-	st.my_key = my_key
-	var mark: CampaignWater.Ship = _campaign.ship(node_id) if node_id != "" else null
-	if mark != null:
-		st.mark = mark
-		st.dock = mark.dock()
-	st.finished.connect(func(_won: bool) -> void:
-		_campaign.refresh()
-		_open_sea_gate()
-		_hud.refresh()
-		get_tree().create_timer(0.4).timeout.connect(celebrate_chapter))
-	_hud.hold_for(st)
-	_hud_layer.add_child(st)
+	SeaBattles.raid_stage(self, str(table_state["raidId"]), node_id, true, my_key)
 
 
-func _go_ashore() -> void:
-	Rumble.buzz([18, 40, 24])
-	Sound.bell()
-	var a: Ashore = Ashore.new()
-	a.chose.connect(_enter_room)
-	_hud.hold_for(a)
-	_hud_layer.add_child(a)
+func open_gauntlet(variant: String) -> void:
+	await SeaBattles.open_gauntlet(self, variant)
 
 
-func _enter_room(door: String) -> void:
-	var room: Room
-	match door:
-		"market":
-			room = MarketRoom.new()
-		"shipyard":
-			room = ShipyardRoom.new()
-		"den":
-			room = DenRoom.new()
-		"parlor":
-			room = ParlorRoom.new()
-		"chart_room":
-			room = ChartStudy.new()
-		"tavern":
-			room = TavernRoom.new()
-		_:
-			room = TackleRoom.new()
-	room.session = session
-	room.closed.connect(func() -> void:
-		_boat.set_look(Skipper.look_of(session.profile()))
-		_boat.set_fit(session.profile())
-		_send_look()
-		_hud.refresh())
-	_hud.hold_for(room)
-	_room_layer.add_child(room)
+func open_gauntlet_battle(t: GauntletTable, my_key: String, variant: String) -> void:
+	SeaBattles.open_gauntlet_battle(self, t, my_key, variant)
 
 
-# ── The regulars and the wanderers ─────────────────────────────────────────────
-
-## The nine regulars and Yoon, where the chart moors them: each regular works
-## their own water (all the slack it leaves them, in legs with a sit between);
-## Yoon barely moves.
-func _moor_regulars() -> void:
-	for m: Dictionary in Rules.data()["regulars"]["moorings"]:
-		var f: Dictionary = Folk.by_id(str(m["folkId"]))
-		var info: Dictionary
-		if m["folkId"] == "yoon":
-			info = Traders.yoon()
-		else:
-			info = {
-				"key": "folk:%s" % m["folkId"], "kind": "talker", "folkId": m["folkId"], "name": m["name"],
-				"x": m["x"], "y": m["y"], "line": m["line"],
-				"driftR": Chart.drift_r(Vector2(float(m["x"]), float(m["y"])), m["zoneId"]) / 0.6,
-				"driftRate": m["driftRate"], "driftPhase": m["driftPhase"], "look": m["look"],
-				"deal": "talk", "topic": "chat", "mood": "One of the regulars", "lines": [m["line"]],
-			}
-		var w: Wanderer = Wanderer.new()
-		w.info = info
-		w.role = str(f.get("role", "One of the regulars"))
-		if not f.is_empty():
-			w.accent = Color(str(f["accent"]))
-		_world.add_child(w)
-		_regulars[info["key"]] = w
+func raids_shared() -> bool:
+	return SeaBattles.raids_shared(self)
 
 
-## The strangers round the boat: re-derived when the boat crosses a cell or
-## night comes and goes (the runners), and the day's dealt list when the sea
-## day turns.
-func _wanderers(now: float, clock: Dictionary, lift: Color) -> void:
-	var day: int = Traders.sea_day(now)
-	if day != _dealt_day:
-		_dealt_day = day
-		_load_dealt()
-	var at: Vector2 = _boat.position
-	var cell: float = float(Rules.data()["traders"]["cell"])
-	var night: bool = clock["phase"] == "night" or clock["phase"] == "dusk"
-	var ck: String = "%d:%d|%s|%d" % [int(floor(at.x / cell)), int(floor(at.y / cell)), night, day]
-	if ck != _trader_cell:
-		_trader_cell = ck
-		var want: Dictionary = {}
-		for t: Dictionary in Traders.around(at.x, at.y, 2400.0, day, now):
-			want[t["key"]] = t
-		for k: String in _strangers.keys():
-			if not want.has(k) and k != _hailing:
-				# A trader leaving the water fades off it (never gone in a frame).
-				Motion.leave(_strangers[k] as Wanderer, true, false)
-				_strangers.erase(k)
-		var labels: Dictionary = Rules.data()["traders"]["kindLabel"]
-		for k: String in want:
-			if _strangers.has(k):
-				continue
-			var w: Wanderer = Wanderer.new()
-			w.info = want[k]
-			w.role = str(labels.get(want[k]["kind"], ""))
-			w.done = _dealt_keys.has(k)
-			_world.add_child(w)
-			_strangers[k] = w
-			# And one coming into it fades in.
-			w.modulate.a = 0.0
-			Motion.ease_fade(w.create_tween(), w, "modulate:a", 1.0, Shipmate.FADE)
-	for list: Dictionary in [_regulars, _strangers]:
-		for k: String in list:
-			(list[k] as Wanderer).lift = lift
-
-
-func _load_dealt() -> void:
-	var r: Variant = await session.act("dealtToday", [])
-	_dealt_keys = r if r is Array else []
-	for k: String in _strangers:
-		(_strangers[k] as Wanderer).done = _dealt_keys.has(k)
-
-
-func _hail_wanderer(w: Wanderer) -> void:
-	Rumble.tap(12)
-	var key: String = w.info["key"]
-	_hailing = key
-	var p: TraderPanel = TraderPanel.new()
-	p.session = session
-	p.trader = w.info
-	p.already_dealt = _dealt_keys.has(key)
-	p.deals_left = int(Rules.data()["traders"]["dealsPerDay"]) - _dealt_keys.size()
-	p.dealt.connect(func(k: String) -> void:
-		if not _dealt_keys.has(k):
-			_dealt_keys.append(k)
-		if is_instance_valid(w):
-			w.done = true)
-	p.changed.connect(func() -> void: _hud.refresh())
-	p.closed.connect(func() -> void: _hailing = "")
-	_hud.hold_for(p)
-	_hud_layer.add_child(p)
-
-
-# ── The portal and the recall ──────────────────────────────────────────────────
-
-## The well's rung and whether it is live (a stone opened, or a rung above the
-## first: a built portal is never dead water).
 func _portal_state() -> void:
-	var t: Variant = session.profile().get("portal_tier")
-	_portal.tier = 1 if t == null else int(Js.num(t))
-	_portal.live = Portal.has_stone_for(1, session.save.get("discoveries", [])) or _portal.tier > 1
-	_portal.refresh()
+	SeaPortal.portal_state(self)
 
 
 func _open_portal() -> void:
-	Rumble.buzz([12, 50, 18])
-	# Course and way both die here: stepping into something, not past it.
-	_boat.velocity = Vector2.ZERO
-	_boat.target = null
-	var sh: PortalSheet = PortalSheet.new()
-	sh.session = session
-	sh.sail.connect(_warp)
-	sh.built.connect(func() -> void:
-		_portal_state()
-		_hud.refresh())
-	_hud.hold_for(sh)
-	_hud_layer.add_child(sh)
+	SeaPortal.open_portal(self)
 
 
-## THE PASSAGE: the light comes up, she moves under it, it clears, and the
-## water she lands in rings out from where she broke it. Portal and recall both.
 func _warp(x: float, y: float, accent: Color) -> void:
-	if _warping:
-		return
-	_warping = true
-	_portal_armed = false
-	Rumble.buzz([14, 60, 22, 60, 30])
-	Sound.bell()
-	var veil: ColorRect = ColorRect.new()
-	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	veil.color = Color(accent.lerp(Color.WHITE, 0.55), 0.0)
-	veil.mouse_filter = Control.MOUSE_FILTER_STOP
-	_room_layer.add_child(veil)
-	var tw: Tween = create_tween()
-	tw.tween_property(veil, "color:a", 1.0, Motion.VEIL).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	await tw.finished
-	_boat.position = Vector2(x, y)
-	_boat.velocity = Vector2.ZERO
-	_boat.target = null
-	_camera.position = Vector2(x, y * Chart.GROUND)
-	_camera.reset_smoothing()
-	var ring: Surfacing = Surfacing.new()
-	ring.color = accent
-	ring.position = Vector2(x, y)
-	_world.add_child(ring)
-	_trader_cell = ""
-	var out: Tween = create_tween()
-	out.tween_property(veil, "color:a", 0.0, Motion.VEIL).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	await out.finished
-	veil.queue_free()
-	_warping = false
-	_flush_position()
+	await SeaPortal.warp(self, x, y, accent)
 
 
-## The free recall home, once a sea day: the rules stamp it, then the passage.
 func _press_recall() -> void:
-	if _warping or _hud.busy():
-		return
-	var to: Dictionary = Portal.HOME_TO
-	if _boat.position.distance_to(Vector2(float(to["x"]), float(to["y"]))) < 900.0:
-		_hud.toast("You are already home")
-		return
-	var left: float = Portal.recall_left_ms(session.profile(), "fishing")
-	if left > 0.0:
-		_hud.toast("Recall ready in %dm" % int(ceil(left / 60000.0)))
-		return
-	var r: Variant = await session.act("spendRecall", ["fishing"])
-	if r is Dictionary and r.get("ok", false):
-		session.persist()
-		_recall_t = 99.0
-		_warp(float(to["x"]), float(to["y"]), Color(str(to["accent"])))
-	elif r is Dictionary and r.get("readyAt") != null:
-		_hud.toast("Recall ready in %dm" % maxi(1, int(ceil((Js.parse_ms(r["readyAt"]) - Clock.now_ms()) / 60000.0))))
-	else:
-		_hud.toast("The recall did not go through")
+	await SeaPortal.press_recall(self)
 
 
-## Where she came up: light under the hull, then the swell running out.
-class Surfacing:
-	extends Node2D
-	var color: Color = Color.WHITE
-	var _t: float = 0.0
-
-	func _process(delta: float) -> void:
-		_t += delta
-		if _t > 1.4:
-			queue_free()
-		queue_redraw()
-
-	func _draw() -> void:
-		var glow: float = clampf(1.0 - _t / 0.6, 0.0, 1.0)
-		draw_circle(Vector2.ZERO, 120.0, Color(color, 0.35 * glow))
-		for k: int in 2:
-			var u: float = clampf((_t - 0.19 - k * 0.2) / 1.0, 0.0, 1.0)
-			if u <= 0.0 or u >= 1.0:
-				continue
-			var e: float = 1.0 - pow(1.0 - u, 3.0)
-			draw_arc(Vector2.ZERO, 60.0 + e * 340.0, 0.0, TAU, 96, Color(color.lightened(0.3), 0.6 * (1.0 - e)), 4.0, true)
+func warp_to_gunwharf() -> void:
+	SeaPortal.warp_to_gunwharf(self)
 
 
-func _hail(b: Buyer) -> void:
-	Rumble.tap(12)
-	var p: BuyerPanel = BuyerPanel.new()
-	p.session = session
-	p.info = b.info
-	p.closed.connect(func() -> void: _dealt[b.info["zoneId"]] = true)
-	p.sold.connect(func() -> void: _hud.refresh())
-	_hud.hold_for(p)
-	_hud_layer.add_child(p)
-
+# ── Input, the chart, the Locker and the wheel ─────────────────────────────────
 
 func _input(event: InputEvent) -> void:
 	# Anything pressed: not away (the crew's status).
@@ -2191,11 +827,6 @@ func _input(event: InputEvent) -> void:
 		_input_ms = Time.get_ticks_msec()
 	if not _music_started and (event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton) and event.is_pressed():
 		_music_started = true
-
-
-## THE WORLD CHART, over everything; the sea runs on under it (the autopilot
-## keeps sailing).
-var _chart: WorldMap
 
 
 func _open_chart() -> void:
@@ -2210,11 +841,6 @@ func _open_chart() -> void:
 		_chart = null
 		layer.queue_free())
 	layer.add_child(_chart)
-
-
-## THE LOCKER, over the sea with the camera pushed in on her; the HUD steps
-## aside while it is up.
-var _locker: Locker
 
 
 func _open_locker(tab: String, slot: String) -> void:
@@ -2234,12 +860,7 @@ func _open_locker(tab: String, slot: String) -> void:
 		_locker = null
 		_hud_layer.visible = true
 		layer.queue_free())
-	_hud.hold_for(_locker)
-	layer.add_child(_locker)
-
-
-## THE QUICK-SWAP WHEEL: bait and rods round her, while Q is held.
-var _wheel: SwapWheel
+	_hold(_locker, layer)
 
 
 func _open_wheel() -> void:
@@ -2273,8 +894,7 @@ func _open_wheel() -> void:
 		Rumble.tap(10)
 		if _boat.field != null:
 			_boat.field.ring(_boat.position, 120.0, 1.0, 0.5))
-	_hud.hold_for(_wheel)
-	_hud_layer.add_child(_wheel)
+	_hold(_wheel, _hud_layer)
 
 
 func _course_chip() -> void:
@@ -2284,12 +904,6 @@ func _course_chip() -> void:
 		_hud.set_course({})
 		return
 	_hud.set_course({ "label": _course.label, "eta": Course.eta_text(_course.eta()), "autopilot": _course.autopilot })
-
-
-## Holding the mouse down on the water: she keeps sailing toward the pointer
-## (and on past it, so a held press never runs out under her).
-var _holding: bool = false
-var _held_t: float = 0.0
 
 
 func _hold_steer() -> void:
@@ -2333,32 +947,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_open_chart()
 		return
 	# Zoom: the wheel, a trackpad pinch, or - and = on the keyboard.
-	var zf: float = 1.0
-	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
-		var mb: InputEventMouseButton = event
-		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zf = 1.12
-		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zf = 1.0 / 1.12
-	elif event is InputEventMagnifyGesture:
-		zf = (event as InputEventMagnifyGesture).factor
-	elif event is InputEventKey and (event as InputEventKey).pressed:
-		var k: Key = (event as InputEventKey).keycode
-		if k == KEY_EQUAL or k == KEY_KP_ADD:
-			zf = 1.12
-		elif k == KEY_MINUS or k == KEY_KP_SUBTRACT:
-			zf = 1.0 / 1.12
-	if zf != 1.0 and stage != null:
-		# In a fight: a nudge on the fight's own framing, kept for the next.
-		fight_zoom = clampf(fight_zoom * zf, FIGHT_ZOOM_MIN, FIGHT_ZOOM_MAX)
-		Prefs.set_value("fight_zoom", fight_zoom)
-		get_viewport().set_input_as_handled()
-		return
-	if zf != 1.0:
-		_zoom_to = clampf(_zoom_to * zf, ZOOM_MIN, ZOOM_MAX)
-		Prefs.set_value("sea_zoom_2", _zoom_to)
-		_hud.show_zoom(_zoom_to)
-		get_viewport().set_input_as_handled()
+	if SeaCamera.zoom_input(self, event):
 		return
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		# While the line is out a click is for the dial (Reel In), never a

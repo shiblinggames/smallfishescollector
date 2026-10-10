@@ -57,7 +57,7 @@ func _ready() -> void:
 	var pt: Label = Kit.text(prow, Finn.progress_label(q, have) if not q.is_empty() else "", "label", Paper.INK_SOFT)
 	pt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pt.name = "Progress"
-	var pays: Label = Kit.text(prow, "+%s XP   %s ⟡" % [_n(float(q.get("xp", 0))), _n(float(q.get("reward", 0)))], "label", Paper.INK)
+	var pays: Label = Kit.text(prow, "+%s XP   %s ⟡" % [Js.thousands(float(q.get("xp", 0))), Js.thousands(float(q.get("reward", 0)))], "label", Paper.INK)
 	pays.add_theme_color_override("font_color", Color(0.5, 0.36, 0.05))
 	_bar = Control.new()
 	_bar.custom_minimum_size = Vector2(0, 8)
@@ -83,11 +83,6 @@ static func chapter_of(q: Dictionary) -> Dictionary:
 		if ch["band"] == q.get("band"):
 			return ch
 	return {}
-
-
-## Thousands with commas (the one formatter, Js.thousands).
-static func _n(v: float) -> String:
-	return Js.thousands(v)
 
 
 func set_have(v: float) -> void:

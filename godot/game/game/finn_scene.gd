@@ -1,5 +1,5 @@
 class_name FinnScene
-extends Control
+extends "res://game/talk_modal.gd"
 ## A WORD WITH FINN (Godot port of app/(app)/sea/FinnTalk.tsx, made the main
 ## story, Kong 2026-10-02: The Long Cast). His face, his words typed out a line
 ## at a time, and the job as a slip of paper (game/job_slip.gd).
@@ -10,8 +10,10 @@ extends Control
 ## are with it, the slip showing how far. A job done: the slip with "Hand it
 ## over"; the wax seal is pressed, the XP pours into the level bar, and he
 ## tells you the next piece of the story, with the next slip after it.
+##
+## The shell (card, head, typed line, choices, input) is the talk modal
+## shared with FolkScene (game/talk_modal.gd).
 
-signal closed
 ## A chapter's last job handed back (its number): the sea answers once the
 ## scene is closed (FinnMoment).
 signal chapter_done(number: int)
@@ -25,91 +27,30 @@ signal taken(from: Vector2)
 
 const GOLD: Color = Color(1.0, 0.8, 0.3)
 
-var session: Session
 ## finnState when he was hailed.
 var st: Dictionary = {}
-var _card: Pane
-var _line: TypedLine
-var _choices: VBoxContainer
 var _slip_box: CenterContainer
 var _slip: JobSlip
-var _err: Label
 var _queue: Array = []
 var _then: Callable = Callable()
-var _busy: bool = false
-var _asked: Dictionary = {}
 
 
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	theme = UiTheme.make()
-	var shade: ColorRect = Kit.scrim(self)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			_tap_outside())
-	var center: CenterContainer = CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
+	_accent = GOLD
+	var center: CenterContainer = _build_shell()
 	var outer: VBoxContainer = VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 16)
 	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(outer)
-	var spec: Dictionary = Kit.modal(GOLD, 18)
-	spec["top"] = [1, Kit.a(GOLD, 0.56)]
-	_card = Kit.pane(outer, spec)
-	_card.custom_minimum_size = Vector2(500, 0)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	_card.add_child(col)
-
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 12)
-	col.add_child(head)
-	var av: Avatar = Avatar.new()
+	var col: VBoxContainer = _build_card(outer, Vector2(500, 0))
 	var fa: Dictionary = Rules.data()["finnAvatar"]
-	av.face = { "characterColor": fa["characterColor"], "hat": fa.get("equippedHat"), "bg": fa["bgColor"], "ring": fa["borderColor"], "mirrored": fa.get("mirrored", true) }
-	av.px = 58.0
-	head.add_child(av)
-	var who: VBoxContainer = VBoxContainer.new()
-	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	who.alignment = BoxContainer.ALIGNMENT_CENTER
-	who.add_theme_constant_override("separation", 1)
-	head.add_child(who)
 	var done_n: float = float(Js.list(st.get("questsDone")).size())
 	var tier: int = Finn.standing_tier(Finn.standing(Js.num(st.get("encounters")), done_n))
-	Kit.text(who, "The Angler  ·  %s" % str(Finn.d()["standingName"][tier]), "eyebrow", GOLD)
-	Kit.text(who, "Finn", "title", Kit.INK)
-	var x: Button = Kit.close_button()
-	x.pressed.connect(close)
-	head.add_child(x)
-
-	var say_box: HBoxContainer = HBoxContainer.new()
-	say_box.add_theme_constant_override("separation", 12)
-	say_box.custom_minimum_size = Vector2(0, 112)
-	col.add_child(say_box)
-	var rule: ColorRect = ColorRect.new()
-	rule.color = Kit.a(GOLD, 0.5)
-	rule.custom_minimum_size = Vector2(2, 0)
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	say_box.add_child(rule)
-	_line = TypedLine.new()
-	_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Kit.style(_line, "body", Color("#e6eef4"))
-	_line.add_theme_font_size_override("font_size", 17)
-	_line.add_theme_font_override("font", Kit.italic())
-	_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_line.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	_line.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	say_box.add_child(_line)
+	_build_head(col, { "characterColor": fa["characterColor"], "hat": fa.get("equippedHat"), "bg": fa["bgColor"], "ring": fa["borderColor"], "mirrored": fa.get("mirrored", true) },
+		"The Angler  ·  %s" % str(Finn.d()["standingName"][tier]), "Finn")
+	_build_say(col, 112)
 	_line.done.connect(_line_done)
-
-	_choices = VBoxContainer.new()
-	_choices.add_theme_constant_override("separation", 7)
-	col.add_child(_choices)
-	_err = Kit.text(col, "", "small", Kit.DANGER_INK, true)
-	_err.visible = false
+	_build_choices(col)
 
 	# The slip sits under the card, on the table between you.
 	_slip_box = CenterContainer.new()
@@ -117,7 +58,9 @@ func _ready() -> void:
 	# Room kept for it, so the card does not jump when it comes and goes.
 	_slip_box.custom_minimum_size = Vector2(0, 190)
 	outer.add_child(_slip_box)
-	_card.ready.connect(func() -> void: Kit.modal_in(_card))
+	# The card was readied inside add_child (this is the scene's own _ready),
+	# so its ready signal has already gone: start the entrance here.
+	Kit.modal_in(_card)
 	_open.call_deferred()
 
 
@@ -177,28 +120,13 @@ func _line_done() -> void:
 		_choice("Go on", "", false, _next_line)
 
 
-func _clear_choices() -> void:
-	for c: Node in _choices.get_children():
-		c.queue_free()
-
-
 func _choice(label: String, hint: String, warm: bool, run: Callable) -> Button:
 	var n: Dictionary = { "radius": 11, "fill": [Kit.a(GOLD, 0.14) if warm else Color(1, 1, 1, 0.045)], "border": [1, Kit.a(GOLD, 0.42) if warm else Color(1, 1, 1, 0.13)], "pad": 0 }
 	var h: Dictionary = n.duplicate()
 	h["border"] = [1, Kit.a(GOLD, 0.7)]
-	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
-	b.custom_minimum_size = Vector2(0, 52 if hint != "" else 42)
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side: String in ["left", "right"]:
-		m.add_theme_constant_override("margin_" + side, 14)
-	b.add_child(m)
-	var words: VBoxContainer = VBoxContainer.new()
-	words.alignment = BoxContainer.ALIGNMENT_CENTER
-	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	words.add_theme_constant_override("separation", 0)
-	m.add_child(words)
+	var fr: Array = _choice_frame(n, h, hint)
+	var b: Pane.PaneButton = fr[0]
+	var words: VBoxContainer = _choice_words(fr[1])
 	Kit.text(words, label, "label", GOLD if warm else Kit.INK)
 	if hint != "":
 		Kit.text(words, hint, "small", Kit.DIM)
@@ -332,21 +260,7 @@ func _tap_outside() -> void:
 		close()
 
 
-func close() -> void:
-	closed.emit()
-	queue_free()
-
-
-func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and _line.typing:
-		_line.finish()
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("fish_back"):
-		get_viewport().set_input_as_handled()
-		if not _busy:
-			close()
-	elif event.is_action_pressed("ui_accept") and _line.typing:
-		get_viewport().set_input_as_handled()
-		_line.finish()
+## Back leaves, unless a hand-over or a taking is under way.
+func _back() -> void:
+	if not _busy:
+		close()

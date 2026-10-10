@@ -113,7 +113,7 @@ func _paint_tabs() -> void:
 		# Only the tab shown is "on"; landmarks waiting are a dot beside it.
 		var b: Button = Paper.button(label, t[0] == tab)
 		if t[0] == "chart" and _pending > 0 and tab != "chart":
-			CrewHall._dot(b)
+			CrewHall.notice_dot(b)
 		b.disabled = lock != ""
 		b.pressed.connect(func() -> void: open(t[0]))
 		_tabs.add_child(b)

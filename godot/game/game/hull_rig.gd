@@ -256,6 +256,6 @@ func react(lean: float, shove: Vector2, tint: float = 0.0) -> void:
 	flash = maxf(flash, tint)
 
 
-## A ball's contact: the hull flashes white (BattleStage._strike).
+## A ball's contact: the hull flashes white (BattleStagePlayback._strike).
 func flash_white() -> void:
 	white = 1.0

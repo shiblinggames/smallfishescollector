@@ -229,7 +229,6 @@ func _tick_countdown() -> void:
 
 
 func _process(delta: float) -> void:
-	super._process(delta)
 	if _all_armed > 0.0:
 		_all_armed -= delta
 		if _all_armed <= 0.0:

@@ -9,12 +9,8 @@ extends Node2D
 ## berths to the shader (u_berths).
 
 var r: float = 330.0
-## The direction from the island to the berth.
-var bearing: float = 0.0
 var inside: bool = false
-var darkness: float = 0.0
 var lit: float = 0.0
-var field: SeaField
 
 
 func _process(delta: float) -> void:

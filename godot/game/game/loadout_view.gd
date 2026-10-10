@@ -8,16 +8,15 @@ extends HBoxContainer
 ## Look, Hat, Boat, Pet) with what each holds, a line on where to get more, and
 ## a grid of what you own: hover to try it on, press to wear it. Equip only;
 ## nothing is bought here, and nothing you do not own is listed.
+##
+## The slot data (what you own, what is worn, the names, the look tried on,
+## the equip calls, where to get more) is the Locker's, read through
+## LockerLoadout (game/locker_loadout.gd); this file only draws it in the
+## Shipyard's dark style. It was a second copy of that logic until 2026-10-10.
 
 signal changed
 
-const HOW_TO_GET: Dictionary = {
-	"rod": "Buy new rods at the Tackle Shop. Stronger ones unlock as your Fishing level climbs.",
-	"skin": "Looks unlock with achievement points (see the Fishing Guide), and come from nowhere else.",
-	"hat": "Hats are bought with doubloons. A few only come out of crates.",
-	"boat": "Boats come only from fishing crates.",
-	"pet": "Pets come out of supply crates.",
-}
+const LockerLoadout = preload("res://game/locker_loadout.gd")
 const TABS: Array = [["rod", "Rod"], ["skin", "Look"], ["hat", "Hat"], ["boat", "Boat"], ["pet", "Pet"]]
 
 var session: Session
@@ -90,73 +89,11 @@ func _ready() -> void:
 
 
 func _name_for(slot: String) -> String:
-	var p: Dictionary = session.profile()
-	match slot:
-		"rod":
-			return String(Rules.rod(Js.num(p.get("rod_tier")))["name"])
-		"hat":
-			return String(Skipper._find("hats", p.get("equipped_hat")).get("name", "None"))
-		"boat":
-			return String(Skipper._find("boats", p.get("equipped_boat")).get("name", "Default"))
-		"pet":
-			return String(Skipper._find("pets", p.get("equipped_pet")).get("name", "None"))
-		"skin":
-			for c: Dictionary in Rules.data()["characterColors"]:
-				if c["id"] == str(Js.nz(p.get("character_color"), "default")):
-					return c["name"]
-			return "Default"
-	return ""
-
-
-## What this captain owns for a slot: [id, name, art url] (null id = none).
-func _options(slot: String) -> Array:
-	var p: Dictionary = session.profile()
-	var out: Array = []
-	match slot:
-		"rod":
-			var tiers: Array = [0.0] + session.store.held_rod_tiers(session.uid)
-			for t: Variant in tiers:
-				var r: Dictionary = Rules.rod(float(t))
-				out.append([float(t), r["name"], "%s_thumb.png" % r.get("slug", "")])
-		"skin":
-			var owned: Array = Js.list(p.get("unlocked_character_colors"))
-			for c: Dictionary in Rules.data()["characterColors"]:
-				if c["free"] or Js.includes(owned, c["id"]):
-					out.append([c["id"], c["name"], "look:" + str(c["id"])])
-		"hat":
-			out.append([null, "No hat", ""])
-			for id: Variant in Js.list(p.get("unlocked_hats")):
-				var h: Dictionary = Skipper._find("hats", id)
-				if not h.is_empty():
-					out.append([id, h["name"], h["restImageUrl"]])
-		"boat":
-			for id: Variant in Js.list(p.get("unlocked_boats")):
-				var b: Dictionary = Skipper._find("boats", id)
-				if not b.is_empty():
-					out.append([id, b["name"], b["restImageUrl"]])
-		"pet":
-			out.append([null, "No pet", ""])
-			for id: Variant in Js.list(p.get("unlocked_pets")):
-				var pt: Dictionary = Skipper._find("pets", id)
-				if not pt.is_empty():
-					out.append([id, pt["name"], pt["restImageUrl"]])
-	return out
+	return LockerLoadout.name_for(session, slot, "")
 
 
 func _worn(slot: String) -> Variant:
-	var p: Dictionary = session.profile()
-	match slot:
-		"rod":
-			return Js.num(p.get("rod_tier"))
-		"skin":
-			return str(Js.nz(p.get("character_color"), "default"))
-		"hat":
-			return p.get("equipped_hat")
-		"boat":
-			return p.get("equipped_boat")
-		"pet":
-			return p.get("equipped_pet")
-	return null
+	return LockerLoadout.worn(session, slot, "")
 
 
 func _show(slot: String) -> void:
@@ -186,12 +123,12 @@ func _show(slot: String) -> void:
 		Kit.tap(b)
 		b.pressed.connect(func() -> void: _show(t[0]))
 		_tabs.add_child(b)
-	_how.text = HOW_TO_GET[slot]
+	_how.text = LockerLoadout.HOW_TO_GET[slot]
 	_error.text = "Rods stay put while a line is in the water." if slot == "rod" and line_out else ""
 	for c: Node in _grid.get_children():
 		c.queue_free()
 	var worn: Variant = _worn(slot)
-	for o: Array in _options(slot):
+	for o: Array in LockerLoadout.options(session, slot):
 		var on: bool = (o[0] == null and worn == null) or (o[0] != null and worn != null and str(o[0]) == str(worn))
 		var cn: Dictionary = Kit.tile(Kit.GOLD if on else Color("#67d4e8"), "active" if on else "owned", 0)
 		var ch: Dictionary = cn.duplicate()
@@ -236,22 +173,11 @@ func _show(slot: String) -> void:
 
 ## The preview wears the item under the pointer, and the card says so.
 func _try_on(slot: String, o: Array) -> void:
-	var look: Dictionary = Skipper.look_of(session.profile())
+	var look: Dictionary = LockerLoadout.look_with(session, slot, o)
 	var name: String = _name_for(slot)
 	var trying: bool = not o.is_empty()
 	if trying:
 		name = o[1]
-		match slot:
-			"rod":
-				look["rodSlug"] = Rules.rod(float(o[0])).get("slug")
-			"skin":
-				look["color"] = o[0]
-			"hat":
-				look["hat"] = o[0]
-			"boat":
-				look["boat"] = o[0]
-			"pet":
-				look["pet"] = o[0]
 	_preview.set_look(look)
 	_card_title.text = name
 	_card_tag.text = "TRYING ON" if trying else "EQUIPPED"
@@ -266,20 +192,9 @@ func _try_on(slot: String, o: Array) -> void:
 
 
 func _choose(slot: String, id: Variant) -> void:
-	var r: Dictionary = {}
-	match slot:
-		"rod":
-			if line_out:
-				return
-			r = await session.act("equipTackleRod", [float(id)])
-		"skin":
-			r = await session.act("updateCharacterColor", [id])
-		"hat":
-			r = await session.act("equipHat", [id])
-		"boat":
-			r = await session.act("equipBoat", [id])
-		"pet":
-			r = await session.act("equipPet", [id, "stern"])
+	if slot == "rod" and line_out:
+		return
+	var r: Dictionary = await LockerLoadout.equip(session, slot, id)
 	session.persist()
 	_error.text = r.get("error", "")
 	changed.emit()

@@ -300,7 +300,7 @@ func _together() -> void:
 	var quiet: Clean = Clean.new()
 	quiet.hud = hud
 	quiet.keep = []
-	quiet.only = ["FinnArrow", "StoryLine", "XpBar"]
+	quiet.only = ["StoryLine", "XpBar"]
 	tree.root.add_child(quiet)
 	await _hold()
 
@@ -676,7 +676,7 @@ func _fish() -> void:
 			(n as Clean).queue_free()
 	var quiet: Clean = Clean.new()
 	quiet.hud = hud
-	quiet.only = ["FinnArrow", "StoryLine"]
+	quiet.only = ["StoryLine"]
 	tree.root.add_child(quiet)
 	while hud.phase != "result" and guard < 1500:
 		guard += 1

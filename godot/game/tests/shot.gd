@@ -1731,10 +1731,6 @@ func _init() -> void:
 			if what == "crateopen":
 				sea._locker._open_crate("gold")
 				await create_timer(float(OS.get_environment("CRATE_T")) if OS.get_environment("CRATE_T") != "" else 2.6).timeout
-		"crate":
-			hud._shot["crateTier"] = "gold"
-			hud._set_phase("result")
-			hud._crate_card({ "type": "doubloons", "amount": 1250.0, "newDoubloons": 3400.0 })
 		"golden":
 			var g: GoldenChoice = GoldenChoice.new()
 			g.session = sea.session

@@ -133,8 +133,7 @@ func _open(which: String) -> void:
 			_board_view()
 
 
-func _process(delta: float) -> void:
-	super._process(delta)
+func _process(_delta: float) -> void:
 	if _ring != null and is_instance_valid(_ring):
 		_ring.queue_redraw()
 		if _deadline > 0.0 and Time.get_ticks_msec() / 1000.0 > _deadline and _answering.is_valid():

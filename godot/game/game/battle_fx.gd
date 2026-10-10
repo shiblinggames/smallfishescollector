@@ -632,8 +632,8 @@ func sigil(at: Vector2, col: Color) -> void:
 		_sparks.append({ "kind": "glint", "a": u + Vector2.from_angle(TAU * k / 6.0) * 60.0, "t": -0.25, "life": 0.35, "c": col.lightened(0.3) })
 
 
-## A fireball of light flung on an arc (a rake skipping on, a powder keg's
-## debris).
+## A fireball of light flung on an arc from one hull to another, bursting
+## where it lands (a powder keg's fire thrown to the other hulls).
 func fling(from: Vector2, to: Vector2, kind: String = "fireball", col: Color = Color.WHITE) -> void:
 	var a: Vector2 = up(from) + Vector2(0, -40)
 	var b: Vector2 = up(to) + Vector2(0, -40)
@@ -716,7 +716,7 @@ func fire_leap(from: Vector2, to: Vector2, col: Color) -> void:
 	flare_up(to, true)
 
 
-# ══ Crew summons on the water (BattleStage._ability_card) ══════════════════════
+# ══ Crew summons on the water (BattleStagePlayback._ability_card) ══════════════════════
 
 ## The caster's sigil: rune rings turning on the water under the ship, and a
 ## helix of motes climbing out of it.

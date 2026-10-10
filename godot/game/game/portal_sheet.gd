@@ -19,6 +19,9 @@ var _foot: HBoxContainer
 var _err: Label
 var _sel: Variant = null
 var _busy: bool = false
+## The card and the dim, kept so close() can fade them out (Motion.dismiss).
+var _card: Pane
+var _scrim: ColorRect
 
 
 func _ready() -> void:
@@ -26,6 +29,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
 	var shade: ColorRect = Kit.scrim(self)
+	_scrim = shade
 	shade.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			close())
@@ -35,6 +39,7 @@ func _ready() -> void:
 	add_child(center)
 	var violet: Color = Color(0.66, 0.57, 1.0)
 	var card: Pane = Kit.pane(center, Kit.modal(violet, 20))
+	_card = card
 	card.custom_minimum_size = Vector2(640, 0)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
@@ -68,7 +73,9 @@ func _ready() -> void:
 	_err = Kit.text(col, "", "small", Kit.DANGER_INK, true)
 	_err.visible = false
 	_paint()
-	card.ready.connect(func() -> void: Kit.modal_in(card))
+	# The card was readied inside add_child (this is the sheet's own _ready),
+	# so its ready signal has already gone: start the entrance here.
+	Kit.modal_in(card)
 
 
 func _tier() -> int:
@@ -226,8 +233,11 @@ func _build() -> void:
 
 
 func close() -> void:
+	if Motion.closing(self):
+		return
 	closed.emit()
-	queue_free()
+	# The card and the dim fade out before it goes.
+	Motion.dismiss(self, _card, _scrim)
 
 
 func _unhandled_input(event: InputEvent) -> void:

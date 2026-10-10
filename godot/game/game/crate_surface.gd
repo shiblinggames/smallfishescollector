@@ -234,11 +234,7 @@ func _burst() -> void:
 
 
 func _view() -> Dictionary:
-	var m: CrateMoment = CrateMoment.new()
-	m.loot = loot
-	var v: Dictionary = m._loot_view()
-	m.free()
-	return v
+	return CrateMoment.loot_view(loot)
 
 
 func _rare() -> bool:

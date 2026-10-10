@@ -230,7 +230,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     (scrolling ripple strips) and beds. Boat._flow pushes, holds and fills the sails as
     SeaMap does. The HUD carries the web's cue chips. Godot adds streaks of water rushing past
     at full sail.
-  - THE DIAL (fx/dial.gdshader): a brass bezel with engraved ticks and rivets, a bevelled
+  - THE DIAL (fx/dial.gdshader; SUPERSEDED, the dial face is drawn now and the shader file is
+    gone): a brass bezel with engraved ticks and rivets, a bevelled
     track (the live zone lit, the perfect a moving sheen, the snag striped), a glass face with
     a compass rose and light under it, and a comet trail behind the needle. A tapered brass
     needle reaches into the track, under a domed hub. The logic and the lock-in are
@@ -265,7 +266,7 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     A mooring is now the WATER. The shader paints a calmer, lighter harbour patch with a
     soft broken foam edge (u_berths), warming while she is inside. Berth.gd only holds where
     and how lit.
-  - THE DIAL IN WATERCOLOUR (fx/dial.gdshader, restyled): pigment washes for the zones,
+  - THE DIAL IN WATERCOLOUR (fx/dial.gdshader, restyled; SUPERSEDED, the shader file is gone): pigment washes for the zones,
     pooling darker at their edges and granulating, the live zone the full pigment. An
     ochre rim with ink ticks, an indigo face blooming lighter at the centre, paper grain
     and brush-uneven edges. The needle is a stroke of ink with a tinted point.
@@ -1326,7 +1327,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   slip), game/story_line.gd (under the level bar: chapter, job, progress; each counting catch
   sends a gold mote into it with a pluck a semitone higher, so the last few climb; the last
   one presses a wax seal with its own chime and the line turns gold, "Back to Finn"), and
-  game/finn_arrow.gd (a gold chevron at the screen edge pointing to him while he has a mark).
+  his mark on the compass ribbon while he has one (game/finn_arrow.gd, a gold chevron at the
+  screen edge, is retired and deleted, 2026-10-10).
   His state is read off the local save each second (a crewmate's Charter never sends it).
   THE JOURNAL (game/journal.gd; the story line, or J): Story, SPOILER-FREE AND PICTURES
   OVER PARAGRAPHS (Kong, 2026-10-03: "spoiling future things; too wordy"): the chapter you
@@ -2389,6 +2391,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   aim_dial.gd still has its own colours and SPACE keycap; golden_choice still rumbles on the
   answer as well as the HUD on arrival; a crate catch splashes twice (ReelFight and
   CrateSurface); tabs in the room header need a hook in room.gd.
+- THE CODE REVIEW (2026-10-10). A full review of the port by area (core combat, the rest of
+  core, the sea and HUD, fights, rooms, scenes, puzzles and the Den, co-op and the app, the world
+  and tools): 145 verified findings, every bug and tidy-up fixed. The high-severity bugs: a class
+  order also took a reload; co-op aim afflictions never wore off; the Sixth Berth's crewmate never
+  fought; a class order's event killed the round's playback; the fight-clear hid the shrine, the
+  Fence, the Don's launch and the Admiral's ghosts; Chart Room boards took every click on screen;
+  the Hold saved stale progress over the player's work; leaving a Charter left its tables running;
+  a hardcore sinking could be dodged; the GPS routed through the reef, the anchorage wall and
+  campaign water. The structural splits followed (battle, gauntlet, chart room, casino, sea,
+  fishing HUD, battle stage, gauntlet overlay, Locker, gauntlet table and the rest): each owner
+  keeps its public API and its parts are preloaded files beside it, no class_name. DEPARTURE:
+  the Long Vigil's rank-up shows "It starts tighter than before" when the window's start shrinks
+  (game/almanac.gd); the web compares the wrong way (lib/ancientVigil.ts) and never shows it.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

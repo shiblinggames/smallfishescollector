@@ -1,5 +1,5 @@
 class_name FolkScene
-extends Control
+extends "res://game/talk_modal.gd"
 ## A WORD WITH ONE OF THE REGULARS (Godot port of app/(app)/sea/FolkScene.tsx,
 ## the rest of the sea, stage 4): their face, their voice typed out, where you
 ## stand with them, and what you can say.
@@ -13,92 +13,37 @@ extends Control
 ##
 ## Everything goes through Session.act, so a crewmate's word is still theirs:
 ## rapport is personal in a Charter.
+##
+## The shell (card, head, typed line, choices, input) is the talk modal
+## shared with FinnScene (game/talk_modal.gd).
 
-signal closed
 ## The standing changed: the row as it is now (the trader panel redraws the
 ## rod block off it).
 signal changed(rap: Dictionary)
 
-var session: Session
 var folk: Dictionary = {}
 var rap: Dictionary = {}
-var _accent: Color
-var _card: Pane
 var _said: Label
-var _line: TypedLine
 var _bar_box: VBoxContainer
-var _choices: VBoxContainer
-var _err: Label
 var _crest: Control
-var _asked: Dictionary = {}
 var _follow: Variant = null
-var _busy: bool = false
 var _gained: float = 0.0
 
 
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	theme = UiTheme.make()
 	_accent = Color(str(folk.get("accent", "#f0c040")))
-	var shade: ColorRect = Kit.scrim(self)
-	shade.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			_tap_outside())
-	var center: CenterContainer = CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
-	var spec: Dictionary = Kit.modal(_accent, 18)
-	spec["top"] = [1, Kit.a(_accent, 0.56)]
-	_card = Kit.pane(center, spec)
-	_card.custom_minimum_size = Vector2(480, 540)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	_card.add_child(col)
+	var center: CenterContainer = _build_shell()
+	var col: VBoxContainer = _build_card(center, Vector2(480, 540))
 
 	# Who.
-	var head: HBoxContainer = HBoxContainer.new()
-	head.add_theme_constant_override("separation", 12)
-	col.add_child(head)
-	var av: Avatar = Avatar.new()
-	av.face = folk["face"]
-	av.px = 58.0
-	head.add_child(av)
-	var who: VBoxContainer = VBoxContainer.new()
-	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	who.alignment = BoxContainer.ALIGNMENT_CENTER
-	who.add_theme_constant_override("separation", 1)
-	head.add_child(who)
-	var role: Label = Kit.text(who, Folk.role_for(folk, _tier()), "eyebrow", _accent)
+	var role: Label = _build_head(col, folk["face"], Folk.role_for(folk, _tier()), folk["short"])
 	role.name = "Role"
-	Kit.text(who, folk["short"], "title", Kit.INK)
-	var x: Button = Kit.close_button()
-	x.pressed.connect(close)
-	head.add_child(x)
 
 	# What you said last, and what they are saying (a reserved block: their
 	# lines run from four words to thirty and the card must not jump).
 	_said = Kit.text(col, "", "note", Color(0.71, 0.84, 0.91, 0.6), true)
 	_said.visible = false
-	var say_box: HBoxContainer = HBoxContainer.new()
-	say_box.add_theme_constant_override("separation", 12)
-	say_box.custom_minimum_size = Vector2(0, 120)
-	col.add_child(say_box)
-	var rule: ColorRect = ColorRect.new()
-	rule.color = Kit.a(_accent, 0.5)
-	rule.custom_minimum_size = Vector2(2, 0)
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	say_box.add_child(rule)
-	_line = TypedLine.new()
-	_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Kit.style(_line, "body", Color("#e6eef4"))
-	_line.add_theme_font_size_override("font_size", 17)
-	_line.add_theme_font_override("font", Kit.italic())
-	_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_line.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	_line.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	say_box.add_child(_line)
+	_build_say(col, 120)
 	_line.done.connect(_show_choices)
 
 	_bar_box = VBoxContainer.new()
@@ -106,15 +51,13 @@ func _ready() -> void:
 	col.add_child(_bar_box)
 	_draw_bar(false)
 
-	_choices = VBoxContainer.new()
-	_choices.add_theme_constant_override("separation", 7)
+	_build_choices(col)
 	_choices.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(_choices)
-	_err = Kit.text(col, "", "small", Kit.DANGER_INK, true)
-	_err.visible = false
 
 	_line.say(str(folk["greeting"]))
-	_card.ready.connect(func() -> void: Kit.modal_in(_card))
+	# The card was readied inside add_child (this is the scene's own _ready),
+	# so its ready signal has already gone: start the entrance here.
+	Kit.modal_in(_card)
 
 
 func _tier() -> int:
@@ -153,11 +96,6 @@ func _draw_bar(animate: bool) -> void:
 	var bar: Kit.Bar = Kit.bar(_bar_box, was if animate else frac, _accent)
 	if animate:
 		bar.ready.connect(func() -> void: bar.set_value(frac, true))
-
-
-func _clear_choices() -> void:
-	for c: Node in _choices.get_children():
-		c.queue_free()
 
 
 ## What you can say, once they have finished saying theirs (and not under the
@@ -221,26 +159,16 @@ func _choice(label: String, hint: String, tag: String, warm: bool, spent: bool, 
 	var h: Dictionary = n.duplicate()
 	if not spent:
 		h["border"] = [1, Kit.a(_accent, 0.6)]
-	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
-	b.custom_minimum_size = Vector2(0, 52 if hint != "" else 42)
+	var fr: Array = _choice_frame(n, h, hint)
+	var b: Pane.PaneButton = fr[0]
 	b.disabled = spent or _busy
 	b.focus_mode = Control.FOCUS_NONE if spent else Control.FOCUS_ALL
-	var m: MarginContainer = MarginContainer.new()
-	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side: String in ["left", "right"]:
-		m.add_theme_constant_override("margin_" + side, 14)
-	b.add_child(m)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 8)
-	m.add_child(row)
-	var words: VBoxContainer = VBoxContainer.new()
+	(fr[1] as MarginContainer).add_child(row)
+	var words: VBoxContainer = _choice_words(row)
 	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	words.alignment = BoxContainer.ALIGNMENT_CENTER
-	words.add_theme_constant_override("separation", 0)
-	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(words)
 	var ink: Color = Color(0.89, 0.93, 0.96, 0.42) if spent else (Color("#f4ecd8") if warm else Color("#cfe0ec"))
 	var l: Label = Kit.text(words, label, "body_strong", ink)
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -405,26 +333,12 @@ func _tap_outside() -> void:
 		close()
 
 
-func close() -> void:
-	closed.emit()
-	queue_free()
-
-
-func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed and _line.typing:
-		_line.finish()
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("fish_back"):
-		get_viewport().set_input_as_handled()
-		if _crest != null:
-			_drop_crest()
-		else:
-			close()
-	elif event.is_action_pressed("ui_accept") and _line.typing:
-		get_viewport().set_input_as_handled()
-		_line.finish()
+## Back drops the crest first, then leaves.
+func _back() -> void:
+	if _crest != null:
+		_drop_crest()
+	else:
+		close()
 
 
 ## THE BOND DEEPENING: rings going out from the middle, one for a rung, three
