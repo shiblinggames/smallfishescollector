@@ -1409,8 +1409,18 @@ func _init() -> void:
 			var cr: ChartStudy = sea._room_layer.get_child(0)
 			if OS.get_environment("CHART_TAB") != "":
 				cr.open(OS.get_environment("CHART_TAB"))
+			# CHART_PLAY: a move on the open board once it has settled (any
+			# value; the Minefield takes "flag", the Rigging "set");
+			# CHART_SLOW: the game's clock slowed to this after SHOT_F frames,
+			# so the shot lands mid-move.
+			if OS.get_environment("CHART_PLAY") != "":
+				for f: int in 40:
+					await process_frame
+				cr._view.call("play_for_shot", OS.get_environment("CHART_PLAY"))
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 40:
 				await process_frame
+			if OS.get_environment("CHART_SLOW") != "":
+				Engine.time_scale = float(OS.get_environment("CHART_SLOW"))
 		"crewbunks":
 			# The Bunks room: a full hall, hands asleep, one stint done, a draw
 			# from the deep waiting. BUNK_SHOW: "wake" collects the done one,

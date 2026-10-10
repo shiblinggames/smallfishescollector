@@ -2498,6 +2498,55 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   card. tests/shot.gd's parlor case: PARLOR_PLAY=1 calls ParlorRoom.play_for_shot, PARLOR_PICK
   (right, wrong, 0-3) answers once the question is up (pick_for_shot). Unchanged: the rules,
   points, odds, timers and the save.
+- THE CHART ROOM AS A PLACE (Kong, 2026-10-10: the Den and the Parlor approved, the Chart Room
+  gets the same). game/chart_study.gd (the room, the sheet, ink in flight, the shared bits) and
+  the boards game/chart_match.gd, chart_mines.gd, chart_rigging.gd, chart_hold.gd and
+  chart_world.gd. The room keeps the standard header with the four puzzles and the World Chart
+  as Paper.tab buttons in its row (a closed one says "Needs Fishing N"; a dot on the World
+  Chart while landmarks wait). Under it, as words on the dark (no boxed strip): the charting
+  points, the next landmark and what it pays, a slim teal bar, landmarks to claim in gold and
+  "Landmarks charted N of 13". Then ONE flat CHART SHEET (ChartStudy.ChartSheet) to the foot
+  of the window: the day paper, R_LARGE, a thin ink rim, a faint ink grid every 64px and two
+  rhumb roses drawn in code at low alpha; no texture, gradient or shadow. Each board lies on it
+  as large as the height allows (ChartStudy.board_cell), centred together with its words: the
+  rules, score and buttons in ink beside it, no boxed panel. A board is laid down with a short
+  slide from the right. Points banked fly "+N" off the board to the points line, which counts
+  them in (no toast); results (a strike, a tally, a claim, an error) are written on the sheet
+  in a message line beside the board (ChartStudy.say); the one thing to do (Claim, Play again)
+  is a flat ink button with paper words (ChartStudy.primary), never the wooden plank.
+  TREASURE MATCH: faint inked cells, the painted pieces kept. Pieces DROP with weight (they
+  accelerate, a longer fall takes longer, a fresh board pours in column by column, bottom up)
+  and land with a squash and settle; a swap slides the two (the one moved rides a touch large;
+  no line, it slides back); matched pieces swell and pop with a ring and a burst of bits in
+  their colour; the cascade falls in; a CHAIN counter ("x2", "x3", in red ink, growing a size a
+  level) stands at the board's right while chains run and fades after; the score counts up and
+  "swaps left" dips as it ticks down. The run's result is written beside the board (Run over,
+  the score and tier, the points) with Play again, and the board pales under it.
+  THE MINEFIELD, SOUNDING THE DEPTHS: unsounded water is a flat sea wash on the chart (a slow
+  swell through its shade); a press drops a LEAD LINE into the tile, a ripple opens where it
+  lands, the water draws back to bare paper and the sounding writes itself in left to right;
+  open water spreads outward by distance. A mine: a local splash of water bits, the tile
+  darkens and shows the mine and shudders; the harbour's sounded water then closes back over.
+  A flag plants with a pop. A cleared harbour sends one ring of red ink across it.
+  LAY THE RIGGING: no plank deck; faint inked squares, cleats as rings of their rope's colour
+  with an inked iron cleat across. Lines are ROPES drawn in code (a dark lay, the coloured
+  strand, a twisted stroke along it); a rope in hand SAGS between squares; let go, it TIGHTENS
+  on a damped spring a touch past straight; a cut rope flashes and twitches; a complete rig
+  hauls every rope taut at once. THE HOLD: givens printed on the paper, your lots as CRATES
+  (flat pale squares, an ink rim) that SLIDE into their cells (out to the right when cleared);
+  a deck, section or bay filled with nine different lots gets a small red ink stamp round it
+  (only what the player can see; never checked against the solution); wrong lots SHAKE where
+  they sit; STOWED is stamped on a solve. The four holds are tabs beside the board. Its
+  debounced save and the flush on leaving or switching holds are unchanged (the Rigging's too).
+  THE WORLD CHART: the painted map kept (it is the game's chart, not a backdrop) with the fog;
+  a claim burns the fog back and the landmark's NAME-RIBBON UNFURLS (a flat paper strip wiped
+  open from its middle, then the name writes in); the voucher flies off the map to the charted
+  count, which moves on; the next landmark in the fog wears an ink ring with its progress drawn
+  round it in teal and "N more" under it. tests/shot.gd chartroom: CHART_TAB, CHART_PTS, and
+  now CHART_PLAY (a move once the board settles: a swap, a sounding or "flag", a rope held or
+  "set", a lot, a claim; each board's play_for_shot) and CHART_SLOW (the clock slowed after
+  SHOT_F frames, to shoot mid-move). Unchanged: the rules, scoring, weekly boards, limits and
+  their messages, the save, the keys (the Hold's digits, arrows, N/P, Backspace).
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the
