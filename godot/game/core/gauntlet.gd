@@ -19,6 +19,18 @@ extends RefCounted
 ##
 ## Everything a run holds is plain Dictionaries and Arrays (it crosses the
 ## Charter's wire, and the party's table holds one per captain).
+##
+## Split 2026-10-10 for size: this file keeps the constants, the economy,
+## Davy's Offer, the enemy curve, the affixes, the fights and the bands; the
+## draft (gauntlet_draft.gd), the Terms, Marks and jobs (gauntlet_terms.gd),
+## the Locker (gauntlet_locker.gd) and the port-native co-op packs and bonds
+## (gauntlet_packs.gd) live in their own parts, reached through the
+## forwarders at the foot of this file so every caller still says Gauntlet.x.
+
+const GauntletDraft = preload("res://core/gauntlet_draft.gd")
+const GauntletTerms = preload("res://core/gauntlet_terms.gd")
+const GauntletLocker = preload("res://core/gauntlet_locker.gd")
+const GauntletPacks = preload("res://core/gauntlet_packs.gd")
 
 const VARIANTS: Array = ["davy", "don"]
 ## Davy's opens at the second chapter's Captain's Choice (GAUNTLET_UNLOCK_NODE);
@@ -154,13 +166,6 @@ static func max_pot(depth: int, variant: String = "davy") -> float:
 	var total: float = 0.0
 	for d: int in range(1, depth + 1):
 		total += round_contribution(d, true, variant)
-	return total
-
-
-static func estimate_pot(depth: int, variant: String = "davy") -> float:
-	var total: float = 0.0
-	for d: int in range(1, depth + 1):
-		total += round_contribution(d, false, variant)
 	return total
 
 
@@ -646,780 +651,6 @@ static func advance_roll(st: Dictionary, fight: Dictionary) -> Dictionary:
 	}
 
 
-## A party's field (port rule, Kong 2026-10-03: "multiple ships for enemies
-## just like in raids"): the lead from generate_fight, then escorts, mobs of
-## the same depth, each with its own elite roll. port_rules gauntlet.party.
-static func escorts(fight: Dictionary, n: int, terms: Dictionary, variant: String) -> Array:
-	if n < 2:
-		return []
-	var pk: Dictionary = packs_cfg()
-	var tm: Dictionary = terms if not terms.is_empty() else no_terms()
-	var d: int = int(fight["depth"])
-	var boss: bool = fight["isBoss"] == true
-	# The threat budget: the party's size, a little either way, less under a
-	# boss, more in deep water.
-	var budget: int = int(Js.num(Js.obj(pk.get("budget")).get(str(clampi(n, 2, 4)))))
-	var sp: int = int(Js.nz(pk.get("spread"), 1.0))
-	budget += int(floor(Dice.next() * (2 * sp + 1))) - sp
-	if boss:
-		budget -= int(Js.nz(pk.get("bossCut"), 2.0))
-	budget += _deep_bonus(pk, variant, d)
-	# The fleet: the lead's own when it is one of the descent's crews.
-	var fleets: Dictionary = _fleets(variant)
-	var names: Array = fleets.keys()
-	names.sort()
-	var lead_fleet: String = str(Js.obj(fight["enemy"]).get("raidId", ""))
-	var home: String = lead_fleet if fleets.has(lead_fleet) else str(names[int(floor(Dice.next() * names.size()))])
-	var away: String = ""
-	if names.size() > 1 and d >= int(Js.num(Js.obj(pk.get("mixFrom")).get(variant))) and Dice.next() < float(Js.nz(pk.get("mixChance"), 0.4)):
-		var others: Array = names.filter(func(x: String) -> bool: return x != home)
-		away = str(others[int(floor(Dice.next() * others.size()))])
-	fight["pack"] = _fleet_name(home) + ((" and " + _fleet_name(away)) if away != "" else "")
-	var tm2: Dictionary = tm.duplicate()
-	tm2["eliteChanceMult"] = float(tm["eliteChanceMult"]) * float(party_cfg().get("escortElite", 1.0))
-	var out: Array = []
-	var support: Array = Js.list(pk.get("support"))
-	var has_sup: bool = false
-	var has_other: bool = false
-	var cost: Dictionary = Js.obj(pk.get("cost"))
-	while out.size() < int(Js.nz(pk.get("maxEscorts"), 3.0)):
-		var fl: String = home if away == "" or Dice.next() < 0.5 else away
-		var afford: Array = Js.list(fleets[fl]).filter(func(p: Array) -> bool: return int(Js.nz(cost.get(str(p[1])), 2.0)) <= budget)
-		if afford.is_empty():
-			break
-		var pair: Array = afford[int(floor(Dice.next() * afford.size()))]
-		budget -= int(Js.nz(cost.get(str(pair[1])), 2.0))
-		var en: Dictionary = scale_to_curve(hand(pair), d, false, variant)
-		var r: Dictionary = _elite_roll(en, d, tm2)
-		if r["elite"]:
-			budget -= int(Js.nz(pk.get("eliteCost"), 2.0))
-		# A role, from the ship's own fleet, when the pack has room for it.
-		var role: String = ""
-		if budget >= int(Js.nz(pk.get("roleCost"), 1.0)) and Dice.next() < float(Js.nz(pk.get("roleChance"), 0.55)):
-			var can: Array = Js.list(Js.obj(Js.obj(pk.get("fleets")).get(fl)).get("roles")).filter(func(x: String) -> bool:
-				return (not has_sup) if support.has(x) else (not has_other))
-			if not can.is_empty():
-				role = str(can[int(floor(Dice.next() * can.size()))])
-				budget -= int(Js.nz(pk.get("roleCost"), 1.0))
-				if support.has(role):
-					has_sup = true
-				else:
-					has_other = true
-		out.append({ "enemy": r["enemy"], "isElite": r["elite"], "affix": r["affix"], "role": role, "kind": str(pair[1]), "fleet": fl })
-	_combo(fight, out, variant, d)
-	return out
-
-
-## The deep water's extra budget at this depth (the last step reached).
-static func _deep_bonus(pk: Dictionary, variant: String, d: int) -> int:
-	var add: int = 0
-	for st: Variant in Js.list(Js.obj(pk.get("deepBonus")).get(variant)):
-		if d >= int(st[0]):
-			add = int(st[1])
-	return add
-
-
-## Co-op packs (port rules battle.gauntlet.packs).
-static func packs_cfg() -> Dictionary:
-	return Js.obj(coop_cfg().get("packs"))
-
-
-## The descent's crews: { raidId: [[raidId, key], ...] }.
-static func _fleets(variant: String) -> Dictionary:
-	var out: Dictionary = {}
-	for p: Variant in Js.list(t()["pools"]["donMobs" if variant == "don" else "davyMobs"]):
-		var pr: Array = p
-		if not out.has(str(pr[0])):
-			out[str(pr[0])] = []
-		(out[str(pr[0])] as Array).append(pr)
-	return out
-
-
-static func _fleet_name(id: String) -> String:
-	return str(Js.obj(Js.obj(packs_cfg().get("fleets")).get(id)).get("name", id.capitalize()))
-
-
-## One named combo for the pack, past its depth: a role ship and a partner
-## (the lead counts when it is a plain ship), neither with an elite affix.
-## Written as { id, with } on each half (0 is the lead, escort j is j + 1).
-static func _combo(fight: Dictionary, out: Array, variant: String, d: int) -> void:
-	var pk: Dictionary = packs_cfg()
-	if d < int(Js.num(Js.obj(pk.get("comboFrom")).get(variant))) or Dice.next() >= float(Js.nz(pk.get("comboChance"), 0.6)):
-		return
-	var heavy: Array = Js.list(pk.get("heavy"))
-	var ships: Array = []
-	var lead: Dictionary = Js.obj(fight["enemy"])
-	if fight["isBoss"] != true and Js.obj(fight.get("affix")).is_empty() and fight.get("isElite", false) != true:
-		ships.append({ "i": 0, "role": "", "kind": str(lead.get("key", "")), "name": str(lead.get("name", "")) })
-	for j: int in out.size():
-		var x: Dictionary = out[j]
-		if Js.obj(x.get("affix")).is_empty():
-			ships.append({ "i": j + 1, "role": str(x["role"]), "kind": str(x["kind"]), "name": str(Js.obj(x["enemy"]).get("name", "")) })
-	var can: Array = []
-	for c: Dictionary in Js.list(pk.get("combos")):
-		for a: Dictionary in ships:
-			if a["role"] != c["role"]:
-				continue
-			for p: Dictionary in ships:
-				if p["i"] == a["i"]:
-					continue
-				var ok: bool = false
-				match str(c["partner"]):
-					"heavy": ok = heavy.has(p["kind"]) and p["role"] == ""
-					"plain": ok = p["role"] == ""
-					_: ok = p["role"] == c["partner"]
-				if ok:
-					can.append([c, a, p])
-	if can.is_empty():
-		return
-	var pick: Array = can[int(floor(Dice.next() * can.size()))]
-	var cb: Dictionary = pick[0]
-	var halves: Array = [pick[1], pick[2]]
-	for h: int in 2:
-		var me: Dictionary = halves[h]
-		var other: Dictionary = halves[1 - h]
-		var tag: Dictionary = { "id": cb["id"], "with": float(other["i"]), "withName": other["name"], "half": "role" if h == 0 else "partner" }
-		if int(me["i"]) == 0:
-			fight["leadCombo"] = tag
-		else:
-			out[int(me["i"]) - 1]["combo"] = tag
-
-
-static func combo_def(id: String) -> Dictionary:
-	for c: Dictionary in Js.list(packs_cfg().get("combos")):
-		if c["id"] == id:
-			return c
-	return {}
-
-
-static func party_cfg() -> Dictionary:
-	return Js.obj(Js.obj(Battle.cfg().get("gauntlet")).get("party"))
-
-
-## Co-op's own (port rules battle.gauntlet): bond and crew synergy odds, the
-## Fleet Chest, the vouchers.
-static func coop_cfg() -> Dictionary:
-	return Js.obj(Battle.cfg().get("gauntlet"))
-
-
-# ══ Curses ════════════════════════════════════════════════════════════════════
-
-static func curse_def(id: String) -> Dictionary:
-	for c: Dictionary in Js.list(t().get("curses")):
-		if c["id"] == id:
-			return c
-	return {}
-
-
-static func is_curse_depth(d: int, freq: float = 1.0) -> bool:
-	var last: int = CURSE_DEPTHS[CURSE_DEPTHS.size() - 1]
-	if CURSE_DEPTHS.has(d) or (d > last and (d - last) % CURSE_INTERVAL == 0):
-		return true
-	if freq > 1.0 and d > last:
-		var tight: int = maxi(2, int(Js.round(CURSE_INTERVAL / freq)))
-		return (d - last) % tight == 0
-	if freq > 1.0 and d <= last and d >= CURSE_DEPTHS[0]:
-		return CURSE_DEPTHS.any(func(x: int) -> bool: return d == x - 1) and d > CURSE_DEPTHS[0]
-	return false
-
-
-## drawCurse: a fresh curse, or (from depth 13) a deepening of one carried;
-## once the pool is spent and the run is past the bend, The Crush.
-static func draw_curse(held: Dictionary, d: int, worst: bool, variant: String) -> Dictionary:
-	var elig: Array = []
-	for c: Dictionary in Js.list(t().get("curses")):
-		if c["id"] == "the_crush" or not in_pool(c.get("gauntlet"), variant):
-			continue
-		var nx: int = int(Js.num(held.get(c["id"]))) + 1
-		if nx <= Js.list(c["tiers"]).size() and (nx == 1 or d >= CURSE_TIER2_DEPTH):
-			elig.append([c, nx])
-	if not elig.is_empty():
-		var dr: Array = elig[int(floor(Dice.next() * elig.size()))]
-		var c: Dictionary = dr[0]
-		var nx: int = mini(Js.list(c["tiers"]).size(), maxi(int(dr[1]), 2)) if worst else int(dr[1])
-		return _curse_offer(c, nx)
-	if d > DEEP_BEND_START:
-		var crush: Dictionary = curse_def("the_crush")
-		var nx2: int = int(Js.num(held.get("the_crush"))) + 1
-		if not crush.is_empty() and nx2 <= Js.list(crush["tiers"]).size():
-			return _curse_offer(crush, nx2)
-	return {}
-
-
-static func _curse_offer(c: Dictionary, tier: int) -> Dictionary:
-	var tr: Dictionary = c["tiers"][tier - 1]
-	return {
-		"id": c["id"], "name": c["name"], "image": c.get("image"), "flavor": c.get("flavor", ""), "tier": float(tier),
-		"desc": tr.get("desc", ""), "detail": tr.get("detail", ""), "effects": Js.list(tr.get("effects")),
-		"hpDrainPct": Js.num(tr.get("hpDrainPct")), "silenceCrew": Js.num(tr.get("silenceCrew")), "isUpgrade": tier > 1,
-	}
-
-
-static func curse_effects(held: Dictionary) -> Array:
-	var out: Array = []
-	for id: String in held:
-		var c: Dictionary = curse_def(id)
-		var tiers: Array = Js.list(c.get("tiers"))
-		var tr: int = int(held[id])
-		if tr >= 1 and tr <= tiers.size():
-			out += Js.list(Js.obj(tiers[tr - 1]).get("effects"))
-	return out
-
-
-static func curse_hp_drain(held: Dictionary) -> float:
-	var a: float = 0.0
-	for id: String in held:
-		var tiers: Array = Js.list(curse_def(id).get("tiers"))
-		var tr: int = int(held[id])
-		if tr >= 1 and tr <= tiers.size():
-			a += Js.num(Js.obj(tiers[tr - 1]).get("hpDrainPct"))
-	return a
-
-
-static func curse_silence(held: Dictionary) -> int:
-	var a: int = 0
-	for id: String in held:
-		var tiers: Array = Js.list(curse_def(id).get("tiers"))
-		var tr: int = int(held[id])
-		if tr >= 1 and tr <= tiers.size():
-			a += int(Js.num(Js.obj(tiers[tr - 1]).get("silenceCrew")))
-	return a
-
-
-# ══ Boons ═════════════════════════════════════════════════════════════════════
-
-static func boon_def(id: String) -> Dictionary:
-	for b: Dictionary in Js.list(t().get("boons")):
-		if b["id"] == id:
-			return b
-	for b2: Dictionary in bonds():
-		if b2["id"] == id:
-			return b2
-	return {}
-
-
-## Every synergy: the web's, then the co-op ones (bond + power; port rules
-## battle.gauntlet.bondSynergies, none under the parity run).
-static func confluences() -> Array:
-	return Js.list(t().get("confluences")) + Js.list(Js.obj(Battle.cfg().get("gauntlet")).get("bondSynergies"))
-
-
-## The co-op bond powers (port rules battle.gauntlet.bonds; none under the
-## parity run, which reads the web's tables alone).
-static func bonds() -> Array:
-	return Js.list(Js.obj(Battle.cfg().get("gauntlet")).get("bonds"))
-
-
-## One bond card for a co-op spread, weighted by rarity like the powers,
-## among the families someone at the table can still take.
-static func draw_bond(lowest: Dictionary, banned: Array) -> Dictionary:
-	var meta: Dictionary = t()["rarity"]
-	var pool: Array = []
-	var tot: float = 0.0
-	for b: Dictionary in bonds():
-		if banned.has(b["id"]):
-			continue
-		var nx: int = int(Js.num(lowest.get(b["id"]))) + 1
-		if nx > Js.list(b["tiers"]).size():
-			continue
-		var w: float = float(Js.obj(meta.get(rarity(b))).get("weight", 1.0))
-		pool.append([b, nx, w])
-		tot += w
-	if pool.is_empty():
-		return {}
-	var r: float = Dice.next() * tot
-	for p: Array in pool:
-		r -= float(p[2])
-		if r <= 0.0:
-			var o: Dictionary = boon_offer(p[0], int(p[1]))
-			o["bond"] = true
-			o["role"] = p[0].get("role", "")
-			return o
-	var last: Array = pool[pool.size() - 1]
-	var o2: Dictionary = boon_offer(last[0], int(last[1]))
-	o2["bond"] = true
-	o2["role"] = last[0].get("role", "")
-	return o2
-
-
-static func rarity(b: Dictionary) -> String:
-	return str(Js.nz(b.get("rarity"), "common"))
-
-
-static func is_boon_depth(d: int, freq: float = 1.0) -> bool:
-	if d < 2:
-		return false
-	var m: int = (d - 2) % 5
-	if m != 0 and m != 2:
-		return false
-	return not (freq < 1.0 and m == 2)
-
-
-## drawBoons: up to n families, each at the next tier this captain can take,
-## weighted by rarity (luck lifts the rare ones, a skew crushes them).
-static func draw_boons(n: int, owned: Dictionary, luck: float, skew: float, variant: String, banned: Array = []) -> Array:
-	var meta: Dictionary = t()["rarity"]
-	var avail: Array = []
-	for b: Dictionary in Js.list(t().get("boons")):
-		if not in_pool(b.get("gauntlet"), variant) or banned.has(b["id"]):
-			continue
-		var nx: int = int(Js.num(owned.get(b["id"]))) + 1
-		if nx <= Js.list(b["tiers"]).size():
-			avail.append([b, nx])
-	var w: Callable = func(b: Dictionary) -> float:
-		var r: String = rarity(b)
-		if r == "common":
-			return float(meta[r]["weight"])
-		return float(meta[r]["weight"]) * luck * (1.0 - clampf(skew, 0.0, 1.0))
-	var out: Array = []
-	var i: int = 0
-	while i < n and not avail.is_empty():
-		var tot: float = 0.0
-		for x: Array in avail:
-			tot += float(w.call(x[0]))
-		var r: float = Dice.next() * tot
-		var idx: int = 0
-		while idx < avail.size() - 1:
-			r -= float(w.call(avail[idx][0]))
-			if r <= 0.0:
-				break
-			idx += 1
-		var pick: Array = avail.pop_at(idx)
-		out.append(boon_offer(pick[0], int(pick[1])))
-		i += 1
-	return out
-
-
-static func boon_offer(b: Dictionary, tier: int) -> Dictionary:
-	var tr: Dictionary = b["tiers"][tier - 1]
-	return {
-		"id": b["id"], "name": b["name"], "flavor": b.get("flavor", ""), "rarity": rarity(b), "tier": float(tier),
-		"desc": tr.get("desc", ""), "detail": tr.get("detail", ""), "effect": tr.get("effect"), "upgrade": tier > 1, "image": b.get("image"),
-	}
-
-
-static func blood_oath_boon(variant: String) -> String:
-	var pool: Array = Js.list(t().get("boons")).filter(func(b: Dictionary) -> bool:
-		return in_pool(b.get("gauntlet"), variant) and rarity(b) != "legendary" and b["id"] != "manowars_wrath")
-	if pool.is_empty():
-		return ""
-	return str(pool[int(floor(Dice.next() * pool.size()))]["id"])
-
-
-static func boon_effects(owned: Dictionary) -> Array:
-	var out: Array = []
-	for b: Dictionary in Js.list(t().get("boons")) + bonds():
-		var tr: int = int(Js.num(owned.get(b["id"])))
-		if tr >= 1:
-			out.append(b["tiers"][mini(tr, Js.list(b["tiers"]).size()) - 1]["effect"])
-	return out
-
-
-static func hp_boon_mult(effects: Array, d: int, kills: int) -> float:
-	var m: float = 1.0
-	for e: Dictionary in effects:
-		match str(e.get("kind", "")):
-			"maxHpMult":
-				m *= float(e["mult"])
-			"maxHpPerDepth":
-				m *= 1.0 + minf(float(e["max"]), float(e["perDepth"]) * maxi(0, d))
-			"maxHpPerKill":
-				m *= 1.0 + minf(float(e["max"]), float(e["perKill"]) * maxi(0, kills))
-	return m
-
-
-# ── Confluences and convergences ──────────────────────────────────────────────
-
-static func confluence_def(id: String) -> Dictionary:
-	for c: Dictionary in confluences():
-		if c["id"] == id:
-			return c
-	return {}
-
-
-static func convergence_def(id: String) -> Dictionary:
-	for c: Dictionary in Js.list(t().get("convergences")):
-		if c["id"] == id:
-			return c
-	return {}
-
-
-static func confluence_level(c: Dictionary, owned: Dictionary) -> int:
-	var lo: int = 99
-	for r: Dictionary in Js.list(c["requires"]):
-		lo = mini(lo, int(Js.num(owned.get(r["boonId"]))))
-	if lo < 1:
-		return 0
-	return mini(lo, Js.list(c["levels"]).size())
-
-
-static func eligible_confluences(owned: Dictionary, taken: Array, variant: String) -> Array:
-	return confluences().filter(func(c: Dictionary) -> bool:
-		return in_pool(c.get("gauntlet"), variant) and not taken.has(c["id"]) and confluence_level(c, owned) >= 1)
-
-
-static func confluence_hints(offer_id: String, offer_tier: int, owned: Dictionary, taken: Array) -> Array:
-	var after: Dictionary = owned.duplicate()
-	after[offer_id] = float(maxi(int(Js.num(owned.get(offer_id))), offer_tier))
-	var out: Array = []
-	for c: Dictionary in confluences():
-		if not Js.list(c["requires"]).any(func(r: Dictionary) -> bool: return r["boonId"] == offer_id):
-			continue
-		var before: int = confluence_level(c, owned)
-		var nx: int = confluence_level(c, after)
-		if nx < 1:
-			continue
-		if not taken.has(c["id"]):
-			if before < 1:
-				out.append({ "id": c["id"], "name": c["name"], "kind": "unlocks", "level": float(nx) })
-		elif nx > before:
-			out.append({ "id": c["id"], "name": c["name"], "kind": "deepens", "level": float(nx) })
-	return out
-
-
-static func _desc_at(levels: Array, level: int) -> String:
-	return str(Js.obj(levels[clampi(level if level > 0 else 1, 1, levels.size()) - 1]).get("desc", ""))
-
-
-## drawConfluenceOffer: a synergy card for this captain's draft, the pity rule
-## guaranteeing one never yet shown.
-static func draw_confluence(owned: Dictionary, taken: Array, offered: Array, mult: float, variant: String) -> Dictionary:
-	if mult <= 0.0:
-		return {}
-	var pool: Array = eligible_confluences(owned, taken, variant)
-	if pool.is_empty():
-		return {}
-	var fresh: Array = pool.filter(func(c: Dictionary) -> bool: return not offered.has(c["id"]))
-	if not fresh.is_empty() and mult < 1.0 and Dice.next() >= mult:
-		return {}
-	if fresh.is_empty() and Dice.next() >= CONFLUENCE_OFFER_CHANCE * mult:
-		return {}
-	var from: Array = fresh if not fresh.is_empty() else pool
-	var c: Dictionary = from[int(floor(Dice.next() * from.size()))]
-	var lv: int = confluence_level(c, owned)
-	var req: Array = Js.list(c["requires"])
-	return {
-		"kind": "confluence", "id": c["id"], "name": c["name"], "flavor": c.get("flavor", ""), "level": float(lv),
-		"desc": _desc_at(c["levels"], lv), "detail": c.get("detail", ""), "image": c.get("image"),
-		"halves": [str(boon_def(req[0]["boonId"]).get("name", req[0]["boonId"])), str(boon_def(req[1]["boonId"]).get("name", req[1]["boonId"]))],
-	}
-
-
-static func confluence_effects(owned: Dictionary, taken: Array) -> Array:
-	var out: Array = []
-	for c: Dictionary in confluences():
-		if not taken.has(c["id"]):
-			continue
-		var lv: int = confluence_level(c, owned)
-		if lv >= 1:
-			out += Js.list(c["levels"][lv - 1]["effects"])
-	return out
-
-
-static func convergence_level(cv: Dictionary, owned: Dictionary, taken: Array) -> int:
-	var lo: int = 99
-	for r: Dictionary in Js.list(cv["requires"]):
-		var l: int = 0
-		if taken.has(r["confluenceId"]):
-			var c: Dictionary = confluence_def(str(r["confluenceId"]))
-			l = confluence_level(c, owned) if not c.is_empty() else 0
-		lo = mini(lo, l)
-	if lo < 1:
-		return 0
-	return mini(lo, Js.list(cv["levels"]).size())
-
-
-static func draw_convergence(owned: Dictionary, taken: Array, taken_cv: Array, offered: Array, mult: float, variant: String) -> Dictionary:
-	if mult <= 0.0:
-		return {}
-	var pool: Array = Js.list(t().get("convergences")).filter(func(cv: Dictionary) -> bool:
-		return in_pool(cv.get("gauntlet"), variant) and not taken_cv.has(cv["id"]) and convergence_level(cv, owned, taken) >= 1)
-	if pool.is_empty():
-		return {}
-	var fresh: Array = pool.filter(func(cv: Dictionary) -> bool: return not offered.has(cv["id"]))
-	if not fresh.is_empty() and mult < 1.0 and Dice.next() >= mult:
-		return {}
-	if fresh.is_empty() and Dice.next() >= CONVERGENCE_OFFER_CHANCE * mult:
-		return {}
-	var from: Array = fresh if not fresh.is_empty() else pool
-	var cv: Dictionary = from[int(floor(Dice.next() * from.size()))]
-	var lv: int = convergence_level(cv, owned, taken)
-	var req: Array = Js.list(cv["requires"])
-	return {
-		"kind": "confluence", "isConvergence": true, "id": cv["id"], "name": cv["name"], "flavor": cv.get("flavor", ""), "level": float(lv),
-		"desc": _desc_at(cv["levels"], lv), "detail": cv.get("detail", ""), "image": cv.get("image"),
-		"halves": [str(confluence_def(req[0]["confluenceId"]).get("name", "")), str(confluence_def(req[1]["confluenceId"]).get("name", ""))],
-	}
-
-
-static func convergence_effects(owned: Dictionary, taken: Array, taken_cv: Array) -> Array:
-	var out: Array = []
-	for cv: Dictionary in Js.list(t().get("convergences")):
-		if not taken_cv.has(cv["id"]):
-			continue
-		var lv: int = convergence_level(cv, owned, taken)
-		if lv >= 1:
-			out += Js.list(cv["levels"][lv - 1]["effects"])
-	return out
-
-
-# ── Reprieves ─────────────────────────────────────────────────────────────────
-
-static func draw_reprieve(curse_count: int) -> Dictionary:
-	var pool: Array = Js.list(t().get("reprieves")).filter(func(r: Dictionary) -> bool: return r["kind"] != "cleanse" or curse_count > 0)
-	return pool[int(floor(Dice.next() * pool.size()))]
-
-
-# ══ Terms (hardcore only) ═════════════════════════════════════════════════════
-
-static func term_def(id: String) -> Dictionary:
-	for x: Dictionary in Js.list(t().get("terms")):
-		if x["id"] == id:
-			return x
-	return {}
-
-
-static func terms_for(variant: String) -> Array:
-	return Js.list(t().get("terms")).filter(func(x: Dictionary) -> bool: return in_pool(x.get("gauntlet"), variant))
-
-
-static func terms_title(variant: String) -> String:
-	return "Don's Terms" if variant == "don" else "Davy's Terms"
-
-
-static func pressure(signed: Dictionary) -> float:
-	var p: float = 0.0
-	for id: String in signed:
-		var x: Dictionary = term_def(id)
-		var tr: int = int(Js.num(signed[id]))
-		if x.is_empty() or tr < 1:
-			continue
-		p += Js.num(Js.obj(x["tiers"][mini(tr, Js.list(x["tiers"]).size()) - 1]).get("pressure"))
-	return p
-
-
-static func max_pressure(variant: String) -> float:
-	var p: float = 0.0
-	for x: Dictionary in terms_for(variant):
-		var tiers: Array = Js.list(x["tiers"])
-		p += Js.num(Js.obj(tiers[tiers.size() - 1]).get("pressure"))
-	return p
-
-
-static func no_terms() -> Dictionary:
-	return {
-		"forceContracts": false, "eliteChanceMult": 1.0, "affixPairFromStart": false, "tripleAffixChance": 0.0,
-		"eliteHpMult": 1.0, "eliteDmgMult": 1.0, "bossHpMult": 1.0, "bossDmgMult": 1.0, "bossAffixCount": 0.0,
-		"crewRefreshChance": 1.0, "crewSlotsLost": 0.0, "boonPicks": 3.0, "boonFrequencyMult": 1.0, "commonSkew": 0.0,
-		"confluenceOfferMult": 1.0, "curseFrequencyMult": 1.0, "curseStartsAtWorst": false, "maxHpPct": 1.0,
-		"noLethalSaves": false, "noReprieves": false, "noPeek": false, "bloodPriceToOne": false,
-		"cashOutOnlyAfterBoss": false, "healMult": 1.0,
-	}
-
-
-## resolveTerms: the signed board folded into the knobs the run reads.
-static func resolve_terms(signed: Dictionary) -> Dictionary:
-	var e: Dictionary = no_terms()
-	var tier_of: Callable = func(id: String) -> int:
-		var x: Dictionary = term_def(id)
-		return mini(int(Js.num(signed.get(id))), Js.list(x.get("tiers")).size()) if not x.is_empty() else 0
-	if tier_of.call("every_job") > 0:
-		e["forceContracts"] = true
-	var press: int = tier_of.call("press_ganged")
-	if press > 0:
-		e["eliteChanceMult"] = 1.8 if press == 1 else 2.6
-	var marked: int = tier_of.call("marked_hulls")
-	if marked > 0:
-		e["affixPairFromStart"] = true
-		if marked >= 2:
-			e["tripleAffixChance"] = 0.33
-	var iron: int = tier_of.call("ironbacked")
-	if iron > 0:
-		e["eliteHpMult"] = 1.2 if iron == 1 else 1.45
-		e["eliteDmgMult"] = 1.12 if iron == 1 else 1.28
-	var court: int = tier_of.call("davys_court")
-	if court > 0:
-		e["bossHpMult"] = 1.25 if court == 1 else 1.5
-		e["bossDmgMult"] = 1.15 if court == 1 else 1.3
-	e["bossAffixCount"] = float(tier_of.call("crowned"))
-	var skel: int = tier_of.call("skeleton_crew")
-	if skel > 0:
-		e["crewRefreshChance"] = 0.6 if skel == 1 else 0.3
-	if tier_of.call("short_handed") > 0:
-		e["crewSlotsLost"] = 1.0
-	var comm: int = tier_of.call("no_communion")
-	if comm > 0:
-		e["confluenceOfferMult"] = 0.5 if comm == 1 else 0.0
-	var powder: int = tier_of.call("scarce_powder")
-	if powder > 0:
-		e["boonPicks"] = 2.0
-		if powder >= 2:
-			e["boonFrequencyMult"] = 0.65
-	var barren: int = tier_of.call("barren_tides")
-	if barren > 0:
-		e["commonSkew"] = 0.6 if barren == 1 else 0.85
-	var tongue: int = tier_of.call("loose_tongue")
-	if tongue > 0:
-		e["curseFrequencyMult"] = 1.5 if tongue == 1 else 1.9
-		if tongue >= 2:
-			e["curseStartsAtWorst"] = true
-	var draft: int = tier_of.call("deep_draft")
-	if draft > 0:
-		e["maxHpPct"] = 0.85 if draft == 1 else 0.70
-	if tier_of.call("full_measure") > 0:
-		e["bloodPriceToOne"] = true
-	if tier_of.call("no_second_thoughts") > 0:
-		e["cashOutOnlyAfterBoss"] = true
-	var rations: int = tier_of.call("iron_rations")
-	if rations > 0:
-		e["healMult"] = 0.5 if rations == 1 else 0.0
-	if tier_of.call("no_mercy") > 0:
-		e["noLethalSaves"] = true
-	if tier_of.call("no_quarter") > 0:
-		e["noReprieves"] = true
-	if tier_of.call("blind_descent") > 0:
-		e["noPeek"] = true
-	return e
-
-
-static func term_effects(signed: Dictionary) -> Array:
-	var out: Array = []
-	for id: String in signed:
-		var x: Dictionary = term_def(id)
-		var tr: int = int(Js.num(signed[id]))
-		if x.is_empty() or tr < 1:
-			continue
-		out += Js.list(Js.obj(x["tiers"][mini(tr, Js.list(x["tiers"]).size()) - 1]).get("effects"))
-	return out
-
-
-# ══ Marks of the Don ═════════════════════════════════════════════════════════
-
-static func roll_marks() -> Dictionary:
-	var m: Dictionary = t()["marks"]
-	return { "shark": _roll_buffs(Js.list(m["shark"])), "whale": _roll_buffs(Js.list(m["whale"])) }
-
-
-static func _roll_buffs(cats: Array) -> Array:
-	var pool: Array = cats.duplicate()
-	var out: Array = []
-	for i: int in mini(MARK_BUFFS_PER, pool.size()):
-		var cat: String = str(pool.pop_at(int(floor(Dice.next() * pool.size()))))
-		var pct: int = MARK_ROLL_MIN + int(floor(Dice.next() * (MARK_ROLL_MAX - MARK_ROLL_MIN + 1)))
-		out.append({ "cat": cat, "pct": float(pct) })
-	return out
-
-
-static func mark_effects(marks: Array) -> Array:
-	var out: Array = []
-	for mk: Dictionary in marks:
-		for b: Dictionary in Js.list(mk.get("buffs")):
-			var p: float = float(b["pct"]) / 100.0
-			match str(b["cat"]):
-				"gunnery": out.append({ "kind": "damageMult", "mult": 1.0 + p })
-				"broadside": out.append({ "kind": "volleyDmgMult", "mult": 1.0 + p })
-				"bombards": out.append({ "kind": "megaDmgMult", "mult": 1.0 + p })
-				"marksman": out.append({ "kind": "critDmgMult", "mult": 1.0 + p })
-				"keen_eye": out.append({ "kind": "critChanceBonus", "chance": p })
-				"wildfire": out.append({ "kind": "fireAffinity", "burnChance": p, "burnTurnsBonus": 0.0, "burnTickMult": 1.0 + p })
-				"hoarfrost": out.append({ "kind": "iceAffinity", "freezeChance": p, "frozenDmgMult": 1.0 + p })
-				"ironhull": out.append({ "kind": "maxHpMult", "mult": 1.0 + p })
-				"bulwark": out.append({ "kind": "fightShield", "pctMax": p })
-				"mending": out.append({ "kind": "healMult", "mult": 1.0 + p })
-				"aegis": out.append({ "kind": "incomingDmgMult", "mult": 1.0 - p, "scope": "allRemaining" })
-				"bloodward": out.append({ "kind": "lifestealPct", "pct": p })
-	return out
-
-
-# ══ The Fence, the Shrine, the Don's jobs ═════════════════════════════════════
-
-static func fence_stock(has_curse: bool) -> Array:
-	var extras: Array = ["charges", "crew", "boon"]
-	if has_curse:
-		extras.append("cleanse")
-	for i: int in range(extras.size() - 1, 0, -1):
-		var j: int = int(floor(Dice.next() * (i + 1)))
-		var tmp: Variant = extras[i]
-		extras[i] = extras[j]
-		extras[j] = tmp
-	return ["heal"] + extras.slice(0, 2)
-
-
-static func roll_contract(d: int) -> String:
-	if d < CONTRACT_MIN_DEPTH:
-		return ""
-	if Dice.next() >= CONTRACT_OFFER_CHANCE:
-		return ""
-	return CONTRACT_KINDS[int(floor(Dice.next() * CONTRACT_KINDS.size()))]
-
-
-static func contract_param(kind: String, stake: int, d: int) -> int:
-	return maxi(2, (6 - stake) + int(floor(d / 25.0))) if kind == "fast" else 0
-
-
-static func build_contract(kind: String, stake: int, d: int) -> Dictionary:
-	var plunder: float = float(Js.round(round_contribution(d, true, "don") * (0.4 + 0.3 * stake)))
-	var reward: Dictionary
-	if stake == 3 and Dice.next() < 0.5:
-		reward = { "kind": "boonDraft" }
-	elif Dice.next() < 0.3:
-		reward = { "kind": "hullBoost", "pct": 0.15 }
-	elif Dice.next() < 0.22:
-		reward = { "kind": "fullHeal" }
-	else:
-		reward = { "kind": "plunder", "n": plunder }
-	var penalty: Dictionary
-	if stake == 3 and Dice.next() < 0.5:
-		penalty = { "kind": "curse" }
-	elif stake >= 2 and Dice.next() < 0.3:
-		penalty = { "kind": "hullCut", "pct": 0.08 }
-	elif Dice.next() < 0.4:
-		penalty = { "kind": "hpLossPct", "pct": minf(0.4, 0.1 + 0.06 * stake) }
-	else:
-		penalty = { "kind": "plunderLose", "n": float(Js.round(plunder * 0.7)) }
-	return { "kind": kind, "stake": float(stake), "param": float(contract_param(kind, stake, d)), "reward": reward, "penalty": penalty }
-
-
-## Was the job done? f: the fight's facts, summed over the party.
-static func contract_met(c: Dictionary, f: Dictionary) -> bool:
-	var won: bool = f.get("won", false) == true
-	var n: Callable = func(k: String) -> float: return Js.num(f.get(k))
-	match str(c["kind"]):
-		"fast": return won and n.call("turns") <= float(c["param"])
-		"deadeye": return won and n.call("shots") > 0.0 and n.call("crits") == n.call("shots")
-		"no_crew": return won and n.call("crewAbilities") == 0.0
-		"fire_only": return won and n.call("volleys") == 0.0 and n.call("megas") == 0.0
-		"volley_only": return won and n.call("fires") == 0.0 and n.call("megas") == 0.0
-		"ultimate_only": return won and n.call("fires") == 0.0 and n.call("volleys") == 0.0 and n.call("megas") > 0.0
-		"no_dodge": return won and n.call("dodges") == 0.0
-		"untouched": return won and n.call("nonSpecialHitsTaken") == 0.0
-	return false
-
-
-static func contract_goal(c: Dictionary) -> String:
-	var d: Dictionary = Js.obj(Js.obj(t().get("contracts")).get(str(c["kind"])))
-	if str(c["kind"]) == "fast":
-		var k: int = int(c["param"])
-		return "Sink it in %d turn%s or fewer." % [k, "" if k == 1 else "s"]
-	return str(d.get("goal", ""))
-
-
-static func describe_reward(r: Dictionary) -> String:
-	match str(r["kind"]):
-		"plunder": return "+%s ⟡ plunder" % Js.thousands(float(r["n"]))
-		"hullBoost": return "+%d%% max hull, rest of run" % int(round(float(r["pct"]) * 100.0))
-		"boonDraft": return "A free power draft"
-	return "Patched to full hull"
-
-
-static func describe_penalty(p: Dictionary) -> String:
-	match str(p["kind"]):
-		"plunderLose": return "Lose %s ⟡ plunder" % Js.thousands(float(p["n"]))
-		"curse": return "A curse for the rest of the run"
-		"hpLossPct": return "Lose %d%% of your hull" % int(round(float(p["pct"]) * 100.0))
-	return "-%d%% max hull, rest of run" % int(round(float(p["pct"]) * 100.0))
-
-
 # ══ Bands and voices ══════════════════════════════════════════════════════════
 
 static func band(d: int, variant: String) -> Dictionary:
@@ -1446,176 +677,275 @@ static func tier_label(tier: int) -> String:
 	return ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV"][clampi(tier, 0, 15)]
 
 
-# ══ The Locker (gauntletUpgrades) ═════════════════════════════════════════════
+# ══ The parts, forwarded (one line each; the doc comments live in the parts) ═
+
+# ── Co-op packs and bonds (core/gauntlet_packs.gd, port-native) ───────────────
+
+static func escorts(fight: Dictionary, n: int, terms: Dictionary, variant: String) -> Array:
+	return GauntletPacks.escorts(fight, n, terms, variant)
+
+
+static func combo_def(id: String) -> Dictionary:
+	return GauntletPacks.combo_def(id)
+
+
+static func party_cfg() -> Dictionary:
+	return GauntletPacks.party_cfg()
+
+
+static func coop_cfg() -> Dictionary:
+	return GauntletPacks.coop_cfg()
+
+
+static func bonds() -> Array:
+	return GauntletPacks.bonds()
+
+
+static func draw_bond(lowest: Dictionary, banned: Array) -> Dictionary:
+	return GauntletPacks.draw_bond(lowest, banned)
+
+
+# ── The draft: curses, boons, confluences, convergences, reprieves (core/gauntlet_draft.gd) ───
+
+static func curse_def(id: String) -> Dictionary:
+	return GauntletDraft.curse_def(id)
+
+
+static func is_curse_depth(d: int, freq: float = 1.0) -> bool:
+	return GauntletDraft.is_curse_depth(d, freq)
+
+
+static func draw_curse(held: Dictionary, d: int, worst: bool, variant: String) -> Dictionary:
+	return GauntletDraft.draw_curse(held, d, worst, variant)
+
+
+static func curse_effects(held: Dictionary) -> Array:
+	return GauntletDraft.curse_effects(held)
+
+
+static func curse_hp_drain(held: Dictionary) -> float:
+	return GauntletDraft.curse_hp_drain(held)
+
+
+static func curse_silence(held: Dictionary) -> int:
+	return GauntletDraft.curse_silence(held)
+
+
+static func boon_def(id: String) -> Dictionary:
+	return GauntletDraft.boon_def(id)
+
+
+static func confluences() -> Array:
+	return GauntletDraft.confluences()
+
+
+static func rarity(b: Dictionary) -> String:
+	return GauntletDraft.rarity(b)
+
+
+static func is_boon_depth(d: int, freq: float = 1.0) -> bool:
+	return GauntletDraft.is_boon_depth(d, freq)
+
+
+static func draw_boons(n: int, owned: Dictionary, luck: float, skew: float, variant: String, banned: Array = []) -> Array:
+	return GauntletDraft.draw_boons(n, owned, luck, skew, variant, banned)
+
+
+static func boon_offer(b: Dictionary, tier: int) -> Dictionary:
+	return GauntletDraft.boon_offer(b, tier)
+
+
+static func blood_oath_boon(variant: String) -> String:
+	return GauntletDraft.blood_oath_boon(variant)
+
+
+static func boon_effects(owned: Dictionary) -> Array:
+	return GauntletDraft.boon_effects(owned)
+
+
+static func hp_boon_mult(effects: Array, d: int, kills: int) -> float:
+	return GauntletDraft.hp_boon_mult(effects, d, kills)
+
+
+static func confluence_def(id: String) -> Dictionary:
+	return GauntletDraft.confluence_def(id)
+
+
+static func convergence_def(id: String) -> Dictionary:
+	return GauntletDraft.convergence_def(id)
+
+
+static func confluence_level(c: Dictionary, owned: Dictionary) -> int:
+	return GauntletDraft.confluence_level(c, owned)
+
+
+static func confluence_hints(offer_id: String, offer_tier: int, owned: Dictionary, taken: Array) -> Array:
+	return GauntletDraft.confluence_hints(offer_id, offer_tier, owned, taken)
+
+
+static func draw_confluence(owned: Dictionary, taken: Array, offered: Array, mult: float, variant: String) -> Dictionary:
+	return GauntletDraft.draw_confluence(owned, taken, offered, mult, variant)
+
+
+static func confluence_effects(owned: Dictionary, taken: Array) -> Array:
+	return GauntletDraft.confluence_effects(owned, taken)
+
+
+static func convergence_level(cv: Dictionary, owned: Dictionary, taken: Array) -> int:
+	return GauntletDraft.convergence_level(cv, owned, taken)
+
+
+static func draw_convergence(owned: Dictionary, taken: Array, taken_cv: Array, offered: Array, mult: float, variant: String) -> Dictionary:
+	return GauntletDraft.draw_convergence(owned, taken, taken_cv, offered, mult, variant)
+
+
+static func convergence_effects(owned: Dictionary, taken: Array, taken_cv: Array) -> Array:
+	return GauntletDraft.convergence_effects(owned, taken, taken_cv)
+
+
+static func draw_reprieve(curse_count: int) -> Dictionary:
+	return GauntletDraft.draw_reprieve(curse_count)
+
+
+# ── Terms, Marks, the Fence and the Don's jobs (core/gauntlet_terms.gd) ───────
+
+static func pressure(signed: Dictionary) -> float:
+	return GauntletTerms.pressure(signed)
+
+
+static func no_terms() -> Dictionary:
+	return GauntletTerms.no_terms()
+
+
+static func resolve_terms(signed: Dictionary) -> Dictionary:
+	return GauntletTerms.resolve_terms(signed)
+
+
+static func term_effects(signed: Dictionary) -> Array:
+	return GauntletTerms.term_effects(signed)
+
+
+static func roll_marks() -> Dictionary:
+	return GauntletTerms.roll_marks()
+
+
+static func mark_effects(marks: Array) -> Array:
+	return GauntletTerms.mark_effects(marks)
+
+
+static func fence_stock(has_curse: bool) -> Array:
+	return GauntletTerms.fence_stock(has_curse)
+
+
+static func roll_contract(d: int) -> String:
+	return GauntletTerms.roll_contract(d)
+
+
+static func build_contract(kind: String, stake: int, d: int) -> Dictionary:
+	return GauntletTerms.build_contract(kind, stake, d)
+
+
+static func contract_met(c: Dictionary, f: Dictionary) -> bool:
+	return GauntletTerms.contract_met(c, f)
+
+
+static func contract_goal(c: Dictionary) -> String:
+	return GauntletTerms.contract_goal(c)
+
+
+static func describe_reward(r: Dictionary) -> String:
+	return GauntletTerms.describe_reward(r)
+
+
+static func describe_penalty(p: Dictionary) -> String:
+	return GauntletTerms.describe_penalty(p)
+
+
+# ── The Locker (core/gauntlet_locker.gd) ──────────────────────────────────────
 
 static func upgrade_def(id: String) -> Dictionary:
-	for u: Dictionary in Js.list(t().get("upgrades")):
-		if u["id"] == id:
-			return _worded(u)
-	return {}
-
-
-static func _worded(u: Dictionary) -> Dictionary:
-	if Rules.web_only or not PORT_WORDS.has(u["id"]):
-		return u
-	var w: Dictionary = u.duplicate()
-	w["description"] = PORT_WORDS[u["id"]]
-	return w
-
-
-## The Locker's upgrades the port does not sell: gone by decision (the Don's
-## Tribute; the Crimson Tithe with Blood Gems).
-const NOT_SOLD: Array = ["dg_daily_tribute", "dg_crimson_tithe"]
-
-## The forge's three upgrades, said as the port's redesigned forge works
-## (core/forge.gd): no recipe toll, no gems, no day's wait.
-const PORT_WORDS: Dictionary = {
-	"forge": "Opens the anvil at the forge island: put two raid items on it to find the recipes that fuse them, forge what you find, temper spare copies to +1, +2 and +3, and break unwanted copies into scrap.",
-	"dg_abyssal_forge": "Lets the anvil fuse two forged items into a tier-3 Abyssal item, carrying both effect sets in a single mount. The endgame forge.",
-	"dg_abyssal_accel": "Transmuting at the anvil: an epic boss item, a second copy of itself and 25 scrap become its legendary chase counterpart at once.",
-}
+	return GauntletLocker.upgrade_def(id)
 
 
 static func upgrades_for(variant: String) -> Array:
-	return Js.list(t().get("upgrades")).filter(func(u: Dictionary) -> bool: return str(Js.nz(u.get("gauntlet"), "davy")) == variant and not NOT_SOLD.has(u["id"])).map(func(u: Dictionary) -> Dictionary: return _worded(u))
+	return GauntletLocker.upgrades_for(variant)
 
 
-## A permanent upgrade owned in either Locker (the web reads the two together).
 static func owns(p: Dictionary, id: String) -> bool:
-	return (Js.list(p.get("gauntlet_upgrades")) + Js.list(p.get("dons_gauntlet_upgrades"))).has(id)
+	return GauntletLocker.owns(p, id)
 
 
-## The Run Upgrades this captain has on for a dive (owned, not switched off).
 static func active_upgrades(owned: Array, off: Array) -> Array:
-	return owned.filter(func(id: Variant) -> bool: return not off.has(id))
-
-
-static func _has(ups: Array, id: String) -> bool:
-	return ups.has(id)
+	return GauntletLocker.active_upgrades(owned, off)
 
 
 static func run_hp_mult(ups: Array) -> float:
-	var m: float = 1.0
-	if _has(ups, "diving_bell"):
-		m *= 1.15
-	m *= 1.5 if _has(ups, "dg_hp_3") else (1.35 if _has(ups, "dg_hp_2") else (1.2 if _has(ups, "dg_hp") else 1.0))
-	return m
+	return GauntletLocker.run_hp_mult(ups)
 
 
 static func damage_taken_mod(ups: Array) -> float:
-	var p: float = 0.0
-	if _has(ups, "iron_hide"):
-		p -= 10.0
-	p += -25.0 if _has(ups, "dg_armor_3") else (-18.0 if _has(ups, "dg_armor_2") else (-12.0 if _has(ups, "dg_armor") else 0.0))
-	if _has(ups, "dg_loan_shark"):
-		p += 18.0
-	return p
+	return GauntletLocker.damage_taken_mod(ups)
 
 
 static func damage_mod(ups: Array) -> float:
-	var p: float = 0.0
-	if _has(ups, "gunners_eye"):
-		p += 10.0
-	p += 22.0 if _has(ups, "dg_power_3") else (16.0 if _has(ups, "dg_power_2") else (10.0 if _has(ups, "dg_power") else 0.0))
-	if _has(ups, "dg_loan_shark"):
-		p += 25.0
-	return p
+	return GauntletLocker.damage_mod(ups)
 
 
 static func kill_heal_pct(ups: Array) -> float:
-	var p: float = 0.08 if _has(ups, "vigor") else 0.0
-	return maxf(p, 0.22 if _has(ups, "dg_lifedrain_3") else (0.15 if _has(ups, "dg_lifedrain_2") else (0.10 if _has(ups, "dg_lifedrain") else 0.0)))
+	return GauntletLocker.kill_heal_pct(ups)
 
 
 static func fathoms_mult(ups: Array) -> float:
-	return (1.33 if _has(ups, "lucky_locker") else 1.0) * (1.4 if _has(ups, "dg_fathoms") else 1.0)
+	return GauntletLocker.fathoms_mult(ups)
 
 
 static func haul_mult(ups: Array) -> float:
-	return (1.15 if _has(ups, "salvagers_eye") else 1.0) * (1.2 if _has(ups, "dg_haul") else 1.0)
+	return GauntletLocker.haul_mult(ups)
 
 
 static func xp_mult(ups: Array) -> float:
-	return (1.2 if _has(ups, "navigators_log") else 1.0) * (1.25 if _has(ups, "dg_xp") else 1.0)
+	return GauntletLocker.xp_mult(ups)
 
 
 static func boon_luck(ups: Array) -> float:
-	return maxf(1.7 if _has(ups, "diviners_charm") else 1.0, 1.8 if _has(ups, "dg_luck") else 1.0)
+	return GauntletLocker.boon_luck(ups)
 
 
 static func boon_rerolls(ups: Array) -> int:
-	return maxi(1 if _has(ups, "second_cast") else 0, 2 if _has(ups, "dg_reroll_boon_2") else (1 if _has(ups, "dg_reroll_boon") else 0))
+	return GauntletLocker.boon_rerolls(ups)
 
 
 static func curse_rerolls(ups: Array) -> int:
-	return maxi(1 if _has(ups, "salt_ward") else 0, 2 if _has(ups, "dg_reroll_curse_2") else (1 if _has(ups, "dg_reroll_curse") else 0))
+	return GauntletLocker.curse_rerolls(ups)
 
 
 static func boon_filters(ups: Array) -> int:
-	return 2 if _has(ups, "dg_boon_filter_2") else (1 if _has(ups, "dg_boon_filter") else 0)
+	return GauntletLocker.boon_filters(ups)
 
 
 static func synergy_mult(ups: Array) -> float:
-	return 2.2 if _has(ups, "dg_consigliere") else 1.0
+	return GauntletLocker.synergy_mult(ups)
 
 
 static func skips_first_curse(ups: Array) -> bool:
-	return _has(ups, "calm_before") or _has(ups, "dg_calm")
+	return GauntletLocker.skips_first_curse(ups)
 
 
 static func sounding_line(ups: Array) -> bool:
-	return _has(ups, "sounding_line") or _has(ups, "dg_peek")
+	return GauntletLocker.sounding_line(ups)
 
 
 static func start_depth(ups: Array) -> int:
-	return 5 if _has(ups, "veterans_start") or _has(ups, "dg_veteran") else 1
+	return GauntletLocker.start_depth(ups)
 
 
 static func blood_oath(ups: Array) -> bool:
-	return _has(ups, "dg_blood_oath")
+	return GauntletLocker.blood_oath(ups)
 
 
-static func blood_gem_mult(ups: Array) -> float:
-	return 1.15 if _has(ups, "dg_crimson_tithe") else 1.0
-
-
-## claimGauntletUpgrade: a perk from this descent's Locker, bought with the
-## shared Fathoms purse (not owned yet, its prerequisite owned in either
-## Locker, the descent's deepest past its depth).
 static func buy_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary:
-	var u: Dictionary = upgrade_def(id)
-	if u.is_empty() or NOT_SOLD.has(id):
-		return { "error": "There is no such upgrade." }
-	var v: String = str(Js.nz(u.get("gauntlet"), "davy"))
-	var col: String = "dons_gauntlet_upgrades" if v == "don" else "gauntlet_upgrades"
-	var p: Dictionary = db.me(uid)
-	var own: Array = Js.list(p.get(col))
-	if own.has(id):
-		return { "error": "Already yours." }
-	var req: Variant = u.get("requires")
-	if req != null and not (Js.list(p.get("gauntlet_upgrades")) + Js.list(p.get("dons_gauntlet_upgrades"))).has(req):
-		return { "error": "Needs %s first." % upgrade_def(str(req)).get("name", req) }
-	if Js.num(p.get("dons_gauntlet_deepest" if v == "don" else "gauntlet_deepest")) < Js.num(u.get("depthRequired")):
-		return { "error": "Reach depth %d first." % int(Js.num(u.get("depthRequired"))) }
-	var cost: float = Js.num(u.get("cost"))
-	if Js.num(p.get("gauntlet_fathoms")) < cost:
-		return { "error": "Not enough Fathoms." }
-	db.bump_stat(uid, "gauntlet_fathoms", -cost)
-	db.add_to_list(uid, col, id)
-	return { "ok": true }
+	return GauntletLocker.buy_upgrade(db, uid, id)
 
 
-## A Run Upgrade switched off (or on) for the next dives.
 static func toggle_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary:
-	var u: Dictionary = upgrade_def(id)
-	if str(u.get("scope", "")) != "gauntlet":
-		return { "error": "Only Run Upgrades switch off." }
-	var v: String = str(Js.nz(u.get("gauntlet"), "davy"))
-	var col: String = ("dons_gauntlet_upgrades" if v == "don" else "gauntlet_upgrades") + "_off"
-	var off: Array = Js.list(db.me(uid).get(col)).duplicate()
-	if off.has(id):
-		off.erase(id)
-	else:
-		off.append(id)
-	db.update_profile(uid, { col: off })
-	return { "ok": true, "off": off.has(id) }
+	return GauntletLocker.toggle_upgrade(db, uid, id)

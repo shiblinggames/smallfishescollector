@@ -154,19 +154,10 @@ static func class_of(slug: String) -> Dictionary:
 
 
 ## traitLabel of a crew's net trait (exported over the whole -4..4 cube).
+## Bunks.net_trait owns the "s:p,d,f" parse; this clamps the sum to the cube.
 static func trait_label(effects: Array) -> String:
-	var p: int = 0
-	var d: int = 0
-	var f: int = 0
-	for e: Variant in effects:
-		var s: String = str(e)
-		if s.begins_with("s:"):
-			var parts: PackedStringArray = s.substr(2).split(",")
-			if parts.size() == 3:
-				p += int(parts[0])
-				d += int(parts[1])
-				f += int(parts[2])
-	return str(Js.obj(t().get("traitLabels")).get("%d,%d,%d" % [clampi(p, -4, 4), clampi(d, -4, 4), clampi(f, -4, 4)], ""))
+	var tr: Array = Bunks.net_trait(effects)
+	return str(Js.obj(t().get("traitLabels")).get("%d,%d,%d" % [clampi(int(tr[0]), -4, 4), clampi(int(tr[1]), -4, 4), clampi(int(tr[2]), -4, 4)], ""))
 
 
 # ── The hall and the roster's size (lib/crewHall, lib/crewCapacity) ─────────
@@ -522,11 +513,13 @@ static func _reassign_error(db: CaptainStore, uid: String, c: Dictionary) -> Str
 	return Bunks.hold_error(db, db.me(uid), crew_id)
 
 
-## The seats a ship has for a party: the hull's berths and the Sixth Berth.
+## The seats a ship has for a party (applyAssignment's crewSlots): the hull's
+## berths, a class pick's extra seat (Expanded Quarters) and the Sixth Berth,
+## counted as Battle.seat_for, Campaign.muster_party and Voyages count them.
 static func party_slots(prof: Dictionary) -> int:
 	var tier: int = int(Js.nz(prof.get("ship_tier"), 0.0))
 	var row: Dictionary = Js.obj(Js.obj(Rules.data().get("shipCombat")).get(str(tier)))
-	return int(Js.nz(row.get("crewSlots"), 1.0)) + (1 if prof.get("has_sixth_berth") == true else 0)
+	return int(Js.nz(row.get("crewSlots"), 1.0)) + int(Campaign.class_effects(prof.get("ship_classes"))["crewSlots"]) + (1 if prof.get("has_sixth_berth") == true else 0)
 
 
 ## assignToRaid / assignToVoyage / benchCrew (applyAssignment): a seat, with

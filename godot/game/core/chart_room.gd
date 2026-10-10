@@ -19,7 +19,17 @@ extends RefCounted
 ## 2026-10-03) it pays a SKIN VOUCHER (port_rules chartRoom.landmarkVouchers),
 ## and charting the whole sea one more. Parity: tests/parity/chart.json.
 
-const WILD: int = -2
+## The four pure engines live in parts beside this file (split 2026-10-10 for
+## size): chart_room_match.gd, chart_room_minefield.gd, chart_room_sudoku.gd
+## and chart_room_rigging.gd. This file keeps the weekly boards, the actions
+## over the save and the World Chart.
+
+const ChartMatch = preload("res://core/chart_room_match.gd")
+const ChartMinefield = preload("res://core/chart_room_minefield.gd")
+const ChartSudoku = preload("res://core/chart_room_sudoku.gd")
+const ChartRigging = preload("res://core/chart_room_rigging.gd")
+
+const WILD: int = ChartMatch.WILD
 const HOLD_DIFFS: Array = ["easy", "medium", "hard", "extreme"]
 const KEEP_WEEKS: int = 12
 
@@ -79,535 +89,43 @@ static func _board(db: CaptainStore, kind: String, wk: String, build: Callable, 
 	return (b as Dictionary).duplicate(true)
 
 
-# ══ The engines ═══════════════════════════════════════════════════════════════
-
-# ── Treasure Match (charting/treasureMatch.ts) ──
-
-static func _rand_type(rng: Dice.Mulberry32, n: int) -> int:
-	return int(floor(rng.next() * n))
-
+# ══ The engines (forwarders: the screens call these on ChartRoom) ═════════════
 
 static func initial_board(rng: Dice.Mulberry32, cols: int, rows: int, n: int) -> Array:
-	var b: Array = []
-	b.resize(cols * rows)
-	b.fill(-1)
-	for r: int in rows:
-		for col: int in cols:
-			var t: int = _rand_type(rng, n)
-			var guard: int = 0
-			while guard < 50:
-				guard += 1
-				var two_left: bool = col >= 2 and b[r * cols + col - 1] == t and b[r * cols + col - 2] == t
-				var two_up: bool = r >= 2 and b[(r - 1) * cols + col] == t and b[(r - 2) * cols + col] == t
-				if not two_left and not two_up:
-					break
-				t = _rand_type(rng, n)
-			b[r * cols + col] = t
-	return b
+	return ChartMatch.initial_board(rng, cols, rows, n)
 
 
 static func adjacent4(a: int, b: int, cols: int) -> bool:
-	var ra: int = a / cols
-	var ca: int = a % cols
-	var rb: int = b / cols
-	var cb: int = b % cols
-	return (ra == rb and absi(ca - cb) == 1) or (ca == cb and absi(ra - rb) == 1)
-
-
-## findColorRuns: maximal runs of 3+ of one colour or Compasses, with a real
-## gem of the colour in them; colours in the order first seen on the board.
-static func color_runs(board: Array, cols: int, rows: int) -> Array:
-	var runs: Array = []
-	var colors: Array = []
-	for v: int in board:
-		if v >= 0 and not colors.has(v):
-			colors.append(v)
-	var scan: Callable = func(line: Array) -> void:
-		for color: int in colors:
-			var run: Array = []
-			for k: int in line.size() + 1:
-				var v: int = board[line[k]] if k < line.size() else -99
-				if v == color or v == WILD:
-					run.append(line[k])
-				else:
-					if run.size() >= 3 and run.any(func(i: int) -> bool: return board[i] == color):
-						runs.append({ "cells": run.duplicate(), "color": color, "hasWild": run.any(func(i: int) -> bool: return board[i] == WILD) })
-					run = []
-	for r: int in rows:
-		var line: Array = []
-		for col: int in cols:
-			line.append(r * cols + col)
-		scan.call(line)
-	for col: int in cols:
-		var line2: Array = []
-		for r: int in rows:
-			line2.append(r * cols + col)
-		scan.call(line2)
-	return runs
+	return ChartMatch.adjacent4(a, b, cols)
 
 
 static func find_matches(board: Array, cols: int, rows: int) -> Array:
-	var hit: Array = []
-	for run: Dictionary in color_runs(board, cols, rows):
-		for i: int in run["cells"]:
-			if not hit.has(i):
-				hit.append(i)
-	return hit
+	return ChartMatch.find_matches(board, cols, rows)
 
 
 static func swapped(board: Array, a: int, b: int) -> Array:
-	var nx: Array = board.duplicate()
-	var t: int = nx[a]
-	nx[a] = nx[b]
-	nx[b] = t
-	return nx
-
-
-static func collapse_refill(board: Array, cleared: Array, cols: int, rows: int, rng: Dice.Mulberry32, n: int, wild_chance: float) -> Array:
-	var nx: Array = []
-	nx.resize(cols * rows)
-	nx.fill(-1)
-	for col: int in cols:
-		var stack: Array = []
-		for r: int in range(rows - 1, -1, -1):
-			var i: int = r * cols + col
-			if not cleared.has(i):
-				stack.append(board[i])
-		while stack.size() < rows:
-			stack.append(WILD if rng.next() < wild_chance else _rand_type(rng, n))
-		for k: int in rows:
-			nx[(rows - 1 - k) * cols + col] = stack[k]
-	return nx
-
-
-static func _pick_spawn(run: Array, a: int, b: int) -> int:
-	if run.has(a):
-		return a
-	if run.has(b):
-		return b
-	return run[run.size() / 2]
-
-
-static func _cascades(start: Array, cols: int, rows: int, n: int, rng: Dice.Mulberry32, wild_chance: float, a: int, b: int) -> Dictionary:
-	var steps: int = 0
-	var log: Array = []
-	var total: float = 0.0
-	var cur: Array = start
-	var cascade: int = 1
-	while true:
-		var runs: Array = color_runs(cur, cols, rows)
-		if runs.is_empty():
-			break
-		var wipe: Array = []
-		for run: Dictionary in runs:
-			if (run["cells"] as Array).size() >= 5 and not wipe.has(run["color"]):
-				wipe.append(run["color"])
-		var spawns: Array = []
-		for run: Dictionary in runs:
-			if (run["cells"] as Array).size() == 4 and not run["hasWild"] and not wipe.has(run["color"]):
-				var s: int = _pick_spawn(run["cells"], a if cascade == 1 else -1, b if cascade == 1 else -1)
-				if not spawns.has(s):
-					spawns.append(s)
-		var cleared_set: Dictionary = {}
-		for run: Dictionary in runs:
-			for i: int in run["cells"]:
-				cleared_set[i] = true
-		if not wipe.is_empty():
-			for i: int in cur.size():
-				if wipe.has(cur[i]):
-					cleared_set[i] = true
-		var cleared: Array = cleared_set.keys().filter(func(i: int) -> bool: return not spawns.has(i))
-		total += float(cleared.size() * 10 * cascade)
-		var with_wilds: Array = cur.duplicate()
-		for s: int in spawns:
-			with_wilds[s] = WILD
-		cur = collapse_refill(with_wilds, cleared, cols, rows, rng, n, wild_chance)
-		log.append({ "cleared": cleared, "spawns": spawns, "gained": float(cleared.size() * 10 * cascade), "board": cur })
-		steps += 1
-		cascade += 1
-	return { "steps": steps, "gained": total, "board": cur, "log": log }
+	return ChartMatch.swapped(board, a, b)
 
 
 ## resolveSwap: null for a swap that makes no match.
 static func resolve_swap(board: Array, a: int, b: int, cols: int, rows: int, n: int, rng: Dice.Mulberry32, wild_chance: float) -> Variant:
-	if not adjacent4(a, b, cols):
-		return null
-	var r: Dictionary = _cascades(swapped(board, a, b), cols, rows, n, rng, wild_chance, a, b)
-	if int(r["steps"]) == 0:
-		return null
-	return r
+	return ChartMatch.resolve_swap(board, a, b, cols, rows, n, rng, wild_chance)
 
 
 static func has_valid_move(board: Array, cols: int, rows: int) -> bool:
-	for i: int in board.size():
-		var r: int = i / cols
-		var col: int = i % cols
-		if col < cols - 1 and not find_matches(swapped(board, i, i + 1), cols, rows).is_empty():
-			return true
-		if r < rows - 1 and not find_matches(swapped(board, i, i + cols), cols, rows).is_empty():
-			return true
-	return false
+	return ChartMatch.has_valid_move(board, cols, rows)
 
 
 static func reshuffle(rng: Dice.Mulberry32, cols: int, rows: int, n: int) -> Array:
-	for k: int in 60:
-		var b: Array = initial_board(rng, cols, rows, n)
-		if has_valid_move(b, cols, rows):
-			return b
-	return initial_board(rng, cols, rows, n)
+	return ChartMatch.reshuffle(rng, cols, rows, n)
 
-
-static func points_for_score(score: float) -> int:
-	var p: int = 0
-	for t: Dictionary in c()["matchTiers"]:
-		if score >= float(t["score"]):
-			p = int(t["points"])
-	return p
-
-
-# ── The Minefield (charting/minefield.ts) ──
-
-static func neighbors8(i: int, cols: int, rows: int) -> Array:
-	var r: int = i / cols
-	var col: int = i % cols
-	var out: Array = []
-	for dr: int in range(-1, 2):
-		for dc: int in range(-1, 2):
-			if dr == 0 and dc == 0:
-				continue
-			var nr: int = r + dr
-			var nc: int = col + dc
-			if nr < 0 or nr >= rows or nc < 0 or nc >= cols:
-				continue
-			out.append(nr * cols + nc)
-	return out
-
-
-static func adjacent_mines(mines: Dictionary, i: int, cols: int, rows: int) -> int:
-	var n: int = 0
-	for j: int in neighbors8(i, cols, rows):
-		if mines.has(j):
-			n += 1
-	return n
-
-
-static func flood_reveal(mines: Dictionary, cols: int, rows: int, start: int, already: Dictionary, blocked: Dictionary) -> Array:
-	if mines.has(start) or already.has(start) or blocked.has(start):
-		return []
-	var revealed: Array = []
-	var seen: Dictionary = {}
-	var stack: Array = [start]
-	while not stack.is_empty():
-		var cell: int = stack.pop_back()
-		if seen.has(cell) or already.has(cell) or blocked.has(cell) or mines.has(cell):
-			continue
-		seen[cell] = true
-		revealed.append(cell)
-		if adjacent_mines(mines, cell, cols, rows) == 0:
-			for nb: int in neighbors8(cell, cols, rows):
-				if not seen.has(nb) and not already.has(nb) and not blocked.has(nb) and not mines.has(nb):
-					stack.append(nb)
-	return revealed
-
-
-static func _set_of(list: Array) -> Dictionary:
-	var d: Dictionary = {}
-	for v: Variant in list:
-		d[int(v)] = true
-	return d
-
-
-static func _sorted_ints(list: Array) -> Array:
-	var out: Array = list.map(func(v: Variant) -> float: return float(v))
-	out.sort()
-	return out
-
-
-static func generate_minefield(cols: int, rows: int, count: int) -> Dictionary:
-	var total: int = cols * rows
-	var min_open: int = maxi(6, int(floor(total * 0.06)))
-	for attempt: int in 200:
-		var seed: int = int(floor(Dice.next() * total))
-		var forbidden: Dictionary = _set_of([seed] + neighbors8(seed, cols, rows))
-		var cand: Array = []
-		for i: int in total:
-			if not forbidden.has(i):
-				cand.append(i)
-		for i: int in range(cand.size() - 1, 0, -1):
-			var j: int = int(floor(Dice.next() * (i + 1)))
-			var t: int = cand[i]
-			cand[i] = cand[j]
-			cand[j] = t
-		var mines: Dictionary = _set_of(cand.slice(0, count))
-		var opening: Array = flood_reveal(mines, cols, rows, seed, {}, {})
-		if opening.size() >= min_open:
-			return { "mines": _sorted_ints(mines.keys()), "opening": _sorted_ints(opening) }
-	var forb: Dictionary = _set_of([0] + neighbors8(0, cols, rows))
-	var cands: Array = []
-	for i: int in total:
-		if not forb.has(i):
-			cands.append(i)
-	var ms: Dictionary = _set_of(cands.slice(0, count))
-	return { "mines": _sorted_ints(ms.keys()), "opening": _sorted_ints(flood_reveal(ms, cols, rows, 0, {}, {})) }
-
-
-# ── The Hold's sudoku (hold/sudoku.ts) ──
 
 static func _box(idx: int) -> int:
-	return (idx / 9 / 3) * 3 + (idx % 9) / 3
+	return ChartSudoku._box(idx)
 
-
-static func _shuffled(arr: Array) -> Array:
-	var a: Array = arr.duplicate()
-	for i: int in range(a.size() - 1, 0, -1):
-		var j: int = int(floor(Dice.next() * (i + 1)))
-		var t: Variant = a[i]
-		a[i] = a[j]
-		a[j] = t
-	return a
-
-
-static func _masks(board: Array) -> Array:
-	var rws: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-	var cls: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-	var bxs: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-	for i: int in board.size():
-		var v: int = board[i]
-		if v == 0:
-			continue
-		var bit: int = 1 << v
-		rws[i / 9] |= bit
-		cls[i % 9] |= bit
-		bxs[_box(i)] |= bit
-	return [rws, cls, bxs]
-
-
-static func _cand_bits(m: Array, idx: int) -> int:
-	var used: int = int(m[0][idx / 9]) | int(m[1][idx % 9]) | int(m[2][_box(idx)])
-	return ~used & 0b1111111110
-
-
-static func _digits(bits: int) -> Array:
-	var out: Array = []
-	for v: int in range(1, 10):
-		if bits & (1 << v):
-			out.append(v)
-	return out
-
-
-static func _set_cell(board: Array, m: Array, idx: int, v: int) -> void:
-	board[idx] = v
-	var bit: int = 1 << v
-	m[0][idx / 9] |= bit
-	m[1][idx % 9] |= bit
-	m[2][_box(idx)] |= bit
-
-
-static func _clear_cell(board: Array, m: Array, idx: int, v: int) -> void:
-	board[idx] = 0
-	var bit: int = ~(1 << v)
-	m[0][idx / 9] &= bit
-	m[1][idx % 9] &= bit
-	m[2][_box(idx)] &= bit
-
-
-## MRV: [idx, bits], or -1 full, or -2 a dead end.
-static func _pick(board: Array, m: Array) -> Variant:
-	var best: int = -1
-	var best_bits: int = 0
-	var best_count: int = 10
-	for i: int in board.size():
-		if board[i] != 0:
-			continue
-		var bits: int = _cand_bits(m, i)
-		var count: int = _digits(bits).size()
-		if count == 0:
-			return -2
-		if count < best_count:
-			best_count = count
-			best = i
-			best_bits = bits
-			if count == 1:
-				break
-	if best == -1:
-		return -1
-	return [best, best_bits]
-
-
-static func _fill(board: Array, m: Array) -> bool:
-	var p: Variant = _pick(board, m)
-	if p is int:
-		return p == -1
-	for v: int in _shuffled(_digits(p[1])):
-		_set_cell(board, m, p[0], v)
-		if _fill(board, m):
-			return true
-		_clear_cell(board, m, p[0], v)
-	return false
-
-
-static func count_solutions(source: Array, limit: int = 2) -> int:
-	var board: Array = source.duplicate()
-	var m: Array = _masks(board)
-	var found: Array = [0]
-	var rec: Array = []
-	rec.append(func() -> void:
-		if found[0] >= limit:
-			return
-		var p: Variant = _pick(board, m)
-		if p is int:
-			if p == -1:
-				found[0] += 1
-			return
-		for v: int in _digits(p[1]):
-			_set_cell(board, m, p[0], v)
-			rec[0].call()
-			_clear_cell(board, m, p[0], v)
-			if found[0] >= limit:
-				return)
-	rec[0].call()
-	return found[0]
-
-
-static func _str(board: Array) -> String:
-	var s: String = ""
-	for v: int in board:
-		s += str(v) if v != 0 else "."
-	return s
-
-
-static func generate_sudoku(target_givens: int) -> Dictionary:
-	var full: Array = []
-	full.resize(81)
-	full.fill(0)
-	_fill(full, _masks(full))
-	var puzzle: Array = full.duplicate()
-	var givens: int = 81
-	var order: Array = []
-	for i: int in 81:
-		order.append(i)
-	for idx: int in _shuffled(order):
-		if givens <= target_givens:
-			break
-		if puzzle[idx] == 0:
-			continue
-		var backup: int = puzzle[idx]
-		puzzle[idx] = 0
-		if count_solutions(puzzle, 2) != 1:
-			puzzle[idx] = backup
-		else:
-			givens -= 1
-	return { "givens": _str(puzzle), "solution": _str(full) }
-
-
-# ── The Rigging (rigging/rigging.ts) ──
 
 static func neighbors4(i: int, cols: int, rows: int) -> Array:
-	var r: int = i / cols
-	var col: int = i % cols
-	var out: Array = []
-	if r > 0:
-		out.append(i - cols)
-	if r < rows - 1:
-		out.append(i + cols)
-	if col > 0:
-		out.append(i - 1)
-	if col < cols - 1:
-		out.append(i + 1)
-	return out
-
-
-static func generate_rigging(cols: int, rows: int, colors: int) -> Dictionary:
-	var path: Array = []
-	for r: int in rows:
-		if r % 2 == 0:
-			for col: int in cols:
-				path.append(r * cols + col)
-		else:
-			for col: int in range(cols - 1, -1, -1):
-				path.append(r * cols + col)
-	var n: int = path.size()
-	var pos: Dictionary = {}
-	for k: int in n:
-		pos[path[k]] = k
-	for it: int in cols * rows * 12:
-		var at_tail: bool = int(floor(Dice.next() * 2)) == 0
-		var end_cell: int = path[n - 1] if at_tail else path[0]
-		var nb: Array = neighbors4(end_cell, cols, rows)
-		var v: int = nb[int(floor(Dice.next() * nb.size()))]
-		var j: int = pos[v]
-		var lo: int
-		var hi: int
-		if at_tail:
-			if j >= n - 2:
-				continue
-			lo = j + 1
-			hi = n - 1
-		else:
-			if j <= 1:
-				continue
-			lo = 0
-			hi = j - 1
-		while lo < hi:
-			var t: int = path[lo]
-			path[lo] = path[hi]
-			path[hi] = t
-			pos[path[lo]] = lo
-			pos[path[hi]] = hi
-			lo += 1
-			hi -= 1
-		if lo == hi:
-			pos[path[lo]] = lo
-	var lengths: Array = []
-	lengths.resize(colors)
-	lengths.fill(2)
-	var remaining: int = n - 2 * colors
-	while remaining > 0:
-		lengths[int(floor(Dice.next() * colors))] += 1
-		remaining -= 1
-	var pairs: Array = []
-	var cursor: int = 0
-	for color: int in colors:
-		var seg: Array = path.slice(cursor, cursor + lengths[color])
-		cursor += lengths[color]
-		pairs.append({ "color": float(color), "a": float(seg[0]), "b": float(seg[seg.size() - 1]) })
-	return { "cols": float(cols), "rows": float(rows), "pairs": pairs }
-
-
-static func path_valid(cells: Variant, pair: Dictionary, cols: int, rows: int) -> bool:
-	if not (cells is Array) or (cells as Array).size() < 2:
-		return false
-	var p: Array = cells
-	var a: int = int(pair["a"])
-	var b: int = int(pair["b"])
-	var first: int = int(Js.num(p[0]))
-	var last: int = int(Js.num(p[p.size() - 1]))
-	if not (first == a or first == b) or not (last == a or last == b) or first == last:
-		return false
-	var seen: Dictionary = {}
-	for k: int in p.size():
-		if not (p[k] is float or p[k] is int):
-			return false
-		var cell: int = int(p[k])
-		if float(p[k]) != float(cell) or cell < 0 or cell >= cols * rows or seen.has(cell):
-			return false
-		seen[cell] = true
-		if k > 0 and not neighbors4(int(p[k - 1]), cols, rows).has(cell):
-			return false
-	return true
-
-
-static func rigging_solved(cols: int, rows: int, pairs: Array, paths: Dictionary) -> bool:
-	var covered: Dictionary = {}
-	for pair: Dictionary in pairs:
-		var p: Variant = paths.get(Js.key(pair["color"]))
-		if p == null or not path_valid(p, pair, cols, rows):
-			return false
-		for cell: Variant in p:
-			if covered.has(int(cell)):
-				return false
-			covered[int(cell)] = true
-	return covered.size() == cols * rows
+	return ChartRigging.neighbors4(i, cols, rows)
 
 
 # ══ The week's boards ═════════════════════════════════════════════════════════
@@ -621,7 +139,7 @@ static func _match_board(db: CaptainStore) -> Dictionary:
 static func _minefield_board(db: CaptainStore) -> Dictionary:
 	var m: Dictionary = c()["minefield"]
 	return _board(db, "minefield", week(), func() -> Variant:
-		var g: Dictionary = generate_minefield(int(m["cols"]), int(m["rows"]), int(m["mines"]))
+		var g: Dictionary = ChartMinefield.generate_minefield(int(m["cols"]), int(m["rows"]), int(m["mines"]))
 		return { "cols": m["cols"], "rows": m["rows"], "mineCount": m["mines"], "mines": g["mines"], "opening": g["opening"] })
 
 
@@ -629,7 +147,7 @@ static func _sudoku_board(db: CaptainStore) -> Dictionary:
 	return _board(db, "sudoku", week(), func() -> Variant:
 		var out: Dictionary = {}
 		for d: String in HOLD_DIFFS:
-			out[d] = generate_sudoku(int(c()["hold"][d]["givens"]))
+			out[d] = ChartSudoku.generate_sudoku(int(c()["hold"][d]["givens"]))
 		return out, func(b: Variant) -> bool:
 			return HOLD_DIFFS.all(func(d: String) -> bool: return Js.obj(b).has(d) and Js.obj(Js.obj(b)[d]).get("givens") is String))
 
@@ -637,7 +155,7 @@ static func _sudoku_board(db: CaptainStore) -> Dictionary:
 static func _rigging_board(db: CaptainStore) -> Dictionary:
 	var m: Dictionary = c()["rigging"]
 	return _board(db, "rigging", week(), func() -> Variant:
-		return generate_rigging(int(m["cols"]), int(m["rows"]), int(m["colors"])))
+		return ChartRigging.generate_rigging(int(m["cols"]), int(m["rows"]), int(m["colors"])))
 
 
 ## A puzzle's Fishing gate (port rules; none under the web's tables).
@@ -715,7 +233,7 @@ static func submit_match(db: CaptainStore, uid: String, moves: Variant) -> Dicti
 		if not has_valid_move(board, cols, rows):
 			board = reshuffle(rng, cols, rows, types)
 	var best: float = maxf(float(attempt["best_score"]), floor(score))
-	var tier: int = points_for_score(best)
+	var tier: int = ChartMatch.points_for_score(best)
 	var delta: int = maxi(0, tier - int(attempt["points_awarded"]))
 	var maxed: bool = tier >= int(c()["match"]["maxPoints"])
 	var ms: Dictionary = _ch(db)["match"]
@@ -738,8 +256,8 @@ static func submit_match(db: CaptainStore, uid: String, moves: Variant) -> Dicti
 # ══ The Minefield ═════════════════════════════════════════════════════════════
 
 static func _tiles(indices: Array, layout: Dictionary) -> Array:
-	var mines: Dictionary = _set_of(layout["mines"])
-	return indices.map(func(i: Variant) -> Dictionary: return { "i": float(i), "adj": float(adjacent_mines(mines, int(i), int(layout["cols"]), int(layout["rows"]))) })
+	var mines: Dictionary = ChartMinefield.set_of(layout["mines"])
+	return indices.map(func(i: Variant) -> Dictionary: return { "i": float(i), "adj": float(ChartMinefield.adjacent_mines(mines, int(i), int(layout["cols"]), int(layout["rows"]))) })
 
 
 static func _fresh_mf(layout: Dictionary) -> Dictionary:
@@ -783,17 +301,17 @@ static func reveal_cell(db: CaptainStore, uid: String, index: Variant) -> Dictio
 	var a: Dictionary = Js.obj(existing).duplicate(true) if existing != null else _fresh_mf(layout)
 	if a["status"] == "cleared":
 		return { "busted": false, "cleared": true, "revealed": _tiles(a["revealed"], layout), "status": "cleared", "busts": a["busts"], "pointsWon": 0.0, "newPuzzlePoints": null }
-	var rset: Dictionary = _set_of(a["revealed"])
-	var fset: Dictionary = _set_of(a["flagged"])
+	var rset: Dictionary = ChartMinefield.set_of(a["revealed"])
+	var fset: Dictionary = ChartMinefield.set_of(a["flagged"])
 	if rset.has(i) or fset.has(i):
 		return { "busted": false, "cleared": false, "revealed": _tiles(a["revealed"], layout), "status": "active", "busts": a["busts"], "pointsWon": 0.0, "newPuzzlePoints": null }
-	var mines: Dictionary = _set_of(layout["mines"])
+	var mines: Dictionary = ChartMinefield.set_of(layout["mines"])
 	if mines.has(i):
 		a["revealed"] = (layout["opening"] as Array).duplicate()
 		a["busts"] = float(a["busts"]) + 1.0
 		_save_mf(db, wk, a)
 		return { "busted": true, "cleared": false, "revealed": _tiles(a["revealed"], layout), "status": "active", "busts": a["busts"], "pointsWon": 0.0, "newPuzzlePoints": null }
-	var fresh: Array = flood_reveal(mines, int(layout["cols"]), int(layout["rows"]), i, rset, fset)
+	var fresh: Array = ChartMinefield.flood_reveal(mines, int(layout["cols"]), int(layout["rows"]), i, rset, fset)
 	var rev: Array = (a["revealed"] as Array).duplicate()
 	for f: int in fresh:
 		if not rset.has(f):
@@ -1055,7 +573,7 @@ static func submit_rigging(db: CaptainStore, uid: String, paths: Variant) -> Dic
 	var g: String = gate(db, uid, "rigging")
 	if g != "":
 		return { "error": g }
-	if not rigging_solved(int(layout["cols"]), int(layout["rows"]), layout["pairs"], pd):
+	if not ChartRigging.rigging_solved(int(layout["cols"]), int(layout["rows"]), layout["pairs"], pd):
 		if a["status"] != "cleared":
 			_save_rig(db, wk, pd)
 		return { "solved": false, "pointsWon": 0.0, "newPuzzlePoints": null }
