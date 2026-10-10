@@ -89,7 +89,9 @@ func _ready() -> void:
 	fw.add_child(FlowPainter.new())
 	_blobs = _layer(BLOB_CAP, _blob_tex())
 	_rings = _layer(RING_CAP, Wake._ring_tex())
+	_blobs.set_meta("ambient", true)
 	_world.add_child(_blobs)
+	_rings.set_meta("ambient", true)
 	_world.add_child(_rings)
 	for i: int in RING_CAP:
 		_r.append([0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
@@ -106,6 +108,7 @@ func share_wake(w: Wake) -> void:
 		mi.texture = _blob_tex() if src == w._marks else src.texture
 		# The wake draws its foam faint; as height it wants to be felt.
 		mi.material = _gain(5.0 if src == w._marks else 2.4)
+		mi.set_meta("ambient", true)
 		_world.add_child(mi)
 
 

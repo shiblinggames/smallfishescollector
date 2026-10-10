@@ -65,6 +65,7 @@ func attach(world: Node2D) -> void:
 		mul.shader = load("res://game/fx/cloud_shadow.gdshader")
 		sh.material = mul
 		sh.z_index = 3
+		sh.set_meta("ambient", true)
 		world.add_child(sh)
 		_shadows.append(sh)
 		_clouds.append({ "on": false })

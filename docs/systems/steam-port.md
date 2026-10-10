@@ -2286,9 +2286,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   defensive orders land after the hit by chance): a ring breathes on the water under what it
   will touch (the ship it helps, your own, or the enemy) with its name, and beside the crew "Skwid:
   Jam Dodge / Goes first this round, with your action" (BattleStage._order_preview); a co-op
-  plate's chip names the order. THE WATER CLEARS FOR A FIGHT (Sea._fight_clear): the anchored
-  campaign ships, the buyers and Finn fade with the cut, wanderers and regulars are put away, and
-  in a fight of your own crewmates nearby fade out; all return as it ends.
+  plate's chip names the order. THE WATER CLEARS FOR A FIGHT (Sea._fight_clear; Kong: home
+  portals, islands and the campaign's ticks too): everything on the water fades with the cut but
+  the fight (meta "fight": the line, the enemy, the battle's effects) and the sea's own life (meta
+  "ambient": wake, ripples, weather, fog, sky; and her wake, sea life, motes, the fog layer), and
+  returns at its own alpha as it ends (the campaign then refreshed); in a fight of your own,
+  crewmates nearby fade too. THE FIGHT SITS FURTHER BACK: BattleStage.FRAME_FILL 0.56 x 0.47 of
+  the screen (was 0.72 x 0.6, "very zoomed in").
 - PLAYTEST PROGRESS STAYS IN THE PLAYTEST (Kong, 2026-10-09: testers' web captains brought in
   for testing, then wiped "once we do the full production release"; everything is wiped, imported
   or not). game/playtest.gd: the build's channel is game/channel (tools/build.mjs writes it into

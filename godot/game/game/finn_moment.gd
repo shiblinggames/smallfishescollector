@@ -32,6 +32,7 @@ static func play(world: Node2D, at: Vector2, sea_field: SeaField, number: int, z
 	m.field = sea_field
 	m.position = at
 	m.z_index = z
+	m.set_meta("fight", true)
 	world.add_child(m)
 	return m
 

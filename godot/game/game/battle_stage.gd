@@ -180,6 +180,7 @@ func _ready() -> void:
 	_fx = BattleFx.new()
 	_fx.field = sea._field
 	_fx.z_index = 6
+	_fx.set_meta("fight", true)
 	sea._world.add_child(_fx)
 	_frame()
 	_banner = Kit.text(self, "", "display", BattleLook.CREAM)
@@ -214,6 +215,7 @@ func _ready() -> void:
 		_moments = GauntletMoments.new()
 		_moments.field = sea._field
 		_moments.fx = _fx
+		_moments.set_meta("fight", true)
 		sea._world.add_child(_moments)
 		_atmos = DeepAtmos.new()
 		_atmos.sea = sea
@@ -246,6 +248,7 @@ func _ready() -> void:
 
 ## The camera's frame on the fight: centred between the two, zoomed so the
 ## pair fills the middle of the screen.
+const FRAME_FILL: Vector2 = Vector2(0.56, 0.47)
 func _frame() -> void:
 	var vp: Vector2 = get_viewport_rect().size
 	# Every ship in the line in the frame (together), the enemy facing them.
@@ -267,7 +270,9 @@ func _frame() -> void:
 	hi = hi.max(Vector2(hi.x, ehi.y))
 	var span: float = absf(ehi.x - lo.x) + 520.0
 	var tall: float = (hi.y - lo.y) * Chart.GROUND + 560.0
-	var z: float = clampf(minf(vp.x * 0.72 / span, vp.y * 0.6 / tall), 0.4, 1.5)
+	# FRAME_FILL: how much of the screen the fight fills (Kong, 2026-10-09:
+	# "very zoomed in" at 0.72 / 0.6, eased out about a fifth).
+	var z: float = clampf(minf(vp.x * FRAME_FILL.x / span, vp.y * FRAME_FILL.y / tall), 0.35, 1.5)
 	var mid: Vector2 = Vector2((lo.x + ehi.x) / 2.0, (lo.y + hi.y) / 2.0) - (_at + _offset(me))
 	sea.stage = { "zoom": z, "shift": Vector2(mid.x, mid.y * Chart.GROUND - 40.0) * z }
 
@@ -441,6 +446,7 @@ func _enemy_enters() -> void:
 		var anchored: bool = at_anchor and j == 0
 		node.position = at if anchored else at + Vector2(900, 30)
 		node.z_index = 1
+		node.set_meta("fight", true)
 		sea._world.add_child(node)
 		var kind: String = GauntletMoments.entry_for(e) if gauntlet != "" and j == 0 and _moments != null and not autoplay and not anchored else ""
 		if kind != "":
@@ -1784,6 +1790,7 @@ func _breach(tex: Texture2D, col: Color) -> void:
 	sm.col = col
 	sm.position = _enemy_at + Vector2(-220, 200)
 	sm.z_index = 3
+	sm.set_meta("fight", true)
 	sea._world.add_child(sm)
 	await sm.rise()
 	await sm.lunge(_enemy_at)
@@ -2359,6 +2366,7 @@ func _summon(x: Dictionary) -> void:
 	sm.col = Color(str(x.get("color", "#a78bfa")))
 	sm.position = _enemy_at + Vector2(-90, 260)
 	sm.z_index = 3
+	sm.set_meta("fight", true)
 	sea._world.add_child(sm)
 	_say(str(x.get("name", "")))
 	await sm.rise()

@@ -58,6 +58,7 @@ func _ready() -> void:
 	_water = Node2D.new()
 	_water.z_index = -1
 	_water.draw.connect(_draw_water)
+	_water.set_meta("ambient", true)
 	sea._world.add_child(_water)
 
 

@@ -1410,39 +1410,34 @@ func _open_finn() -> void:
 ## eases out as she enters the passage (the stone's scale), and under the span
 ## the music closes in to a muffle and opens again beyond.
 var _pass_k: float = 0.0
-## THE WATER CLEARS FOR A FIGHT (Kong, 2026-10-09: other ships and NPCs in the
-## background of the Quartermaster's fight were "weird"): while a fight has the
-## stage, the anchored campaign ships (the enemy sails in as its own hull), the
-## buyers and Finn fade out with the cut, and the wandering traders and
-## regulars are put away; all come back as it ends. Islands and the line's own
-## ships stay.
-var _fight_hid: Array = []
+## THE WATER CLEARS FOR A FIGHT (Kong, 2026-10-09: other ships, NPCs, home
+## portals, islands and the campaign's marks behind a fight were "weird"): while
+## a fight has the stage, everything on the water fades out with the cut but
+## the fight itself (her ship, the line's, the enemy, the battle's effects:
+## meta "fight") and the sea's own life (the wake, the ripples, weather, fog,
+## the sky: meta "ambient"), and comes back as it ends at the alpha it had.
+var _fight_alpha: Dictionary = {}
 
 
 func _fight_clear() -> void:
 	var sk: float = _stage_k * _stage_k * (3.0 - 2.0 * _stage_k)
-	var fade: Array = []
-	if _campaign != null:
-		fade += _campaign._ships.values()
-	fade += _buyers
-	if _finn != null:
-		fade.append(_finn)
-	for n: Variant in fade:
-		if is_instance_valid(n):
-			(n as CanvasItem).modulate.a = 1.0 - sk
-	var want: bool = stage != null and _stage_k > 0.5
-	if want:
-		for list: Dictionary in [_regulars, _strangers]:
-			for k: String in list:
-				var w: Node2D = list[k]
-				if is_instance_valid(w) and w.visible:
-					w.visible = false
-					_fight_hid.append(w)
-	elif not _fight_hid.is_empty():
-		for w2: Variant in _fight_hid:
-			if is_instance_valid(w2):
-				(w2 as Node2D).visible = true
-		_fight_hid.clear()
+	if sk <= 0.0 and _fight_alpha.is_empty():
+		return
+	var keep: Array = [_boat, _wake, _life, _motes, _xfog]
+	keep += _mates.values()
+	for n: Node in _world.get_children():
+		if not (n is CanvasItem) or n in keep or n.has_meta("fight") or n.has_meta("ambient") or n is SeaFlow:
+			continue
+		var ci: CanvasItem = n
+		var id: int = ci.get_instance_id()
+		if not _fight_alpha.has(id):
+			_fight_alpha[id] = ci.modulate.a
+		ci.modulate.a = float(_fight_alpha[id]) * (1.0 - sk)
+	if sk <= 0.0:
+		_fight_alpha.clear()
+		# The campaign's marks and islands as the fight left them.
+		if _campaign != null:
+			_campaign.refresh()
 ## THE CAMERA UNDER WAY (Kong, 2026-10-09): it leads the way she is sailing,
 ## up to LEAD of the screen at full speed, and settles dead centre at anchor,
 ## with the rod out or a panel up (fishing stays locked in); it draws back

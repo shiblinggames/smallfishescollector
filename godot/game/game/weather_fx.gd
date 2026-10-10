@@ -46,6 +46,7 @@ func _ready() -> void:
 	_world = Node2D.new()
 	_world.z_index = 2
 	_world.draw.connect(_draw_world)
+	_world.set_meta("ambient", true)
 	sea._world.add_child(_world)
 	_screen = CanvasLayer.new()
 	_screen.layer = 1
