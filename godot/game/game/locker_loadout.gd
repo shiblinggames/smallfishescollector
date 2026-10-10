@@ -63,6 +63,9 @@ static func options(session: Session, s: String) -> Array:
 	match s:
 		"rod":
 			var tiers: Array = [0.0] + session.store.held_rod_tiers(session.uid)
+			# In the ladder's order, not the save's (a converted web captain's
+			# rods came in the order they were bought).
+			tiers.sort()
 			for t: Variant in tiers:
 				var r: Dictionary = Rules.rod(float(t))
 				out.append([float(t), r["name"], "%s_thumb.png" % r.get("slug", ""), Paper.rarity(1.0 + minf(4.0, float(t) / 2.0)), ""])
