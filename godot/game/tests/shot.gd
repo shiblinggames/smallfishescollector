@@ -11,6 +11,14 @@ extends SceneTree
 
 func _init() -> void:
 	Captains.dir_override = "user://shot_captains"
+	# SHOT_SAVE: play a real captain's save (a copy; the file is untouched),
+	# e.g. a converted web captain, to see screens with a full game's data.
+	if OS.get_environment("SHOT_SAVE") != "":
+		Captains.dir_override = "user://shot_save_captains"
+		DirAccess.make_dir_recursive_absolute(Captains.dir_override)
+		for f0: String in DirAccess.get_files_at(Captains.dir_override):
+			DirAccess.remove_absolute("%s/%s" % [Captains.dir_override, f0])
+		DirAccess.copy_absolute(OS.get_environment("SHOT_SAVE"), Captains.dir_override + "/" + OS.get_environment("SHOT_SAVE").get_file())
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
@@ -117,8 +125,9 @@ func _init() -> void:
 			owned_sk.append(OS.get_environment("SHIP_SKIN"))
 		p["owned_ship_skins"] = owned_sk
 		p["equipped_ship_skin"] = OS.get_environment("SHIP_SKIN")
-	p["current_perfect_streak"] = 8.0
-	p["fishing_xp"] = 2400.0
+	if OS.get_environment("SHOT_SAVE") == "":
+		p["current_perfect_streak"] = 8.0
+		p["fishing_xp"] = 2400.0
 	if OS.get_environment("SHOT_XP") != "":
 		p["fishing_xp"] = float(OS.get_environment("SHOT_XP"))
 		sea.session.changed.emit()
@@ -305,7 +314,7 @@ func _init() -> void:
 				await process_frame
 				var sh: PortalSheet = sea._hud_layer.get_child(sea._hud_layer.get_child_count() - 1)
 				sh._sel = Portal.tier_def(4)
-				sh._draw()
+				sh._build()
 		"front", "frontedge":
 			# A front of the kind FRONT_KIND (default tempest), the view at its
 			# heart or (frontedge) on its leading edge.
@@ -1769,6 +1778,16 @@ func _init() -> void:
 	var wait: int = 150 if what == "crate" else (160 if what in ["card", "finn", "rankup", "slain"] else 50)
 	for f: int in wait:
 		await process_frame
+	# LAYOUT=1: the screen as it stands checked for words that do not fit,
+	# and for anything changing size while idle (tests/layout_audit.gd).
+	if OS.get_environment("LAYOUT") != "":
+		var la: GDScript = preload("res://tests/layout_audit.gd")
+		var snap: Dictionary = la.snapshot(root)
+		for f2: int in 90:
+			await process_frame
+		print("LAYOUT-RAN ", what)
+		for line: String in la.audit(root, snap, what):
+			print(line)
 	var img: Image = root.get_texture().get_image()
 	img.save_png(out)
 	print("  saved ", out)
