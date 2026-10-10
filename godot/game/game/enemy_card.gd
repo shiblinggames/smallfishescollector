@@ -74,7 +74,7 @@ func _content() -> void:
 	# A co-op pack's combo, and the other half it needs.
 	var cb: Dictionary = Js.obj(e.get("combo"))
 	if not cb.is_empty():
-		var cd: Dictionary = Battle.combo_def(e, str(cb["id"]))
+		var cd: Dictionary = Gauntlet.combo_def(str(cb["id"]))
 		does.append([str(cd.get("name", "")), "combo", _combo_desc(cd, cb) + " Sink either ship and the combo breaks."])
 	var af: Dictionary = Js.obj(e.get("affix"))
 	if not af.is_empty():

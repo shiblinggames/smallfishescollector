@@ -1,5 +1,5 @@
 class_name RaidTable
-extends Node
+extends "res://game/crew_table.gd"
 ## A CHARTER'S RAID TOGETHER (Kong, 2026-10-03: co-op raids; the settled shape
 ## in docs/systems/steam-port.md: the founder's game runs the fight, a shared
 ## planning phase, the boss's target hidden, joining only at a raid's start).
@@ -31,26 +31,18 @@ extends Node
 ##   PAY: every kill pays each captain still in the fight into their own save
 ##   (a captain sunk or fled is out of it); the boss's crate is each one's own,
 ##   and the clear is recorded for each.
-
-signal changed(state: Dictionary)
+##
+## The plumbing it shares with GauntletTable (the wire, the invites, the AFK
+## clock, welcome and drop) is in game/crew_table.gd, which it extends.
 
 ## No clock on a plan (battle_stage reads PLAN only as a fallback).
 const PLAN: float = 30.0
-const PLAY: float = 25.0
 const FLARES: float = 25.0
-const MAX_SEATS: int = 4
 ## How near the raid's dock a ship must be to call or join it.
 const NEAR: float = 1400.0
 
 ## Who in this game is listening (the battle stage, the muster call).
 static var live: RaidTable = null
-
-## On the founder's game: the Charter the raid belongs to.
-var charter: Charter = null
-## The latest raid, as everyone sees it.
-var state: Dictionary = {}
-var _r: Dictionary = { "phase": "idle", "seq": 0 }
-var _began_ms: int = 0
 
 
 func _ready() -> void:
@@ -63,18 +55,10 @@ func _exit_tree() -> void:
 		live = null
 
 
-func hosting() -> bool:
-	return charter != null
-
-
-## The Charter is left (CrewNet): the raid is gone with it, so a later Charter
-## starts idle (a muster left standing refused every new call).
+## The Charter is left (CrewNet): the raid is gone with it (the feats too).
 func reset() -> void:
-	charter = null
-	state = {}
-	_r = { "phase": "idle", "seq": 0 }
+	super()
 	_feats = {}
-	_phase_seen = ""
 
 
 # ── The founder's side ─────────────────────────────────────────────────────────
@@ -101,13 +85,7 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 			_start()
 			return { "ok": true }
 		"ready":
-			if _r["phase"] != "muster":
-				return { "error": "Not now." }
-			for m: Dictionary in _r["members"]:
-				if m["key"] == key:
-					m["ready"] = payload == true
-			_push()
-			return { "ok": true }
+			return _ready_up(key, payload == true)
 		"tier":
 			if _r["phase"] != "muster" or _r.get("by") != key:
 				return { "error": "Only the captain who called it picks the tier." }
@@ -138,24 +116,8 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 		"nudge":
 			return _nudge(key)
 		"out":
-			# Sunk or got away: this screen has left the fight, so the rounds
-			# no longer wait on it.
-			if _r.has("gone"):
-				_r["gone"][key] = true
-				if _r["phase"] == "playing" and _everyone_played():
-					_advance()
-			return { "ok": true }
+			return _out(key)
 	return { "error": "There is no such order." }
-
-
-func _seat_of(key: String) -> int:
-	if not (_r.get("b") is Dictionary):
-		return -1
-	var seats: Array = _r["b"]["seats"]
-	for i: int in seats.size():
-		if seats[i].get("key") == key:
-			return i
-	return -1
 
 
 ## May this captain take on that raid? Their own map must have reached it.
@@ -218,18 +180,6 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 	return { "ok": true }
 
 
-func _leave(key: String) -> Dictionary:
-	if _r["phase"] != "muster":
-		return { "error": "The fight is on." }
-	if _r.get("by") == key:
-		_r["phase"] = "idle"
-		_r["result"] = "called off"
-	else:
-		_r["members"] = (_r["members"] as Array).filter(func(m: Dictionary) -> bool: return m["key"] != key)
-	_push()
-	return { "ok": true }
-
-
 ## The muster is over: every ship joins the line, the first fight begins.
 func _start() -> void:
 	var seats: Array = []
@@ -244,26 +194,6 @@ func _start() -> void:
 	_began_ms = Time.get_ticks_msec()
 	_feats = {}
 	_step("plan", [{ "t": "begin" }])
-
-
-## Move to a phase with this round's events; everyone plays them first.
-func _step(next: String, ev: Array) -> void:
-	_r["seq"] = int(_r["seq"]) + 1
-	_r["ev"] = ev
-	_r["acks"] = {}
-	_r["after"] = next
-	_r["phase"] = "playing"
-	_r["left"] = PLAY
-	_push()
-
-
-func _played(key: String, seq: int) -> Dictionary:
-	if _r["phase"] != "playing" or seq != int(_r["seq"]):
-		return { "ok": true }
-	_r["acks"][key] = true
-	if _everyone_played():
-		_advance()
-	return { "ok": true }
 
 
 func _everyone_played() -> bool:
@@ -329,27 +259,6 @@ func _next_fight() -> void:
 	_step("plan", [{ "t": "nextFight", "rest": nx.get("rest", false), "boss": nx.get("boss", false) }])
 
 
-func _plan(key: String, plan: Dictionary) -> Dictionary:
-	if _r["phase"] != "plan":
-		return { "error": "Not now." }
-	var si: int = _seat_of(key)
-	if si < 0 or not Battle.alive(_r["b"]).has(_r["b"]["seats"][si]):
-		return { "error": "You are out of this fight." }
-	_r["plans"][key] = plan
-	_push()
-	if _all_planned():
-		_resolve()
-	return { "ok": true }
-
-
-func _all_planned() -> bool:
-	var b: Dictionary = _r["b"]
-	for s: Dictionary in Battle.alive(b):
-		if not _r["plans"].has(s["key"]):
-			return false
-	return true
-
-
 ## Resolve the round on the founder's game (flees first), and pay any kill.
 func _resolve() -> void:
 	var b: Dictionary = _r["b"]
@@ -398,20 +307,6 @@ func _lives_lost() -> void:
 	for s: Dictionary in _r["b"]["seats"]:
 		if s.get("sunk", false):
 			charter.spend_life(str(s.get("key", "")), "Sunk at %s" % title)
-
-
-## A crew moment for the crew's bounty order, written down ONCE (in the first
-## captain's record; the board reads the whole crew's): in a Charter with more
-## than one captain in the line.
-func _crew_moment(kind: String, value: float) -> void:
-	if charter == null or (_r.get("members", []) as Array).size() < 2:
-		return
-	var k: String = str((_r["members"] as Array)[0]["key"])
-	var s: Session = _session(k)
-	if s == null:
-		return
-	Bounties.log_event(s.store, s.uid, kind, value)
-	charter.write(k)
 
 
 ## Each captain's feats over the raid (core/raid_feats.gd), by seat key.
@@ -525,28 +420,9 @@ func _tide_pick(key: String, choice: String) -> Dictionary:
 	return { "ok": true }
 
 
-func _drum(key: String) -> Dictionary:
-	if _r["phase"] != "plan":
-		return { "error": "Not now." }
-	var si: int = _seat_of(key)
-	if si < 0:
-		return { "error": "You are out of this fight." }
-	var r: Dictionary = Battle.use_drum(_r["b"], si)
-	_push()
-	return r
-
-
-func _process(delta: float) -> void:
-	if not hosting():
-		return
-	if float(_r.get("left", -1.0)) <= 0.0:
-		return
-	_r["left"] = float(_r["left"]) - delta
-	if float(_r["left"]) > 0.0:
-		return
-	_r["left"] = -1.0
-	# Only these two run on a clock: a plan and a tide wait for the crew (the
-	# AFK nudge moves those on).
+## Only these two run on a clock: a plan and a tide wait for the crew (the
+## AFK nudge moves those on).
+func _timed_out() -> void:
 	match str(_r["phase"]):
 		"playing":
 			_advance()
@@ -554,25 +430,15 @@ func _process(delta: float) -> void:
 			_land_flares()
 
 
-## Send the raid to everyone (and to this game's own screens).
-func _push() -> void:
-	_clock()
-	if _r["phase"] == "muster":
-		_r["crew"] = _crew_view()
-		_r["tiers"] = tiers_open(Js.list(_r.get("members")))
-		if str(_r["tiers"].get(_r.get("tier", "normal"), "")) != "":
-			_r["tier"] = "normal"
-	var pub: Dictionary = _r.duplicate(true)
-	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
-		_state.rpc(pub)
-	else:
-		_state(pub)
+## The muster's tiers go out with it (a shut tier falls back to Normal).
+func _muster_extras() -> void:
+	_r["tiers"] = tiers_open(Js.list(_r.get("members")))
+	if str(_r["tiers"].get(_r.get("tier", "normal"), "")) != "":
+		_r["tier"] = "normal"
 
 
-@rpc("authority", "call_local", "reliable")
-func _state(pub: Dictionary) -> void:
-	state = pub
-	changed.emit(pub)
+func _under_way() -> String:
+	return "The fight is on."
 
 
 func _settle_saves() -> void:
@@ -582,85 +448,6 @@ func _settle_saves() -> void:
 	charter.write()
 
 
-func _session(key: String) -> Session:
-	return charter.session_for(key) if charter != null else null
-
-
-
-## GO ON WITHOUT THEM (Kong's audit, 2026-10-06: one captain gone to make tea
-## held the whole crew). Once a choice has waited AFK_WAIT seconds, any
-## captain still in can move it on: the ones not yet answered take the
-## default (a ship holds and reloads, a curse is borne, a vote banks). The
-## clock is the founder's, from when the choice opened.
-const AFK_WAIT: float = 60.0
-var _phase_ms: int = 0
-var _phase_seen: String = ""
-
-
-func _clock() -> void:
-	var tag: String = "%s:%s:%s" % [_r.get("phase", ""), str(_r.get("seq", "")), str(Js.obj(_r.get("draft")).get("turn", ""))]
-	if tag != _phase_seen:
-		_phase_seen = tag
-		_phase_ms = Time.get_ticks_msec()
-
-
-func _waited() -> bool:
-	return Time.get_ticks_msec() - _phase_ms >= int((AFK_WAIT - 5.0) * 1000.0)
-
-
-# ── Invites (Kong, 2026-10-06: "an option to invite them and they get a
-#    notification"; no sailing for them: they still sail there) ─────────────
-
-## Who is aboard the Charter now ([{ key, name }]; CrewNet sets it).
-var aboard: Callable = Callable()
-
-
-## The crewmates aboard but not in the line: each with whether they can come
-## ("" or why not) and what they said to an invite ("", asked, coming, no).
-func _crew_view() -> Array:
-	var out: Array = []
-	if not aboard.is_valid():
-		return out
-	var inv: Dictionary = Js.obj(_r.get("invites"))
-	for a: Dictionary in aboard.call():
-		var k: String = str(a["key"])
-		if (_r["members"] as Array).any(func(m: Dictionary) -> bool: return m["key"] == k):
-			continue
-		var s: Session = _session(k)
-		out.append({ "key": k, "name": a["name"], "can": _invite_refusal(s) if s != null else "Not aboard.", "state": str(inv.get(k, "")) })
-	return out
-
-
-## A captain in the line asks a crewmate aboard to come.
-func _invite(key: String, who: String) -> Dictionary:
-	if _r["phase"] != "muster":
-		return { "error": "Not now." }
-	if not (_r["members"] as Array).any(func(m: Dictionary) -> bool: return m["key"] == key):
-		return { "error": "Only a captain in the line can ask." }
-	var row: Dictionary = {}
-	for c: Dictionary in _crew_view():
-		if c["key"] == who:
-			row = c
-	if row.is_empty():
-		return { "error": "They are not aboard." }
-	if str(row["can"]) != "":
-		return { "error": str(row["can"]) }
-	if not _r.has("invites"):
-		_r["invites"] = {}
-	_r["invites"][who] = "asked"
-	_push()
-	return { "ok": true }
-
-
-## An invited captain's answer: on their way, or not now.
-func _answer(key: String, yes: bool) -> Dictionary:
-	if _r["phase"] != "muster" or not Js.obj(_r.get("invites")).has(key):
-		return { "ok": true }
-	_r["invites"][key] = "coming" if yes else "no"
-	_push()
-	return { "ok": true }
-
-
 func _invite_refusal(s: Session) -> String:
 	if not eligible(s, str(_r["nodeId"])):
 		return "Their map has not reached this raid."
@@ -668,24 +455,6 @@ func _invite_refusal(s: Session) -> String:
 	if base != str(_r["raidId"]) and s.store.clear_count(s.uid, base) <= 0:
 		return "They have not beaten the raid itself yet."
 	return ""
-
-
-## A captain back on the line mid-raid: back in their seat, and shown where
-## the raid is now. Only one whose LINE dropped (drop) comes back in: a captain
-## who fled or sank left the fight for good, and stays out of it.
-func welcome(key: String, id: int) -> void:
-	if str(_r.get("phase", "idle")) == "idle":
-		return
-	if Js.obj(_r.get("dropped")).has(key) and not ["muster", "done"].has(str(_r["phase"])):
-		_r["dropped"].erase(key)
-		_r["gone"].erase(key)
-		var si: int = _seat_of(key)
-		if si >= 0 and not _r["b"]["seats"][si].get("sunk", false):
-			_r["b"]["seats"][si].erase("fled")
-		_push()
-		return
-	if multiplayer.multiplayer_peer != null:
-		_state.rpc_id(id, _r.duplicate(true))
 
 
 func _nudge(key: String) -> Dictionary:
@@ -707,27 +476,9 @@ func _nudge(key: String) -> Dictionary:
 	return { "ok": true }
 
 
-## A captain's game has dropped out of the Charter: out of the muster, or out
-## of the line (as one who got away, paid nothing more), and nothing waits on
-## them.
-func drop(key: String) -> void:
-	match str(_r["phase"]):
-		"idle", "done":
-			return
-		"muster":
-			_leave(key)
-			return
-	var si: int = _seat_of(key)
-	# Out by the line alone (not already fled, sunk or gone): only such a
-	# captain is let back in on a later hello (welcome).
-	var was_out: bool = Js.obj(_r.get("gone")).has(key) or (si >= 0 and (_r["b"]["seats"][si].get("fled", false) or _r["b"]["seats"][si].get("sunk", false)))
-	if not was_out:
-		if not _r.has("dropped"):
-			_r["dropped"] = {}
-		_r["dropped"][key] = true
-	if si >= 0:
-		_r["b"]["seats"][si]["fled"] = true
-	_r["gone"][key] = true
+## A captain's game has dropped out of the line (drop, in the base: as one who
+## got away, paid nothing more): nothing waits on them.
+func _after_drop(_key: String) -> void:
 	var b: Dictionary = _r["b"]
 	if Battle.alive(b).is_empty():
 		b["state"] = "fled"
@@ -748,7 +499,6 @@ func drop(key: String) -> void:
 		"tide":
 			if _all_in("tidePicks"):
 				_step("tided", [{ "t": "tided", "picks": _r["tidePicks"] }])
-
 
 
 ## Why each tier is shut for this line ("" when open).

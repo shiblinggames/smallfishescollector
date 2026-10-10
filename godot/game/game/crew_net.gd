@@ -109,7 +109,7 @@ func _process(delta: float) -> void:
 		SteamLayer.steam().call("run_callbacks")
 	if _sink_due:
 		# The fight that spent the last life plays out, and its end is seen.
-		var quiet: bool = ["idle", "done"].has(str(raids._r.get("phase", "idle"))) and ["idle", "done"].has(str(gauntlets._r.get("phase", "idle")))
+		var quiet: bool = not raids.busy() and not gauntlets.busy()
 		_sink_wait = _sink_wait + delta if quiet else 0.0
 		if _sink_wait >= SINK_AFTER:
 			_sink_due = false
@@ -171,7 +171,7 @@ func hand_over(to_key: String) -> String:
 			id = int(p)
 	if id < 0:
 		return "They need to be aboard to take it."
-	if not ["idle", "done"].has(str(raids._r.get("phase", "idle"))) or not ["idle", "done"].has(str(gauntlets._r.get("phase", "idle"))):
+	if raids.busy() or gauntlets.busy():
 		return "Not while the crew are in a fight."
 	_hand_to = to_key
 	_handing = true

@@ -746,7 +746,7 @@ func _on_hover(meta: Variant) -> void:
 			title = str(rd.get("name", id))
 			body = "A reaction: %s + %s%s.  %s" % [rd.get("a", ""), rd.get("b", ""), (" + " + str(rd["c"])) if rd.has("c") else "", rd.get("desc", "")]
 		"co":
-			var cd: Dictionary = Battle.combo_def({}, id)
+			var cd: Dictionary = Gauntlet.combo_def(id)
 			title = str(cd.get("name", id))
 			body = "An enemy pack's combo of two ships. Sinking either half breaks it."
 	if title == "":

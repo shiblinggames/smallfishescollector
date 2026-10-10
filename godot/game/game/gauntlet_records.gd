@@ -1,6 +1,6 @@
 class_name GauntletRecords
 extends Control
-## THE RECORDS of a descent, this captain's own (kept by GauntletTable._record):
+## THE RECORDS of a descent, this captain's own (kept by GauntletPay.record in game/gauntlet_pay.gd):
 ## Solo and Co-op side by side (the deepest banked and the time it took, the
 ## deepest sunk, the dives banked and sunk), then across both the Fathoms
 ## earned and the biggest single hit; and two recaps, the deepest dive of each
