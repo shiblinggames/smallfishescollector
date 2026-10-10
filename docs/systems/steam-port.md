@@ -2278,6 +2278,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (CampaignWater); Finn sails his own red ship (the Sunken Hand hull he drops). Re-run the
   tool if the v3 ships are repainted. North.bow_left counts only a skin's Man-o-War painting
   as bow-left (its smaller ships face right).
+- CUTSCENES: THE CAST LOOK AT EACH OTHER, FURTHER APART (Kong, 2026-10-09: "too close to each
+  other"; "they should always be looking at each other (towards the center)"). StoryScene.FACING
+  records which way each portrait is painted (-1 left, 1 right; unlisted look out front and are
+  never turned), sorted by eye at full size (the crocodiles all look left; Mira looks right); the
+  left mark looks right and the right mark left. The marks stand SPREAD 150px past the dialogue
+  plate's ends (they stood 30px inside it). A new portrait in profile goes into FACING.
 - SMOOTHNESS (Kong, 2026-10-09: "everything feels like there's a slight delay or lag").
   Measured first (tests/feel_probe.gd, in a window: frame times while idle, sailing and opening
   menus): sailing held a steady frame with rare 30ms hitches, the GPU at 1.5 to 3ms, every part

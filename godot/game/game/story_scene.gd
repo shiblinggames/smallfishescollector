@@ -84,7 +84,6 @@ func _ready() -> void:
 		b.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.modulate.a = 0.0
-		b.flip_h = k == 1
 		add_child(b)
 		_busts.append(b)
 	_insert = Control.new()
@@ -191,8 +190,58 @@ func _layout() -> void:
 		_fit(k)
 
 
+## WHICH WAY EACH PORTRAIT LOOKS as painted (Kong, 2026-10-09: the cast
+## "should always be looking at each other (towards the center)"): -1 to the
+## left, 1 to the right; one not listed looks out front and is never turned.
+## Sorted by eye from the art (checked at full size: the crocodiles all look
+## left); a new portrait in profile goes in here.
+const FACING: Dictionary = {
+	"bilge_eel": -1,
+	"Catfish": -1,
+	"Coelacanth": -1,
+	"Doby_Mick_v2": -1,
+	"Dole": -1,
+	"Mako_Shark": -1,
+	"driftscout": -1,
+	"thesurveyor": -1,
+	"finn_portrait": -1,
+	"quartermasterghost": -1,
+	"raid4_gulletmaw": -1,
+	"raid4_silverdart": -1,
+	"raid4_theexactor": -1,
+	"raid6_thequartermaster": -1,
+	"raid7_thebank": -1,
+	"raid8_donfinleone": -1,
+	"raid8_thecloser": -1,
+	"raid8_thegnash": -1,
+	"raid8_thegorge": -1,
+	"raid8_thereaper": -1,
+	"raid8_therender": -1,
+	"raid8_theripper": -1,
+	"Mira": 1,
+	"raid4_snapjaw": -1,
+	"raid7_oldscar": -1,
+	"raid7_salbrackwater": -1,
+	"raid7_themangrove": -1,
+	"raid7_themuzzle": -1,
+	"raid7_therasp": -1,
+	"raid7_thescute": -1,
+	"raid7_thewedge": -1,
+}
+
+
+## The way a portrait looks, by its file's name: -1 left, 1 right, 0 front.
+static func facing(path: String) -> int:
+	return int(FACING.get(path.get_file().get_basename(), 0))
+
+
+## How far past the dialogue plate's ends each mark stands (Kong: the two
+## stood "too close to each other").
+const SPREAD: float = 150.0
+
+
 ## A bust sized to its art, standing on its mark with its feet behind the
-## dialogue plate.
+## dialogue plate, turned to look toward the middle.
 func _fit(k: int) -> void:
 	var b: TextureRect = _busts[k]
 	var bh: float = minf(size.y * 0.6, 620.0)
@@ -202,8 +251,13 @@ func _fit(k: int) -> void:
 	b.size = Vector2(bh * asp, bh)
 	b.pivot_offset = Vector2(b.size.x / 2.0, b.size.y)
 	var pw: float = _plate.size.x
-	var x: float = _plate.position.x + 30.0 if k == 0 else _plate.position.x + pw - 30.0 - b.size.x
+	var x: float = _plate.position.x - SPREAD if k == 0 else _plate.position.x + pw + SPREAD - b.size.x
+	x = clampf(x, 16.0, size.x - 16.0 - b.size.x)
 	b.position = Vector2(x, _plate.position.y - bh + 70.0)
+	# The left mark looks right and the right mark left: turned when painted
+	# the other way.
+	var looks: int = facing(b.texture.resource_path) if b.texture != null else 0
+	b.flip_h = (k == 0 and looks < 0) or (k == 1 and looks > 0)
 
 
 # ── The lines ────────────────────────────────────────────────────────────────
