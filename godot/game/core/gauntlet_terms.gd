@@ -13,10 +13,6 @@ static func term_def(id: String) -> Dictionary:
 	return {}
 
 
-static func terms_for(variant: String) -> Array:
-	return Js.list(Gauntlet.t().get("terms")).filter(func(x: Dictionary) -> bool: return Gauntlet.in_pool(x.get("gauntlet"), variant))
-
-
 static func pressure(signed: Dictionary) -> float:
 	var p: float = 0.0
 	for id: String in signed:
