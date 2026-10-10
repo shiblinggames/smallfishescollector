@@ -382,7 +382,10 @@ func _flier(v: float, w: float) -> TextureRect:
 
 ## A SMALL BURST of chips thrown up from a point (a bigger win), drawn in
 ## code: they rise, turn, fall and fade, all within a few hundred pixels.
-func burst(at: Vector2, n: int) -> void:
+## `spill`: thrown out sideways and barely up, as chips spilling over a
+## tray's lip (the slot machine's: thrown up, they flew across the win's
+## words, and the felt's words cannot be drawn over the room's burst).
+func burst(at: Vector2, n: int, spill: bool = false) -> void:
 	var b: Burst = Burst.new()
 	b.top_level = true
 	b.z_index = 45
@@ -390,7 +393,7 @@ func burst(at: Vector2, n: int) -> void:
 	b.position = Vector2.ZERO
 	b.size = get_viewport_rect().size
 	add_child(b)
-	b.go(at, n, _chip_w() * 0.7)
+	b.go(at, n, _chip_w() * 0.7, spill)
 
 
 func _buy(n: float) -> void:
@@ -571,12 +574,12 @@ class Burst:
 	var _t: float = 0.0
 	var _w: float = 24.0
 
-	func go(at: Vector2, n: int, w: float) -> void:
+	func go(at: Vector2, n: int, w: float, spill: bool = false) -> void:
 		_w = w
 		for i: int in n:
 			_bits.append({
 				"p": at + Vector2(randf_range(-40, 40), randf_range(-8, 8)),
-				"v": Vector2(randf_range(-260, 260), randf_range(-620, -320)),
+				"v": Vector2(randf_range(-320, 320), randf_range(-160, -30)) if spill else Vector2(randf_range(-260, 260), randf_range(-620, -320)),
 				"r": randf_range(0, TAU), "s": randf_range(-9.0, 9.0),
 				"life": randf_range(0.8, 1.2), "chip": DenRoom.STAKES[randi() % DenRoom.STAKES.size()],
 			})

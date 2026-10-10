@@ -61,7 +61,7 @@ func play_for_shot() -> void:
 
 
 func _cs() -> float:
-	return DenBlackjack.card_scale(size.y, 0.19)
+	return DenBlackjack.fit_scale(size.y, 0.19, 64.0, true)
 
 
 ## The dealer's row and the print across the top, the seats along the foot
@@ -98,9 +98,10 @@ func _layout() -> void:
 			else:
 				hd.position = goal
 			hd.relayout()
-	_print_y = _dealer.full_h() + 24.0
 	var seats_top: float = h - ctl_h - 2.0 - DenBlackjack.Hand.full_h_for(cs, true, true)
-	_says.position = Vector2(0, maxf(_print_y + 40.0, (_print_y + 40.0 + seats_top) / 2.0 - 18.0))
+	var ys: Vector2 = DenBlackjack.print_ys(_dealer.full_h(), seats_top)
+	_print_y = ys.x
+	_says.position = Vector2(0, ys.y)
 	_says.size = Vector2(w, 36)
 	queue_redraw()
 

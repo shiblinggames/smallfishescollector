@@ -2442,12 +2442,24 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   it; a split hands each card to its hand and they slide apart; at the end the payout slides
   home and a loss is swept to the dealer; the next deal slides the old cards off to the
   discard. The crew's table: up to four seats along the foot, each a Hand with its name in the
-  seat colour; your ready bet leaves your pile, the others' land in their circles. SLOTS: a flat
-  cabinet of the night paper (marquee, coin slot, clean paper windows, a payout tray) with the
-  pays printed on the felt beside it (each fish's picture, name, pays); the stake slides into
-  the slot; each reel kicks back, runs smeared with ghost copies, stops left to right with an
-  overshoot and a clunk; the paying line draws across the windows and pulses, the windows
-  ring gold; wins throw chips from the tray. Unchanged: the rules, payouts, odds, the save,
+  seat colour; your ready bet leaves your pile, the others' land in their circles. The "pays 3
+  to 2" print sits centred in the gap between the dealer's cards and the hands, the card scale
+  shrinking on a short window until it fits (DenBlackjack.fit_scale / print_ys; it used to sit
+  right under the dealer's cards). SLOTS IS A MACHINE (Kong, 2026-10-10: the night-paper cabinet
+  with three cream windows "looks kinda weird in a paper format ... Doesn't look like slots"):
+  a solid dark navy cabinet (R_LARGE, thin lighter rim) with a marquee head, round lamps along
+  its top and down its sides (they chase while the reels run, flash on a win, a few breathe at
+  rest), real reels (each window shows three fish on a cream strip shaded darker toward the
+  top and bottom like a drum; the strip is a fixed per-reel order, DenSlots.ORDER rotated, so
+  the result lands on the payline with its strip neighbours above and below; the bonus wild is
+  laid onto the strip where it lands), a lever on the right side (click or drag the knob down;
+  Spin and Space swing it too), BET and WIN as lit digit panels either side of the payout tray,
+  and the pays printed on the felt beside it. The stake slides into the coin slot; each reel
+  kicks back, runs smeared with ghost copies, stops left to right with an overshoot and a
+  clunk; the paying line draws across and pulses, the windows ring gold, WIN counts up; bigger
+  wins SPILL chips over the tray's lip sideways and down (DenRoom.burst spill), never up across
+  the win's words (a z_index on the felt's words did not lift them over the room's burst).
+  Unchanged: the rules, payouts, odds, the save,
   the den_tables protocol, the keys (Space, H, S, D, P), the gates and the daily cap.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer

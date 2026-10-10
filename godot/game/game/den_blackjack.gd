@@ -68,8 +68,8 @@ func _layout() -> void:
 	var h: float = size.y
 	if w < 10.0 or h < 10.0:
 		return
-	var cs: float = card_scale(h, CARD_OF_H)
 	var ctl_h: float = 62.0
+	var cs: float = fit_scale(h, CARD_OF_H, ctl_h + 4.0, false)
 	_ctl.position = Vector2(0, h - ctl_h)
 	_ctl.size = Vector2(w, ctl_h)
 	_dealer.cs = cs
@@ -88,9 +88,10 @@ func _layout() -> void:
 		else:
 			hd.position = goal
 		hd.relayout()
-	_print_y = _dealer.full_h() + 26.0
 	var hands_top: float = h - ctl_h - 4.0 - Hand.full_h_for(cs, true, false)
-	_says.position = Vector2(0, maxf(_print_y + 44.0, (_print_y + 44.0 + hands_top) / 2.0 - 18.0))
+	var ys: Vector2 = print_ys(_dealer.full_h(), hands_top)
+	_print_y = ys.x
+	_says.position = Vector2(0, ys.y)
 	_says.size = Vector2(w, 36)
 	queue_redraw()
 
@@ -98,6 +99,31 @@ func _layout() -> void:
 ## A card's scale for a play area this tall.
 static func card_scale(h: float, frac: float) -> float:
 	return clampf(h * frac / Card.SIZE.y, 0.7, 1.6)
+
+
+## The room the print and the words need between the dealer's cards and the
+## hands (the print's arc and its soft-17 line, a gap, one line of words).
+const PRINT_GAP: float = 104.0
+
+
+## The card scale, shrunk until the print and the words fit between the
+## dealer's cards and the hands (a short window used to lay the print right
+## under the dealer's cards, half covered by them). `foot`: what sits under
+## the hands (the moves); `named`: the hands carry a name over their cards.
+static func fit_scale(h: float, frac: float, foot: float, named: bool) -> float:
+	var cs: float = card_scale(h, frac)
+	while cs > 0.7 and h - foot - Hand.full_h_for(cs, true, named) - Hand.full_h_for(cs, false, true) < PRINT_GAP:
+		cs -= 0.03
+	return maxf(cs, 0.7)
+
+
+## Where the print (x) and the words (y) go between the dealer's cards'
+## foot and the hands' top: the pair centred in the gap, the print never
+## closer than 18px under the cards (and their shadow).
+static func print_ys(dealer_foot: float, hands_top: float) -> Vector2:
+	var block: float = 54.0 + 8.0 + 34.0
+	var start: float = maxf(dealer_foot + 6.0, dealer_foot + 6.0 + (hands_top - dealer_foot - 6.0 - block) / 2.0)
+	return Vector2(start + 18.0, start + 62.0)
 
 
 func _draw() -> void:
