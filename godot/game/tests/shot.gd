@@ -495,7 +495,8 @@ func _init() -> void:
 				await process_frame
 		"parlor":
 			# The Parlor. PARLOR_TAB: board, king or capstan; PARLOR_PLAY: 1
-			# turns the first card (or reveals the rung, or spins).
+			# turns the first card (or reveals the rung, or spins); PARLOR_F
+			# frames after.
 			var pp: Dictionary = sea.session.profile()
 			pp["fishing_xp"] = float(Rules.data()["xpTable"][29])
 			Parlor.board(sea.session.store, sea.session.uid)
@@ -507,14 +508,13 @@ func _init() -> void:
 			for f: int in 20:
 				await process_frame
 			if OS.get_environment("PARLOR_PLAY") != "":
-				match pr.tab:
-					"board":
-						var hb: Array = Parlor.board(sea.session.store, sea.session.uid)["hand"]
-						pr._turn(hb[0], pr._body.get_child(1).get_child(0))
-					"king":
-						pr._king_rung(pr._body.get_child(0).get_child(1))
-					"capstan":
-						pr._cap_spin()
+				pr.play_for_shot()
+				# PARLOR_PICK (board or king): right, wrong or 0-3, once the
+				# question is on the slate.
+				if OS.get_environment("PARLOR_PICK") != "":
+					for f: int in 70:
+						await process_frame
+					pr.pick_for_shot(OS.get_environment("PARLOR_PICK"))
 			for f: int in int(OS.get_environment("PARLOR_F")) if OS.get_environment("PARLOR_F") != "" else 30:
 				await process_frame
 		"crossing":

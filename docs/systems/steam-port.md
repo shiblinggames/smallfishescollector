@@ -2461,6 +2461,43 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the win's words (a z_index on the felt's words did not lift them over the room's burst).
   Unchanged: the rules, payouts, odds, the save,
   the den_tables protocol, the keys (Space, H, S, D, P), the gates and the daily cap.
+- THE PARLOR AS A PLACE (Kong, 2026-10-10: the Den pilot approved, the Parlor gets the same).
+  game/parlor_room.gd, its drawn parts in game/parlor_parts.gd (preloaded, no class_name). The
+  room keeps the standard header with the three games as Paper.tab buttons in its row (the
+  King still says "Needs Fishing 25" until then). Under it: the rank, its points line and a
+  slim bar along the top as words (no boxed strip), the streak, and YOUR PURSE in money gold;
+  then ONE flat SLATE (parlor_parts SLATE, a deep charcoal green, R_LARGE, a 2px darker rim,
+  no texture, gradient or shadow) filling the rest, written on in chalk-cream. Pages change by
+  a WIPE (a duster's sweep of slate across the board, the new page put up under it).
+  THE CAPTAIN'S BOARD: the hand is dealt onto the slate face down (flat cream cards, a band of
+  the topic's colour, stars, worth), sliding up one after another; a hover lifts one; turned,
+  it narrows to its edge, the board wipes, the question is written in (Cinzel, sized to the
+  space) and four cream answer cards are dealt 2x2 under it. THE FUSE is the clock: a cord
+  across the slate's top burning down from its right end, a spark spitting at the burning end
+  (drawn in code), the seconds beside it, the cord reddening in the last four. The pick presses
+  in; RIGHT turns over on its width to a gold-ringed face and glows, "+N ⟡" flies to the purse
+  (it counts up) and "+N points" to the bar; WRONG shakes where it lies and dims, and the right
+  card turns gold; the verdict and the explanation are written in chalk in the slate's foot
+  beside "Back to your hand". A new rank is said on the points line in gold (no toast).
+  THE PIRATE KING: the ladder is a MAST beside the slate, ten yards bottom to top with their
+  prizes, the safe yards (4 and 7) flagged with a green pennant and SAFE, the crown at the
+  masthead; a gold marker stands on the yard you hold. Right: it climbs a yard (runs a touch
+  past and settles); crowned: it reaches the top and the crown lights gold; wrong: it falls to
+  the last safe yard (or the deck) with a bounce and a settle. Between rungs the slate says
+  where you stand, with Climb and Walk away; walking away rings the marker and sends the prize
+  flying to the purse. The 50/50 slides two wrong cards off the board's edges and goes.
+  SPIN THE CAPSTAN: a big flat wheel beside the slate (two creams, the hazards in red, prizes
+  written along the wedges and never upside down, pegs at the rim, a slate hub) with a gold
+  pawl at the top that each peg knocks aside with a tick. It spins up, turns heavily, slows,
+  runs past and settles back onto the wedge the rules returned (a hair off centre), the wedge
+  ringed gold; the prize lifts off the wheel to the board. The slate holds the three phrases as
+  tabs, Strikes and Bank, the phrase's tiles (a tile turns over to show its letter, one after
+  another), what to do now in chalk, the 26 letters as chalk keys (vowels in gold hairline, a
+  called one struck), and Spin, the solve box and Solve. The bank counts; a strike reddens.
+  Keys: 1-4 answer, Enter goes on, Space spins; a pad's first press lands on the slate's first
+  card. tests/shot.gd's parlor case: PARLOR_PLAY=1 calls ParlorRoom.play_for_shot, PARLOR_PICK
+  (right, wrong, 0-3) answers once the question is up (pick_for_shot). Unchanged: the rules,
+  points, odds, timers and the save.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the
