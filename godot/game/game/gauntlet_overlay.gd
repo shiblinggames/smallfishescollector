@@ -327,6 +327,9 @@ func _curse() -> void:
 # ══ The draft table ═══════════════════════════════════════════════════════════
 
 func _draft(fresh: bool) -> void:
+	# A repaint builds fresh cards (none set to banish), so banish mode ends.
+	_banishing = false
+	_banish_btn = null
 	var d: Dictionary = Js.obj(_st.get("draft"))
 	var w: float = _ss.x
 	var order: Array = Js.list(d.get("order"))
@@ -412,8 +415,13 @@ func _draft(fresh: bool) -> void:
 			c.stamp_name = _name(sk)
 		c.live = mine and not stamps.has(str(i)) and not c.dim and (not crew_card or Js.list(cd.get("keys")).has(my_key))
 		var ii: int = i
+		# One handler for both presses: in banish mode the card is banished,
+		# otherwise taken. Cancelling banish mode then gives the pick back.
 		c.pressed.connect(func() -> void:
-			if c.live:
+			if c.banish:
+				var idx: int = _body.get_children().filter(func(n: Node) -> bool: return n is GCard and not (n as GCard).own).find(c)
+				_send(["banish", float(idx)])
+			elif c.live:
 				_send(["pick", { "card": float(ii) }]))
 		x += cw + gap
 	# Your own synergy, apart from the spread.
@@ -445,7 +453,8 @@ func _draft(fresh: bool) -> void:
 			_btn(row, "Reroll the cards left  ·  %d" % rr, "secondary", func() -> void: _send(["reroll"]), 260.0)
 		var fl: int = int(Js.num(_cap().get("filters")))
 		if fl > 0:
-			_btn(row, "Banish a card  ·  %d left" % fl, "secondary", func() -> void: _banish_mode(), 230.0)
+			_banish_label = "Banish a card  ·  %d left" % fl
+			_banish_btn = _btn(row, _banish_label, "secondary", func() -> void: _banish_mode(), 230.0)
 	var took: Dictionary = Js.obj(Js.obj(d.get("took")).get(my_key))
 	if not took.is_empty() and str(took.get("kind", "")) != "none":
 		_label(Vector2(0, y + ch + 76.0), "You took %s." % _took_line(took), "karla", 700, 13, Dossier.HELP, w, true)
@@ -466,18 +475,20 @@ func _took_line(t: Dictionary) -> String:
 
 
 var _banishing: bool = false
+## The Banish button and its resting words (it reads "Stop banishing" while on).
+var _banish_btn: Button = null
+var _banish_label: String = ""
 
 
+## Banish mode on or off: the cards it may touch take (or lose) the red
+## hairline, and their press banishes while it is on (see _draft's handler).
 func _banish_mode() -> void:
 	_banishing = not _banishing
+	if _banish_btn != null and is_instance_valid(_banish_btn):
+		_banish_btn.text = "Stop banishing" if _banishing else _banish_label
 	for c: Node in _body.get_children():
 		if c is GCard and not (c as GCard).own and (c as GCard).stamp == null:
 			(c as GCard).banish = _banishing
-			if _banishing:
-				for con: Dictionary in (c as GCard).pressed.get_connections():
-					(c as GCard).pressed.disconnect(con["callable"])
-				var idx: int = _body.get_children().filter(func(n: Node) -> bool: return n is GCard and not (n as GCard).own).find(c)
-				(c as GCard).pressed.connect(func() -> void: _send(["banish", float(idx)]))
 
 
 # ══ The Drowned Shrine ════════════════════════════════════════════════════════
@@ -1245,7 +1256,6 @@ class BankPane:
 	var view: Dictionary = {}
 	var pot: float = 0.0
 	var variant: String = "davy"
-	var hardcore: bool = false
 	var chest_tex: Texture2D
 	var _frames: int = 0
 
@@ -1284,9 +1294,14 @@ class CrewPane:
 	var rows: Array = []
 	var curses: Dictionary = {}
 	var boons: Dictionary = {}
+	var _frames: int = 0
 
+	## Static once painted: redrawn for its first frames only (the faces'
+	## textures land a frame or two late), as the other panes do.
 	func _process(_d: float) -> void:
-		queue_redraw()
+		if _frames < 12:
+			_frames += 1
+			queue_redraw()
 
 	func _draw() -> void:
 		draw_string(Kit.font("karla", 800), Vector2(0, 12), "THE CREW", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Dossier.SOFT)

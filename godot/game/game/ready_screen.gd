@@ -175,17 +175,7 @@ func _paint() -> void:
 			invite_seat(sc, crew[i - members.size()], sea, dock, _act)
 		if i < members.size():
 			var m: Dictionary = members[i]
-			sc.member = m
-			sc.face = _face_tex(Js.obj(Js.obj(m.get("card")).get("face")))
-			# Pictures loaded here, never first inside _draw (they come out white).
-			var cd0: Dictionary = Js.obj(m.get("card"))
-			var sa0: Dictionary = North.ship_art(cd0.get("shipTier"), cd0.get("shipSkin"))
-			sc.ship_tex = Skipper.tex(str(sa0["art"]).trim_prefix("/"))
-			sc.ship_name = str(Js.obj(sa0["def"]).get("name", "Ship"))
-			for cm0: Variant in Js.list(cd0.get("crew")):
-				sc.crew_tex.append(Skipper.tex("card_thumbs/%s.png" % str(Js.obj(cm0).get("filename", "")).get_basename()))
-			sc.me = m["key"] == _mine()
-			sc.leader = m["key"] == _st.get("by")
+			fill_seat(sc, m, _face_tex(Js.obj(Js.obj(m.get("card")).get("face"))), m["key"] == _mine(), m["key"] == _st.get("by"))
 		seats.add_child(sc)
 	# THE BOSS.
 	var bp: BossPane = BossPane.new()
@@ -242,6 +232,23 @@ func _paint() -> void:
 ## name and where things stand, and Invite (or Ask again) for any captain in
 ## the line. `to` is where the line forms (for how far off they are);
 ## `act` sends ["invite", key].
+## A member's seat (the raid's line and the dive's alike): their face, their
+## ship and its name, their crew's thumbnails, and whether it is you or the
+## one who called the table. Pictures are loaded here, never first inside
+## _draw (they come out white).
+static func fill_seat(sc: SeatCard, m: Dictionary, face: Texture2D, me: bool, leader: bool) -> void:
+	sc.member = m
+	sc.face = face
+	var cd0: Dictionary = Js.obj(m.get("card"))
+	var sa0: Dictionary = North.ship_art(cd0.get("shipTier"), cd0.get("shipSkin"))
+	sc.ship_tex = Skipper.tex(str(sa0["art"]).trim_prefix("/"))
+	sc.ship_name = str(Js.obj(sa0["def"]).get("name", "Ship"))
+	for cm0: Variant in Js.list(cd0.get("crew")):
+		sc.crew_tex.append(Skipper.tex("card_thumbs/%s.png" % str(Js.obj(cm0).get("filename", "")).get_basename()))
+	sc.me = me
+	sc.leader = leader
+
+
 static func invite_seat(sc: SeatCard, c: Dictionary, sea: Sea, to: Vector2, act: Callable) -> void:
 	var state: String = str(c.get("state", ""))
 	var can: String = str(c.get("can", ""))
@@ -307,16 +314,7 @@ func _face_tex(face: Dictionary) -> Texture2D:
 	var k: String = JSON.stringify(face)
 	if _faces.has(k):
 		return _faces[k]
-	var sv: SubViewport = SubViewport.new()
-	sv.size = Vector2i(128, 128)
-	sv.transparent_bg = true
-	sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	var av: Avatar = Avatar.new()
-	av.px = 128.0
-	av.face = face.merged({ "bg": "#2a1f17", "ring": "#00000000" })
-	sv.add_child(av)
-	add_child(sv)
-	_faces[k] = sv.get_texture()
+	_faces[k] = Avatar.texture_of(face, self)
 	return _faces[k]
 
 

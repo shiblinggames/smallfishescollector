@@ -257,7 +257,6 @@ func lock() -> void:
 	# Iron shutters: the first knock only cracks them.
 	if afflict == "hardened" and not _cracked:
 		_cracked = true
-		var w: float = size.x
 		for k: int in 18:
 			_sparks.append({ "p": _needle_point(), "v": Vector2(randf_range(-220, 220), randf_range(-260, -60)), "t": 0.0 })
 		Sound.impact(false)

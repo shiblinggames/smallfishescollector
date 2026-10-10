@@ -27,7 +27,7 @@ extends Node2D
 ## sparks, ice slivers, mist and spray are particle shapes (FxSheet); the
 ## additive ones (light) on a child layer.
 
-const GROUND: float = 0.58
+const GROUND: float = Chart.GROUND
 
 var field: SeaField = null
 var _balls: Array = []
@@ -53,6 +53,9 @@ var links: Array = []
 ## Standing light for a while (a summon's sigil on the water, an aureole, glyph
 ## rings, a reticle, lightning): { kind, p, t, life, c, big, pts }.
 var _marks: Array = []
+## True once nothing is flying, no link stands and the empty frame is drawn:
+## the long quiet stretches of a fight then skip the filters and redraws.
+var _idle: bool = false
 
 
 func _ready() -> void:
@@ -75,6 +78,15 @@ func paint(k: String, at: Vector2, v: Vector2, life: float, size: float, grow: f
 
 func _process(delta: float) -> void:
 	_t += delta
+	if links.is_empty() and [_paint, _balls, _bits, _puffs, _rings, _waves, _cones, _sparks, _marks, _beams].all(func(l: Array) -> bool: return l.is_empty()):
+		# One more redraw on the frame the last one ends, then rest.
+		if not _idle:
+			_idle = true
+			queue_redraw()
+			if _add != null:
+				_add.queue_redraw()
+		return
+	_idle = false
 	for pp: Dictionary in _paint:
 		pp["t"] = float(pp["t"]) + delta
 		if float(pp["t"]) < 0.0:
@@ -622,7 +634,7 @@ func sigil(at: Vector2, col: Color) -> void:
 
 ## A fireball of light flung on an arc (a rake skipping on, a powder keg's
 ## debris).
-func fling(from: Vector2, to: Vector2, kind: String = "fireball", col: Color = Color.WHITE, size: float = 46.0) -> void:
+func fling(from: Vector2, to: Vector2, kind: String = "fireball", col: Color = Color.WHITE) -> void:
 	var a: Vector2 = up(from) + Vector2(0, -40)
 	var b: Vector2 = up(to) + Vector2(0, -40)
 	_arc_mote(kind, a, (a + b) / 2.0 + Vector2(0, -120), b, 0.45, col, 0.0)
@@ -756,9 +768,6 @@ func lightning(at: Vector2, col: Color) -> void:
 		x = lerpf(x, tip.x, 0.35) + randf_range(-36, 36)
 		pts.append(Vector2(x, minf(y, tip.y)))
 	# Drawn in the light layer's standing space (un-squashed y).
-	var flat: PackedVector2Array = PackedVector2Array()
-	for q: Vector2 in pts:
-		flat.append(Vector2(q.x, q.y * GROUND))
 	_marks.append({ "kind": "bolt", "p": at, "pts": pts, "t": 0.0, "life": 0.32, "c": col, "big": 1.0 })
 	paint("flash", tip, Vector2.ZERO, 0.25, 60.0, 200.0, col.lightened(0.5), { "fade": 0.1 })
 	glyph_burst(at, "spark", col.lightened(0.4), 8, 260.0, 20.0)

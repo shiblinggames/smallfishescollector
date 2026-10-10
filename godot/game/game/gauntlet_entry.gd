@@ -116,9 +116,6 @@ func _paint() -> void:
 	var resume: bool = _st.get("resume", false) == true
 	var held: Dictionary = Js.obj(_st.get("held"))
 	var mine_held: bool = not held.is_empty() and Js.list(held.get("keys")).has(my_key)
-	var deepest: float = 0.0
-	for m0: Dictionary in members:
-		deepest = maxf(deepest, Js.num(Js.obj(m0.get("card")).get("deepest")))
 	_label(Vector2(pad, 30), "The descent  ·  a fight a depth, bank or dive at every breather", "karla", 600, 14, Dossier.SOFT)
 	_label(Vector2(pad, 50), str(Gauntlet.NAMES[v]), "cinzel", 700, 34, Dossier.INK)
 	# THE MODE (and a held dive of this crew, to take up again).
@@ -171,16 +168,7 @@ func _paint() -> void:
 			ReadyScreen.invite_seat(sc, crew[i - members.size()], sea, pool, func(a: Array) -> void: _act(a))
 		if i < members.size():
 			var m: Dictionary = members[i]
-			sc.member = m
-			sc.face = _face_tex(Js.obj(Js.obj(m.get("card")).get("face")))
-			var cd0: Dictionary = Js.obj(m.get("card"))
-			var sa0: Dictionary = North.ship_art(cd0.get("shipTier"), cd0.get("shipSkin"))
-			sc.ship_tex = Skipper.tex(str(sa0["art"]).trim_prefix("/"))
-			sc.ship_name = str(Js.obj(sa0["def"]).get("name", "Ship"))
-			for cm0: Variant in Js.list(cd0.get("crew")):
-				sc.crew_tex.append(Skipper.tex("card_thumbs/%s.png" % str(Js.obj(cm0).get("filename", "")).get_basename()))
-			sc.me = m["key"] == my_key
-			sc.leader = m["key"] == _st.get("by")
+			ReadyScreen.fill_seat(sc, m, _face_tex(Js.obj(Js.obj(m.get("card")).get("face"))), m["key"] == my_key, m["key"] == _st.get("by"))
 		seats.add_child(sc)
 	# THE FOOT.
 	var foot_y: float = h - 88.0
@@ -253,16 +241,7 @@ func _face_tex(face: Dictionary) -> Texture2D:
 	var k: String = JSON.stringify(face)
 	if _faces.has(k):
 		return _faces[k]
-	var sv: SubViewport = SubViewport.new()
-	sv.size = Vector2i(128, 128)
-	sv.transparent_bg = true
-	sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	var av: Avatar = Avatar.new()
-	av.px = 128.0
-	av.face = face.merged({ "bg": "#2a1f17", "ring": "#00000000" })
-	sv.add_child(av)
-	add_child(sv)
-	_faces[k] = sv.get_texture()
+	_faces[k] = Avatar.texture_of(face, self)
 	return _faces[k]
 
 

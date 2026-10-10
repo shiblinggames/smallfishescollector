@@ -53,12 +53,18 @@ var _rows: VBoxContainer
 var _chip: Button
 var _tip: PanelContainer
 var _tip_label: RichTextLabel
-var _handle: Button
 var _lines: Array = []
 ## The log in the deck: the last few lines (the stage seats it there).
 var mini: VBoxContainer
 var _mini_rows: VBoxContainer
 const MINI: int = 4
+## The full log keeps at most this many row nodes (lines, fight headers, turn
+## rules); older ones are freed. `entries` stays whole for the recap and the
+## filters, and a filter's rebuild writes only the newest KEEP_LINES lines.
+const KEEP: int = 400
+const KEEP_LINES: int = 300
+## A line's damage number, lifted into a column of its own (compiled once).
+static var _dmg_re: RegEx = RegEx.create_from_string(":\\s\\[b\\](\\d+)\\[/b\\]((?:\\s\\s\\[color=#ffd36b\\]\\[b\\]CRIT\\[/b\\]\\[/color\\])?)")
 
 
 func _ready() -> void:
@@ -121,14 +127,7 @@ func _ready() -> void:
 	_rows.add_theme_constant_override("separation", 3)
 	_scroll.add_child(_rows)
 	_rows.resized.connect(_fit)
-	# Hidden: a slim tab on the edge.
-	_handle = _link_button("LOG  ·  L", func() -> void: toggle())
-	_handle.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_handle.offset_left = -84.0
-	_handle.offset_right = -12.0
-	_handle.offset_top = 88.0
-	_handle.offset_bottom = 112.0
-	add_child(_handle)
+	# Hidden, it is called back with L (no tab on the edge).
 	# A hover's explanation.
 	_tip = PanelContainer.new()
 	var tsb: StyleBoxFlat = StyleBoxFlat.new()
@@ -249,7 +248,6 @@ func toggle() -> void:
 
 func _apply_open() -> void:
 	_panel.visible = _open
-	_handle.visible = false
 	_tip.visible = false
 
 
@@ -405,6 +403,13 @@ func _write(e: Dictionary) -> void:
 		tr.add_child(hair)
 	_rows.add_child(_row(e))
 	_lines.append(_rows.get_child(_rows.get_child_count() - 1))
+	# A long dive: the oldest rows go, so the log never holds thousands.
+	while _rows.get_child_count() > KEEP:
+		var gone: Node = _rows.get_child(0)
+		_rows.remove_child(gone)
+		gone.queue_free()
+	while _lines.size() > KEEP:
+		_lines.pop_front()
 	# The older lines settle back.
 	if _lines.size() > FRESH:
 		var old: Control = _lines[_lines.size() - FRESH - 1]
@@ -419,7 +424,7 @@ func _row(e: Dictionary, fs: int = 13) -> Control:
 	var bb: String = str(e["bb"])
 	var num: String = ""
 	var ncol: Color = INK
-	var m: RegExMatch = RegEx.create_from_string(":\\s\\[b\\](\\d+)\\[/b\\]((?:\\s\\s\\[color=#ffd36b\\]\\[b\\]CRIT\\[/b\\]\\[/color\\])?)").search(bb)
+	var m: RegExMatch = _dmg_re.search(bb)
 	if m != null and e["dmg"]:
 		num = m.get_string(1)
 		var crit: bool = m.get_string(2) != ""
@@ -469,9 +474,9 @@ func _rebuild() -> void:
 	_lines.clear()
 	_shown_fight = -2
 	_shown_turn = -1
-	for e: Dictionary in entries:
-		if _passes(e):
-			_write(e)
+	var shown: Array = entries.filter(func(e: Dictionary) -> bool: return _passes(e))
+	for e: Dictionary in shown.slice(maxi(0, shown.size() - KEEP_LINES)):
+		_write(e)
 	for l: Control in _lines:
 		l.modulate.a = 1.0
 	for k: int in maxi(0, _lines.size() - FRESH):
@@ -537,6 +542,19 @@ func _fmt(x: Dictionary) -> Array:
 	var si: int = int(x.get("seat", -1))
 	var mine: String = "me" if si == stage.me else "crew"
 	match t:
+		# A captain's class order (core/battle.gd use_order). The round's turn
+		# order shares the "order" event but carries no seat, and is not logged.
+		"order" when x.has("seat"):
+			var line: String = "%s gives the order: [b]%s[/b]" % [_S(si), _esc(str(x.get("name", "")))]
+			match str(x.get("order", "")):
+				"field_surgery":
+					var hs: Array = Js.list(x.get("healed")).map(func(h: Variant) -> String: return "%s %s back" % [_S(int(Js.obj(h).get("seat", -1))), _n(Js.obj(h).get("heal"))])
+					if not hs.is_empty():
+						line += " (%s)" % ", ".join(PackedStringArray(hs))
+				"full_sail":
+					var nl: int = Js.list(x.get("loaded")).size()
+					line += " (%s)" % ("no ball loaded" if nl == 0 else ("1 ship gets a ball" if nl == 1 else "%d ships get a ball" % nl))
+			return [mine, false, line]
 		"shot":
 			var act: String = str(x.get("action", "fire"))
 			var what: String = ACT.get(act, "fires")
@@ -803,6 +821,16 @@ func _tally(x: Dictionary) -> void:
 			var s8: Dictionary = _st(si)
 			if not s8.is_empty():
 				s8["healed"] = float(s8["healed"]) + Js.num(x.get("heal"))
+		"order":
+			# Field Surgery: a heal on your own ship counts as healed, on
+			# another's as given.
+			var so: Dictionary = _st(si)
+			if so.is_empty() or str(x.get("order", "")) != "field_surgery":
+				return
+			for h: Variant in Js.list(x.get("healed")):
+				var hd: Dictionary = Js.obj(h)
+				var k: String = "healed" if int(hd.get("seat", -1)) == si else "given"
+				so[k] = float(so[k]) + Js.num(hd.get("heal"))
 		"bond":
 			var s9: Dictionary = _st(si)
 			if s9.is_empty():

@@ -80,6 +80,16 @@ func hosting() -> bool:
 	return charter != null or solo != null
 
 
+## The Charter is left (CrewNet): the dive is gone with it, so a later Charter
+## starts idle (a dive left standing refused every new call). A held dive is
+## safe in the Charter's file.
+func reset() -> void:
+	charter = null
+	state = {}
+	_r = { "phase": "idle", "seq": 0 }
+	_phase_seen = ""
+
+
 func _session(key: String) -> Session:
 	if solo != null:
 		return solo if key == "me" else null
@@ -88,9 +98,17 @@ func _session(key: String) -> Session:
 
 # ══ The founder's side ════════════════════════════════════════════════════════
 
+## The dive's own choices, each taken only from a captain still in it (a stale
+## screen or a forged request from anyone else is refused: a seat index of -1
+## would land on the LAST seat).
+const DIVERS_ONLY: Array[String] = ["shrine", "fence", "done", "mark", "bear", "vote", "contract"]
+
+
 func handle(key: String, s: Session, args: Array) -> Dictionary:
 	var action: String = str(args[0]) if args.size() > 0 else ""
 	var p: Variant = args[1] if args.size() > 1 else null
+	if DIVERS_ONLY.has(action) and _r.has("caps") and not _keys_in().has(key):
+		return { "error": "You are out of this dive." }
 	match action:
 		"call": return _call(key, s, Js.obj(p))
 		"join": return _join(key, s, Js.obj(p))
@@ -678,8 +696,6 @@ func _after_fight() -> void:
 	if _keys_in().is_empty():
 		_dive_lost(ev)
 		return
-	_r["events"] = ev
-	_r["after"] = "chain"
 	_step("chain", ev)
 
 
@@ -1030,7 +1046,6 @@ func _can_pick(key: String) -> bool:
 func _draft_done() -> void:
 	var personal: bool = _r["draft"].get("personal", false)
 	var back: String = str(_r["draft"].get("back", ""))
-	_r["lastDraft"] = _r["draft"]
 	_r.erase("draft")
 	if personal and back == "shrine":
 		_r["phase"] = "shrine"
@@ -1379,7 +1394,6 @@ func _marks_check() -> void:
 			return
 	_effects_onto(_r["b"]["seats"])
 	_r.erase("donFall")
-	_r["lastMarks"] = mk
 	_r.erase("marks")
 	_chain()
 
@@ -1844,11 +1858,15 @@ func _waited() -> bool:
 
 
 func _nudge(key: String) -> Dictionary:
-	if not _keys_in().has(key):
+	var ph: String = str(_r["phase"])
+	# The end screens (a bank, a loss, a hold) wait on every captain who saw
+	# the dive through, drowned ones too: any of them may move it on.
+	var end_screen: bool = ["haul", "dead", "held"].has(ph)
+	var on_screen: bool = Js.obj(_r.get("caps")).has(key) and not Js.obj(_r.get("gone")).has(key)
+	if not (_keys_in().has(key) or (end_screen and on_screen)):
 		return { "error": "You are out of this dive." }
 	if not _waited():
 		return { "error": "Give them a moment more." }
-	var ph: String = str(_r["phase"])
 	match ph:
 		"plan":
 			_resolve()
@@ -1862,6 +1880,13 @@ func _nudge(key: String) -> Dictionary:
 				_r["draft"]["took"][tk] = { "kind": "none" }
 				_r["draft"]["turn"] = float(_r["draft"]["turn"]) + 1.0
 				_turn_on()
+			return { "ok": true }
+		"haul", "dead", "held":
+			# Nobody is left on these screens for good (they had no nudge).
+			for k3: String in Js.obj(_r.get("caps")):
+				if not _r["acks"].has(k3) and not Js.obj(_r.get("gone")).has(k3):
+					_r["acks"][k3] = true
+			_acks_check()
 			return { "ok": true }
 	for k: String in _keys_in():
 		if k == key or str(_r["phase"]) != ph:
@@ -1966,11 +1991,13 @@ func _crew_moment(kind: String, value: float) -> void:
 
 
 ## A captain back on the line mid-dive (their game dropped and came back):
-## back in their seat, and shown where the dive is now.
+## back in their seat, and shown where the dive is now. Only one whose LINE
+## dropped (drop) comes back in: one who fled or sank stays out.
 func welcome(key: String, id: int) -> void:
 	if _r.get("phase", "idle") == "idle":
 		return
-	if Js.obj(_r.get("gone")).has(key) and not ["muster", "done"].has(str(_r["phase"])):
+	if Js.obj(_r.get("dropped")).has(key) and not ["muster", "done"].has(str(_r["phase"])):
+		_r["dropped"].erase(key)
 		_r["gone"].erase(key)
 		var si: int = _seat_of(key)
 		if si >= 0 and not _r["b"]["seats"][si].get("sunk", false):
@@ -1993,8 +2020,15 @@ func drop(key: String) -> void:
 		"muster":
 			_leave(key)
 			return
-	_r["gone"][key] = true
 	var si: int = _seat_of(key)
+	# Out by the line alone (not already fled, sunk or gone): only such a
+	# captain is let back in on a later hello (welcome).
+	var was_out: bool = Js.obj(_r.get("gone")).has(key) or (si >= 0 and (_r["b"]["seats"][si].get("fled", false) or _r["b"]["seats"][si].get("sunk", false)))
+	if not was_out:
+		if not _r.has("dropped"):
+			_r["dropped"] = {}
+		_r["dropped"][key] = true
+	_r["gone"][key] = true
 	if si >= 0:
 		_r["b"]["seats"][si]["fled"] = true
 	if _keys_in().is_empty():
@@ -2092,6 +2126,8 @@ func _checkpoint(status: String, fight: Dictionary = {}) -> void:
 		"status": status, "at": Js.iso(Clock.now_ms()), "variant": run["variant"], "mode": run.get("mode", "solo"),
 		"depth": float(int(run["roll"]["cleared"]) + int(run["skip"])), "pot": run["pot"], "keys": _keys_in(), "names": names,
 		"run": run, "caps": _r["caps"].duplicate(true), "seats": seats,
+		# The dive's time so far: a resumed dive's record counts all of it.
+		"elapsed": float(Time.get_ticks_msec() - _began_ms),
 	}
 	_held_write()
 
@@ -2154,7 +2190,8 @@ func _resume() -> Dictionary:
 	_r["gone"] = {}
 	_r["fight"] = {}
 	_r["descent"] = {}
-	_began_ms = Time.get_ticks_msec()
+	# The clock picks up where the held dive left it (not from the resume).
+	_began_ms = Time.get_ticks_msec() - int(Js.num(h.get("elapsed", 0.0)))
 	var mid: bool = str(h.get("status", "")) == "fighting" and not Js.obj(Js.obj(h["run"]).get("peek")).is_empty()
 	_step("refight" if mid else "breather", [{ "t": "resume", "depth": h["depth"] }])
 	return { "ok": true }
@@ -2172,6 +2209,11 @@ func _end_held(key: String) -> Dictionary:
 	if not (h["keys"] as Array).has(key):
 		return { "error": "Only a captain of that dive can end it." }
 	var keep_r: Dictionary = _r
+	var keep_began: int = _began_ms
+	# Its record carries the held dive's own time, not a leftover clock (a dive
+	# held before the time was kept leaves the clock as it was).
+	if h.has("elapsed"):
+		_began_ms = Time.get_ticks_msec() - int(Js.num(h["elapsed"]))
 	_r = { "run": h["run"], "caps": h["caps"], "phase": "muster" }
 	var cd: int = int(h["depth"])
 	for k: String in h["keys"]:
@@ -2182,6 +2224,7 @@ func _end_held(key: String) -> Dictionary:
 		_death_pay(k, s, cd)
 		_take(s)
 	_r = keep_r
+	_began_ms = keep_began
 	_held_all().erase(v)
 	_held_write()
 	_settle()

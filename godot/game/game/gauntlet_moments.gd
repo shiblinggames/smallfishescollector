@@ -41,6 +41,9 @@ var _pieces: Dictionary = {}
 ## Over the hulls (the coin, the light coming down); this node itself lies
 ## on the water, under them.
 var _over: Node2D
+## True once every list has emptied and the last empty frame is drawn, so an
+## idle dive skips the per-frame filters and redraws.
+var _idle: bool = false
 
 
 func _ready() -> void:
@@ -53,7 +56,16 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	for arr: Array in [_whirls, _words, _rings, _coins, _shafts, _charts, _gates, _trail, _booms, _stills]:
+	var lists: Array = [_whirls, _words, _rings, _coins, _shafts, _charts, _gates, _trail, _booms, _stills]
+	if lists.all(func(l: Array) -> bool: return l.is_empty()):
+		# One more redraw on the frame the last mark ends, then rest.
+		if not _idle:
+			_idle = true
+			queue_redraw()
+			_over.queue_redraw()
+		return
+	_idle = false
+	for arr: Array in lists:
 		for w: Dictionary in arr:
 			w["t"] = float(w["t"]) + delta
 		arr.assign(arr.filter(func(w: Dictionary) -> bool: return float(w["t"]) < float(w["life"])))
@@ -70,6 +82,13 @@ func _process(delta: float) -> void:
 
 func _wait(s: float) -> void:
 	await get_tree().create_timer(s).timeout
+
+
+## A set piece goes on the sea's world (beside the hulls), marked as part of
+## the fight so the sea's fight-clear does not fade it out.
+func _to_world(node: Node2D) -> void:
+	node.set_meta("fight", true)
+	get_parent().add_child(node)
 
 
 # ── Drawing ────────────────────────────────────────────────────────────────────
@@ -223,7 +242,7 @@ func shrine_rise(at: Vector2) -> void:
 	pc.glow_col = Color(0.55, 0.6, 1.0)
 	pc.position = at
 	pc.bob = 0.3
-	get_parent().add_child(pc)
+	_to_world(pc)
 	_pieces["shrine"] = pc
 	pc.spr.position.y = 330.0
 	pc.spr.modulate.a = 0.0
@@ -313,7 +332,7 @@ func fence_arrive(at: Vector2) -> void:
 	pc.box = 400.0
 	pc.glow_col = Color(1.0, 0.75, 0.4)
 	pc.position = at + Vector2(820, -120)
-	get_parent().add_child(pc)
+	_to_world(pc)
 	_pieces["fence"] = pc
 	pc.mat.set_shader_parameter("water_y", 0.9)
 	pc.spr.modulate = Color(0.25, 0.3, 0.38, 0.0)
@@ -564,7 +583,7 @@ func _enter_fleet(n: HullRig, at: Vector2) -> void:
 		gh.offset = Vector2(0, -n.tex.get_height() * 0.38)
 		gh.modulate = Color(0.7, 0.85, 0.8, 0.0)
 		gh.position = at + Vector2(900 + 120 * k, 0)
-		get_parent().add_child(gh)
+		_to_world(gh)
 		ghosts.append(gh)
 	var tw: Tween = create_tween().set_parallel()
 	tw.tween_property(n, "position", at, 1.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -742,7 +761,7 @@ func launch_arrive(at: Vector2) -> void:
 	n.face = -1.0
 	n.position = at + Vector2(760, 40)
 	n.modulate = Color(0.55, 0.9, 0.65, 0.0)
-	get_parent().add_child(n)
+	_to_world(n)
 	_pieces["launch"] = n
 	var lamp: Sprite2D = Sprite2D.new()
 	lamp.texture = Glow.radial(64, Color(0.4, 1.0, 0.55))

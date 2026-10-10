@@ -11,15 +11,12 @@ extends RefCounted
 ## the orders carry drawn icons (no emoji). Everything draws onto a CanvasItem
 ## so the plates on the water, the deck and the turn track share one hand.
 
-## EVERY battle colour is an alias of a Kit or Paper token (2026-10-09): no
-## hand-typed colours here.
+## The battle's named colours are aliases of Kit or Paper tokens (2026-10-09);
+## a few drawn pieces below (the ball, the crew card's light) keep their own.
 const LACQUER: Color = Paper.NIGHT_PAPER_DEEP
 const LACQUER_HI: Color = Paper.NIGHT_PAPER_HI
 const LACQUER_LO: Color = Paper.NIGHT_PAPER_LO
 const HAIR: Color = Paper.NIGHT_HAIR
-## The chosen accent (a chosen thing), Paper.CHOSEN; the name is kept for
-## callers, nothing on screen is "brass".
-const BRASS: Color = Paper.CHOSEN
 const CREAM: Color = Paper.NIGHT_INK
 const MUTED: Color = Paper.NIGHT_INK_SOFT
 const ALLY: Color = Kit.HELP
@@ -42,7 +39,10 @@ static var _boxes: Dictionary = {}
 ## A rounded box (cached): fill, hairline, its width, corner radius, and a soft
 ## shadow (or a glow, in the shadow's colour).
 static func box(bg: Color, rim: Color, rim_w: int, r: float, shadow: float = 0.0, shadow_col: Color = Color(0, 0, 0, 0.45)) -> StyleBoxFlat:
-	var key: String = "%s|%s|%d|%d|%d|%s" % [bg.to_html(), rim.to_html(), rim_w, int(r), int(shadow), shadow_col.to_html()]
+	# Keyed by integers, not formatted strings: dozens of boxes ask each frame.
+	# Colours quantise to 8 bits a channel (as to_html did), so animated alphas
+	# add at most 256 boxes a colour.
+	var key: Vector4i = Vector4i(bg.to_rgba32(), rim.to_rgba32(), shadow_col.to_rgba32(), (rim_w & 0xFF) | ((int(r) & 0xFFF) << 8) | ((int(shadow) & 0xFFF) << 20))
 	if _boxes.has(key):
 		return _boxes[key]
 	var s: StyleBoxFlat = StyleBoxFlat.new()
@@ -276,9 +276,6 @@ class ActionKey:
 	var disc: bool = false
 	## The main action's disc: larger, whether or not it can be pressed now.
 	var big: bool = false
-	## Fire carries the shot in the rack under its word: full of this many.
-	var pips: int = -1
-	var pips_full: int = 0
 
 	func _init() -> void:
 		flat = true
@@ -353,12 +350,6 @@ class ActionKey:
 			draw_texture_rect(FxSheet.glow(), Rect2(Vector2(cx - size.x * 0.5, y - 36.0), Vector2(size.x, 56.0)), false, Color(BattleLook.GOLD, 0.1 + 0.1 * _hover))
 		BattleLook.say(self, f, cx, y, word, fs, Color(col, a), 6)
 		var y2: float = y + 18.0
-		if pips >= 0 and pips_full > 0:
-			var step: float = minf(16.0, 100.0 / float(pips_full))
-			var x0: float = cx - step * (pips_full - 1) * 0.5
-			for k: int in pips_full:
-				BattleLook.ball(self, Vector2(x0 + k * step, y2 + 3.0), 6.0, k < pips, a)
-			y2 += 16.0
 		if sub != "":
 			BattleLook.say(self, Kit.font("karla", 800), cx, y2 + 6.0, sub, 10, Color(BattleLook.MUTED, 0.9 * a), 3)
 			y2 += 14.0

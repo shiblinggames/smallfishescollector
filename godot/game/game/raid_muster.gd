@@ -12,9 +12,6 @@ var _card: Pane
 ## The banner's holder (what fades in and out).
 var _holder: Control = null
 var _body: VBoxContainer
-var _until: float = 0.0
-var _t: float = 0.0
-var _left: Label
 var _last: Dictionary = {}
 var _opened_seq: int = -1
 var _screen: ReadyScreen = null
@@ -113,7 +110,6 @@ func _close(fade: bool = true) -> void:
 	_holder = null
 	if _card != null:
 		_card = null
-		_left = null
 
 
 func _paint(st: Dictionary) -> void:
@@ -150,7 +146,6 @@ func _paint(st: Dictionary) -> void:
 	Kit.text(_body, str(raid.get("raidTitle", node.get("label", "A raid"))), "title")
 	Kit.text(_body, "In the line: %s  ·  %d of %d seats" % [", ".join(PackedStringArray(names)), names.size(), RaidTable.MAX_SEATS], "small", Dossier.SOFT, true)
 	invite_block(_body, st, _my_key(), by, str(raid.get("raidTitle", "a raid")), sea, "raidTable", "muster", _rang)
-	_left = null
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	_body.add_child(row)
@@ -167,8 +162,7 @@ func _paint(st: Dictionary) -> void:
 	_tick()
 
 
-func _process(delta: float) -> void:
-	_t += delta
+func _process(_delta: float) -> void:
 	_tick()
 
 

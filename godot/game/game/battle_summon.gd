@@ -9,7 +9,7 @@ extends Node2D
 ## settles a mark on every ship. Then it sinks back where it came from.
 ## In the sea's World (squashed by GROUND); the creature stands upright.
 
-const GROUND: float = 0.58
+const GROUND: float = Chart.GROUND
 
 var field: SeaField
 var tex: Texture2D

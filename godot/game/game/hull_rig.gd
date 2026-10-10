@@ -189,14 +189,6 @@ func wake_contact(id: String, at: Vector2, bow: float) -> Dictionary:
 	}
 
 
-## The hull's middle above the water, in the World's space (for shots and
-## numbers aimed at it).
-func centre() -> Vector2:
-	if _hull == null:
-		return position
-	return position + Vector2(0, _hull.position.y * 0.6)
-
-
 func _process(delta: float) -> void:
 	if _rig == null:
 		return

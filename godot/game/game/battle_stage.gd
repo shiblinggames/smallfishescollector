@@ -36,8 +36,8 @@ extends Control
 signal finished(won: bool)
 
 const BAR: float = 74.0
-## Every colour on the fight's screen comes from BattleLook (aliases of the
-## Kit and Paper tokens): no hand-typed colours here.
+## The fight's shared colours come from BattleLook (aliases of the Kit and
+## Paper tokens); one-off tints for single effects are typed where they are used.
 
 var sea: Sea
 var raid_id: String = "corsairs_reckoning"
@@ -54,7 +54,6 @@ var _crew_row: HBoxContainer
 ## The crew's XP showing after a fight: their row stays lit while it plays.
 var _crew_lit: bool = false
 var _deck_h: float = 0.0
-var _log: Label
 ## The combat log on the right edge (game/combat_log.gd).
 var _clog: CombatLog
 ## The deck's paper and panel (faded away while the aim bar floats free).
@@ -203,10 +202,8 @@ func _ready() -> void:
 		_ov.my_key = my_key
 		_ov.profile = sea.session.profile()
 		_ov.face_of = func(k: String) -> Texture2D:
-			for i: int in (b["seats"] as Array).size():
-				if b["seats"][i].get("key") == k:
-					return _face(i)
-			return null
+			var si: int = _seat_index(k)
+			return _face(si) if si >= 0 else null
 		_ov.acted.connect(func(a: Array) -> void:
 			var r: Variant = await _act(a)
 			if r is Dictionary and (r as Dictionary).has("error"):
@@ -352,15 +349,12 @@ func _process(delta: float) -> void:
 		var top_y: float = -BAR - 12.0 - dh
 		# While a round plays the deck stays up (its log is being written);
 		# only the orders dim, out of play.
-		var dip: float = 0.0
-		_deck.offset_top = top_y + dip
-		_deck.offset_bottom = -BAR - 12.0 + dip
+		_deck.offset_top = top_y
+		_deck.offset_bottom = -BAR - 12.0
 		_deck_box.modulate.a = 1.0 - 0.65 * clampf(_dim, 0.0, 1.0)
 		# A chooser open (Fire, Special): the crew's keys mean other things
 		# there, so their row steps back.
 		_crew_row.modulate.a = 1.0 if _crew_lit else _deck_box.modulate.a * (0.45 if _menu != "" else 1.0)
-		_log.offset_top = top_y - 54.0
-		_log.offset_bottom = top_y - 22.0
 	for n: Dictionary in _numbers:
 		n["t"] = float(n["t"]) + delta
 	_numbers = _numbers.filter(func(n: Dictionary) -> bool: return float(n["t"]) < 1.4)
@@ -612,17 +606,7 @@ func _build_deck() -> void:
 	_deck_log.offset_bottom = -12.0
 	_deck_log.mouse_filter = Control.MOUSE_FILTER_PASS
 	_deck.add_child(_deck_log)
-	_log = Kit.text(self, "", "body_strong", BattleLook.CREAM)
-	_log.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	_log.offset_left = -470
-	_log.offset_right = 470
-	_log.offset_top = -BAR - 186
-	_log.offset_bottom = -BAR - 156
-	_log.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# The deck's log says it now: the floating line stays hidden.
-	_log.visible = false
-	_log.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
-	_log.add_theme_constant_override("shadow_outline_size", 8)
+	# The deck's log (CombatLog) carries every line; there is no floating one.
 	if _clog == null:
 		_clog = CombatLog.new()
 		_clog.stage = self
@@ -647,7 +631,20 @@ func _deck_paper(on: bool) -> void:
 			create_tween().tween_property(n, "modulate:a", 1.0 if on else 0.0, 0.25 if on else 0.18)
 
 
+## The aim bar (or Finn's dial) still waiting on its lock, or null. A Charter's
+## table can default the plan and start the round while it waits: the deck is
+## then cleared under it, and the aim is called off (see _clear_deck).
+var _aiming: AimBar = null
+
+
 func _clear_deck() -> void:
+	# An aim still unlocked is called off: freed wherever it stands (the dial
+	# is on the stage, not in the deck) and the deck's paper comes back.
+	if _aiming != null:
+		if is_instance_valid(_aiming):
+			_aiming.queue_free()
+		_aiming = null
+		_deck_paper(true)
 	for c: Node in _deck_box.get_children():
 		c.queue_free()
 	if _crew_row != null:
@@ -888,6 +885,7 @@ func _toggle_order(c: Dictionary) -> void:
 ## While choosing: a ring breathing on the water under what it will touch (the
 ## ship it helps, your own ship, or the enemy it works on) with its name, and
 ## beside the crew, what it is and when it goes.
+## The crew orders that help a ship (and so may go to another ship in the line).
 const ORDER_ALLY: Array = ["mender", "abyssal_tide", "anchor", "vengeance"]
 const ORDER_FOE: Array = ["snare", "leviathan", "blitz", "requiem"]
 
@@ -938,10 +936,6 @@ func _order_preview() -> void:
 		Kit.sea_string(self, Kit.font("karla", 700), Vector2(x0, y0 + 20.0), "Goes first this round, with your action", 12, Color(BattleLook.CREAM, 0.85))
 
 
-## The crew orders that may go to another ship in the line.
-const SHARED_ORDERS: Array = ["mender", "abyssal_tide", "anchor", "vengeance"]
-
-
 ## Together: a heal, shield, brace or ward ordered this turn may go to a crewmate.
 func _target_row() -> void:
 	var ab: Dictionary = Js.obj(_plan.get("ability"))
@@ -951,7 +945,7 @@ func _target_row() -> void:
 	for c: Dictionary in b["seats"][me]["crew"]:
 		if c["id"] == ab["crew"]:
 			cls = str(c["cls"])
-	if cls not in SHARED_ORDERS:
+	if cls not in ORDER_ALLY:
 		return
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
@@ -1124,7 +1118,12 @@ func _choose(act: String) -> void:
 		# The bar floats free over the water, like the fishing dial: the
 		# deck's paper fades away while you aim, and comes back after.
 		_deck_paper(false)
+		_aiming = bar
 		var res: String = await bar.locked
+		# Called off while it waited (the table moved on): nothing to send.
+		if _aiming != bar:
+			return
+		_aiming = null
 		_deck_paper(true)
 		_plan["aim"] = res
 		_plan["target"] = _target
@@ -1200,7 +1199,9 @@ func _one_play(x: Dictionary) -> void:
 	match x["t"]:
 		"ability":
 			await _ability_card(x)
-		"order":
+		# Two events share "order": the turn order (an Array) and a captain's
+		# class order (a seat and a String id, handled further down).
+		"order" when x["order"] is Array:
 			_strip = x["order"]
 		"reload":
 			var rs: int = int(x["seat"])
@@ -1542,14 +1543,7 @@ func _one_play(x: Dictionary) -> void:
 			await _depth_call()
 			await _enemy_enters()
 		"nextFight":
-			if x.get("rest", false):
-				_say("Rest stop")
-				_log_line("The crew catch their breath: every crew order is ready again.")
-				await _wait(1.8)
-			if x.get("boss", false):
-				Sound.horn()
-				await _pre_fight_words()
-			await _enemy_enters()
+			await _next_fight_in(x)
 		"pay":
 			if x["key"] == my_key:
 				_say("%s sunk" % b["enemy"]["name"])
@@ -1593,9 +1587,6 @@ func _one_play(x: Dictionary) -> void:
 			await _wait(0.2)
 		"overkill":
 			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), BattleLook.HEAL, 10)
-			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), BattleLook.HEAL)
-		"leech":
-			_fx.motes(_enemy_at, _seat_at(int(x["seat"])), BattleLook.HEAL, 8)
 			_num(_seat_at(int(x["seat"])) + Vector2(0, -70), "+%d" % int(x["heal"]), BattleLook.HEAL)
 		"bond":
 			# A bond reaching a crewmate (or the ship it marked): its motion,
@@ -1651,12 +1642,7 @@ func _one_play(x: Dictionary) -> void:
 			_fx.status_burst(_enemy_at, str(x.get("status", "")))
 			_num(_enemy_at + Vector2(0, -100), str(x["status"]).capitalize(), Color(0.8, 0.6, 1.0))
 		"tided":
-			var r: Dictionary = Js.obj(Js.obj(x.get("picks")).get(my_key))
-			if Js.num(r.get("heal")) > 0.0:
-				_num(_seat_at(me), "+%d" % int(r["heal"]), BattleLook.HEAL, true)
-			if r.get("refreshed") != null:
-				_log_line("A spent crew order is ready again.")
-			await _wait(0.6)
+			await _tide_shown(Js.obj(Js.obj(x.get("picks")).get(my_key)))
 
 
 ## A BROADSIDE: the call over the water, the enemy heeling with the recoil,
@@ -1821,10 +1807,6 @@ func _dmg(world_p: Vector2, amount: int, on_you: bool, crit: bool = false, word:
 	_num(world_p, ("%d!" % amount) if crit else str(amount), col, crit, crit, word, word_col)
 
 
-func _puff(world_p: Vector2, text: String, col: Color) -> void:
-	_num(world_p, text, col)
-
-
 ## The headline banner. One at a time: a new line while one is up swaps its
 ## words in place (no blink); one under 0.6s old is let finish its entrance
 ## first (queued). A Stamp on screen holds it (it carries the moment).
@@ -1855,9 +1837,6 @@ func _stamp_up() -> bool:
 func _log_line(text: String) -> void:
 	if _clog != null:
 		_clog.note(text)
-	_log.text = text
-	_log.modulate.a = 0.0
-	create_tween().tween_property(_log, "modulate:a", 1.0, 0.2)
 
 
 # ── A fight won, a raid done, a ship lost ─────────────────────────────────────
@@ -1882,6 +1861,14 @@ func _won() -> void:
 	if nx["done"]:
 		await _crate()
 		return
+	await _next_fight_in(nx)
+	_await_plan()
+
+
+## The next fight coming on (the solo path's next_fight, or a table's
+## "nextFight" event): a rest stop called, a boss's horn and words, then
+## the enemy enters.
+func _next_fight_in(nx: Dictionary) -> void:
 	if nx.get("rest", false):
 		_say("Rest stop")
 		_log_line("The crew catch their breath: every crew order is ready again.")
@@ -1890,7 +1877,6 @@ func _won() -> void:
 		Sound.horn()
 		await _pre_fight_words()
 	await _enemy_enters()
-	_await_plan()
 
 
 ## THE CREW'S XP (Kong, 2026-10-05): after a fight, the hands who sailed it
@@ -2115,12 +2101,6 @@ func _draw() -> void:
 			draw_rect(Rect2(lx, ly, lw, 2.0), Color(1, 1, 1, 0.14))
 			draw_rect(Rect2(lx, ly, lw * share, 2.0), BattleLook.GOLD if hot else BattleLook.MUTED)
 			draw_string(Kit.font("karla", 800), Vector2(lx + lw + 8.0, ly + 5.0), "%ds" % ceili(left), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, BattleLook.GOLD if hot else BattleLook.MUTED)
-	# The log's backing, and the banner's brass flourish.
-	if _log.visible and _log.text != "" and _log.modulate.a > 0.01:
-		var la: float = _log.modulate.a
-		var lw: float = _log.get_minimum_size().x
-		var lr: Rect2 = Rect2(vp.x / 2.0 - lw / 2.0 - 24.0, _log.position.y + _log.size.y / 2.0 - 17.0, lw + 48.0, 34.0)
-		BattleLook.draw_box(self, lr, BattleLook.box(Color(BattleLook.LACQUER_LO, 0.82 * la), Color(0, 0, 0, 0), 0, 17))
 
 	# Each enemy's plate over its masthead (on a field, the target marked), and
 	# each ship's; plates that would overlap are spread apart (_spread).
@@ -2456,9 +2436,16 @@ func _tide(tide: Dictionary, eyebrow: String) -> void:
 		_act(["tide", id])
 		return
 	var r: Dictionary = Battle.tide_pick(b, me, tide, id)
-	if float(r.get("heal", 0.0)) > 0.0:
-		_num(_seat_at(me), "+%d" % int(r["heal"]), BattleLook.HEAL, true)
+	if Js.num(r.get("heal")) > 0.0:
 		_shown_hp[me] = float(b["seats"][me]["hp"])
+	await _tide_shown(r)
+
+
+## What a tide picked did for you (solo, or a table's "tided" event): the
+## heal over your ship, a line for an order made ready.
+func _tide_shown(r: Dictionary) -> void:
+	if Js.num(r.get("heal")) > 0.0:
+		_num(_seat_at(me), "+%d" % int(r["heal"]), BattleLook.HEAL, true)
 	if r.get("refreshed") != null:
 		_log_line("A spent crew order is ready again.")
 	await _wait(0.6)
@@ -2968,16 +2955,7 @@ func _face(i: int) -> Texture2D:
 	var face: Dictionary = Js.obj(b["seats"][i].get("face"))
 	if face.is_empty() and i == me and sea != null:
 		face = { "characterColor": str(Js.nz(sea.session.profile().get("character_color"), "default")), "hat": sea.session.profile().get("equipped_hat") }
-	var sv: SubViewport = SubViewport.new()
-	sv.size = Vector2i(128, 128)
-	sv.transparent_bg = true
-	sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	var av: Avatar = Avatar.new()
-	av.px = 128.0
-	av.face = face.merged({ "bg": "#2a1f17", "ring": "#00000000" })
-	sv.add_child(av)
-	add_child(sv)
-	_faces[i] = sv.get_texture()
+	_faces[i] = Avatar.texture_of(face, self)
 	return _faces[i]
 
 
@@ -3040,8 +3018,8 @@ func _z() -> float:
 	return float(Js.obj(sea.stage).get("zoom", 1.0)) * sea.fight_zoom if sea != null and sea.stage is Dictionary else 1.0
 
 
-## How far above a hull's keel its plate sits: over the masthead, following
-## the zoom (never so low it covers the hull, nor so high it floats off).
+## How far above a hull's keel its plate sits: a fixed lift over the masthead
+## (the caller's height at zoom one), not scaled with the zoom.
 func _plate_lift(at_one: float) -> float:
 	return -at_one
 

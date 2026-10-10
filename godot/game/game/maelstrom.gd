@@ -15,11 +15,8 @@ extends Node2D
 ## light at the floor and climbs the throat as you come in.
 ##
 ## (No wreckage now: Kong, 2026-10-05, the debris fields "look cheap"; the
-## themes' lists are empty and nothing is made.)
-## THE WRECKAGE was real physics (Kong, 2026-10-03: "utilize godot physics to
-## juice them up"): rigid bodies in a flat space of their own, carried round
-## by the current and knocking into each other, drawn as the painted debris
-## laid onto the bowl's keystone. And the hull feels the pull (Boat, whirl).
+## rigid bodies that carried it round the bowl are gone with it.) The hull
+## still feels the pull (Boat, whirl).
 ##
 ## Everything is quiet from across the water and rouses as the camera nears;
 ## out of sight it rests.
@@ -55,11 +52,9 @@ const STREAM_N: int = 5
 
 const THEMES: Dictionary = {
 	"davy": { "arm": Color("#156f6c"), "mid": Color("#1f918c"), "wisp": Color("#5fc9c6"), "core": Color("#a6eef0"), "eye": Color("#1a7f7a"), "foam": Color("#8fd6d8"),
-		"spirit": Color("#9cf0ff"), "speed": 0.5, "rise": true, "face": "davyjones.png", "paint": "sea/mael-davy.webp",
-		"debris": [] },
+		"spirit": Color("#9cf0ff"), "speed": 0.5, "rise": true, "face": "davyjones.png", "paint": "sea/mael-davy.webp" },
 	"don": { "arm": Color("#1f4a3a"), "mid": Color("#2f6a52"), "wisp": Color("#7fb098"), "core": Color("#d8e6dc"), "eye": Color("#275c46"), "foam": Color("#93b9a5"),
-		"spirit": Color("#d6b25c"), "speed": 0.4, "rise": false, "face": "donsgauntlet.png", "paint": "sea/mael-don.webp",
-		"debris": [] },
+		"spirit": Color("#d6b25c"), "speed": 0.4, "rise": false, "face": "donsgauntlet.png", "paint": "sea/mael-don.webp" },
 }
 
 var _th: Dictionary
@@ -88,8 +83,6 @@ var _spray_h: Node2D
 var _motes: Motes
 var _foam: Array = []
 var _spirits: Array = []
-var _debris: Array = []
-var _phys: Node2D
 var _label: Label
 var _sub: Label
 var _name_holder: Node2D
@@ -105,7 +98,6 @@ static var _liptex: Texture2D
 static var _mote: Texture2D
 static var _mid: Texture2D
 static var _wisp: Texture2D
-static var _arms: Texture2D
 
 const PAINT_SHADER: String = """shader_type canvas_item;
 uniform float rot = 0.0;
@@ -268,7 +260,6 @@ func _ready() -> void:
 		_foam.append({ "ang": randf() * TAU, "r": R * (0.3 + randf() * 0.75), "size": 3.0 + randf() * 6.0 })
 	for k3: int in SPIRIT_N:
 		_spirits.append({ "ang": 0.0, "r": 0.0, "h": 0.0, "age": randf() * 3.0, "life": 2.2 + randf() * 2.2, "size": 8.0 + randf() * 12.0 })
-	_make_debris()
 	# The name over it.
 	var holder: Node2D = Node2D.new()
 	holder.scale = Vector2(1.0, 1.0 / Chart.GROUND)
@@ -320,7 +311,6 @@ static func _textures() -> void:
 	_mote = _radial([[0.0, Color(1, 1, 1, 1)], [0.4, Color(1, 1, 1, 0.6)], [1.0, Color(1, 1, 1, 0)]], 32)
 	_ring = _radial([[0.0, Color(1, 1, 1, 0)], [0.88, Color(1, 1, 1, 0)], [0.95, Color(1, 1, 1, 1)], [1.0, Color(1, 1, 1, 0)]])
 	_liptex = _radial([[0.0, Color(1, 1, 1, 0)], [0.84, Color(1, 1, 1, 0)], [0.91, Color(1, 1, 1, 0.45)], [0.955, Color(1, 1, 1, 1)], [0.985, Color(1, 1, 1, 0.3)], [1.0, Color(1, 1, 1, 0)]])
-	_arms = _spiral(3, 1.25, 26.0)
 	_mid = _spiral(4, 1.7, 13.0)
 	_wisp = _spiral(6, 2.4, 7.0)
 
@@ -452,63 +442,6 @@ func _flat_ring(h: Node2D, s: Sprite2D, rad: float) -> void:
 	h.scale = Vector2(rad * 2.0 * KEY_W / tw, rad * 2.0 * hk / tw)
 
 
-# ── The wreckage: physics in a flat space, drawn on the bowl ──────────────────
-
-func _make_debris() -> void:
-	# The bodies live in a flat space of their own (top level, off in a corner
-	# of the canvas nothing else uses): the circle is round there, and each
-	# frame a body's place is laid onto the keystone for its painted piece.
-	_phys = Node2D.new()
-	_phys.top_level = true
-	_phys.position = Vector2(-4.0e6 - float(absi(hash(str(info.get("id", "")))) % 1000) * 4000.0, -4.0e6)
-	add_child(_phys)
-	var list: Array = _th["debris"]
-	for k: int in list.size():
-		var body: RigidBody2D = RigidBody2D.new()
-		body.gravity_scale = 0.0
-		body.linear_damp = 0.5
-		body.angular_damp = 0.6
-		body.collision_layer = 1 << 9
-		body.collision_mask = 1 << 9
-		body.mass = randf_range(0.7, 1.6)
-		var cs: CollisionShape2D = CollisionShape2D.new()
-		var circ: CircleShape2D = CircleShape2D.new()
-		var size: float = _r * (0.12 + float((k * 37) % 5) * 0.012)
-		circ.radius = size * 0.42
-		cs.shape = circ
-		body.add_child(cs)
-		var a: float = float(k) / list.size() * TAU
-		body.position = Vector2.from_angle(a) * _r * (1.15 + k * 0.08)
-		_phys.add_child(body)
-		var sp: Sprite2D = Sprite2D.new()
-		sp.texture = Skipper.tex(str(list[k]))
-		sp.offset = Vector2(0, -float(sp.texture.get_height()) * 0.2) if sp.texture != null else Vector2.ZERO
-		add_child(sp)
-		_debris.append({ "body": body, "sp": sp, "size": size, "bob": k * 1.3, "spin": (1.0 if k % 2 == 1 else -1.0) * 0.4 })
-
-
-func _physics_process(_delta: float) -> void:
-	if not _awake:
-		return
-	var dir: float = -1.0 if str(info.get("id", "")) == "don" else 1.0
-	for d: Dictionary in _debris:
-		var body: RigidBody2D = d["body"]
-		var p: Vector2 = body.position
-		var dist: float = maxf(1.0, p.length())
-		var u: Vector2 = p / dist
-		# The current carries it round (faster nearer the lip) and draws it
-		# in; inside the lip it is spat back out to ride the rim again.
-		var round: float = 220.0 * _spd * (1.0 + 0.9 * _g * _g) * clampf(_r * 1.6 / dist, 0.6, 1.8)
-		var want: Vector2 = u.orthogonal() * dir * round
-		body.apply_central_force((want - body.linear_velocity) * body.mass * 1.6)
-		body.apply_central_force(-u * body.mass * 60.0 * (1.0 + _g))
-		if dist < _r * 1.02:
-			body.apply_central_force(u * body.mass * 900.0)
-		if dist > _r * 1.9:
-			body.position = u * _r * 1.6
-		body.apply_torque(dir * 1200.0 * body.mass)
-
-
 # ── Each frame ────────────────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
@@ -531,8 +464,6 @@ func _process(delta: float) -> void:
 	if on != _awake:
 		_awake = on
 		_spray.emitting = on
-		for d0: Dictionary in _debris:
-			(d0["body"] as RigidBody2D).freeze = not on
 	if not on:
 		return
 	# How roused it is: by how near the camera is.
@@ -634,25 +565,6 @@ func _process(delta: float) -> void:
 			s["r"] = float(s["r"]) - delta * _r * 0.28
 			s["h"] = (1.0 - su) * 36.0
 			s["a"] = (0.25 + 0.55 * maxf(0.0, sin(_t * 7.0 + float(s["ang"]) * 3.0))) * sin(su * PI)
-	# The wreckage: where physics has it, laid onto the bowl; the near side
-	# over the throat, the far side under it.
-	for d: Dictionary in _debris:
-		var body: RigidBody2D = d["body"]
-		var sp: Sprite2D = d["sp"]
-		if sp.texture == null:
-			continue
-		var p: Vector2 = body.position
-		var ang: float = p.angle()
-		var sn: float = sin(ang)
-		var kp: Vector2 = keystone(p.x, p.y)
-		sp.position = kp + Vector2(0, sin(_t * 1.3 + float(d["bob"])) * 3.0)
-		var size: float = float(d["size"]) * depth_k(sn)
-		var sc: float = size / float(sp.texture.get_width())
-		sp.scale = Vector2(sc, sc / Chart.GROUND)
-		sp.rotation = sin(_t * 0.8 + float(d["bob"])) * 0.12 + body.rotation * 0.08
-		sp.z_index = 3 if sn >= 0.0 else 0
-		var dist: float = p.length()
-		sp.modulate.a = clampf(minf((_r * 1.9 - dist) / (_r * 0.3), (dist - _r * 0.92) / (_r * 0.15)), 0.0, 1.0) * (0.9 + 0.1 * sn)
 	_motes.queue_redraw()
 	_motes.spirit_layer.queue_redraw()
 

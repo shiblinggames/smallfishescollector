@@ -31,7 +31,7 @@ extends Node2D
 ##   across the deck, a hook's glint at each end.
 ## Fed every frame by the battle stage (set()); it eases in and out.
 
-const GROUND: float = 0.58
+const GROUND: float = Chart.GROUND
 
 var width: float = 300.0
 var face: float = -1.0
@@ -68,6 +68,9 @@ var _smoke: Array = []
 var _shards: Array = []
 var _light: PointLight2D
 var _cracked: float = 0.0
+## True once the hull wears nothing, every particle is gone and the empty
+## frame is drawn: a bare hull then skips its filters and both redraws.
+var _idle: bool = false
 
 
 func _ready() -> void:
@@ -96,6 +99,8 @@ func _process(delta: float) -> void:
 	_surge_a = lerpf(_surge_a, 1.0 if surge else 0.0, k)
 	_wall_a = lerpf(_wall_a, 1.0 if wall_left > 0.0 else 0.0, 1.0 - exp(-delta * 3.0))
 	_cracked = lerpf(_cracked, (1.0 - wall_left / maxf(1.0, wall_of)) if wall_of > 0.0 else 0.0, k)
+	# An enabled light still costs at energy 0: it is on only while burning.
+	_light.enabled = _burn_a > 0.01
 	_light.energy = _burn_a * (0.9 + 0.35 * sin(_t * 17.0) * sin(_t * 7.3))
 	_light.position = Vector2(0, -20)
 	for key: String in WEAR:
@@ -106,6 +111,13 @@ func _process(delta: float) -> void:
 			"spot": on = spot
 			"boarded": on = boarded
 		_wa[key] = lerpf(float(_wa.get(key, 0.0)), 1.0 if on else 0.0, k)
+	if _quiet():
+		if not _idle:
+			_idle = true
+			queue_redraw()
+			_lightl.queue_redraw()
+		return
+	_idle = false
 	_emit(delta)
 	for q: Dictionary in _parts:
 		q["t"] = float(q["t"]) + delta
@@ -135,6 +147,18 @@ func _process(delta: float) -> void:
 		m["p"] = (m["p"] as Vector2) + (m["v"] as Vector2) * delta
 	_smoke = _smoke.filter(func(m: Dictionary) -> bool: return float(m["t"]) < float(m["life"]))
 	queue_redraw()
+
+
+## Nothing on the hull to draw: every eased look has settled to nothing and
+## no particle is left.
+func _quiet() -> bool:
+	for v: float in [_burn_a, _ice_a, _sh_a, _ward_a, _eye_a, _surge_a, _wall_a, _cracked]:
+		if v > 0.005:
+			return false
+	for wv: Variant in _wa.values():
+		if float(wv) > 0.005:
+			return false
+	return _parts.is_empty() and _sparks.is_empty() and _smoke.is_empty() and _shards.is_empty()
 
 
 ## A plate of the Last Wall knocked off: a burst of iron shards.
