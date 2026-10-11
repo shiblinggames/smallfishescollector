@@ -351,8 +351,9 @@ static func say(line: Label, t: String, col: Color = Color(0, 0, 0, 0)) -> void:
 
 # ── Buttons ───────────────────────────────────────────────────────────────────
 
-## A QUIET BUTTON (M2): paper with inked capitals (button_small); `on`, a
-## plank of grained wood with WOOD_INK words. Focusable for a pad (the ring
+## A QUIET BUTTON (M2): paper with inked capitals (button_small); `on`, flat
+## ink with paper words (cream with dark words at night; it was a plank of
+## grained wood until 2026-10-10). Focusable for a pad (the ring
 ## shows only for keyboard and pad focus). nt: the night paper (null: the
 ## deprecated Paper.night); it also follows its root when it lands.
 static func button(label: String, on: bool = false, nt: Variant = null) -> Pane.PaneButton:
@@ -382,10 +383,10 @@ static func button(label: String, on: bool = false, nt: Variant = null) -> Pane.
 
 static func _button_specs(on: bool, dark: bool) -> Array:
 	if on:
-		var w: Dictionary = { "radius": Kit.R_SMALL, "fill": [Kit.WOOD_HI, Kit.WOOD_LO], "border": [1, Color(0.25, 0.15, 0.08, 0.8)], "shadow": [Color(0, 0, 0, 0.3 if dark else 0.16), 6, Vector2(0, 2)], "pad": [12, 6, 12, 7], "keep": true, "grain": true, "night": dark }
-		var wh: Dictionary = w.duplicate()
-		wh["fill"] = [Kit.WOOD_HI.lightened(0.1), Kit.WOOD_LO.lightened(0.08)]
-		return [w, wh]
+		var ps: Array = Kit.primary_specs(dark, [12, 6, 12, 7], Kit.R_SMALL)
+		(ps[0] as Dictionary)["night"] = dark
+		(ps[1] as Dictionary)["night"] = dark
+		return ps
 	var face: Color = Color(0.27, 0.22, 0.18, 0.97) if dark else Color(PAPER, 0.97)
 	var lk: Color = NIGHT_INK if dark else INK
 	var n: Dictionary = { "radius": Kit.R_SMALL, "fill": [face], "border": [1, Color(lk, 0.4 if dark else 0.5)], "shadow": [Color(0, 0, 0, 0.3 if dark else 0.16), 6, Vector2(0, 2)], "pad": [12, 6, 12, 7], "keep": true, "night": dark }
@@ -396,25 +397,23 @@ static func _button_specs(on: bool, dark: bool) -> Array:
 
 
 static func _button_ink(b: Button, on: bool, dark: bool) -> void:
-	var c: Color = Kit.WOOD_INK if on else (NIGHT_INK if dark else INK)
+	var c: Color = (NIGHT_PAPER_DEEP if dark else PAPER) if on else (NIGHT_INK if dark else INK)
 	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		b.add_theme_color_override(st, c)
 	b.add_theme_color_override("font_disabled_color", Color(c, 0.4))
 	b.set_meta("day_font", c)
 
 
-## THE PRIMARY (M2): the one thing to do on a sheet ("Forge it", "Sign on"), a
-## 46px plank of stained wood in Cinzel 16. Wood reads on both papers; at
-## night its shadow deepens.
+## THE PRIMARY (M2): the one thing to do on a sheet ("Forge it", "Sign on"),
+## 46px in Cinzel 16: flat ink on the day paper, flat cream on the night's
+## (Kit.primary_specs; it was a plank of stained wood until 2026-10-10).
 static func primary(label: String, nt: Variant = null) -> Pane.PaneButton:
 	var dark: bool = night if nt == null else bool(nt)
 	var b: Pane.PaneButton = Kit.button(label, "primary", "large")
 	if dark:
-		var n: Dictionary = b.normal.duplicate()
-		var h: Dictionary = b.hot.duplicate()
-		n["shadow"] = [Color(0, 0, 0, 0.45), 12, Vector2(0, 4)]
-		h["shadow"] = n["shadow"]
-		b.restyle(n, h)
+		var ps: Array = Kit.primary_specs(true, [18, 11, 18, 11], 12)
+		b.restyle(ps[0], ps[1])
+		Kit._ink_all(b, NIGHT_PAPER_DEEP)
 	b.custom_minimum_size = Vector2(0, 46)
 	b.focus_mode = Control.FOCUS_ALL
 	return b

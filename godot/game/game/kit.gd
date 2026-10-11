@@ -474,7 +474,7 @@ static func water_pill(pad: Variant = [10, 3, 10, 4], hot: bool = false) -> Dict
 
 # ── Buttons ────────────────────────────────────────────────────────────────────
 #
-# kind: "primary" (a plank of stained wood, the one thing to do), "accent" (a
+# kind: "primary" (flat ink, the one thing to do; cream on the night paper), "accent" (a
 # wash of the room's colour), "secondary" (paper), "danger", or "quiet" (a
 # secondary in Karla, button_quiet, for a deliberately quiet large action).
 # size: "large" (radius 12) or "small" (radius 9, the in-row actions).
@@ -491,11 +491,14 @@ static func button(t: String, kind: String = "secondary", size: String = "large"
 	var ink: Color
 	match kind:
 		"primary":
-			# The one thing to do is a plank of stained wood.
-			n = { "radius": r, "fill": [WOOD_HI, WOOD_LO], "border": [1, Color(0.25, 0.15, 0.08, 0.8)], "shadow": [Color(0.2, 0.12, 0.05, 0.35), 12, Vector2(0, 4)], "pad": pad, "keep": true, "grain": true }
-			h = n.duplicate()
-			h["fill"] = [WOOD_HI.lightened(0.1), WOOD_LO.lightened(0.08)]
-			ink = WOOD_INK
+			# THE ONE THING TO DO, FLAT (Kong, 2026-10-10: no "faux wood
+			# styling"; it was a plank of stained wood): solid ink with paper
+			# words, no grain, gradient or shadow; on the night paper it turns
+			# cream with dark words (primary_specs, applied as it lands).
+			var ps: Array = primary_specs(false, pad, r)
+			n = ps[0]
+			h = ps[1]
+			ink = PAPER
 		"accent":
 			var tint: Color = PAPER.lerp(accent, 0.2)
 			n = { "radius": r, "fill": [tint, tint.darkened(0.04)], "border": [1, Color(ink(accent), 0.55)], "shadow": [Color(0, 0, 0, 0.14), 6, Vector2(0, 2)], "pad": pad, "paper": true }
@@ -528,8 +531,30 @@ static func button(t: String, kind: String = "secondary", size: String = "large"
 		b.add_theme_color_override(st, ink)
 	b.add_theme_color_override("font_disabled_color", Color(ink, 0.4))
 	b.custom_minimum_size = Vector2(0, 46 if big else 32)
+	if kind == "primary":
+		b.tree_entered.connect(func() -> void:
+			if Paper._root(b) == 1:
+				var ns: Array = Kit.primary_specs(true, pad, r)
+				b.restyle(ns[0], ns[1])
+				Kit._ink_all(b, Paper.NIGHT_PAPER_DEEP))
 	tap(b)
 	return b
+
+
+## The flat primary's two faces (normal, hovered): ink on the day paper,
+## cream on the night's.
+static func primary_specs(dark: bool, pad: Array, r: int) -> Array:
+	var face: Color = Paper.NIGHT_INK if dark else PAPER_INK
+	var n: Dictionary = { "radius": r, "fill": [face], "pad": pad, "keep": true }
+	var h: Dictionary = n.duplicate()
+	h["fill"] = [face.lightened(0.12) if not dark else face.lightened(0.08)]
+	return [n, h]
+
+
+static func _ink_all(b: Button, c: Color) -> void:
+	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(st, c)
+	b.add_theme_color_override("font_disabled_color", Color(c, 0.4))
 
 
 ## Press feedback: a small squeeze, as the web's whileTap (Motion.press and
@@ -585,26 +610,39 @@ static func _close_specs(night: bool) -> Array:
 	return [n, h]
 
 
-## THE back pill: stained wood, a chevron, the place it goes back to. Hover
-## lightens the wood as the primary button's does.
-static func back_pill(label: String) -> Pane.PaneButton:
-	var n: Dictionary = { "radius": R_PILL, "fill": [WOOD_HI, WOOD_LO], "border": [1, Color(0.25, 0.15, 0.08, 0.8)], "shadow": [Color(0, 0, 0, 0.35), 9, Vector2(0, 2)], "pad": [26, 6, 13, 6], "keep": true, "grain": true }
+static func _back_specs(dark: bool) -> Array:
+	var lk: Color = Paper.NIGHT_INK if dark else PAPER_INK
+	var n: Dictionary = { "radius": R_PILL, "fill": [Color(lk, 0.0)], "border": [1, Color(lk, 0.55)], "pad": [26, 6, 13, 6], "keep": true }
 	var h: Dictionary = n.duplicate()
-	h["fill"] = [WOOD_HI.lightened(0.1), WOOD_LO.lightened(0.08)]
-	h["border"] = [1, Color(BRONZE, 0.8)]
-	var b: Pane.PaneButton = Pane.PaneButton.new(n, h)
+	h["fill"] = [Color(lk, 0.1)]
+	h["border"] = [1, Color(lk, 0.85)]
+	return [n, h]
+
+
+## THE back pill: a flat pill drawn in a hairline, a chevron, the place it
+## goes back to (Kong, 2026-10-10: it was stained wood). Ink on the day paper,
+## cream on the night's; hover fills it faintly.
+static func back_pill(label: String) -> Pane.PaneButton:
+	var specs: Array = _back_specs(false)
+	var b: Pane.PaneButton = Pane.PaneButton.new(specs[0], specs[1])
 	b.text = label.to_upper()
 	b.tooltip_text = "Back to %s" % label
 	var r: Array = ROLES["button_small"]
 	b.add_theme_font_override("font", tracked(r[0], r[1], r[2], r[3]))
 	b.add_theme_font_size_override("font_size", r[2])
-	for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
-		b.add_theme_color_override(st, WOOD_INK)
+	_ink_all(b, PAPER_INK)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var chev: Glyph = Glyph.new()
 	chev.kind = "back"
-	chev.color = WOOD_INK
+	chev.color = PAPER_INK
+	b.tree_entered.connect(func() -> void:
+		if Paper._root(b) == 1:
+			var ns: Array = Kit._back_specs(true)
+			b.restyle(ns[0], ns[1])
+			Kit._ink_all(b, Paper.NIGHT_INK)
+			chev.color = Paper.NIGHT_INK
+			chev.queue_redraw())
 	chev.position = Vector2(9, 0)
 	chev.size = Vector2(12, 30)
 	chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
