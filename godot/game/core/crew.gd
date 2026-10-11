@@ -20,6 +20,10 @@ extends RefCounted
 ##     was earned in the port (Kong, 2026-10-01: "focus on Fishing for now").
 ##     Off since 2026-10-04: raids earn Navigation, and the hall reads it as
 ##     the web's does.
+##   - THE RECRUIT ROOM, DEEPER (Kong, 2026-10-10): the bad-luck count
+##     (crew_pity, crewPort.pityAfter), the book (crew_seen, crew_signed, a
+##     board face's isNew) and the recruit lines (port_rules crewQuips). See
+##     the sections below; the state carries pity, crewSeen and crewSigned.
 
 static var _cards: Array = []
 
@@ -158,6 +162,18 @@ static func class_of(slug: String) -> Dictionary:
 static func trait_label(effects: Array) -> String:
 	var tr: Array = Bunks.net_trait(effects)
 	return str(Js.obj(t().get("traitLabels")).get("%d,%d,%d" % [clampi(int(tr[0]), -4, 4), clampi(int(tr[1]), -4, 4), clampi(int(tr[2]), -4, 4)], ""))
+
+
+## A trait said plainly, from the numbers it stands for (the rules keep only
+## a label per triple, so its meaning is its stats): "+2 Fortune, -1 Dodge".
+static func trait_effect(effects: Array) -> String:
+	var tr: Array = Bunks.net_trait(effects)
+	var bits: Array = []
+	var names: Array = ["Power", "Dodge", "Fortune"]
+	for k: int in 3:
+		if int(tr[k]) != 0:
+			bits.append("%+d %s" % [int(tr[k]), names[k]])
+	return ", ".join(PackedStringArray(bits))
 
 
 # ── The hall and the roster's size (lib/crewHall, lib/crewCapacity) ─────────
@@ -313,20 +329,102 @@ static func _fill_free_board(db: CaptainStore, uid: String, prev: Variant) -> vo
 		var r: Dictionary = rows[slot]
 		recs.append({ "id": db.next_id(), "slot": float(slot), "source": "free", "card_id": r["cardId"], "rarity": r["rarity"],
 			"power": r["power"], "dodge": r["dodge"], "fortune": r["fortune"], "effects": r["effects"], "recruited": false, "start_xp": 0.0 })
+	_mark_new(prof, recs)
 	db.save["recruits"] = recs
+
+
+# ── The book (port rules) ───────────────────────────────────────────────────
+#
+# THE CREW SEEN (Kong, 2026-10-10, the Crew Hall's collection book): the
+# profile keeps crew_seen, every crewmate (card id) the captain has had on any
+# board, free or posted, or aboard; and crew_signed, every one ever signed
+# (a dismissal does not take it back). Both are filled from the save the
+# first time they are read (the roster, the dead and the board standing) and
+# from then on as boards roll and hands sign. Under the web's tables (the
+# parity run) neither is kept.
+
+static func _add_id(list: Array, id: Variant) -> void:
+	if id == null:
+		return
+	var f: float = float(id)
+	if not list.has(f):
+		list.append(f)
+
+
+## The book's two lists brought up to date: every crew row (alive or lost,
+## however they came aboard) is seen and signed; the first read also takes
+## the board standing as seen.
+static func _keep_book(db: CaptainStore, prof: Dictionary) -> void:
+	if port().is_empty():
+		return
+	var first: bool = prof.get("crew_seen") == null
+	var seen: Array = Js.list(prof.get("crew_seen")).duplicate()
+	var signed: Array = Js.list(prof.get("crew_signed")).duplicate()
+	for c: Dictionary in Js.list(db.save.get("crew")):
+		_add_id(seen, c.get("card_id"))
+		_add_id(signed, c.get("card_id"))
+	if first:
+		for r: Dictionary in Js.list(db.save.get("recruits")):
+			_add_id(seen, r.get("card_id"))
+	prof["crew_seen"] = seen
+	prof["crew_signed"] = signed
+
+
+## A fresh board's faces: each marked "fresh" if the captain has never had
+## that crewmate before (the reveal's NEW), then all of them seen. Port only.
+static func _mark_new(prof: Dictionary, recs: Array) -> void:
+	if port().is_empty():
+		return
+	var seen: Array = Js.list(prof.get("crew_seen")).duplicate()
+	for r: Dictionary in recs:
+		r["fresh"] = not seen.has(float(r["card_id"]))
+	for r: Dictionary in recs:
+		_add_id(seen, r["card_id"])
+	prof["crew_seen"] = seen
+
+
+# ── Bad-luck protection (port rules) ────────────────────────────────────────
+#
+# THE PITY COUNT (Kong, 2026-10-10): profile crew_pity counts the notices
+# posted in a row whose board had no Epic or better, whatever the notice (the
+# free board at sunrise does not count either way). A posted board with an
+# Epic or better sets it back to 0. Once it stands at crewPort.pityAfter, the
+# next posted board is made sure of one: if it rolled none, ONE face (a slot
+# on the rules' dice) is rolled again among the notice's own Epic and
+# Legendary odds (so a Legendary still only on a notice that can bring one,
+# and only one the legendary gate allows); the other faces stay as rolled.
+
+static func pity_after() -> int:
+	return int(Js.num(port().get("pityAfter")))
+
+
+static func _has_epic(rows: Array) -> bool:
+	return rows.any(func(r: Dictionary) -> bool: return float(r["rarity"]) >= 3.0)
+
+
+## What the tickets show: the count, the threshold, and the post (counting
+## this next one as 1) by which an Epic or better is sure.
+static func pity_state(prof: Dictionary) -> Dictionary:
+	var after: int = pity_after()
+	var n: int = int(Js.num(prof.get("crew_pity")))
+	return { "count": float(n), "after": float(after), "within": float(maxi(1, after + 1 - n)) if after > 0 else 0.0 }
 
 
 # ── The state ───────────────────────────────────────────────────────────────
 
 static func _candidate(r: Dictionary) -> Dictionary:
 	var m: Dictionary = card(float(r["card_id"]))
-	return {
+	var out: Dictionary = {
 		"id": r["id"], "slot": r["slot"], "source": r["source"], "cardId": r["card_id"],
 		"name": display_name(str(m.get("slug", "")), str(m.get("name", ""))) if not m.is_empty() else "Unknown",
 		"filename": str(m.get("filename", "")), "slug": str(m.get("slug", "")).to_lower(),
 		"rarity": r["rarity"], "power": r["power"], "dodge": r["dodge"], "fortune": r["fortune"],
 		"effects": Js.list(r.get("effects")), "recruited": r["recruited"], "startXp": Js.nz(r.get("start_xp"), 0.0),
 	}
+	# Port rules: never had before this board (the reveal's NEW).
+	if not port().is_empty():
+		out["isNew"] = r.get("fresh") == true
+	return out
 
 
 static func _member(c: Dictionary, prof: Dictionary = {}) -> Dictionary:
@@ -350,6 +448,8 @@ static func live(db: CaptainStore) -> Array:
 ## getCrewState, cut to the port's fields; fills the free board when stale.
 static func state(db: CaptainStore, uid: String) -> Dictionary:
 	var prof: Dictionary = db.me(uid)
+	# The book first, so a free board filled now is told apart from the save.
+	_keep_book(db, prof)
 	_fill_free_board(db, uid, prof.get("last_free_recruit_date"))
 	var nav: int = nav_level(prof)
 	var board: Array = Js.list(db.save.get("recruits")).duplicate()
@@ -375,7 +475,10 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 		"navLevel": float(nav),
 		"hallTier": float(clamp_hall(prof.get("crew_hall_tier"))),
 		"doubloons": Js.nz(prof.get("doubloons"), 0.0),
-	}.merged(Bunks.state_fields(db, prof)).merged({ "notices": notices_held(prof) } if not port().is_empty() else {})
+	}.merged(Bunks.state_fields(db, prof)).merged({
+		"notices": notices_held(prof), "pity": pity_state(prof),
+		"crewSeen": Js.list(prof.get("crew_seen")).duplicate(), "crewSigned": Js.list(prof.get("crew_signed")).duplicate(),
+	} if not port().is_empty() else {})
 
 
 static func _after(db: CaptainStore, uid: String) -> Dictionary:
@@ -431,16 +534,40 @@ static func post_notice(db: CaptainStore, uid: String, id: String) -> Dictionary
 	p["crew_notices"] = held
 	# Today's free board will not come down over this one.
 	p["last_free_recruit_date"] = board_key(Clock.now_ms())
-	var rows: Array = roll_board(int(t()["dailyRecruits"]), def["weights"], Js.list(p.get("legendary_unlocks")))
+	_keep_book(db, p)
+	var unlocks: Array = Js.list(p.get("legendary_unlocks"))
+	var rows: Array = roll_board(int(t()["dailyRecruits"]), def["weights"], unlocks)
+	# Bad-luck protection: at the threshold a dry board gets one Epic or better.
+	var after: int = pity_after()
+	var dry: int = int(Js.num(p.get("crew_pity")))
+	var lifted: bool = false
+	if after > 0 and dry >= after and not rows.is_empty() and not _has_epic(rows):
+		var w: Array = def["weights"]
+		var top: Array = [0.0, 0.0, float(w[2]), float(w[3])] if float(w[2]) + float(w[3]) > 0.0 else [0.0, 0.0, 1.0, 0.0]
+		var one: Array = roll_board(1, top, unlocks)
+		if not one.is_empty():
+			rows[int(floor(Dice.next() * rows.size()))] = one[0]
+			lifted = true
+	p["crew_pity"] = 0.0 if _has_epic(rows) else float(dry + 1)
 	var recs: Array = []
 	for slot: int in rows.size():
 		var r: Dictionary = rows[slot]
 		recs.append({ "id": db.next_id(), "slot": float(slot), "source": id, "card_id": r["cardId"], "rarity": r["rarity"],
 			"power": r["power"], "dodge": r["dodge"], "fortune": r["fortune"], "effects": r["effects"], "recruited": false, "start_xp": 0.0 })
+	_mark_new(p, recs)
 	db.save["recruits"] = recs
 	var res: Dictionary = _after(db, uid)
 	res["posted"] = id
+	res["pityLifted"] = lifted
 	return res
+
+
+## THE RECRUIT LINES (port_rules crewQuips, by species slug; DRAFTS for Kong):
+## the one short line a crewmate says as their card turns. "" for none.
+static func quip(slug: String) -> String:
+	if Rules.web_only:
+		return ""
+	return str(Js.obj(Rules.data().get("crewQuips")).get(slug.to_lower(), ""))
 
 
 ## recruitCrew: claim the candidate first; a full roster hands it back.

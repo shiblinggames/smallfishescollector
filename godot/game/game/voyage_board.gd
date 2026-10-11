@@ -413,6 +413,8 @@ func _paint_haul() -> void:
 		Paper.stat(_body, str(g["name"]), "+%s crew XP%s" % [Js.thousands(float(_haul["crewXp"])), up])
 	for b: Dictionary in Js.list(_haul.get("earnedBait")):
 		Paper.text(_body, "They brought back a %s lure." % ("Golden" if b["type"] == "golden" else "Luminous"), "body_strong", Paper.NIGHT_GOLD)
+	for nt: Variant in Js.obj(_haul.get("notices")):
+		Paper.text(_body, "They brought back a %s, for the Crew Hall." % str(Js.obj(Crew.notice_defs().get(nt)).get("name", nt)), "body_strong", Paper.NIGHT_GOLD)
 	for n: Variant in Js.list(_haul.get("crewLostNames")):
 		Paper.text(_body, "%s did not come home. They are remembered in the Crew Hall." % str(n), "body_strong", RED, true)
 	var ok: Pane.PaneButton = Paper.button("Back to the board", true)

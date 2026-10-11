@@ -1956,7 +1956,8 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     haul is scaled by the new run over the web's, so a trawl's earnings per hour are unchanged.
   - No gems anywhere in the port (Kong, 2026-10-04). Activities that paid gems on the web
     (voyages first, bounties, the World Chart) need new end rewards, e.g. skin or recruit-roll
-    vouchers: TABLED, to settle as each is ported.
+    vouchers: TABLED, to settle as each is ported. (2026-10-10: voyages now bring notices for the Crew
+    Hall, see THE RECRUIT ROOM, DEEPER; bounties pay doubloons and the World Chart vouchers.)
   THE SHIP'S PURCHASES (2026-10-04, the audit's third item: the Mega was unreachable without
   them): core/hulls.gd ports buyShip (the Sloop to the Man-o-War a rung at a time, each behind
   its Navigation rung, prices in port_rules.json "hulls" since the export carries only the sea
@@ -2580,6 +2581,67 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   odds, notice, save or rule call changed. tests/shot.gd crewhall: CREW_NOTICES ("id:n,..."),
   CREW_PULL=<notice id> with CREW_F frames, CREW_LEGEND=1 (the pulled board's first face made a
   Legendary on the shot's save), CREW_SIGN=1 (skip to the end and sign the second card).
+- THE RECRUIT ROOM, DEEPER (Kong, 2026-10-10: "I like all of it"). RULES (core/crew.gd,
+  core/voyages.gd; port only: under Rules.web_only nothing below is kept or rolled, parity ok):
+  - BAD-LUCK PROTECTION: profile crew_pity counts posted notices in a row whose board had no
+    Epic or better, any notice (shared); the free board at sunrise neither counts nor resets
+    it; a posted board with an Epic or better sets it to 0. Once it stands at
+    crewPort.pityAfter (DEFAULT 9, Kong may tune), the next posted board is sure of one: if it
+    rolled none, ONE face (a slot on the rules' dice) is rolled again among that notice's own
+    Epic and Legendary weights (a Legendary still only on a notice that can bring one, and
+    only one the legendary gate allows; otherwise an Epic); the other faces stay as rolled.
+    So the tenth post at the latest. The state carries pity { count, after, within };
+    postNotice returns pityLifted.
+  - NOTICES AS REWARDS, ONLY WHERE GEMS LEFT NOTHING: checked bounties, their milestones,
+    voyages and World Chart landmarks. Bounty orders and every milestone rung already pay
+    doubloons where the web paid gems (x100), and every landmark plus the completion already
+    pays a skin voucher, so NOTHING was added there (no doubled reward). VOYAGES paid 2 to 30
+    gems by route on the web and nothing in the port: crewPort.noticeDrops.voyage (DEFAULTS,
+    Kong may tune), rolled at reveal after the voyage's own rolls: Inner Sea 4% a Harbor
+    Bill; Crossing 8%; Howling Deep 12%; Bertuna Triangle 18% a Bill and 2% a Proclamation;
+    Shrouded Reach 25% a Bill and 4% a Proclamation; a Massive Booty haul one Bill more. Said
+    on the voyage's haul ("They brought back a Harbor Bill, for the Crew Hall") and on the
+    notice tickets ("Found in caskets, crates and voyages"). Left alone, outside this pass:
+    a fishing crate's gem roll and the dig sites' gems still pay nothing in the port.
+  - THE CREW SEEN: profile crew_seen (card ids on any board, free or posted, or aboard) and
+    crew_signed (signed ever; a dismissal keeps it). Both backfilled on the first read from
+    every crew row (alive or lost) and the board standing, then kept up on each read, each
+    board rolled and each signing. A board face never had before is marked fresh on its
+    record (state: isNew) before it joins crew_seen. The state carries crewSeen and
+    crewSigned.
+  - THE RECRUIT LINES: port_rules crewQuips { species slug: line }, one per crewmate (41),
+    DRAFTS for Kong's approval; Crew.quip. Crew.trait_effect says a trait by its numbers
+    ("+2 Fortune"), since the rules keep only a label per triple.
+  THE ROOM (game/crew_hall.gd, game/crew_pull.gd): THE BOOK, a new tab ("The Book 23/41"):
+  every crewmate in the game by rarity then name, the met ones with their painting on their
+  rarity's glow, name, rarity and class; the rest as the painting multiplied to a flat dark
+  shape with "?" and only the rarity word; a small ink tick on each ever signed; "Met 23 of
+  41 · Signed 12"; a crewmate's page with their line, class and "Signed on before." or "Met on
+  a board, never signed."; an unmet one says how they come (a Legendary only answers a
+  posted notice; one still behind the campaign gate says so). NEW: a small ink stamp in the
+  chosen ink thumps onto the painting's corner as the card turns (and stays on that board).
+  THE LINE: typed onto a dark strip at the foot of the painting as each card turns on a
+  reveal, held a moment, gone. TRAIT STAMP: the trait is a small hairline ink box under the
+  class, its meaning on hover ("Lucky: +2 Fortune to their stats."). COMPARE: hovering or
+  the pad's focus on a face up card shows "+2 Power, -1 Dodge" over "vs your best Snare: Ell,
+  Lv 12" (stats as they would sail today, Crew.leveled_stats; the best is the most Power,
+  Dodge and Fortune together), "Level with ..." when even, "Your first Snare" with none; the
+  hand's page says it too. TICKETS: "Epic or better within N posts", "Epic or better
+  guaranteed on this one" at the threshold; the "?" text says the rule. POST ALL (three or
+  more held): posts every notice in the rules' order, one board at a time; a bar says "Posting
+  all · board 2 of 5" with Next board (the pad goes to it once a board has turned) and Stop
+  here; signing works between boards; a ticket pressed mid-run ends the run. ROSTER FULL:
+  Sign on with a full roster opens a chooser right there (the roster weakest first: level,
+  rarity, stats together; each with Release, pressed twice), which dismisses through the
+  rules (a held hand's refusal shows in the chooser) and then signs the recruit; Esc or the
+  scrim closes it; after a reveal a full roster is said on the status line. SOUNDS made in
+  code (game/sound.gd): wax_crack (a pull's seal giving way), card_flip (every turn),
+  fanfare (a legendary, in place of the chest and bell). tests/crew_pull_check.gd (the
+  count, the guarantee, shared, the free board, seen and signed, NEW, the voyage notices,
+  every line present). tests/shot.gd crewhall: CREW_ROOM=book with CREW_SEEN=n and
+  CREW_PICK=i; CREW_HOVER=i (a hand of that class put aboard, the card focused);
+  CREW_POSTALL=1 with CREW_F, CREW_NEXT=1 and SHOT_F; CREW_FULL=1 (the roster filled, Sign
+  on pressed).
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

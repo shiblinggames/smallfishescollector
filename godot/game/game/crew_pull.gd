@@ -16,6 +16,14 @@ extends RefCounted
 ## light and sparks, drawn in code on the card (no screen shake). Any press
 ## turns the rest at once (Stage.skip). The free board at sunrise gets the
 ## light version ("light": slide in, flip, no seal tell).
+##
+## DEEPER (Kong, 2026-10-10): a face never had before wears a small NEW stamp
+## as it turns (the rules' isNew); each crewmate says their one line as they
+## turn, typed on the card for a moment (port_rules crewQuips); the trait is
+## a small ink stamp with its meaning on hover; hovering or focusing a face
+## shows how it stacks against your best hand of the same class (worked out
+## by the hall, crew_hall.gd); the tickets say how near the bad-luck
+## guarantee is. Sounds made in code (Sound.wax_crack, card_flip, fanfare).
 
 ## A card on the board, and the gaps the stage keeps round them.
 const CARD: Vector2 = Vector2(224, 292)
@@ -32,7 +40,7 @@ const SHEET: Color = Color(0.215, 0.178, 0.15)
 
 
 ## The words for where a notice is found, by drop source (crewPort.noticeDrops).
-const SOURCE_WORDS: Dictionary = { "casket": "caskets", "crate": "crates" }
+const SOURCE_WORDS: Dictionary = { "casket": "caskets", "crate": "crates", "voyage": "voyages" }
 
 
 # ── Words from the rules' numbers ─────────────────────────────────────────────
@@ -46,6 +54,17 @@ static func board_chance(weights: Array, r: int, faces: int) -> float:
 	if total <= 0.0 or weights.size() < r:
 		return 0.0
 	return 1.0 - pow(1.0 - float(weights[r - 1]) / total, faces)
+
+
+## The bad-luck guarantee for a ticket, from the crew state's pity: "Epic or
+## better within 4 posts", or on this one at the threshold ("" with none).
+static func pity_words(pity: Dictionary) -> String:
+	var within: int = int(Js.num(pity.get("within")))
+	if within <= 0:
+		return ""
+	if within == 1:
+		return "Epic or better guaranteed on this one"
+	return "Epic or better within %d posts" % within
 
 
 static func one_in(p: float) -> String:
@@ -68,7 +87,10 @@ static func found_in(id: String) -> String:
 		for tier: Variant in Js.obj(drops[src]):
 			if Js.obj(drops[src][tier]).has(id) and SOURCE_WORDS.has(src) and not where.has(SOURCE_WORDS[src]):
 				where.append(SOURCE_WORDS[src])
-	return "Found in %s" % " and ".join(PackedStringArray(where)) if not where.is_empty() else "Not found anywhere yet"
+	if where.is_empty():
+		return "Not found anywhere yet"
+	var last: String = where.pop_back()
+	return "Found in %s" % (("%s and %s" % [", ".join(PackedStringArray(where)), last]) if not where.is_empty() else last)
 
 
 ## Time left to the next board on the sea's clock (a sea day is boardEveryMs
@@ -92,18 +114,21 @@ class Ticket:
 	var odds: String
 	var held: int
 	var from_words: String
+	## The bad-luck guarantee in words ("Epic or better within 4 posts").
+	var pity: String
 	var _hot: bool = false
 	const STUB: float = 60.0
 
-	func _init(t: String, o: String, n: int, f: String) -> void:
+	func _init(t: String, o: String, n: int, f: String, pty: String = "") -> void:
 		title = t
 		odds = o
 		held = n
 		from_words = f
+		pity = pty
 		flat = true
 		disabled = n <= 0
 		focus_mode = Control.FOCUS_ALL if n > 0 else Control.FOCUS_NONE
-		custom_minimum_size = Vector2(0, 84)
+		custom_minimum_size = Vector2(0, 100 if pty != "" and n > 0 else 84)
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		add_theme_stylebox_override("focus", UiTheme.focus_ring(10, Paper.CHOSEN))
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if n > 0 else Control.CURSOR_ARROW
@@ -122,8 +147,13 @@ class Ticket:
 		# The odds wrap to a second line in a narrow ticket rather than
 		# losing their end (the Legendary chance is the point of a pull).
 		ol.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if n > 0 and pity != "":
+			var pl: Label = Kit.text(v, pity, "small", Paper.CHOSEN)
+			pl.clip_text = true
+			pl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		if n <= 0:
-			var fl: Label = Kit.text(v, "None held.  %s." % from_words, "note", Paper.NIGHT_INK_FAINT)
+			# The stub's x0 already says none are held.
+			var fl: Label = Kit.text(v, "%s." % from_words, "note", Paper.NIGHT_INK_FAINT)
 			fl.clip_text = true
 			fl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		var count: Label = Kit.text(self, "x%d" % n, "name_strong", Paper.NIGHT_INK if n > 0 else Paper.NIGHT_INK_FAINT)
@@ -217,6 +247,20 @@ class Card:
 	var beam: float = -1.0
 	var _sparks: Array = []
 	var _flipping: bool = false
+	## Never had before (the rules' isNew): a NEW stamp as it turns. new_k is
+	## the stamp thumping on (0 to 1), -1 for none.
+	var is_new: bool = false
+	var new_k: float = -1.0
+	## Their one line, said as the card turns on a reveal (speak).
+	var quip: String = ""
+	var speak: bool = false
+	## The line against your best hand of the same class (on hover or focus).
+	var tip_text: String = ""
+	var _quip_box: PanelContainer
+	var _quip_l: Label
+	var _tip_box: PanelContainer
+	var _tip_l: Label
+	var _quip_tw: Tween
 
 	func _init(card: Dictionary, thumb: Texture2D) -> void:
 		c = card
@@ -258,11 +302,31 @@ class Card:
 		var rl: Label = Kit.text(v, word + (("  ·  " + str(cls["name"]).to_upper()) if not cls.is_empty() else ""), "label", rc.lightened(0.12))
 		rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rl.clip_text = true
+		# THE TRAIT AS A STAMP: a small inked box (hairline ink, never a
+		# rarity colour), its meaning in plain words on hover.
 		var tl: String = Crew.trait_label(Js.list(c.get("effects")))
-		var tr: Label = Kit.text(v, tl if tl != "" else " ", "small", Paper.NIGHT_INK_SOFT)
-		tr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		tr.clip_text = true
-		tr.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		var trow: CenterContainer = CenterContainer.new()
+		trow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		trow.custom_minimum_size = Vector2(0, 20)
+		v.add_child(trow)
+		if tl != "":
+			var tr: Label = Kit.text(trow, tl.to_upper(), "tag", Paper.NIGHT_INK_SOFT)
+			var tsb: StyleBoxFlat = StyleBoxFlat.new()
+			tsb.bg_color = Color(0, 0, 0, 0)
+			tsb.border_color = Color(Paper.NIGHT_INK, 0.4)
+			tsb.set_border_width_all(1)
+			tsb.set_corner_radius_all(2)
+			tsb.content_margin_left = 6
+			tsb.content_margin_right = 6
+			tsb.content_margin_top = 1
+			tsb.content_margin_bottom = 1
+			tr.add_theme_stylebox_override("normal", tsb)
+			tr.mouse_filter = Control.MOUSE_FILTER_PASS
+			tr.tooltip_text = "%s: %s to their stats." % [tl, Crew.trait_effect(Js.list(c.get("effects")))]
+		_quip_box = _strip(Color(0.1, 0.085, 0.07, 0.9))
+		_quip_l = _quip_box.get_child(0)
+		_tip_box = _strip(Color(0.07, 0.06, 0.05, 0.94))
+		_tip_l = _tip_box.get_child(0)
 		fx = Control.new()
 		fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -282,7 +346,77 @@ class Card:
 		linger = 1.0 if rar >= 3 else 0.0
 		resized.connect(func() -> void: pivot_offset = size / 2.0)
 		pivot_offset = CARD / 2.0
+		mouse_entered.connect(func() -> void: _show_tip(true))
+		mouse_exited.connect(func() -> void: _show_tip(false))
+		focus_entered.connect(func() -> void: _show_tip(true))
+		focus_exited.connect(func() -> void: _show_tip(false))
 		set_process(false)
+
+	## What the hall adds: NEW (shown at once on a board at rest), the line
+	## to say, the comparison.
+	func dress(fresh: bool, line: String, tip: String) -> void:
+		is_new = fresh and c.get("recruited") != true
+		new_k = 1.0 if is_new else -1.0
+		quip = line
+		tip_text = tip
+		_tip_l.text = tip
+
+	## A slim dark strip along the foot of the painting (the line said, or
+	## the comparison), hidden until wanted.
+	func _strip(fill: Color) -> PanelContainer:
+		var box: PanelContainer = PanelContainer.new()
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = fill
+		sb.set_corner_radius_all(Kit.R_SMALL)
+		sb.content_margin_left = 8
+		sb.content_margin_right = 8
+		sb.content_margin_top = 4
+		sb.content_margin_bottom = 4
+		box.add_theme_stylebox_override("panel", sb)
+		# Held to the foot of the painting, growing upward with its lines.
+		var dock: Control = Control.new()
+		dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dock.position = holder.position
+		dock.size = holder.size
+		face.add_child(dock)
+		dock.add_child(box)
+		box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		box.offset_left = 2
+		box.offset_right = -2
+		box.offset_bottom = -4
+		box.offset_top = -4
+		box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		var l: Label = Kit.text(box, "", "small", Paper.NIGHT_INK)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		box.visible = false
+		return box
+
+	func _show_tip(on: bool) -> void:
+		if tip_text == "" or not revealed:
+			return
+		_tip_box.visible = on
+		if on:
+			_tip_box.modulate.a = 0.0
+			Motion.ease_fade(create_tween(), _tip_box, "modulate:a", 1.0, Motion.WORD_IN)
+
+	## THEIR LINE: typed onto the card, held a moment, then gone.
+	func say() -> void:
+		if quip == "":
+			return
+		if _quip_tw != null:
+			_quip_tw.kill()
+		_quip_l.text = "\u201C%s\u201D" % quip
+		_quip_l.visible_ratio = 0.0
+		_quip_box.visible = true
+		_quip_box.modulate.a = 1.0
+		_quip_tw = create_tween()
+		_quip_tw.tween_property(_quip_l, "visible_ratio", 1.0, clampf(quip.length() * 0.028, 0.45, 1.3))
+		_quip_tw.tween_interval(2.4)
+		Motion.ease_exit(_quip_tw, _quip_box, "modulate:a", 0.0, 0.4)
+		_quip_tw.tween_callback(func() -> void: _quip_box.visible = false)
 
 	## Face down under its seal (the pull starts here).
 	func seal_up() -> void:
@@ -316,10 +450,12 @@ class Card:
 
 	## Turn it over: a squeeze to nothing across, the face, back out (a
 	## legendary breaks open as it lands, burst()). Once only.
-	func flip(quick: bool = false) -> Tween:
+	func flip(quick: bool = false, crack: bool = false) -> Tween:
 		if _flipping or not sealed:
 			return null
 		_flipping = true
+		if crack:
+			Sound.wax_crack()
 		var tw: Tween = create_tween()
 		var half: float = 0.08 if quick else 0.11
 		Motion.ease_exit(tw, self, "scale:x", 0.0, half)
@@ -335,6 +471,15 @@ class Card:
 		face.visible = true
 		stamp_layer.visible = true
 		queue_redraw()
+		Sound.card_flip()
+		if is_new:
+			new_k = 0.0
+			var tn: Tween = create_tween()
+			tn.tween_interval(0.12)
+			tn.tween_property(self, "new_k", 1.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			tn.parallel().tween_method(func(_v: float) -> void: stamp_layer.queue_redraw(), 0.0, 1.0, 0.18)
+		if speak:
+			say()
 		if rar >= 3:
 			var tw: Tween = create_tween()
 			Motion.ease_fade(tw, self, "linger", 1.0, 0.5)
@@ -453,6 +598,8 @@ class Card:
 			fx.draw_texture_rect(FxSheet.glow(), Rect2((s["p"] as Vector2) - Vector2(w2, w2), Vector2(w2, w2) * 2.0), false, Color(CrewHall.rarity_color(4).lightened(0.4), 1.0 - u))
 
 	func _draw_stamp() -> void:
+		if new_k >= 0.0:
+			_draw_new()
 		if stamp < 0.0:
 			return
 		var red: Color = Paper.NIGHT_RED
@@ -466,6 +613,23 @@ class Card:
 		stamp_layer.draw_rect(box, Color(red, a), false, 3.0)
 		stamp_layer.draw_rect(box.grow(-5), Color(red, a * 0.6), false, 1.2)
 		stamp_layer.draw_string(f, Vector2(-tw / 2.0, 3), "ABOARD", HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(red, a))
+		stamp_layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+	## NEW: a small ink stamp at the painting's top left, thumped on as the
+	## card turns (in the chosen ink, never a rarity's colour).
+	func _draw_new() -> void:
+		var ink: Color = Paper.CHOSEN
+		var s: float = lerpf(1.7, 1.0, new_k)
+		var a: float = clampf(new_k * 1.6, 0.0, 1.0)
+		var f: Font = Kit.role_font("name_strong")
+		var px: int = 13
+		var tw: float = f.get_string_size("NEW", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+		stamp_layer.draw_set_transform(Vector2(40, 30), -0.14, Vector2(s, s))
+		var box: Rect2 = Rect2(-tw / 2.0 - 7, -11, tw + 14, 21)
+		stamp_layer.draw_rect(box, Color(0.1, 0.085, 0.07, 0.85 * a))
+		stamp_layer.draw_rect(box, Color(ink, a), false, 1.6)
+		stamp_layer.draw_string(f, Vector2(-tw / 2.0, 5), "NEW", HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(ink, a))
 		stamp_layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -562,6 +726,7 @@ class Stage:
 				order.append(i)
 		for i: int in cards.size():
 			var cd: Card = cards[i]
+			cd.speak = true
 			cd.seal_up()
 			cd.modulate.a = 0.0
 			cd.position = _slot(i) + (Vector2(0, 46) if mode == "pull" else Vector2(36, 0))
@@ -620,23 +785,24 @@ class Stage:
 						Sound.charge())
 					_tw.tween_interval(1.35)
 			_tw.tween_callback(func() -> void:
-				cd2.flip()
+				cd2.flip(false, true)
 				_turn_sound(cd2))
 			_tw.tween_interval(0.3 if cd2.rar < 4 else 0.9)
 		_tw.tween_callback(_end)
 
+	## Over the card's own crack and flip: a rare's pluck, an epic's chest
+	## chord, a legendary's fanfare.
 	static func _turn_sound(cd: Card) -> void:
 		match cd.rar:
 			1:
-				Sound.plip()
+				pass
 			2:
 				Sound.job_tick(9)
 			3:
 				Sound.chest(false)
 				Rumble.buzz([0, 30])
 			_:
-				Sound.chest(true)
-				Sound.bell()
+				Sound.fanfare()
 				Rumble.buzz([0, 40, 40, 80])
 
 	## A press during the reveal: every card left turns at once.
@@ -657,7 +823,7 @@ class Stage:
 				cd.flip(true)
 				cd.tell = 0.0
 				if cd.rar >= 4:
-					Sound.chest(true)
+					Sound.fanfare()
 		_end()
 
 	func _end() -> void:

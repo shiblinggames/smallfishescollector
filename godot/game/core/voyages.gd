@@ -15,7 +15,9 @@ extends RefCounted
 ## lure.
 ##
 ## NO GEMS (the port has none). The expedition crate that is to stand in for
-## them is not built yet: its chance and table are still to be set.
+## them is not built yet: its chance and table are still to be set. In their
+## place for now (Kong, 2026-10-10) a voyage home may bring a NOTICE for the
+## Crew Hall (crewPort.noticeDrops.voyage; see reveal).
 ##
 ## The tables are content/voyages.json (tools/export_voyages.py). Kept in the
 ## save as "voyages": [{ id, route, crew_variant_ids, status, events,
@@ -299,10 +301,22 @@ static func reveal(db: CaptainStore, uid: String, id: float) -> Dictionary:
 	var revealed: int = _all(db).filter(func(x: Dictionary) -> bool: return x.get("status") == "revealed").size()
 	if revealed >= 100:
 		db.grant_badge(uid, "fleet_admiral")
+	# NOTICES IN PLACE OF THE GEMS (Kong, 2026-10-10): the web paid every voyage
+	# gems by route (2 to 30) and the port had nothing there. A voyage home may
+	# bring a notice for the Crew Hall: crewPort.noticeDrops.voyage, a table by
+	# route, and "booty" on top for a Massive Booty haul. Rolled last, so the
+	# voyage's own rolls are unchanged.
+	var notices: Dictionary = {}
+	var vt: Dictionary = Js.obj(Js.obj(Crew.port().get("noticeDrops")).get("voyage"))
+	if not vt.is_empty():
+		notices = Crew.roll_drops(db, uid, vt.get(key))
+		if ev.get("booty") == true:
+			for nid: Variant in Crew.roll_drops(db, uid, vt.get("booty")):
+				notices[nid] = Js.num(notices.get(nid)) + 1.0
 	return {
 		"ok": true, "route": key, "event": ev, "earnedDoubloons": dbl, "newDoubloonTotal": bal, "xpEarned": xp,
 		"oldExpeditionLevel": old_level, "newExpeditionLevel": new_level, "crewXp": crew_xp, "crewGrants": grants,
-		"crewLost": lost, "crewLostNames": lost_names, "earnedBait": bait, "unlockedSkinId": skin,
+		"crewLost": lost, "crewLostNames": lost_names, "earnedBait": bait, "unlockedSkinId": skin, "notices": notices,
 	}
 
 

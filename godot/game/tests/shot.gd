@@ -1529,12 +1529,61 @@ func _init() -> void:
 				for kv: String in OS.get_environment("CREW_NOTICES").split(","):
 					held[kv.get_slice(":", 0)] = float(kv.get_slice(":", 1))
 				p["crew_notices"] = held
+			# CREW_SEEN=n: the book has met the first n crewmates (signed the
+			# first n/2), for THE BOOK; CREW_ROOM=book opens it.
+			if OS.get_environment("CREW_SEEN") != "":
+				var met: Array = []
+				for cd0: Dictionary in CrewHall.book_cards().slice(0, int(OS.get_environment("CREW_SEEN"))):
+					met.append(float(cd0["id"]))
+				p["crew_seen"] = met
+				p["crew_signed"] = met.slice(0, met.size() / 2)
 			var ch: CrewHall = CrewHall.new()
 			ch.session = sea.session
 			ch.room = { "crewhall": "recruit", "crewroster": "roster", "crewhalltier": "hall" }[what]
+			if OS.get_environment("CREW_ROOM") != "":
+				ch.room = OS.get_environment("CREW_ROOM")
 			sea._room_layer.add_child(ch)
 			for f: int in 20:
 				await process_frame
+			# CREW_POSTALL=1: Post all, as a press would; after CREW_F frames
+			# press Next board and shoot SHOT_F frames on (mid-way).
+			if what == "crewhall" and OS.get_environment("CREW_POSTALL") != "":
+				ch._post_all()
+				for f: int in (int(OS.get_environment("CREW_F")) if OS.get_environment("CREW_F") != "" else 200):
+					await process_frame
+				if OS.get_environment("CREW_NEXT") != "" and ch._next_btn != null:
+					ch._next_btn.pressed.emit()
+					for f: int in (int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 60):
+						await process_frame
+			# CREW_FULL=1: the roster filled to its capacity, then Sign on
+			# pressed on the board's first card (the chooser of who to let go).
+			if what == "crewhall" and OS.get_environment("CREW_FULL") != "":
+				var stf: Dictionary = RulesApi.run(sea.session.store, sea.session.uid, "getCrewState", [])
+				var capn: int = int(stf["capacity"])
+				var pool: Array = Crew.cards().filter(func(cd1: Dictionary) -> bool: return Crew.group_for(str(cd1["slug"])) in [1, 2])
+				var k2: int = 0
+				while Crew.live(sea.session.store).size() < capn:
+					var cd2: Dictionary = pool[k2 % pool.size()]
+					(sea.session.save["crew"] as Array).append({ "id": sea.session.store.next_id(), "card_id": cd2["id"], "rarity": float(Crew.group_for(str(cd2["slug"]))), "power": 3.0 + k2 % 5, "dodge": 4.0 + k2 % 3, "fortune": 2.0 + k2 % 4, "effects": [], "pending_trait": null, "voyage_slot": null, "raid_slot": null, "xp": 400.0 * k2, "nickname": null, "recruited_at": "2026-10-01T00:00:00.000Z", "died_at": null })
+					k2 += 1
+				await ch._load()
+				ch._sign(Js.list(ch._state.get("board"))[0])
+				for f: int in 30:
+					await process_frame
+			# CREW_HOVER=n: the pad's focus on board card n (its comparison).
+			if what == "crewhall" and OS.get_environment("CREW_HOVER") != "" and OS.get_environment("CREW_PULL") == "":
+				# A hand of the same class aboard, to stack the card against.
+				var hn: int = int(OS.get_environment("CREW_HOVER"))
+				var hc: Dictionary = Js.list(ch._state.get("board"))[hn]
+				var want: Variant = Js.obj(Crew.t().get("classBySlug")).get(str(hc["slug"]))
+				for cd3: Dictionary in Crew.cards():
+					if Js.obj(Crew.t().get("classBySlug")).get(str(cd3["slug"]).to_lower()) == want:
+						(sea.session.save["crew"] as Array).append({ "id": sea.session.store.next_id(), "card_id": cd3["id"], "rarity": float(Crew.group_for(str(cd3["slug"]))), "power": 4.0, "dodge": 5.0, "fortune": 3.0, "effects": [], "pending_trait": null, "voyage_slot": null, "raid_slot": null, "xp": 2600.0, "nickname": null, "recruited_at": "2026-10-01T00:00:00.000Z", "died_at": null })
+						break
+				await ch._load()
+				ch._stage.cards[hn].grab_focus()
+				for f: int in 20:
+					await process_frame
 			# CREW_PULL=<notice id>: post it as a press would and shoot CREW_F
 			# frames in (mid-reveal); CREW_LEGEND=1 makes the first face of the
 			# pulled board a Legendary (the shot's own setup, set on the save;
@@ -1567,9 +1616,16 @@ func _init() -> void:
 			var list: Array = Js.list(ch._state.get("board" if what == "crewhall" else "roster"))
 			if OS.get_environment("CREW_PULL") != "":
 				list = []
+			if OS.get_environment("CREW_FULL") != "" or OS.get_environment("CREW_HOVER") != "" or OS.get_environment("CREW_POSTALL") != "" or OS.get_environment("CREW_ROOM") == "book":
+				list = []
 			if not list.is_empty() and what != "crewhalltier":
 				ch._pick = list[0]
 				ch._pick_kind = "board" if what == "crewhall" else "roster"
+				ch._draw_room()
+			if OS.get_environment("CREW_ROOM") == "book" and OS.get_environment("CREW_PICK") != "":
+				var bc: Array = CrewHall.book_cards()
+				ch._pick = ch._book_entry(bc[int(OS.get_environment("CREW_PICK"))])
+				ch._pick_kind = "book"
 				ch._draw_room()
 			for f: int in (30 if OS.get_environment("CREW_PULL") == "" else 0):
 				await process_frame

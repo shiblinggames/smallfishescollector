@@ -21,6 +21,15 @@ extends Control
 ##   THE TRUNK every crew skin (Kong, 2026-10-03), by crew, the ones not found
 ##            yet in grey; skin vouchers (Bosun's, Captain's) opened here; a skin
 ##            owned is worn from here or from the roster card's skin row.
+##   THE BOOK every crewmate in the game (Kong, 2026-10-10): the ones met on a
+##            board or aboard in their painting, the rest as dark shapes with
+##            "?", a tick on each ever signed; "Met 23 of 41".
+## THE RECRUIT ROOM, DEEPER (Kong, 2026-10-10): the tickets say how near the
+## bad-luck guarantee is; with three or more notices held, Post all posts
+## them one board at a time (Next board between, signing as you go); a face
+## shows NEW, its line, its trait stamp and, on hover or focus, how it stacks
+## against your best hand of its class; signing onto a full roster asks, right
+## there, who to let go (weakest first).
 ## Every change is Crew.*, through the rules (core/crew.gd).
 
 signal closed
@@ -62,6 +71,13 @@ var _reveal_mode: String = ""
 var _pulling: bool = false
 var _stamp_id: Variant = null
 var _help_open: bool = false
+## POST ALL: the notices still to post after the board on show, and how many
+## the run started with (for "board 2 of 5").
+var _queue: Array = []
+var _queue_total: int = 0
+var _next_btn: Pane.PaneButton
+## ROSTER FULL: the chooser of who to let go, while it is open.
+var _release: Control
 ## The board each captain last saw, by uid: a free board that came in since
 ## plays the light reveal (for the life of the game; a fresh start just shows it).
 static var _seen_boards: Dictionary = {}
@@ -109,6 +125,9 @@ func close() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("fish_back"):
 		get_viewport().set_input_as_handled()
+		if _release != null and is_instance_valid(_release):
+			_close_release()
+			return
 		close()
 
 
@@ -188,6 +207,8 @@ func _build_room() -> void:
 	for kv: Variant in Js.obj(_skins.get("vouchers")):
 		waiting += int(Js.num(_skins["vouchers"][kv]))
 	rooms.append(["trunk", "The Trunk  %d/%d%s" % [Js.list(_skins.get("owned")).size(), int(Js.num(_skins.get("total"))), ("  ·  %d to open" % waiting) if waiting > 0 else ""]])
+	if _state.has("crewSeen"):
+		rooms.append(["book", "The Book  %d/%d" % [_book_met(), book_cards().size()]])
 	for o: Array in rooms:
 		# Only the room shown is the chosen tab; vouchers waiting in the Trunk
 		# are a dot beside its count, not a second chosen tab.
@@ -217,6 +238,8 @@ func _build_room() -> void:
 			_roster_room()
 		"trunk":
 			_trunk_room()
+		"book":
+			_book_room()
 		"bunks":
 			var hb: HallBunks = HallBunks.new()
 			hb.hall = self
@@ -288,6 +311,7 @@ func _recruit_room() -> void:
 	_tick_countdown()
 	for c: Dictionary in board:
 		var cd: Pull.Card = Pull.Card.new(c, _thumb(str(c.get("filename", ""))))
+		cd.dress(c.get("isNew") == true, Crew.quip(str(c.get("slug", ""))), _compare(c))
 		if _pick.get("id") == c.get("id") and _pick_kind == "board":
 			ring_over(cd.holder)
 		art_hover(cd, cd.holder)
@@ -317,9 +341,106 @@ func _recruit_room() -> void:
 	_reveal_mode = ""
 	if mode != "":
 		_pulling = true
-		_stage.finished.connect(func() -> void: _pulling = false)
+		_stage.finished.connect(func() -> void:
+			_pulling = false
+			_after_reveal())
 		_stage.run.call_deferred(mode)
+	_post_all_bar()
 	_notices_row()
+
+
+## The board has turned: a full roster is said now (signing will ask who to
+## let go), and a Post all run puts the pad on Next board.
+func _after_reveal() -> void:
+	if _roster_full():
+		_note("Your roster is full (%d of %d). Sign someone on and you choose who to let go." % [Js.list(_state.get("roster")).size(), int(Js.num(_state.get("capacity")))])
+	if _next_btn != null and is_instance_valid(_next_btn):
+		_next_btn.grab_focus()
+
+
+func _roster_full() -> bool:
+	return Js.list(_state.get("roster")).size() >= int(Js.num(_state.get("capacity")))
+
+
+## HOW A RECRUIT STACKS UP: against your best hand of the same class (the
+## most Power, Dodge and Fortune together, as they would sail today), stat by
+## stat as this recruit would sign on. "+2 Power, -1 Dodge" over "vs your best
+## Snare (Ell, Lv 12)"; "Your first Snare" when there is none aboard.
+func _compare(c: Dictionary) -> String:
+	var slug: String = str(c.get("slug", ""))
+	var cls: Dictionary = Crew.class_of(slug)
+	if cls.is_empty():
+		return ""
+	var by: Dictionary = Js.obj(Crew.t().get("classBySlug"))
+	var want: Variant = by.get(slug)
+	var best: Dictionary = {}
+	var best_st: Dictionary = {}
+	var best_sum: float = -1.0
+	for m: Dictionary in Js.list(_state.get("roster")):
+		if by.get(str(m.get("slug", ""))) != want:
+			continue
+		var st: Dictionary = Crew.leveled_stats(m)
+		var sum: float = float(st["power"]) + float(st["dodge"]) + float(st["fortune"])
+		if sum > best_sum:
+			best = m
+			best_st = st
+			best_sum = sum
+	if best.is_empty():
+		return "Your first %s" % cls["name"]
+	var mine: Dictionary = Crew.leveled_stats({ "power": c.get("power"), "dodge": c.get("dodge"), "fortune": c.get("fortune"), "xp": c.get("startXp", 0.0), "effects": Js.list(c.get("effects")) })
+	var bits: Array = []
+	for s2: Array in [["power", "Power"], ["dodge", "Dodge"], ["fortune", "Fortune"]]:
+		var d: int = int(float(mine[s2[0]]) - float(best_st[s2[0]]))
+		if d != 0:
+			bits.append("%+d %s" % [d, s2[1]])
+	var who: String = "your best %s: %s, Lv %d" % [cls["name"], best.get("name", ""), Crew.level(Js.num(best.get("xp")))]
+	if bits.is_empty():
+		return "Level with %s" % who
+	return "%s\nvs %s" % [", ".join(PackedStringArray(bits)), who]
+
+
+## POST ALL, while a run is on: which board this is, Next board, Stop.
+func _post_all_bar() -> void:
+	_next_btn = null
+	if _queue.is_empty():
+		return
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	_body.add_child(row)
+	var l: Label = Paper.text(row, "Posting all  ·  board %d of %d" % [_queue_total - _queue.size(), _queue_total], "body_strong", Paper.ink())
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var nb: Pane.PaneButton = Paper.primary("Next board  ·  %d left" % _queue.size(), true)
+	nb.pressed.connect(func() -> void:
+		if _pulling or _busy or _queue.is_empty():
+			return
+		_pull(str(_queue.pop_front())))
+	row.add_child(nb)
+	_next_btn = nb
+	var stop: Pane.PaneButton = Paper.button("Stop here", false, true)
+	stop.pressed.connect(func() -> void:
+		_queue = []
+		_queue_total = 0
+		_draw_room())
+	row.add_child(stop)
+
+
+## Every notice held, in the order the rules list them, one board after
+## another (the rules are unchanged: each is one postNotice).
+func _post_all() -> void:
+	if _pulling or _busy:
+		return
+	var held: Dictionary = Js.obj(_state.get("notices"))
+	var q: Array = []
+	for id: Variant in Crew.notice_defs():
+		for i: int in int(Js.num(held.get(id))):
+			q.append(str(id))
+	if q.is_empty():
+		return
+	_queue_total = q.size()
+	var first: String = q.pop_front()
+	_queue = q
+	_pull(first)
 
 
 ## The countdown to the free board, on the sea's clock.
@@ -377,7 +498,7 @@ func _notices_row() -> void:
 	head.add_child(q)
 	var free_w: Array = Js.list(Crew.port().get("freeWeights", Crew.t()["freeWeights"]))
 	var faces: int = int(Crew.t()["dailyRecruits"])
-	var help: Label = Paper.text(_body, "The free board each sunrise is the Tavern Notice (%s). Posting a notice spends one and replaces the board standing with three fresh recruits at that notice's odds; a Legendary only answers a posted notice. Notices are found in treasure-hunt caskets and fishing crates." % Pull.odds_line(free_w, faces).to_lower(), "note", Paper.ink_soft(), true)
+	var help: Label = Paper.text(_body, "The free board each sunrise is the Tavern Notice (%s). Posting a notice spends one and replaces the board standing with three fresh recruits at that notice's odds; a Legendary only answers a posted notice. Notices are found in treasure-hunt caskets, fishing crates and voyages.%s" % [Pull.odds_line(free_w, faces).to_lower(), (" After %d posted boards in a row without an Epic or better, the next posted board is sure of one." % Crew.pity_after()) if Crew.pity_after() > 0 else ""], "note", Paper.ink_soft(), true)
 	help.visible = _help_open
 	q.pressed.connect(func() -> void:
 		_help_open = not _help_open
@@ -389,12 +510,25 @@ func _notices_row() -> void:
 	row.add_theme_constant_override("separation", 14)
 	_body.add_child(row)
 	var held: Dictionary = Js.obj(_state.get("notices"))
+	var pity: String = Pull.pity_words(Js.obj(_state.get("pity")))
+	var total: int = 0
 	for id: Variant in defs:
 		var d: Dictionary = defs[id]
 		var n: int = int(Js.num(held.get(id)))
-		var tk: Pull.Ticket = Pull.Ticket.new("Post a %s" % d["name"], Pull.odds_line(Js.list(d.get("weights")), faces), n, Pull.found_in(str(id)))
-		tk.pressed.connect(func() -> void: _pull(str(id)))
+		total += maxi(0, n)
+		var tk: Pull.Ticket = Pull.Ticket.new("Post a %s" % d["name"], Pull.odds_line(Js.list(d.get("weights")), faces), n, Pull.found_in(str(id)), pity)
+		tk.pressed.connect(func() -> void:
+			_queue = []
+			_queue_total = 0
+			_pull(str(id)))
 		row.add_child(tk)
+	# POST ALL: three or more held, and no run already on.
+	if total >= 3 and _queue.is_empty():
+		var pa: Pane.PaneButton = Paper.button("Post all  ·  %d" % total, false, true)
+		pa.tooltip_text = "Post every notice held, one board at a time"
+		pa.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		pa.pressed.connect(_post_all)
+		head.add_child(pa)
 
 
 ## THE PULL: the board standing is torn down while the notice posts; the
@@ -428,14 +562,141 @@ func _pull(id: String, before_reveal: Callable = Callable()) -> void:
 ## SIGN ON (from the card or the chosen hand): the rules sign them, the
 ## moment plays, and their card takes an ABOARD stamp.
 func _sign(c: Dictionary) -> void:
-	if _pulling:
+	if _pulling or _busy:
+		return
+	# A full roster: choose who to let go, right here, then sign.
+	if _roster_full():
+		_open_release(c)
 		return
 	var r: Dictionary = await _act("recruitCrew", [c["id"]])
+	if str(r.get("error", "")) == "Roster full":
+		_open_release(c)
+		return
 	if r.has("state"):
 		_sign_on_moment(str(c.get("name", "")), rarity_color(clampi(int(Js.num(c.get("rarity"))), 1, 4)))
 		_stamp_id = c["id"]
 		_pick = {}
 	_draw_room()
+
+
+# ── Roster full: who to let go ─────────────────────────────────────────────────
+
+## THE CHOOSER (Kong, 2026-10-10): the roster, weakest first (level, then
+## rarity, then their stats together), each with Release (the dismiss rule,
+## pressed twice to be sure); releasing one signs the recruit waiting.
+func _open_release(c: Dictionary) -> void:
+	_close_release()
+	Paper.night = true
+	var layer: Control = Control.new()
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.draw.connect(func() -> void: layer.draw_rect(Rect2(Vector2.ZERO, layer.size), Color(0, 0, 0, 0.5)))
+	layer.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed:
+			_close_release())
+	add_child(layer)
+	_release = layer
+	var cc: CenterContainer = CenterContainer.new()
+	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(cc)
+	var pane: Pane = Kit.pane(null, { "radius": Kit.R_LARGE, "fill": [Paper.NIGHT_PAPER_HI], "border": [1, Paper.NIGHT_HAIR], "pad": [20, 16, 20, 16], "keep": true, "night": true })
+	pane.custom_minimum_size = Vector2(700, 0)
+	pane.mouse_filter = Control.MOUSE_FILTER_STOP
+	cc.add_child(pane)
+	var v: VBoxContainer = VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	pane.add_child(v)
+	Paper.text(v, "THE ROSTER IS FULL", "eyebrow", Paper.ink_soft())
+	Paper.text(v, "Let someone go to sign %s" % str(c.get("name", "")), "title", Paper.ink())
+	Paper.text(v, "Releasing a crewmate is for good. Weakest first.", "note", Paper.ink_soft(), true)
+	var said: Label = Paper.text(v, "", "small", Paper.NIGHT_RED, true)
+	said.visible = false
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 340)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(scroll)
+	UiTheme.night_scroll(scroll)
+	var list: VBoxContainer = VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 4)
+	scroll.add_child(list)
+	var roster: Array = Js.list(_state.get("roster")).duplicate()
+	roster.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var la: int = Crew.level(Js.num(a.get("xp")))
+		var lb: int = Crew.level(Js.num(b.get("xp")))
+		if la != lb:
+			return la < lb
+		if float(a["rarity"]) != float(b["rarity"]):
+			return float(a["rarity"]) < float(b["rarity"])
+		return Js.num(a.get("power")) + Js.num(a.get("dodge")) + Js.num(a.get("fortune")) < Js.num(b.get("power")) + Js.num(b.get("dodge")) + Js.num(b.get("fortune")))
+	var first: Control = null
+	for m: Dictionary in roster:
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		list.add_child(row)
+		var pic: TextureRect = TextureRect.new()
+		pic.texture = _thumb(str(m.get("filename", "")))
+		pic.custom_minimum_size = Vector2(48, 48)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		row.add_child(pic)
+		var t: VBoxContainer = VBoxContainer.new()
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.alignment = BoxContainer.ALIGNMENT_CENTER
+		t.add_theme_constant_override("separation", 0)
+		row.add_child(t)
+		var rar: int = clampi(int(Js.num(m.get("rarity"))), 1, 4)
+		var cls: Dictionary = Crew.class_of(str(m.get("slug", "")))
+		var nl: Label = Paper.text(t, str(m.get("name", "")), "body_strong", Paper.ink())
+		nl.clip_text = true
+		var st: Dictionary = Crew.leveled_stats(m)
+		var sub: Label = Paper.text(t, "Lv %d  ·  %s%s  ·  Power %d, Dodge %d, Fortune %d" % [Crew.level(Js.num(m.get("xp"))), RARITY_NAMES[rar - 1], ("  ·  " + str(cls["name"])) if not cls.is_empty() else "", int(st["power"]), int(st["dodge"]), int(st["fortune"])], "small", Paper.ink_soft())
+		sub.clip_text = true
+		sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		var b: Pane.PaneButton = Paper.button("Release", false, true)
+		b.custom_minimum_size = Vector2(140, 0)
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.pressed.connect(func() -> void:
+			if b.get_meta("armed", false) != true:
+				b.set_meta("armed", true)
+				b.text = "For good? Again"
+				return
+			_release_and_sign(m, c, said))
+		row.add_child(b)
+		if first == null:
+			first = b
+	var keep: Pane.PaneButton = Paper.button("Keep everyone", false, true)
+	keep.size_flags_horizontal = Control.SIZE_SHRINK_END
+	keep.pressed.connect(_close_release)
+	v.add_child(keep)
+	Paper.night = false
+	Motion.panel_in(pane)
+	if first != null:
+		first.grab_focus.call_deferred()
+
+
+func _close_release() -> void:
+	if _release != null and is_instance_valid(_release):
+		_release.queue_free()
+	_release = null
+
+
+## Release one (the rules' dismiss, which refuses a hand at sea, on a trawl
+## or in a bunk), then sign the recruit waiting.
+func _release_and_sign(m: Dictionary, c: Dictionary, said: Label) -> void:
+	if _busy:
+		return
+	var r: Dictionary = await _act("dismissCrew", [m["id"]])
+	if r.has("error"):
+		said.text = str(r["error"])
+		said.visible = true
+		return
+	_close_release()
+	if _pick_kind == "roster" and _pick.get("id") == m.get("id"):
+		_pick = {}
+	_note("%s has gone ashore." % str(m.get("name", "")), true)
+	_sign(c)
 
 
 func _roster_room() -> void:
@@ -500,6 +761,157 @@ func _hall_room() -> void:
 			Rumble.buzz([0, 40, 30, 60])
 		_draw_room())
 	_body.add_child(b)
+
+
+# ── The Book ───────────────────────────────────────────────────────────────────
+
+## Every crewmate in the game: the crew species (content/cards.json) the rules
+## give a rarity, by rarity then name.
+static func book_cards() -> Array:
+	var out: Array = Crew.cards().filter(func(cd: Dictionary) -> bool: return Crew.group_for(str(cd.get("slug", ""))) > 0)
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var ga: int = Crew.group_for(str(a["slug"]))
+		var gb: int = Crew.group_for(str(b["slug"]))
+		if ga != gb:
+			return ga < gb
+		return Crew.display_name(str(a["slug"]), str(a["name"])) < Crew.display_name(str(b["slug"]), str(b["name"])))
+	return out
+
+
+func _book_met() -> int:
+	var seen: Array = Js.list(_state.get("crewSeen"))
+	return book_cards().filter(func(cd: Dictionary) -> bool: return seen.has(float(cd["id"]))).size()
+
+
+## A crewmate as the book holds them (the hand's fields the detail reads).
+func _book_entry(cd: Dictionary) -> Dictionary:
+	var slug: String = str(cd["slug"]).to_lower()
+	return {
+		"cardId": float(cd["id"]), "slug": slug, "name": Crew.display_name(slug, str(cd["name"])), "filename": str(cd.get("filename", "")),
+		"rarity": float(Crew.group_for(slug)), "met": Js.list(_state.get("crewSeen")).has(float(cd["id"])),
+		"signed": Js.list(_state.get("crewSigned")).has(float(cd["id"])),
+	}
+
+
+## THE BOOK (Kong, 2026-10-10): the count, then every crewmate as a tile.
+func _book_room() -> void:
+	var all: Array = book_cards()
+	var signed_n: int = all.filter(func(cd: Dictionary) -> bool: return Js.list(_state.get("crewSigned")).has(float(cd["id"]))).size()
+	Paper.text(_body, "Met %d of %d  ·  Signed %d" % [_book_met(), all.size(), signed_n], "heading", Paper.ink())
+	Paper.text(_body, "Every crewmate a board has shown you, or who has sailed with you. A tick marks the ones you have signed.", "note", Paper.ink_soft(), true)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(scroll)
+	var flow: HFlowContainer = HFlowContainer.new()
+	flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	flow.add_theme_constant_override("h_separation", 8)
+	flow.add_theme_constant_override("v_separation", 10)
+	scroll.add_child(flow)
+	for cd: Dictionary in all:
+		flow.add_child(_book_tile(_book_entry(cd)))
+
+
+## A tile: met, the painting on its rarity's glow (never a coloured edge), the
+## name, rarity and class; never met, the painting as a flat dark shape and
+## "?". A tick at the corner for one signed ever.
+func _book_tile(e: Dictionary) -> Control:
+	var met: bool = e["met"] == true
+	var rar: int = clampi(int(e["rarity"]), 1, 4)
+	var rc: Color = rarity_color(rar)
+	var b: Button = Button.new()
+	b.flat = true
+	b.custom_minimum_size = Vector2(134, 172)
+	var v: VBoxContainer = VBoxContainer.new()
+	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.add_theme_constant_override("separation", 1)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(v)
+	var holder: Control = Control.new()
+	holder.custom_minimum_size = Vector2(0, 124)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(holder)
+	if met:
+		Paper.blot(holder, rc, 0.7)
+	var pic: TextureRect = TextureRect.new()
+	pic.texture = _thumb(str(e["filename"]))
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if not met:
+		# A flat dark shape: the painting multiplied to near black.
+		pic.modulate = Color(0.055, 0.045, 0.04, 0.95)
+	holder.add_child(pic)
+	if e["signed"] == true:
+		var tick: Control = Control.new()
+		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tick.draw.connect(func() -> void:
+			var at: Vector2 = Vector2(tick.size.x - 16, 14)
+			tick.draw_circle(at, 9.0, Color(0.1, 0.085, 0.07, 0.85))
+			tick.draw_arc(at, 9.0, 0.0, TAU, 24, Color(Paper.CHOSEN, 0.9), 1.4, true)
+			tick.draw_polyline(PackedVector2Array([at + Vector2(-4, 0), at + Vector2(-1, 3.5), at + Vector2(4.5, -3.5)]), Paper.CHOSEN, 2.0, true))
+		holder.add_child(tick)
+	if _pick_kind == "book" and _pick.get("cardId") == e["cardId"]:
+		ring_over(holder)
+	art_hover(b, pic)
+	var n: Label = Paper.text(v, str(e["name"]) if met else "?", "name", Paper.ink() if met else Paper.ink_faint())
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	n.clip_text = true
+	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var cls: Dictionary = Crew.class_of(str(e["slug"]))
+	var sub: Label = Paper.text(v, ("%s  ·  %s" % [RARITY_NAMES[rar - 1], cls.get("name", "")]) if met else RARITY_NAMES[rar - 1], "small", rc.lightened(0.15) if met else Paper.ink_faint())
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.clip_text = true
+	sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.pressed.connect(func() -> void:
+		_pick = e
+		_pick_kind = "book"
+		Rumble.tap(8)
+		_draw_room())
+	return b
+
+
+func _book_detail() -> void:
+	var e: Dictionary = _pick
+	var met: bool = e["met"] == true
+	var rar: int = clampi(int(e["rarity"]), 1, 4)
+	var rc: Color = rarity_color(rar)
+	var holder: Control = Control.new()
+	holder.custom_minimum_size = Vector2(360, 250)
+	_detail.add_child(holder)
+	if met:
+		Paper.blot(holder, rc, 0.9)
+	var pic: TextureRect = TextureRect.new()
+	pic.texture = Skipper.tex("card-arts/%s.webp" % str(e["filename"]).get_basename())
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if not met:
+		pic.modulate = Color(0.055, 0.045, 0.04, 0.95)
+	holder.add_child(pic)
+	var cls: Dictionary = Crew.class_of(str(e["slug"]))
+	if not met:
+		Paper.text(_detail, "Not met yet", "title", Paper.ink_soft())
+		Paper.text(_detail, RARITY_NAMES[rar - 1], "body_strong", rc.lightened(0.15))
+		var how: String = "Any board may bring them, the free one at sunrise or a posted notice."
+		if rar >= 4:
+			how = "A Legendary only answers a posted notice."
+			var p: Dictionary = session.profile() if session != null else {}
+			if Crew.legendary_locked(str(e["slug"]), Js.list(p.get("legendary_unlocks"))):
+				how += " The campaign has yet to bring this one within reach."
+		Paper.text(_detail, how, "note", Paper.ink_soft(), true)
+		return
+	Paper.text(_detail, str(e["name"]), "title", Paper.ink())
+	Paper.text(_detail, "%s%s" % [RARITY_NAMES[rar - 1], ("  ·  " + str(cls["name"])) if not cls.is_empty() else ""], "body_strong", rc.lightened(0.15))
+	var line: String = Crew.quip(str(e["slug"]))
+	if line != "":
+		Paper.text(_detail, "\u201C%s\u201D" % line, "body", Paper.ink(), true)
+	if not cls.is_empty():
+		Paper.text(_detail, str(cls["blurb"]), "note", Paper.ink_soft(), true)
+	Paper.rule(_detail)
+	Paper.text(_detail, "Signed on before." if e["signed"] == true else "Met on a board, never signed.", "body_strong", Paper.CHOSEN if e["signed"] == true else Paper.ink_soft())
 
 
 # ── The Trunk ──────────────────────────────────────────────────────────────────
@@ -855,10 +1267,13 @@ func _draw_detail() -> void:
 		c.queue_free()
 	_detail.visible = room != "hall" and room != "bunks"
 	if _pick.is_empty():
-		Paper.text(_detail, "Press a skin to see it." if room == "trunk" else "Press a card to see the hand.", "note", Paper.ink_faint(), true)
+		Paper.text(_detail, "Press a skin to see it." if room == "trunk" else ("Press a crewmate to see them." if room == "book" else "Press a card to see the hand."), "note", Paper.ink_faint(), true)
 		return
 	if _pick_kind == "skin":
 		_skin_detail()
+		return
+	if _pick_kind == "book":
+		_book_detail()
 		return
 	var c: Dictionary = _pick
 	var rar: int = clampi(int(Js.num(c.get("rarity"))), 1, 4)
@@ -892,12 +1307,11 @@ func _draw_detail() -> void:
 		Paper.text(sv, str(int(Js.num(c.get(s[1])))), "heading", Paper.ink())
 	var tl: String = Crew.trait_label(Js.list(c.get("effects")))
 	if tl != "":
-		var trip: String = ""
-		for e: Variant in Js.list(c.get("effects")):
-			if str(e).begins_with("s:"):
-				var parts: PackedStringArray = str(e).substr(2).split(",")
-				trip = "Power %+d, Dodge %+d, Fortune %+d" % [int(parts[0]), int(parts[1]), int(parts[2])]
-		Paper.text(_detail, "Trait: %s  (%s)" % [tl, trip], "small", Paper.ink(), true)
+		Paper.text(_detail, "Trait: %s  (%s to their stats)" % [tl, Crew.trait_effect(Js.list(c.get("effects")))], "small", Paper.ink(), true)
+	if _pick_kind == "board":
+		var cmp: String = _compare(c)
+		if cmp != "":
+			Paper.text(_detail, cmp.replace("\n", " "), "small", Paper.ink_soft(), true)
 	if not cls.is_empty():
 		Paper.text(_detail, str(cls["blurb"]), "note", Paper.ink_soft(), true)
 		var lvl: int = Crew.level(Js.num(c.get("xp"))) if _pick_kind == "roster" else 1

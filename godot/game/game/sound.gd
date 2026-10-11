@@ -361,3 +361,35 @@ static func charge() -> void:
 		for i: int in f.size():
 			v.append([f[i], i * 0.065, 0.07 + i * 0.012, 0.01, 0.16, "sine"])
 		return _render(v, 0.7), 1.1)
+
+
+# ── The recruit room's pull (Kong, 2026-10-10: made in code, no files) ──────
+
+## A WAX SEAL CRACKING: a dry snap of noise with two brittle clicks on top
+## and a small low knock under it, the wax giving way.
+static func wax_crack() -> void:
+	_play_made("waxcrack", func() -> AudioStreamWAV:
+		return _render([[0.0, 0.0, 0.3, 0.001, 0.06, "noise"], [2400.0, 0.0, 0.08, 0.001, 0.025, "triangle"], [3100.0, 0.018, 0.06, 0.001, 0.02, "triangle"], [0.0, 0.02, 0.14, 0.001, 0.05, "noise"], [140.0, 0.0, 0.16, 0.002, 0.09, "sine"]], 0.25), 1.1)
+
+
+## A CARD FLIPPING: a soft paper flick, two short breaths of noise close
+## together and a faint tap as it lands face up.
+static func card_flip() -> void:
+	_play_made("cardflip", func() -> AudioStreamWAV:
+		return _render([[0.0, 0.0, 0.09, 0.012, 0.07, "noise"], [0.0, 0.05, 0.12, 0.008, 0.09, "noise"], [420.0, 0.11, 0.05, 0.002, 0.05, "triangle"]], 0.25), 0.9)
+
+
+## A SHORT LEGENDARY FANFARE: three rising calls in a brassy triangle (G, C,
+## E), then a held C major chord with an octave shimmer over it.
+static func fanfare() -> void:
+	_play_made("fanfare", func() -> AudioStreamWAV:
+		var v: Array = []
+		var calls: Array = [392.0, 523.25, 659.25]
+		for i: int in calls.size():
+			v.append([calls[i], i * 0.13, 0.17, 0.012, 0.22, "triangle"])
+			v.append([calls[i] * 2.0, i * 0.13, 0.04, 0.012, 0.16, "sine"])
+		for f: float in [523.25, 659.25, 783.99, 1046.5]:
+			v.append([f, 0.4, 0.12, 0.02, 1.5, "triangle"])
+		v.append([2093.0, 0.42, 0.035, 0.04, 1.2, "sine"])
+		v.append([130.8, 0.4, 0.12, 0.02, 1.0, "sine"])
+		return _render(v, 2.0), 1.2)
