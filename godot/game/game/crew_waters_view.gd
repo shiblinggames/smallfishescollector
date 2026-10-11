@@ -18,8 +18,13 @@ var fishing: CrewFishing
 var my_key: String = ""
 
 var _pops: Array = []
+## The callouts waiting: { text, kind, who, fish } (CrewFishing.callout).
 var _calls: Array = []
-## A beat between callouts handed to the toast lane.
+## CALLOUT RULES (THE DEN AND THE WATER TOGETHER, Kong, 2026-10-11): never
+## more than one callout every CALL_GAP seconds; new-species firsts that pile
+## up meanwhile go out as one ("Ben and Cal both logged new species for the
+## crew"). (Which firsts are called at all: CrewFishing.NEW_SPECIES_MIN.)
+const CALL_GAP: float = 4.0
 var _call_t: float = 0.0
 var _streak_l: Label
 var _derby_box: VBoxContainer
@@ -64,7 +69,7 @@ func _ready() -> void:
 	_derby_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_derby_box.visible = false
 	fishing.popped.connect(_on_pop)
-	fishing.called.connect(_on_call)
+	fishing.callout.connect(_on_call)
 	fishing.streak_changed.connect(func(_n: int, _k: Array) -> void: _paint_streak())
 	fishing.derby_changed.connect(func(_st: Dictionary) -> void: _paint_derby())
 	_paint_streak()
@@ -93,11 +98,49 @@ func _on_pop(key: String, pop: Dictionary) -> void:
 	_pops.append({ "key": key, "text": text, "golden": pop.get("golden", false), "t": 0.0 })
 
 
-func _on_call(text: String, about: String) -> void:
+func _on_call(c: Dictionary) -> void:
 	# The catcher hears about their own catch from their own screens.
+	var about: String = str(c.get("about", ""))
 	if about != "" and about == my_key:
 		return
-	_calls.append(text)
+	_calls.append(c)
+
+
+## The next callout to show, with any other new-species firsts waiting merged
+## into it.
+func _next_call() -> String:
+	var c: Dictionary = _calls.pop_front()
+	if str(c.get("kind", "")) != "new":
+		return str(c.get("text", ""))
+	var firsts: Array = [c]
+	for o: Dictionary in _calls.duplicate():
+		if str(o.get("kind", "")) == "new":
+			firsts.append(o)
+			_calls.erase(o)
+	return merge_firsts(firsts)
+
+
+## Firsts as one line: one alone as it came; one captain's several ("Ben
+## logged 2 new species for the crew: Marlin and Tuna"); several captains'
+## ("Ben and Cal both logged new species for the crew").
+static func merge_firsts(firsts: Array) -> String:
+	if firsts.size() == 1:
+		return str(firsts[0].get("text", ""))
+	var who: Array = []
+	var fish: Array = []
+	for f: Dictionary in firsts:
+		if not who.has(str(f.get("who", ""))):
+			who.append(str(f.get("who", "")))
+		fish.append(str(f.get("fish", "")))
+	if who.size() == 1:
+		return "%s logged %d new species for the crew: %s" % [who[0], fish.size(), _and(fish)]
+	return "%s %s logged new species for the crew" % [_and(who), "both" if who.size() == 2 else "all"]
+
+
+static func _and(list: Array) -> String:
+	if list.size() <= 1:
+		return "".join(PackedStringArray(list))
+	return "%s and %s" % [", ".join(PackedStringArray(list.slice(0, list.size() - 1))), list[list.size() - 1]]
 
 
 func _paint_streak() -> void:
@@ -189,8 +232,8 @@ func _process(delta: float) -> void:
 	# dial is up (the fight has the screen).
 	_call_t = maxf(0.0, _call_t - delta)
 	if _call_t <= 0.0 and not _calls.is_empty() and not dial_up and hud != null:
-		hud.toast(str(_calls.pop_front()))
-		_call_t = 1.2
+		hud.toast(_next_call())
+		_call_t = CALL_GAP
 	# The streak's count steps aside while the dial is up (it sat on the ring).
 	_streak_l.modulate.a = move_toward(_streak_l.modulate.a, 0.0 if dial_up else 1.0, delta * Motion.NEAR_RATE)
 	if _streak_l.visible and sea != null and is_instance_valid(sea._boat):

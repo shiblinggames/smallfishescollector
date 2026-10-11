@@ -148,6 +148,17 @@ func _init() -> void:
 	check(Js.num(Js.obj(c.data.get("crewStreak")).get("n")) == 3.0, "the crew's best streak is kept")
 	cf.on_reel("anna-key", "perfect", { "caught": true, "fish": marlin, "sizeIn": 50.0, "isShiny": true })
 	check(calls.any(func(t: String) -> bool: return t.contains("golden Marlin")), "a golden is called out")
+	# THE DEN AND THE WATER TOGETHER: a new species is called out only from
+	# rare up; firsts that pile up go out as one line.
+	calls.clear()
+	cf.on_reel("ben-key", "catch", { "caught": true, "fish": { "id": 1.0, "name": "Bluegill", "bite_rarity": 1.0 }, "sizeIn": 8.0, "isNewSpecies": true })
+	check(calls.is_empty(), "a common new species is not called out")
+	cf.on_reel("ben-key", "catch", { "caught": true, "fish": { "id": 40.0, "name": "Sailfish", "bite_rarity": 3.0 }, "sizeIn": 80.0, "isNewSpecies": true })
+	check(calls.any(func(t: String) -> bool: return t.contains("new species for the crew: Sailfish")), "a rare new species is")
+	var f1: Dictionary = { "kind": "new", "who": "Ben", "fish": "Sailfish", "text": "Ben logged a new species for the crew: Sailfish" }
+	check(CrewWatersView.merge_firsts([f1]) == f1["text"], "one first reads as it came")
+	check(CrewWatersView.merge_firsts([f1, { "kind": "new", "who": "Ben", "fish": "Tuna" }]) == "Ben logged 2 new species for the crew: Sailfish and Tuna", "one captain's firsts merge")
+	check(CrewWatersView.merge_firsts([f1, { "kind": "new", "who": "Cal", "fish": "Tuna" }]) == "Ben and Cal both logged new species for the crew", "two captains' firsts merge")
 	cf.note_pos("ben-key", { "x": 90000.0, "y": 0.0 })
 	cf.on_reel("anna-key", "perfect", { "caught": true, "fish": marlin, "sizeIn": 20.0 })
 	check(cf.streak <= 1, "alone, no crew streak")

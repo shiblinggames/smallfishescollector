@@ -9,6 +9,12 @@ extends RefCounted
 
 # ── The crew ───────────────────────────────────────────────────────────────────
 
+const DEN_CALLOUT: GDScript = preload("res://game/den_callout.gd")
+
+## The Den's games as a status says them.
+const DEN_WORDS: Dictionary = { "roulette": "roulette", "blackjack": "blackjack", "slots": "slots" }
+
+
 ## CREWMATE STATUS (Kong, 2026-10-06): in a raid (which fight), diving (how
 ## deep), ashore, fishing (which water), away (nothing pressed for three
 ## minutes), or where she is sailing.
@@ -24,6 +30,13 @@ static func status_text(o: Sea) -> String:
 			if raid.is_empty() or bs.b.is_empty():
 				return "in a fight"
 			return "in a raid  ·  fight %d of %d" % [int(Js.num(bs.b.get("fight"))) + 1, int(Battle.fight_at(raid, 0)["of"])]
+	# THE DEN AND THE WATER TOGETHER (Kong, 2026-10-11): a captain at the Den
+	# reads "at the Den  ·  roulette" (the walkthrough: they just read
+	# "ashore"), so the crew know where to find them. Before "away": play at
+	# the tables is not input the sea sees.
+	for rc: Node in o._room_layer.get_children():
+		if rc is DenRoom and not rc.is_queued_for_deletion():
+			return "at the Den  ·  %s" % DEN_WORDS.get((rc as DenRoom).game, "the tables")
 	if o._input_ms > 0 and Time.get_ticks_msec() - o._input_ms > 180000:
 		return "away"
 	var port: Dictionary = Chart.berth_at(at)
@@ -72,6 +85,11 @@ static func join_crew(o: Sea) -> void:
 	cw.fishing = o.net.fishing
 	cw.my_key = o.net.key
 	o._hud_layer.add_child(cw)
+	# A crewmate sitting down at a shared Den table, called out with a Join
+	# (THE DEN AND THE WATER TOGETHER, game/den_callout.gd).
+	var dc: Control = DEN_CALLOUT.new()
+	dc.set("sea", o)
+	o._hud_layer.add_child(dc)
 
 
 static func mate(o: Sea, k: String) -> Shipmate:

@@ -2873,6 +2873,67 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     (ENDING_PRESS: Continue pressed); "dive" with DIVE_PARTY=1 on DIVE_STEP haul or dead (a
     crew of three at the end, the overlay's sheet; DIVE_WAIT=500 SHOT_F=300 to let the
     fight's opening play out first).
+- THE DEN AND THE WATER TOGETHER (Kong, 2026-10-11: the fishing, derby and Den designs from the
+  two-copy walkthrough, approved). game/den_callout.gd (new, no class_name; sea_folk.gd preloads
+  it), den_tables.gd, den_roulette.gd, sea_folk.gd, sea_ports.gd, crew_net.gd, menus.gd,
+  crew_pings.gd, crew_fishing.gd, crew_waters_view.gd.
+  - THE ROULETTE SEAT ROW: at a shared wheel the old "At the wheel: Anna, Ben (ready)" line is a
+    row of seats along the felt under the title (DenRoulette.SeatRow, drawn flat in code): each
+    captain's face (their colour and hat, as the plates draw it, on a deep-felt disc), their
+    name ("You" in gold for yours), what they have on the board now ("150 on the board" /
+    "No chips down"; yours follows your own chips as you place them, ahead of the table), and
+    "Ready" with a cream check on the face that lands from a little larger (a soft plip when
+    someone else readies). A seat's colour (their chips' ring on the board) is only a small dot
+    by the name, never a border; a hairline between seats, no boxes. On the result each
+    captain's net (+50 in gold, -75 in a soft red) fades in and rises over their seat, holds and
+    goes; the line above the board now just names the pocket ("5, Pumpkinseed."). Each seat
+    carries `face` (DenTables._face, an extra field; the protocol is otherwise unchanged).
+  - DEN PRESENCE: a captain with the Den open reads "at the Den  ·  roulette" (or blackjack, or
+    slots) as their status (sea_folk.status_text, ahead of "away", since play at the tables is
+    not input the sea sees), so it shows on their plate, on the compass and in the Charter
+    sheet's crew rows, which now say what an aboard crewmate is doing (CrewNet.doing, from their
+    boat's updates) instead of just "aboard".
+  - THE SIT-DOWN CALLOUT: the founder's DenTables says each NEW seat once (signal `sat`, rpc
+    `_sat`; sitting where you already sit is not one), and every other captain's sea shows words
+    on the water under the story line: "Ben sat down at the wheel" (or "at the card table"),
+    with water-pill buttons. In the Mainland's berth: "The Den is one of The Mainland's doors."
+    and Join, which opens the Den on that game (sea_ports enter_room "den:roulette"; a room open
+    there closes first). Anywhere else south: "The Den is ashore at The Mainland." and Set a
+    course, which pins The Mainland on the compass. A game still shut to you: "Fish Roulette:
+    Needs Fishing 10" and no Join. Always Not now; it goes after 14s. NOTE: in the port the Den
+    is a Mainland door (the Ashore picker), not in the Tavern, so the callout names The
+    Mainland, not the Tavern the brief's wording assumed. One callout per sit-down: the same
+    captain at the same table calls again only after 120s (stepping to the slots and back is
+    not a new sit-down). Nothing shows to the captain who sat, to anyone at the Den already, or
+    in a fight; over a room you are in it shows above the room; while a sheet is open on the
+    water it waits for the sheet to close (if still fresh), never drawn over it.
+  - DERBY ENTRY POINTS: the Charter sheet knows a derby is on (Menus.running_derby): "On now
+    Biggest Fish · started by Ben", the time left ticking while the sheet is open (Finishing at
+    0), the standings (your row "You" in green, kept past the top five), "Everyone aboard is in
+    it: every fish you land counts", and Fish on (closes the sheet); the start buttons only show
+    when none is on. It repaints as the derby starts, scores and ends. ON THE WATER: the ping
+    wheel (hold G) has a fifth option, "Call a derby", lower left; the five now sit evenly round
+    the pointer (Hotspot up, Over here upper right, Need a hand lower right, Call a derby lower
+    left, Look upper left), laid wider than tall so the words never meet. Let go on it and a
+    small night card asks which (Biggest fish, Most species, Not now; Esc or B is Not now),
+    starting through the derby's own rule (Charter.run "crewDerby", one at a time, its refusal
+    shown in the card). While one is on the option reads "Derby on 7:12" and letting go on it
+    says where the standings are. It sends no ping.
+  - CALLOUT RULES: a new species is called out to the crew only when it is RARE OR BETTER
+    (CrewFishing.NEW_SPECIES_MIN = 3, the fish's bite_rarity). Chosen over "only after the
+    crew's first 20 species" because it reads the same in a new Charter and an old one, and a
+    rare first is worth hearing whenever it comes. Goldens, ancients, crew bests, streaks and
+    derby starts are unchanged. The screens hand callouts to the toast lane no closer than
+    CrewWatersView.CALL_GAP (4s; it was 1.2s), and new-species firsts waiting meanwhile go out as
+    one: "Ben logged 2 new species for the crew: Sailfish and Tuna", "Ben and Cal both logged
+    new species for the crew" ("all" for three or more). The `_call` rpc now carries kind, who
+    and fish (signal `callout`); `called(text, about)` still fires for whoever only needs the
+    words.
+  - Checks: den_tables_check (a sit-down said once, a second sit is not one, a seat carries its
+    face), charter_crew_check (a common first is not called out, a rare one is, the merged
+    lines). Looks (scratch driver coopdesign5/den_shots.gd): the seat row mid-round and on a
+    result, the callout with Join, the Charter sheet during a derby (Ben "at the Den  ·
+    roulette"), the ping wheel with Call a derby and with a derby on, and the derby card.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

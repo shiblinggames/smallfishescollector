@@ -16,7 +16,16 @@ extends Control
 ## IN A CHARTER THE WHEEL IS SHARED (game/den_tables.gd): everyone at it
 ## sees the others' chips on the board ringed in their colours, "Spin" becomes
 ## "Ready", a countdown starts with the first ready, and one spin settles the
-## whole table; every captain's result is called out after it.
+## whole table.
+##
+## THE SEAT ROW (THE DEN AND THE WATER TOGETHER, Kong, 2026-10-11; the
+## walkthrough: the seat colours were never tied to names, the result was one
+## tiny line, and it said "Ben" for you): along the felt under the title, a
+## seat per captain at the wheel: their face, their name ("You" for yours),
+## what they have on the board now and a ready tick. On the result each
+## captain's net rises over their seat. A seat's colour (their chips' ring on
+## the board) is only a small dot by the name, never a border. Flat, on the
+## felt, no boxes.
 
 const ORDER: Array = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26]
 const POCKET_RED: Color = Color(0.7, 0.2, 0.16)
@@ -43,7 +52,7 @@ var _busy: bool = false
 var _shared: bool = false
 var _seen_round: int = -1
 var _deadline: float = -1.0
-var _seats_l: Label
+var _row: SeatRow
 var _ready_sent: bool = false
 var _phase: String = "betting"
 ## THE SLIP AS IT IS PLACED (co-op walkthrough, 2026-10-11: the crew's chips
@@ -122,8 +131,10 @@ func _ready() -> void:
 	if DenTables.shared_for(session):
 		_shared = true
 		_spin_b.text = "Ready   ·   Space"
-		_seats_l = DenRoom.says(right, "", "label", DenRoom.CREAM)
-		right.move_child(_seats_l, 1)
+		_row = SeatRow.new()
+		_row.my_key = DenTables.live.my_key()
+		right.add_child(_row)
+		right.move_child(_row, 1)
 		DenTables.live.changed.connect(_on_table)
 		tree_exiting.connect(func() -> void: session.act("denTable", ["roulette", "leave"]))
 		var st: Variant = DenTables.live.states.get("roulette")
@@ -147,7 +158,7 @@ func _process(delta: float) -> void:
 		_slip_due -= delta
 		if _slip_due < 0.0:
 			_send_slip()
-	if _shared and _seats_l != null:
+	if _shared and _row != null:
 		var left: int = int(ceil((_deadline - Time.get_ticks_msec() / 1000.0)))
 		if _phase == "betting" and _deadline > 0.0 and left >= 0:
 			_says.text = "Spins in %d" % left
@@ -160,14 +171,18 @@ func _on_table(game: String, st: Dictionary) -> void:
 	var me: String = DenTables.live.my_key()
 	_phase = str(st["phase"])
 	_deadline = Time.get_ticks_msec() / 1000.0 + float(st["left"]) if float(st["left"]) > 0.0 else -1.0
-	var names: Array = []
 	var others: Array = []
+	var row: Array = []
 	for k: String in st["seats"]:
 		var seat: Dictionary = st["seats"][k]
-		names.append("%s%s" % [seat["name"], " (ready)" if seat["ready"] else ""])
+		var stake: float = 0.0
+		for b: Dictionary in Js.list(seat.get("bets")):
+			stake += Js.num(b.get("amount"))
+		row.append({ "key": k, "name": str(seat.get("name", "A captain")), "color": Color(str(seat["color"])), "face": Js.obj(seat.get("face")), "stake": stake, "ready": seat.get("ready", false) == true })
 		if k != me:
 			others.append({ "color": Color(str(seat["color"])), "bets": seat["bets"] })
-	_seats_l.text = "At the wheel: %s" % ", ".join(PackedStringArray(names))
+	_row.set_seats(row)
+	_row.mine = _slip_sum()
 	_board.others = others
 	_board.queue_redraw()
 	if _phase == "betting":
@@ -182,7 +197,7 @@ func _on_table(game: String, st: Dictionary) -> void:
 		_shared_spin(res, st)
 
 
-func _shared_spin(res: Dictionary, st: Dictionary) -> void:
+func _shared_spin(res: Dictionary, _st: Dictionary) -> void:
 	_busy = true
 	_spin_b.disabled = true
 	_board.won = []
@@ -196,15 +211,13 @@ func _shared_spin(res: Dictionary, st: Dictionary) -> void:
 	_board.result = n
 	_board.won = Js.list(mine.get("won"))
 	_board.queue_redraw()
-	var parts: Array = []
+	# Each captain's net rises over their seat (the row), not in one line.
 	for k: String in res["by"]:
 		var r: Dictionary = res["by"][k]
 		if r.has("error"):
 			continue
-		var who: String = str(Js.obj(st["seats"].get(k)).get("name", "Someone"))
-		var net: float = float(r["net"])
-		parts.append("%s %s%s" % [who, "+" if net >= 0.0 else "-", Js.thousands(absf(net))])
-	_says.text = "%d, %s.   %s" % [n, _pocket_name(n), "   ".join(PackedStringArray(parts))]
+		_row.show_net(k, float(r["net"]))
+	_says.text = "%d, %s." % [n, _pocket_name(n)]
 	Motion.rise_word(_says)
 	if not mine.is_empty() and not mine.has("error"):
 		var wk: Array = Js.list(mine.get("won"))
@@ -341,6 +354,9 @@ func _changed() -> void:
 	_total.text = "On the board: %s" % Js.thousands(sum) if sum > 0.0 else "No chips down"
 	_board.bets = _bets
 	_board.queue_redraw()
+	# Your seat shows your slip as you place it (before it reaches the table).
+	if _row != null:
+		_row.mine = sum
 	# The pile shows what is left once these chips are down.
 	if not _busy and den != null:
 		den.paint_purse(maxf(0.0, Js.num(session.profile().get("casino_chips")) - sum))
@@ -874,3 +890,145 @@ class Board:
 		var at: String = Js.thousands(amt)
 		var top: float = base.y - DenRoom.pile_height(amt, w, 8, 8)
 		Kit.sea_string(self, Kit.font("karla", 800), Vector2(spot.x - 40.0, top + 2.0), at, 12, DenRoom.CREAM, HORIZONTAL_ALIGNMENT_CENTER, 80.0)
+
+
+## THE SEAT ROW at a shared wheel (THE DEN AND THE WATER TOGETHER): a seat per
+## captain along the felt, drawn flat in code: their face (as their boat's
+## plate shows it) on a deep-felt disc, a small dot in their chips' colour by
+## the name ("You" for yours, in gold), what they have on the board, and a
+## ready tick (a cream disc with a check on the face, which lands from a
+## little larger, and "Ready"). A hairline between seats, no boxes. On the
+## result each captain's net rises over their seat, holds, and goes.
+class SeatRow:
+	extends Control
+	var my_key: String = ""
+	## [{ key, name, color, face, stake, ready }], in the table's seat order
+	## (the same order on every screen).
+	var seats: Array = []
+	## Your own slip as placed (it leads the table by the slip's short wait,
+	## so your seat never lags your own chips).
+	var mine: float = 0.0:
+		set(v):
+			if v != mine:
+				mine = v
+				queue_redraw()
+	## key -> [face hash, texture].
+	var _faces: Dictionary = {}
+	## When each seat's ready tick landed (msec), for its small pop.
+	var _ready_at: Dictionary = {}
+	const SLOT_W: float = 236.0
+	const FACE: float = 50.0
+	## Headroom over the faces for a net to rise into.
+	const TOP: float = 26.0
+	const POP_MS: int = 400
+	const NET_RED: Color = Color(1.0, 0.64, 0.56)
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = Vector2(0, TOP + FACE + 6.0)
+
+	func set_seats(list: Array) -> void:
+		for st: Dictionary in list:
+			var k: String = str(st["key"])
+			var was: bool = false
+			for o: Dictionary in seats:
+				if o["key"] == k:
+					was = o["ready"]
+			if st["ready"] and not was:
+				_ready_at[k] = Time.get_ticks_msec()
+				# Someone else readying is heard, quietly; yours is your press.
+				if k != my_key:
+					Sound.plip()
+		seats = list
+		queue_redraw()
+
+	func _face(k: String, face: Dictionary) -> Texture2D:
+		var h: int = face.hash()
+		if _faces.has(k) and int(_faces[k][0]) == h:
+			return _faces[k][1]
+		var tex: Texture2D = Avatar.texture_of(face, self)
+		_faces[k] = [h, tex]
+		# The face is drawn into its texture on the next frame.
+		if not get_tree().process_frame.is_connected(queue_redraw):
+			get_tree().process_frame.connect(queue_redraw, CONNECT_ONE_SHOT)
+		return tex
+
+	func _slot(i: int) -> Rect2:
+		var w: float = minf(SLOT_W, size.x / maxf(1.0, float(seats.size())))
+		return Rect2(i * w, 0.0, w, size.y)
+
+	func _process(_delta: float) -> void:
+		# Redrawn only while a tick is still landing.
+		var now: int = Time.get_ticks_msec()
+		for k: String in _ready_at:
+			if now - int(_ready_at[k]) < POP_MS + 40:
+				queue_redraw()
+				return
+
+	## A name that fits its seat (cut with "..." rather than run into the next).
+	static func _fit(f: Font, t: String, px: int, w: float) -> String:
+		if f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x <= w:
+			return t
+		var cut: String = t
+		while cut.length() > 1 and f.get_string_size(cut + "...", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > w:
+			cut = cut.substr(0, cut.length() - 1)
+		return cut + "..."
+
+	func _draw() -> void:
+		var title: Font = Kit.font("cinzel", 700)
+		var small: Font = Kit.font("karla", 700)
+		var now: int = Time.get_ticks_msec()
+		for i: int in seats.size():
+			var st: Dictionary = seats[i]
+			var k: String = str(st["key"])
+			var r: Rect2 = _slot(i)
+			var me: bool = k == my_key
+			if i > 0:
+				draw_line(Vector2(r.position.x, TOP + 4.0), Vector2(r.position.x, TOP + FACE - 4.0), Color(DenRoom.CREAM, 0.18), 1.0)
+			var fc: Vector2 = Vector2(r.position.x + 10.0 + FACE / 2.0, TOP + FACE / 2.0)
+			draw_circle(fc, FACE / 2.0, DenRoom.FELT_DEEP)
+			var tex: Texture2D = _face(k, Js.obj(st.get("face")))
+			if tex != null:
+				draw_texture_rect(tex, Rect2(fc - Vector2(FACE, FACE) / 2.0, Vector2(FACE, FACE)), false)
+			var ready: bool = st["ready"] == true
+			if ready:
+				# The tick lands from a little larger.
+				var u: float = clampf(float(now - int(_ready_at.get(k, 0))) / float(POP_MS), 0.0, 1.0)
+				var sc: float = lerpf(1.6, 1.0, 1.0 - pow(1.0 - u, 3.0))
+				var tc: Vector2 = fc + Vector2(FACE * 0.36, FACE * 0.32)
+				draw_circle(tc, 9.0 * sc, DenRoom.CREAM)
+				draw_polyline(PackedVector2Array([tc + Vector2(-4.5, 0.0) * sc, tc + Vector2(-1.2, 3.4) * sc, tc + Vector2(4.6, -3.6) * sc]), DenRoom.FELT_DEEP, 2.2, true)
+			var x: float = fc.x + FACE / 2.0 + 12.0
+			var w: float = r.end.x - x - 8.0
+			# The seat's colour: a small dot by the name, nothing more.
+			draw_circle(Vector2(x + 4.0, TOP + 9.0), 4.5, st["color"])
+			var nm: String = "You" if me else _fit(title, str(st["name"]), 17, w - 14.0)
+			Kit.sea_string(self, title, Vector2(x + 14.0, TOP + 15.0), nm, 17, DenRoom.WIN if me else DenRoom.CREAM)
+			var stake: float = mine if me else float(st["stake"])
+			var line: String = "%s on the board" % Js.thousands(stake) if stake > 0.0 else "No chips down"
+			Kit.sea_string(self, small, Vector2(x, TOP + 33.0), _fit(small, line, 14, w), 14, DenRoom.CREAM if stake > 0.0 else DenRoom.CREAM_SOFT)
+			Kit.sea_string(self, small, Vector2(x, TOP + 50.0), "Ready" if ready else "Placing chips", 13, DenRoom.WIN if ready else DenRoom.CREAM_SOFT)
+
+	## A captain's net for the spin rises over their seat, holds, and goes.
+	func show_net(k: String, net: float) -> void:
+		var i: int = -1
+		for j: int in seats.size():
+			if seats[j]["key"] == k:
+				i = j
+		if i < 0:
+			return
+		var r: Rect2 = _slot(i)
+		var col: Color = DenRoom.WIN if net > 0.0 else (DenRoom.CREAM if net == 0.0 else NET_RED)
+		var l: Label = DenRoom.says(self, "%s%s" % ["+" if net >= 0.0 else "-", Js.thousands(absf(net))], "title", col)
+		Kit.lift(l)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.size = Vector2(140.0, 32.0)
+		l.position = Vector2(r.position.x + 10.0 + FACE / 2.0 - 70.0, TOP + 4.0)
+		# It fades in as it rises from the face to over it (one tween, so the
+		# rise is not fought by a second one), holds, then goes as a note goes.
+		l.modulate.a = 0.0
+		var tw: Tween = l.create_tween().set_parallel(true)
+		Motion.ease_fade(tw, l, "modulate:a", 1.0, Motion.WORD_IN)
+		Motion.ease_rise(tw, l, "position:y", -6.0, 1.1)
+		tw.chain().tween_interval(2.4)
+		tw.chain().tween_callback(func() -> void: Motion.note_out(l))

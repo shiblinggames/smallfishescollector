@@ -44,6 +44,15 @@ func _init() -> void:
 	# ── Roulette ──
 	check(not (await c.run(a, "denTable", ["roulette", "sit"])).has("error"), "Anna sits at the wheel")
 	check(not (await c.run(b, "denTable", ["roulette", "sit"])).has("error"), "Ben sits at the wheel")
+	# THE DEN AND THE WATER TOGETHER: each new seat is said once, with a face.
+	var sits: Array = []
+	t.sat.connect(func(g: String, k: String, _w: String) -> void: sits.append([g, k]))
+	await c.run(b, "denTable", ["roulette", "sit"])
+	check(sits.is_empty(), "sitting again where you sit is not a new sit-down")
+	await c.run(b, "denTable", ["roulette", "leave"])
+	await c.run(b, "denTable", ["roulette", "sit"])
+	check(sits.size() == 1 and sits[0] == ["roulette", "ben-key"], "a sit-down is said once (%s)" % str(sits))
+	check(t._rl["seats"]["ben-key"].has("face"), "a seat carries its captain's face")
 	var spins: int = 0
 	for round: int in 12:
 		var a0: float = Js.num(a.profile().get("casino_chips"))

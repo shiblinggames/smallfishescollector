@@ -47,6 +47,9 @@ static func purse_sheet(session: Session, hand: Callable = Callable(), aboard: A
 		if net != null:
 			net.roster_changed.connect(again)
 			net.hand_failed.connect(failed)
+			# A derby starting, scoring or ending repaints the Derby part.
+			if net.fishing != null:
+				net.fishing.derby_changed.connect(again)
 		s.tree_exiting.connect(func() -> void:
 			if session.changed.is_connected(again):
 				session.changed.disconnect(again)
@@ -54,7 +57,9 @@ static func purse_sheet(session: Session, hand: Callable = Callable(), aboard: A
 				if net.roster_changed.is_connected(again):
 					net.roster_changed.disconnect(again)
 				if net.hand_failed.is_connected(failed):
-					net.hand_failed.disconnect(failed)))
+					net.hand_failed.disconnect(failed)
+				if net.fishing != null and net.fishing.derby_changed.is_connected(again):
+					net.fishing.derby_changed.disconnect(again)))
 	return s
 
 
@@ -98,7 +103,10 @@ static func _purse_body(s: Sheet, session: Session, hand: Callable, aboard_given
 			s.body.add_child(row)
 			var here: bool = aboard.has(m.get("key"))
 			Kit.text(row, str(m.get("name", "?")) + ("  ·  founder" if m.get("founder", false) else ""), "body", Kit.INK).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			Kit.text(row, "aboard" if here else "away", "small", Paper.GREEN if here else Kit.DIM).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			# Aboard, what they are doing as their plate says it ("at the Den
+			# · roulette", "fishing · The Shallows"); away, away.
+			var doing: String = net.doing_of(str(m.get("key", ""))) if net != null and here else ""
+			Kit.text(row, (doing if doing != "" else "aboard") if here else "away", "small", Paper.GREEN if here else Kit.DIM).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			if crew.get("founder", false) and hand.is_valid() and not m.get("founder", false) and here:
 				can_hand = true
 				var k: String = str(m["key"])
@@ -131,6 +139,78 @@ static func _purse_body(s: Sheet, session: Session, hand: Callable, aboard_given
 			s.note("Hand the Charter over and it lives on their machine instead; they host it from then on. Release a berth from the title screen.")
 	# Fishing together: start a derby for everyone aboard; the records.
 	s.section("Derby")
+	# THE DERBY THAT IS ON (THE DEN AND THE WATER TOGETHER, Kong, 2026-10-11;
+	# the walkthrough: this sheet offered to start another while one ran):
+	# what it is, who started it, the time left ticking, the standings with
+	# your row, and Fish on (everyone aboard is in it already).
+	var cf: CrewFishing = net.fishing if net != null else null
+	if cf != null and running_derby(cf):
+		_derby_on(s, cf, net.key)
+	else:
+		_derby_start(s, session)
+	var cs: Dictionary = Js.obj(crew.get("crewStreak"))
+	if not cs.is_empty():
+		s.stat("Crew best streak", "%d  (%s)" % [int(Js.num(cs.get("n"))), ", ".join(PackedStringArray(Js.list(cs.get("names")).map(func(x: Variant) -> String: return str(x))))])
+	var dl: Array = Js.list(crew.get("derbies")).duplicate()
+	dl.reverse()
+	for d: Dictionary in dl:
+		if str(d.get("winner", "")) != "":
+			s.stat("%s derby" % str(CrewFishing.DERBY_KINDS.get(d.get("kind"), "")).capitalize(), "%s: %s" % [d["winner"], d.get("label", "")])
+	s.section("The ledger")
+	var rows: Array = Js.list(crew.get("ledger")).duplicate()
+	rows.reverse()
+	if rows.is_empty():
+		s.note("Nothing earned or spent yet.")
+	for r: Dictionary in rows:
+		var amt: float = float(r.get("amount", 0.0))
+		Kit.stat_row(s.body, "%s  ·  %s" % [r.get("by", "?"), r.get("reason", "")], "%s%s ⟡" % ["+" if amt > 0 else "-", Js.thousands(absf(amt))], "good" if amt > 0 else "bad")
+
+
+## Is a derby on now (as this game last heard it, its clock not yet run out)?
+static func running_derby(cf: CrewFishing) -> bool:
+	return not cf.derby.is_empty() and cf.derby.get("final") != true
+
+
+## The time a derby has left, from what this game last heard.
+static func derby_left(cf: CrewFishing) -> float:
+	return maxf(0.0, Js.num(cf.derby.get("left")) - float(Time.get_ticks_msec() - cf.derby_got_ms) / 1000.0)
+
+
+## The derby that is on: its kind and who started it, the time left (ticking
+## while the sheet is open), the standings (your row as "You", in green), and
+## Fish on, which closes the sheet.
+static func _derby_on(s: Sheet, cf: CrewFishing, my_key: String) -> void:
+	var st: Dictionary = cf.derby
+	s.stat("On now", "%s  ·  started by %s" % [str(st.get("title", "")).capitalize(), st.get("by", "a crewmate")])
+	var tr: HBoxContainer = Kit.stat_row(s.body, "Time left", "")
+	var tl: Label = tr.get_child(1) as Label
+	var tick: Callable = func() -> void:
+		var left: float = derby_left(cf)
+		tl.text = "%d:%02d" % [int(left) / 60, int(left) % 60] if left > 0.0 else "Finishing"
+	tick.call()
+	var tm: Timer = Timer.new()
+	tm.wait_time = 0.5
+	tm.autostart = true
+	tm.timeout.connect(tick)
+	tl.add_child(tm)
+	var rows: Array = Js.list(st.get("rows"))
+	if rows.is_empty():
+		s.note("No catches yet. The first fish anyone lands leads it.")
+	for i: int in rows.size():
+		var r: Dictionary = rows[i]
+		var me: bool = str(r.get("key", "")) == my_key
+		if i >= 5 and not me:
+			continue
+		Kit.stat_row(s.body, "%d.  %s" % [i + 1, "You" if me else str(r.get("name", "?"))], str(r.get("label", "")), "good" if me else "")
+	s.note("Everyone aboard is in it: every fish you land counts. The standings show on the water at the right.")
+	var fish: Button = Kit.button("Fish on", "secondary", "small")
+	fish.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	fish.pressed.connect(s.close)
+	s.body.add_child(fish)
+
+
+## No derby on: the two kinds to start one for everyone aboard.
+static func _derby_start(s: Sheet, session: Session) -> void:
 	s.note("Everyone aboard fishes for %d minutes. Standings show on the water." % int(CrewFishing.DERBY_S / 60.0))
 	var drow: HBoxContainer = HBoxContainer.new()
 	drow.add_theme_constant_override("separation", 10)
@@ -149,19 +229,3 @@ static func _purse_body(s: Sheet, session: Session, hand: Callable, aboard_given
 			else:
 				s.close())
 		drow.add_child(db_)
-	var cs: Dictionary = Js.obj(crew.get("crewStreak"))
-	if not cs.is_empty():
-		s.stat("Crew best streak", "%d  (%s)" % [int(Js.num(cs.get("n"))), ", ".join(PackedStringArray(Js.list(cs.get("names")).map(func(x: Variant) -> String: return str(x))))])
-	var dl: Array = Js.list(crew.get("derbies")).duplicate()
-	dl.reverse()
-	for d: Dictionary in dl:
-		if str(d.get("winner", "")) != "":
-			s.stat("%s derby" % str(CrewFishing.DERBY_KINDS.get(d.get("kind"), "")).capitalize(), "%s: %s" % [d["winner"], d.get("label", "")])
-	s.section("The ledger")
-	var rows: Array = Js.list(crew.get("ledger")).duplicate()
-	rows.reverse()
-	if rows.is_empty():
-		s.note("Nothing earned or spent yet.")
-	for r: Dictionary in rows:
-		var amt: float = float(r.get("amount", 0.0))
-		Kit.stat_row(s.body, "%s  ·  %s" % [r.get("by", "?"), r.get("reason", "")], "%s%s ⟡" % ["+" if amt > 0 else "-", Js.thousands(absf(amt))], "good" if amt > 0 else "bad")

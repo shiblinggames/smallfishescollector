@@ -106,6 +106,10 @@ var _next: int = 0
 var _open: Dictionary = {}
 var _boat_t: float = 0.0
 var _looks: Dictionary = {}
+## What each crewmate is doing, as their boat last said (key -> [the status,
+## their velocity]): the Charter sheet's crew rows read it (THE DEN AND THE
+## WATER TOGETHER: "at the Den  ·  roulette" shows there as on the plates).
+var doing: Dictionary = {}
 ## STARTING TOGETHER, on the founder's game: who in the harbour said Ready
 ## (key -> true; only for the harbour, never saved), the berths made this
 ## session whose captain is still choosing their look (key -> true), and
@@ -444,6 +448,7 @@ func _reset() -> void:
 	sunk_info = {}
 	heard_ms = 0
 	_looks.clear()
+	doing.clear()
 	_open.clear()
 	_answering.clear()
 	_skipped.clear()
@@ -1140,6 +1145,13 @@ func send_boat(delta: float, state: Dictionary) -> void:
 	_boat.rpc(key, state)
 
 
+## What a crewmate is doing now, as their plate says it ("" when unheard).
+func doing_of(k: String) -> String:
+	if not doing.has(k):
+		return ""
+	return Shipmate.at_rest(str(doing[k][0]), doing[k][1])
+
+
 func send_look(look: Dictionary, as_name: String) -> void:
 	_looks[key] = [as_name, look]
 	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
@@ -1167,6 +1179,7 @@ func _boat(k: String, state: Dictionary) -> void:
 	heard_ms = Time.get_ticks_msec()
 	if hosting:
 		fishing.note_pos(k, state)
+	doing[k] = [str(state.get("do", "")), Vector2(Js.num(state.get("vx")), Js.num(state.get("vy")))]
 	mate_boat.emit(k, state)
 
 

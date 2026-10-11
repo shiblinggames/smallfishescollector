@@ -10,6 +10,14 @@ extends Node
 ##     everyone's water (the fish and its length; a golden in gold). A golden,
 ##     a new crew best, a species new to the crew's book or an ancient is
 ##     called out to the whole crew ("Ben landed a golden Marlin").
+##     CALLOUT RULES (THE DEN AND THE WATER TOGETHER, Kong, 2026-10-11; the
+##     walkthrough: in a new Charter the new-species callouts flooded the toast
+##     lane): a new species is called out only when it is RARE OR BETTER
+##     (bite_rarity >= NEW_SPECIES_MIN). Chosen over "only after the crew's
+##     first 20 species" because it reads the same in any Charter, old or new,
+##     and a rare first is worth hearing about whenever it comes. The screens
+##     space the callouts out and merge firsts that pile up
+##     (game/crew_waters_view.gd).
 ##   THE CREW STREAK: perfects by captains fishing in company (another
 ##     crewmate within NEAR) build one shared streak; any other reel by one of
 ##     them breaks it. It shows from 2 on, under every hull in it. The crew's
@@ -21,6 +29,9 @@ extends Node
 
 signal popped(key: String, pop: Dictionary)
 signal called(text: String, about: String)
+## The same callout with what it is about, for the screens' merging: { text,
+## about, kind ("new" for a new species, else ""), who, fish }.
+signal callout(c: Dictionary)
 signal streak_changed(n: int, keys: Array)
 signal derby_changed(state: Dictionary)
 
@@ -29,6 +40,8 @@ const FRESH_MS: int = 6000
 const DERBY_S: float = 600.0
 const DERBY_KINDS: Dictionary = { "biggest": "biggest fish", "species": "most species" }
 const ANCIENTS: Array = [143.0, 144.0, 145.0, 146.0, 147.0, 148.0]
+## A new species is called out from this rarity up (3, rare).
+const NEW_SPECIES_MIN: float = 3.0
 
 var charter: Charter = null
 ## Where each captain's ship was last seen, and when: key -> [Vector2, ms].
@@ -110,16 +123,18 @@ func on_reel(key: String, result: String, r: Variant) -> void:
 		_send("_pop", [key, { "name": fname, "size": size_in, "golden": golden, "tier": str(d.get("sizeTier", "")) }])
 		# The moments the whole crew hears about.
 		var line: String = ""
+		var kind: String = ""
 		if ANCIENTS.has(Js.num(fish.get("id"))):
 			line = "%s landed an ancient: the %s" % [who, fname]
 		elif golden:
 			line = "%s landed a golden %s" % [who, fname]
-		elif d.get("isNewSpecies") == true:
+		elif d.get("isNewSpecies") == true and Js.num(fish.get("bite_rarity")) >= NEW_SPECIES_MIN:
 			line = "%s logged a new species for the crew: %s" % [who, fname]
+			kind = "new"
 		elif d.get("isPB") == true and d.get("previousBest") != null:
 			line = "%s set the crew's best %s: %s in" % [who, fname, Js.thousands(round(size_in))]
 		if line != "":
-			_send("_call", [line, key])
+			_say(line, key, kind, who, fname)
 		_derby_catch(key, fish, size_in)
 	_streak_reel(key, result == "perfect" and caught)
 
@@ -138,7 +153,7 @@ func _streak_reel(key: String, perfect: bool) -> void:
 		if _streak > 0 and _streak % 10 == 0:
 			_crew_moment("crew_streak", float(_streak))
 		if _streak > 0 and _streak % 10 == 0:
-			_send("_call", ["Crew streak %d" % _streak, ""])
+			_say("Crew streak %d" % _streak)
 		return
 	if _streak >= 2:
 		var best: Dictionary = Js.obj(charter.data.get("crewStreak"))
@@ -146,9 +161,9 @@ func _streak_reel(key: String, perfect: bool) -> void:
 		if float(_streak) > Js.num(best.get("n")):
 			charter.data["crewStreak"] = { "n": float(_streak), "names": names, "at": Js.iso(Clock.now_ms()) }
 			charter.write()
-			_send("_call", ["A new crew best streak: %d (%s)" % [_streak, ", ".join(PackedStringArray(names))], ""])
+			_say("A new crew best streak: %d (%s)" % [_streak, ", ".join(PackedStringArray(names))])
 		else:
-			_send("_call", ["%s broke the crew streak at %d" % [_name(key), _streak], ""])
+			_say("%s broke the crew streak at %d" % [_name(key), _streak])
 	_streak = 0
 	_streak_keys = []
 	_send("_streak_state", [0, []])
@@ -167,7 +182,7 @@ func handle(key: String, args: Array) -> Dictionary:
 	_derby = { "kind": kind, "by": _name(key), "scores": {}, "names": {} }
 	_derby_end_ms = Time.get_ticks_msec() + int(DERBY_S * 1000.0)
 	_derby_push()
-	_send("_call", ["%s started a derby: %s, %d minutes" % [_name(key), DERBY_KINDS[kind], int(DERBY_S / 60.0)], ""])
+	_say("%s started a derby: %s, %d minutes" % [_name(key), DERBY_KINDS[kind], int(DERBY_S / 60.0)])
 	return { "ok": true }
 
 
@@ -275,9 +290,15 @@ func _pop(key: String, pop: Dictionary) -> void:
 	popped.emit(key, pop)
 
 
+## A callout to every screen (always all five, so the rpc's arguments match).
+func _say(text: String, about: String = "", kind: String = "", who: String = "", fish: String = "") -> void:
+	_send("_call", [text, about, kind, who, fish])
+
+
 @rpc("authority", "call_local", "reliable")
-func _call(text: String, about: String) -> void:
+func _call(text: String, about: String, kind: String, who: String, fish: String) -> void:
 	called.emit(text, about)
+	callout.emit({ "text": text, "about": about, "kind": kind, "who": who, "fish": fish })
 
 
 @rpc("authority", "call_local", "reliable")

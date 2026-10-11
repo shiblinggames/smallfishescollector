@@ -23,6 +23,10 @@ extends Node
 ## at the shared table (a dealer's natural is seen at once).
 
 signal changed(game: String, state: Dictionary)
+## THE DEN AND THE WATER TOGETHER (Kong, 2026-10-11): a captain took a NEW
+## seat at a shared table (sent once per sit-down by the founder's game, so
+## the rest of the crew can be told "Ben sat down at the wheel" with a Join).
+signal sat(game: String, key: String, who: String)
 
 const COLORS: Array = ["#e0a545", "#6fc4b4", "#dd8f79", "#a99be6"]
 const RL_BETTING: float = 20.0
@@ -95,6 +99,30 @@ func drop(key: String) -> void:
 		_rl_handle(key, null, "leave", null)
 	if _bj["seats"].has(key):
 		_bj_handle(key, null, "leave", null)
+
+
+## A seat's face (the captain's colour and hat, as the plates and the spoils
+## sheet draw it): the roulette seat row shows it. An extra field on the seat;
+## a screen that does not read it is unchanged.
+static func _face(s: Session) -> Dictionary:
+	if s == null:
+		return {}
+	var prof: Dictionary = s.profile()
+	return { "characterColor": str(Js.nz(prof.get("character_color"), "default")), "hat": prof.get("equipped_hat") }
+
+
+## A new seat, said to everyone aboard (and this game) once: the sea's
+## callout (game/den_callout.gd) decides who hears it.
+func _announce(game: String, key: String, who: String) -> void:
+	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
+		_sat.rpc(game, key, who)
+	else:
+		_sat(game, key, who)
+
+
+@rpc("authority", "call_local", "reliable")
+func _sat(game: String, key: String, who: String) -> void:
+	sat.emit(game, key, who)
 
 
 func _seat_color(table: Dictionary, key: String) -> String:
@@ -180,7 +208,8 @@ func _rl_handle(key: String, s: Session, action: String, payload: Variant) -> Di
 	match action:
 		"sit":
 			if not seats.has(key):
-				seats[key] = { "name": s.captain_name(), "color": _seat_color(_rl, key), "bets": [], "ready": false }
+				seats[key] = { "name": s.captain_name(), "color": _seat_color(_rl, key), "bets": [], "ready": false, "face": _face(s) }
+				_announce("roulette", key, s.captain_name())
 			_push("roulette")
 			return { "ok": true }
 		"leave":
@@ -282,8 +311,9 @@ func _bj_handle(key: String, s: Session, action: String, payload: Variant) -> Di
 			if not seats.has(key):
 				if seats.size() >= 4:
 					return { "error": "The table is full." }
-				seats[key] = { "name": s.captain_name(), "color": _seat_color(_bj, key), "wager": 25.0, "ready": false, "playing": false, "hands": [], "outcomes": [], "net": 0.0 }
+				seats[key] = { "name": s.captain_name(), "color": _seat_color(_bj, key), "wager": 25.0, "ready": false, "playing": false, "hands": [], "outcomes": [], "net": 0.0, "face": _face(s) }
 				(_bj["order"] as Array).append(key)
+				_announce("blackjack", key, s.captain_name())
 			_push("blackjack")
 			return { "ok": true }
 		"leave":

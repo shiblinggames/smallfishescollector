@@ -203,8 +203,12 @@ static func enter_room(o: Sea, door: String) -> void:
 			room = MarketRoom.new()
 		"shipyard":
 			room = ShipyardRoom.new()
-		"den":
+		"den", "den:slots", "den:roulette", "den:blackjack":
+			# "den:roulette": the Den opened on that game (the crew's
+			# callout's Join, game/den_callout.gd).
 			room = DenRoom.new()
+			if door.contains(":"):
+				(room as DenRoom).game = door.get_slice(":", 1)
 		"parlor":
 			room = ParlorRoom.new()
 		"chart_room":
