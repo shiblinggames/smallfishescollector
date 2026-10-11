@@ -39,6 +39,11 @@ var _faces: Dictionary = {}
 var _body: Control
 var _solo_tier: String = "normal"
 var _scrim: ColorRect
+## The foot's status line (refreshed with the invitees' distances).
+var _status_l: Label = null
+## When the tier last changed under this captain (its tab pulses).
+var _pulse_ms: int = -100000
+var _tick_t: float = 0.0
 
 
 func _ready() -> void:
@@ -72,10 +77,17 @@ func _solo_state() -> Dictionary:
 func _on_table(st: Dictionary) -> void:
 	match str(st.get("phase", "")):
 		"muster":
+			var was: Dictionary = _st
 			_st = st
 			if not Js.list(st.get("members")).any(func(m: Dictionary) -> bool: return m["key"] == my_key):
 				_close()
 				return
+			# A new tier clears every Ready: said, not silent (the walkthrough,
+			# 2026-10-11), and its tab pulses.
+			if not was.is_empty() and str(was.get("tier", "")) != str(st.get("tier", "")) and st.get("by") != my_key:
+				_pulse_ms = Time.get_ticks_msec()
+				sea._hud.toast("%s chose %s  ·  ready again" % [ReadyScreen.name_in(st, str(st.get("by", ""))), { "normal": "Normal", "coop": "Co-op", "coopc": "Co-op Challenge" }.get(str(st.get("tier", "")), "a tier")])
+			ReadyScreen.invite_news(sea, was, st)
 			_paint()
 		"playing":
 			# The line has sailed: the fight takes it from here (RaidMuster).
@@ -142,6 +154,7 @@ func _paint() -> void:
 			if m4["key"] == _mine():
 				tab.cleared = Js.obj(Js.obj(m4.get("card")).get("clears")).get(t[0], false) == true
 		tab.can = caller
+		tab.pulse_ms = _pulse_ms if tab.chosen else -100000
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.custom_minimum_size = Vector2(0, 74)
 		tab.tooltip_text = ("Every captain in the line must clear this raid on Co-op first." if tab.shut.begins_with("Each") else tab.shut) if tab.shut != "" else ""
@@ -172,7 +185,7 @@ func _paint() -> void:
 		sc.solo = table == null
 		sc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if i >= members.size() and i - members.size() < crew.size():
-			invite_seat(sc, crew[i - members.size()], sea, dock, _act)
+			invite_seat(sc, crew[i - members.size()], sea, dock, _act, RaidTable.NEAR)
 		if i < members.size():
 			var m: Dictionary = members[i]
 			fill_seat(sc, m, _face_tex(Js.obj(Js.obj(m.get("card")).get("face"))), m["key"] == _mine(), m["key"] == _st.get("by"))
@@ -201,11 +214,12 @@ func _paint() -> void:
 	for m3: Dictionary in members:
 		if m3["key"] != _st.get("by") and not m3.get("ready", false):
 			waiting.append("you" if m3["key"] == _mine() else str(m3["name"]))
-	var status: String = "Everyone is ready." if waiting.is_empty() else "Waiting on %s." % ", ".join(PackedStringArray(waiting))
-	if members.size() == 1:
-		status = "Sailing alone." if table == null else "Sailing alone, unless a crewmate at the raid joins."
-	_label(_body, Vector2(pad, foot_y + 22), status, "karla", 800, 15, Dossier.INK)
-	_label(_body, Vector2(pad, foot_y + 46), _terms(str(_st.get("tier", "normal")), tc), "karla", 500, 13, Dossier.SOFT)
+	_status_l = _label(_body, Vector2(pad, foot_y + 18), status_line(_st, _mine(), table == null, sea, dock, RaidTable.NEAR, "at the raid"), "karla", 800, 15, Dossier.INK)
+	_status_l.size = Vector2(w - 520 - pad * 3.0, 0)
+	_status_l.clip_text = true
+	var terms: Label = _label(_body, Vector2(pad, foot_y + 44), _terms(str(_st.get("tier", "normal")), tc), "karla", 500, 13, Dossier.SOFT)
+	terms.size = Vector2(w - 520 - pad * 3.0, 0)
+	terms.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var btns: HBoxContainer = HBoxContainer.new()
 	btns.add_theme_constant_override("separation", 10)
 	btns.alignment = BoxContainer.ALIGNMENT_END
@@ -226,6 +240,88 @@ func _paint() -> void:
 		_button(btns, "Leave", "secondary", func() -> void: _act(["leave"]))
 		_button(btns, "Not ready" if my_ready else "Ready", "secondary" if my_ready else "primary", func() -> void: _act(["ready", not my_ready]))
 	Pane.set_night(_body, true)
+
+
+## Every half second: the invitees' "13s away" counts down as they sail in
+## (it was worked out once and froze), and the foot's line with it.
+func _process(delta: float) -> void:
+	_tick_t += delta
+	if _tick_t < 0.5 or table == null or _st.is_empty():
+		return
+	_tick_t = 0.0
+	var dock: Vector2 = RaidTable.dock_of(str(_st.get("nodeId", "")))
+	if _status_l != null and is_instance_valid(_status_l):
+		_status_l.text = status_line(_st, _mine(), false, sea, dock, RaidTable.NEAR, "at the raid")
+
+
+## The foot's status for a line (the raid's and the dive's): who is still to
+## say ready, you first; alone, and anyone on their way ("Ben is on the way
+## · 13s").
+static func status_line(st: Dictionary, mine: String, solo: bool, sea: Sea, to: Vector2, near: float, where: String) -> String:
+	var members: Array = Js.list(st.get("members"))
+	var waiting: Array = []
+	var me_too: bool = false
+	for m3: Dictionary in members:
+		if m3["key"] != st.get("by") and not m3.get("ready", false):
+			if m3["key"] == mine:
+				me_too = true
+			else:
+				waiting.append(str(m3["name"]))
+	if me_too:
+		waiting.push_front("you")
+	var status: String = "Everyone is ready." if waiting.is_empty() else "Waiting on %s." % BattleLook.join_names(waiting)
+	if members.size() == 1:
+		status = "Sailing alone." if solo else "Sailing alone, unless a crewmate %s joins." % where
+	var coming: Array = []
+	for c: Dictionary in Js.list(st.get("crew")):
+		if str(c.get("state", "")) == "coming":
+			coming.append("%s is on the way  ·  %s" % [str(c["name"]), away_of(c, sea, to, near)])
+	if not coming.is_empty():
+		status = "  ·  ".join(PackedStringArray(coming)) if members.size() == 1 else status + "  " + "  ·  ".join(PackedStringArray(coming))
+	return status
+
+
+## A crewmate's name in the line's state (its members, else the crew aboard).
+static func name_in(st: Dictionary, key: String) -> String:
+	for m: Dictionary in Js.list(st.get("members")) + Js.list(st.get("crew")):
+		if str(m.get("key", "")) == key:
+			return str(m.get("name", "A crewmate"))
+	return "A crewmate"
+
+
+## An invite answered, told to the line (the walkthrough, 2026-10-11: only
+## the small grey words under the seat changed): a chime and "Ben is on the
+## way · 13s", or "Ben said not now".
+static func invite_news(sea: Sea, was: Dictionary, st: Dictionary) -> void:
+	if sea == null or was.is_empty():
+		return
+	var before: Dictionary = Js.obj(was.get("invites"))
+	var now: Dictionary = Js.obj(st.get("invites"))
+	for k: Variant in now:
+		if str(before.get(k, "")) == str(now[k]):
+			continue
+		match str(now[k]):
+			"coming":
+				var row: Dictionary = {}
+				for c: Dictionary in Js.list(st.get("crew")):
+					if c["key"] == k:
+						row = c
+				Sound.bell()
+				sea._hud.toast("%s is on the way%s" % [name_in(st, str(k)), ("  ·  " + away_of(row, sea, RaidTable.dock_of(str(st.get("nodeId", ""))) if st.has("nodeId") else GauntletTable.maelstrom_of(str(st.get("variant", "davy"))), RaidTable.NEAR if st.has("nodeId") else GauntletTable.NEAR)) if not row.is_empty() else ""])
+			"no":
+				sea._hud.toast("%s said not now" % name_in(st, str(k)))
+
+
+## How far a crewmate is from where the line forms: "here" within reach, else
+## the sail time ("13s away", "2 min away"), "" when their ship is not seen.
+static func away_of(c: Dictionary, sea: Sea, to: Vector2, near: float) -> String:
+	if sea == null or c.is_empty() or not sea._mates.has(c["key"]):
+		return ""
+	var d: float = (sea._mates[c["key"]] as Node2D).position.distance_to(to)
+	if d < near:
+		return "here"
+	var s: float = (d - near) / maxf(1.0, Boat.SPEED * 0.92)
+	return "%s away" % ("%ds" % int(ceil(s)) if s < 60.0 else "%d min" % int(round(s / 60.0)))
 
 
 ## An open seat given to a crewmate aboard (the table's "crew" row): their
@@ -249,26 +345,21 @@ static func fill_seat(sc: SeatCard, m: Dictionary, face: Texture2D, me: bool, le
 	sc.leader = leader
 
 
-static func invite_seat(sc: SeatCard, c: Dictionary, sea: Sea, to: Vector2, act: Callable) -> void:
-	var state: String = str(c.get("state", ""))
+static func invite_seat(sc: SeatCard, c: Dictionary, sea: Sea, to: Vector2, act: Callable, near: float = RaidTable.NEAR) -> void:
 	var can: String = str(c.get("can", ""))
-	var away: String = ""
-	if sea != null and sea._mates.has(c["key"]):
-		var d: float = (sea._mates[c["key"]] as Node2D).position.distance_to(to)
-		var s: float = d / maxf(1.0, Boat.SPEED * 0.92)
-		away = "here" if d < RaidTable.NEAR else ("%s away" % ("%ds" % int(ceil(s)) if s < 60.0 else "%d min" % int(round(s / 60.0))))
-	var line: String = away
-	match state:
-		"asked": line = "Asked  ·  waiting for an answer"
-		"coming": line = "On the way  ·  %s" % away if away != "" else "On the way"
-		"no": line = "Not now"
-	if can != "":
-		line = can
-	sc.invitee = { "name": c["name"], "line": line, "faint": can != "" }
+	var state: String = str(c.get("state", ""))
+	sc.invite_row = c
+	sc.invite_to = to
+	sc.invite_near = near
+	sc.sea = sea
+	sc.invitee = { "name": c["name"], "line": invite_line(c, sea, to, near), "faint": can != "" }
 	if can != "" or state == "coming":
 		return
 	var b: Button = Kit.button("Ask again" if state == "no" else ("Invited" if state == "asked" else "Invite"), "primary" if state == "" else "secondary", "small")
-	b.disabled = state == "asked"
+	# Asked: kept readable (a disabled one drew as an empty dark box), deaf.
+	if state == "asked":
+		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.modulate.a = 0.6
 	b.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	b.offset_left = -60
 	b.offset_right = 60
@@ -279,6 +370,18 @@ static func invite_seat(sc: SeatCard, c: Dictionary, sea: Sea, to: Vector2, act:
 		Sound.plip()
 		act.call(["invite", c["key"]]))
 	sc.add_child(b)
+
+
+## An invitee's line under their name, as things stand now.
+static func invite_line(c: Dictionary, sea: Sea, to: Vector2, near: float) -> String:
+	var away: String = away_of(c, sea, to, near)
+	if str(c.get("can", "")) != "":
+		return str(c["can"])
+	match str(c.get("state", "")):
+		"asked": return "Asked  ·  waiting for an answer"
+		"coming": return "On the way  ·  %s" % away if away != "" else "On the way"
+		"no": return "Not now"
+	return away
 
 
 static func _terms(tier: String, tc: Dictionary) -> String:
@@ -341,6 +444,9 @@ class TierTab:
 	var chosen: bool = false
 	var can: bool = false
 	var cleared: bool = false
+	## When it became the chosen one under you (a caller's change): it
+	## pulses for a moment.
+	var pulse_ms: int = -100000
 
 	func _init() -> void:
 		flat = true
@@ -357,6 +463,10 @@ class TierTab:
 		if chosen:
 			bg = bg.lerp(BattleLook.GOLD.darkened(0.6), 0.35)
 		BattleLook.draw_box(self, r, BattleLook.box(bg, Color(BattleLook.GOLD, 0.9) if chosen else Color(1, 1, 1, 0.07), 2 if chosen else 1, 12))
+		var since: float = float(Time.get_ticks_msec() - pulse_ms) / 1000.0
+		if since >= 0.0 and since < 1.6:
+			var u: float = since / 1.6
+			BattleLook.draw_box(self, r.grow(3.0 + 8.0 * u), BattleLook.box(Color(0, 0, 0, 0), Color(BattleLook.GOLD, 0.8 * (1.0 - u)), 2, 14))
 		var a: float = 0.45 if shut != "" else 1.0
 		draw_string(Kit.font("cinzel", 700), Vector2(16, 32), title, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 18, Color(Dossier.INK, a))
 		draw_string(Kit.font("karla", 600), Vector2(16, 54), shut if shut != "" else note, HORIZONTAL_ALIGNMENT_LEFT, size.x - 56, 12, Color(Dossier.HARM if shut != "" else Dossier.SOFT, 0.8 if shut != "" else 1.0))
@@ -377,13 +487,30 @@ class SeatCard:
 	var crew_tex: Array = []
 	## An open seat with a crewmate aboard to ask: { name, line, faint }.
 	var invitee: Dictionary = {}
+	## Its crew row, where the line forms and how near is near, and the
+	## sea: the line under the name is worked out again every half second.
+	var invite_row: Dictionary = {}
+	var invite_to: Vector2 = Vector2.ZERO
+	var invite_near: float = 0.0
+	var sea: Sea = null
+	## Where an empty seat's crewmate must be to join ("at the raid", "at
+	## the maelstrom").
+	var where: String = "at the raid"
 	var _frames: int = 0
+	var _tick: float = 0.0
 
 	# A texture first loaded in _draw is white until the next frame: draw again.
-	func _process(_d: float) -> void:
+	func _process(d: float) -> void:
 		if _frames < 12:
 			_frames += 1
 			queue_redraw()
+		_tick += d
+		if _tick >= 0.5 and not invite_row.is_empty():
+			_tick = 0.0
+			var ln: String = ReadyScreen.invite_line(invite_row, sea, invite_to, invite_near)
+			if ln != str(invitee.get("line", "")):
+				invitee["line"] = ln
+				queue_redraw()
 
 	func _draw() -> void:
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
@@ -392,13 +519,13 @@ class SeatCard:
 			_dashed(r.grow(-1.0))
 			BattleLook.say(self, Kit.font("karla", 600), r.size.x / 2.0, r.size.y * 0.3, "Open seat", 12, Dossier.FAINT)
 			BattleLook.say(self, Kit.font("cinzel", 700), r.size.x / 2.0, r.size.y * 0.42, str(invitee.get("name", "")), 18, Dossier.INK)
-			BattleLook.say(self, Kit.font("karla", 600), r.size.x / 2.0, r.size.y * 0.42 + 22.0, str(invitee.get("line", "")), 12, Dossier.FAINT if invitee.get("faint", false) else Dossier.SOFT)
+			# Wrapped to the seat (it ran into the next one).
+			BattleLook.say_wrapped(self, Kit.font("karla", 600), r.size.x / 2.0, r.size.y * 0.42 + 22.0, str(invitee.get("line", "")), 12, Dossier.FAINT if invitee.get("faint", false) else Dossier.SOFT, r.size.x - 20.0, 3)
 			return
 		if member.is_empty():
 			_dashed(r.grow(-1.0))
 			BattleLook.say(self, Kit.font("cinzel", 700), r.size.x / 2.0, r.size.y * 0.46, "Open seat", 16, Color(Dossier.SOFT, 0.7))
-			BattleLook.say(self, Kit.font("karla", 600), r.size.x / 2.0, r.size.y * 0.46 + 22.0, "sail in a Charter" if solo else "a crewmate at the raid", 12, Dossier.FAINT)
-			BattleLook.say(self, Kit.font("karla", 600), r.size.x / 2.0, r.size.y * 0.46 + 38.0, "to fill it" if solo else "can join", 12, Dossier.FAINT)
+			BattleLook.say_wrapped(self, Kit.font("karla", 600), r.size.x / 2.0, r.size.y * 0.46 + 22.0, "sail in a Charter to fill it" if solo else "a crewmate %s can join" % where, 12, Dossier.FAINT, r.size.x - 20.0, 3)
 			return
 		var c: Dictionary = Js.obj(member.get("card"))
 		var ready: bool = member.get("ready", false) or leader
@@ -417,16 +544,18 @@ class SeatCard:
 			var sc: float = minf(box.x / float(tex.get_width()), box.y / float(tex.get_height()))
 			var ts: Vector2 = tex.get_size() * sc
 			draw_texture_rect(tex, Rect2(Vector2(cx - ts.x / 2.0, 156), ts), false)
-		BattleLook.say(self, Kit.font("karla", 700), cx, 244, "%s  ·  Nav %d  ·  Hull %d" % [ship_name, int(Js.num(c.get("nav"))), int(Js.num(c.get("hull")))], 12, Dossier.SOFT)
+		# Two lines, so a long ship's name stays in its own seat.
+		BattleLook.say(self, Kit.font("karla", 700), cx, 240, ship_name, 12, Dossier.SOFT)
+		BattleLook.say(self, Kit.font("karla", 700), cx, 255, "Nav %d  ·  Hull %d" % [int(Js.num(c.get("nav"))), int(Js.num(c.get("hull")))], 12, Dossier.SOFT)
 		# The hands seated for raids.
 		var crew: Array = Js.list(c.get("crew"))
 		var n: int = mini(crew.size(), 6)
 		var x0: float = cx - (n * 26.0 - 4.0) / 2.0 + 11.0
 		for k: int in n:
 			var cm: Dictionary = crew[k]
-			BattleLook.medallion(self, Vector2(x0 + k * 26.0, 268), 11.0, crew_tex[k] if k < crew_tex.size() else null, Color(1, 1, 1, 0.3), str(cm.get("name", "?")).substr(0, 1), 1.0, Vector2(0.5, 0.36), 0.36)
+			BattleLook.medallion(self, Vector2(x0 + k * 26.0, 274), 11.0, crew_tex[k] if k < crew_tex.size() else null, Color(1, 1, 1, 0.3), str(cm.get("name", "?")).substr(0, 1), 1.0, Vector2(0.5, 0.36), 0.36)
 		if crew.is_empty():
-			BattleLook.say(self, Kit.font("karla", 600), cx, 272, "no hands seated", 11, Dossier.FAINT)
+			BattleLook.say(self, Kit.font("karla", 600), cx, 278, "no hands seated", 11, Dossier.FAINT)
 		# The tiers of this raid they have beaten, as seals.
 		var cl: Dictionary = Js.obj(c.get("clears"))
 		for q: int in 3:

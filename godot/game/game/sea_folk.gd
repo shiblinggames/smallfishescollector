@@ -42,7 +42,9 @@ static func status_text(o: Sea) -> String:
 			return "sailing  ·  %s" % Charting.bay_name(str(ch["bay"]))
 		return "sailing north"
 	var w2: Dictionary = Chart.water_at(at)
-	return "sailing  ·  %s" % w2["name"] if not w2.is_empty() else "sailing"
+	# Still on the water is "at rest", not "sailing".
+	var how: String = "at rest" if o._boat.velocity.length() < 8.0 else "sailing"
+	return "%s  ·  %s" % [how, w2["name"]] if not w2.is_empty() else how
 
 
 ## A Charter's crew line, wired to the sea: their ships and looks, one
@@ -50,17 +52,21 @@ static func status_text(o: Sea) -> String:
 static func join_crew(o: Sea) -> void:
 	o.net.mate_boat.connect(o._on_mate_boat)
 	o.net.mate_look.connect(o._on_mate_look)
-	o.net.mate_left.connect(func(k: String) -> void:
-		if o._mates.has(k):
-			var gone: Shipmate = o._mates[k]
-			o._hud.toast("%s has left port" % gone.mate_name)
-			gone.leave()
-			o._mates.erase(k))
+	# A node of the Sea's own carries the crew's comings and goings: a method
+	# on it, not a lambda holding the Sea, so the connection goes with the Sea
+	# (a freed Sea's lambda stayed on CrewNet, and the next leave errored).
+	var link: CrewLink = CrewLink.new()
+	link.name = "CrewLink"
+	link.sea = o
+	o.add_child(link)
+	o.net.mate_gone.connect(link.on_gone)
 	o._send_look()
 	o.net.proposed.connect(o._on_proposed)
 	o._pings = CrewPings.new()
 	o._pings.sea = o
 	o._hud_layer.add_child(o._pings)
+	# Under the HUD and its sheets (they drew across an open sheet).
+	o._hud_layer.move_child(o._pings, o._hud.get_index())
 	var cw: CrewWatersView = CrewWatersView.new()
 	cw.sea = o
 	cw.fishing = o.net.fishing
@@ -84,7 +90,51 @@ static func on_mate_look(o: Sea, k: String, mate_name: String, look: Dictionary)
 	m.set_mate_name(mate_name)
 	m.set_look(look)
 	if fresh:
-		o._hud.toast("%s is on the water" % mate_name)
+		# One who left or dropped and came back is back aboard, not new.
+		var link: CrewLink = o.get_node_or_null("CrewLink") as CrewLink
+		if link != null and link.left.has(k):
+			link.left.erase(k)
+			o._hud.toast("%s is back aboard" % mate_name)
+			var bs: BattleStage = link.stage()
+			if bs != null and (bs.b.get("seats", []) as Array).any(func(s: Dictionary) -> bool: return s.get("key") == k):
+				bs._log_line("%s is back in the line." % mate_name)
+		else:
+			o._hud.toast("%s is on the water" % mate_name)
+
+
+## THE CREW'S COMINGS AND GOINGS on this Sea (a child of it, so its
+## connections to CrewNet end with it): a crewmate leaving or dropping, and
+## a fight under way when this captain rejoins.
+class CrewLink:
+	extends Node
+
+	var sea: Sea
+	## Keys that left or dropped while this Sea was up (their return is a
+	## "back aboard").
+	var left: Dictionary = {}
+	## The fight open on this Sea, if any.
+	func stage() -> BattleStage:
+		for c: Node in sea._hud_layer.get_children():
+			if c is BattleStage and not (c as BattleStage).is_queued_for_deletion():
+				return c
+		return null
+
+	func on_gone(k: String, how: String) -> void:
+		if not sea._mates.has(k):
+			return
+		var gone: Shipmate = sea._mates[k]
+		var who: String = gone.mate_name
+		left[k] = true
+		var line: String = "%s left the Charter" % who if how == "left" else "Lost touch with %s's game" % who
+		sea._hud.toast(line)
+		var bs: BattleStage = stage()
+		if bs != null and (bs.b.get("seats", []) as Array).any(func(s: Dictionary) -> bool: return s.get("key") == k):
+			bs._log_line("%s. The line sails on." % line)
+		gone.leave()
+		sea._mates.erase(k)
+
+	# (A captain back mid-fight is taken into the line by the raid and dive
+	# musters, RaidMuster._back_in and GauntletMuster's: one place, not two.)
 
 
 ## The crew is asked to agree to something: a small panel over the sea,

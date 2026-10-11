@@ -274,6 +274,24 @@ func _waited() -> bool:
 	return Time.get_ticks_msec() - _phase_ms >= int((AFK_WAIT - 5.0) * 1000.0)
 
 
+## The crew went on without someone (a nudge): written into the state so the
+## captains it skipped are told on their own screens ("The crew went on
+## without you"), by who pressed it and what it meant for them (`what`: the
+## phase it moved on). `n` counts up so each screen says it once.
+func _went_on(by: String, keys: Array, what: String) -> void:
+	if keys.is_empty():
+		return
+	_r["afk"] = { "n": int(Js.num(Js.obj(_r.get("afk")).get("n"))) + 1, "by": _name_of(by), "keys": keys, "what": what }
+
+
+## A captain's name in the line (the muster's members carry it).
+func _name_of(key: String) -> String:
+	for m: Dictionary in Js.list(_r.get("members")):
+		if str(m.get("key", "")) == key:
+			return str(m.get("name", "A captain"))
+	return "A captain"
+
+
 # ── Invites (Kong, 2026-10-06: "an option to invite them and they get a
 #    notification"; no sailing for them: they still sail there) ─────────────
 
@@ -348,6 +366,18 @@ func welcome(key: String, id: int) -> void:
 		_state.rpc_id(id, _rejoin_copy())
 
 
+## What a captain back on the line should be sent to pick the table up where
+## it is (for CrewNet, which may send it itself). welcome() already sends it:
+## to everyone (a push) for a captain whose line dropped mid-fight, or to the
+## newcomer alone otherwise. A crewmate's screens open the fight from ANY
+## in-fight phase they are still in the line for (RaidMuster and
+## GauntletMuster), so no "resume" event is needed on top of the state.
+func rejoin_state(_key: String) -> Dictionary:
+	if str(_r.get("phase", "idle")) == "idle":
+		return {}
+	return _rejoin_copy()
+
+
 ## A captain's game has dropped out of the Charter: out of the muster, or out
 ## of the line, and nothing waits on them (the table says what that moves on:
 ## _after_drop).
@@ -370,3 +400,10 @@ func drop(key: String) -> void:
 		_r["b"]["seats"][si]["fled"] = true
 	_r["gone"][key] = true
 	_after_drop(key)
+	# Pushed in EVERY phase (the walkthrough, 2026-10-11: a drop in the plan
+	# phase was marked here but never sent, so the line kept "Choosing" a
+	# captain whose ship was gone). Each screen greys the plate as AWAY and
+	# logs the drop from the `dropped` it carries; a second push of a phase
+	# _after_drop already sent is harmless (the screens handle a phase once).
+	if str(_r.get("phase", "idle")) != "idle":
+		_push()

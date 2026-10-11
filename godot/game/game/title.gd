@@ -34,6 +34,18 @@ var _founding: bool = false
 var _joining: bool = false
 var _color: String = "default"
 var _name_draft: String = ""
+## What was typed in the Found and Join forms: a press that rebuilds the
+## sheet (a mode, a colour) keeps them (the walkthrough: picking Hardcore or
+## a colour wiped the Charter's name).
+var _charter_draft: String = ""
+var _addr_draft: String = ""
+var _who_draft: String = ""
+## Why the open form did not go (a join refused or unanswered, no port free),
+## shown inside it.
+var _form_note: String = ""
+## A word on the Charters sheet (a berth released).
+var _charter_note: String = ""
+var _note_label: Label = null
 var _cols: HBoxContainer
 var _first: Control = null
 
@@ -96,6 +108,7 @@ func _ready() -> void:
 	if note != "":
 		var n: Label = Kit.lift(Kit.text(page, note, "body_strong", Kit.SEA_GOLD, true))
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_note_label = n
 	var gap: Control = Control.new()
 	gap.custom_minimum_size = Vector2(0, 14)
 	page.add_child(gap)
@@ -374,6 +387,8 @@ func _charters(v: VBoxContainer) -> void:
 		for i: int in names.size():
 			var m: VBoxContainer = VBoxContainer.new()
 			m.add_theme_constant_override("separation", 0)
+			# A fixed column: the confirm below a face never stretches it.
+			m.custom_minimum_size = Vector2(88, 0)
 			crew.add_child(m)
 			m.add_child(_portrait(looks[i] if i < looks.size() else { "color": "default" }, Vector2(78, 60)))
 			var nl: Label = Kit.text(m, names[i], "small", Kit.PAPER_INK)
@@ -383,8 +398,9 @@ func _charters(v: VBoxContainer) -> void:
 			if c["founder"] == mine and i < keys.size() and keys[i] != mine:
 				var tag: String = "%s|%s" % [c["id"], keys[i]]
 				var asking: bool = _releasing == tag
-				var rel: Button = Kit.button("Release for good?" if asking else "Release", "danger" if asking else "secondary", "small")
+				var rel: Button = Kit.button("For good?" if asking else "Release", "danger" if asking else "secondary", "small")
 				rel.tooltip_text = "Free this berth. Their captain stays in the Charter's file but sails no more.%s" % (" A Charter that has sailed cannot fill it again." if c["sailed"] else "")
+				rel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 				rel.pressed.connect(func() -> void:
 					if _releasing != tag:
 						_releasing = tag
@@ -394,22 +410,28 @@ func _charters(v: VBoxContainer) -> void:
 					var ch: Charter = Charter.open(c["id"])
 					if ch != null:
 						var why: String = ch.release(str(keys[i]))
-						if why != "":
-							note = why
+						_charter_note = why if why != "" else "%s's berth is released. Their captain is kept in the Charter's file." % names[i]
 						# Opened only to free the berth: let it go again.
 						ch.close()
 					_build())
 				m.add_child(rel)
-		for i: int in range(names.size(), Charter.BERTHS):
+		# Released captains, faintly (they no longer vanish without a word).
+		for rn: Variant in c.get("released", []):
+			var rl: Label = Kit.text(crew, "%s  ·  released" % str(rn), "note", Color(Kit.PAPER_INK_SOFT, 0.6))
+			rl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		# A sailed Charter's crew is fixed: no open berths it can never fill.
+		for i: int in range(names.size(), 0 if c["sailed"] else Charter.BERTHS):
 			var e: VBoxContainer = VBoxContainer.new()
 			crew.add_child(e)
 			var slot: Pane = Kit.pane(e, { "radius": 30, "fill": [Color(Kit.PAPER_INK, 0.05)], "border": [1, Color(Kit.PAPER_INK, 0.18)], "pad": 0, "paper": true })
 			slot.custom_minimum_size = Vector2(60, 60)
 			var el: Label = Kit.text(e, "Open berth", "note", Kit.PAPER_INK_SOFT)
 			el.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		Kit.text(col, "At sea" if c["sailed"] else "In harbor, the crew still gathering", "note", Kit.ink(SEA_DYE) if c["sailed"] else Paper.MONEY)
+		Kit.text(col, "At sea  ·  crew fixed at sailing" if c["sailed"] else "In harbor, the crew still gathering", "note", Kit.ink(SEA_DYE) if c["sailed"] else Paper.MONEY)
 		if c["founder"] != mine:
 			Kit.text(col, "Only its founder can host it.", "note", Kit.PAPER_INK_SOFT)
+	if _charter_note != "":
+		Kit.text(v, _charter_note, "note", Kit.PAPER_INK_SOFT, true)
 	var acts: HBoxContainer = HBoxContainer.new()
 	acts.add_theme_constant_override("separation", 8)
 	v.add_child(acts)
@@ -417,12 +439,14 @@ func _charters(v: VBoxContainer) -> void:
 	fb.pressed.connect(func() -> void:
 		_founding = not _founding
 		_joining = false
+		_form_note = ""
 		_build())
 	acts.add_child(fb)
 	var jb: Button = Kit.button("Join a friend's", "accent" if _joining else "secondary", "large", SEA_DYE)
 	jb.pressed.connect(func() -> void:
 		_joining = not _joining
 		_founding = false
+		_form_note = ""
 		_build())
 	acts.add_child(jb)
 	if _founding:
@@ -437,7 +461,9 @@ func _found_form(v: VBoxContainer) -> void:
 	col.add_theme_constant_override("separation", 8)
 	card.add_child(col)
 	Kit.text(col, "Found a Charter", "eyebrow", Kit.ink(SEA_DYE))
-	var cname: LineEdit = _line(col, "", "The Charter's name")
+	var cname: LineEdit = _line(col, _charter_draft, "The Charter's name")
+	cname.text_changed.connect(func(t: String) -> void: _charter_draft = t)
+	_form_line(col)
 	var modes: HBoxContainer = HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 6)
 	col.add_child(modes)
@@ -473,12 +499,59 @@ func _join_form(v: VBoxContainer) -> void:
 	var jr: HBoxContainer = HBoxContainer.new()
 	jr.add_theme_constant_override("separation", 8)
 	col.add_child(jr)
-	var addr: LineEdit = _line(jr, "127.0.0.1", "The founder's address")
-	var who: LineEdit = _line(jr, SteamLayer.suggested_name(), "Your captain's name")
+	# The address and name are kept across a rebuild and a failed join.
+	var addr: LineEdit = _line(jr, _addr_draft if _addr_draft != "" else "127.0.0.1", "The founder's address, with :port if the harbour shows one")
+	addr.text_changed.connect(func(t: String) -> void: _addr_draft = t)
+	var who: LineEdit = _line(jr, _who_draft if _who_draft != "" else SteamLayer.suggested_name(), "Your captain's name")
+	who.text_changed.connect(func(t: String) -> void: _who_draft = t)
 	var j: Button = Kit.button("Join", "primary", "large")
 	j.custom_minimum_size = Vector2(100, 42)
-	j.pressed.connect(func() -> void: join.emit(addr.text.strip_edges(), who.text))
+	j.pressed.connect(func() -> void:
+		_addr_draft = addr.text
+		_who_draft = who.text
+		# A blank name is refused here (it came out as "crew_f9f08").
+		if who.text.strip_edges() == "":
+			_form_note = "Name your captain first."
+			_build()
+			return
+		join.emit(addr.text.strip_edges(), who.text.strip_edges()))
 	jr.add_child(j)
+	Kit.text(col, "The founder's harbour shows their address, and its port when it is not the usual one (for example 192.168.1.39:24651).", "note", Kit.PAPER_INK_SOFT, true)
+	_form_line(col)
+	if _form_note == "Name your captain first.":
+		who.grab_focus.call_deferred()
+
+
+## Why the open form did not go, inside it.
+func _form_line(col: VBoxContainer) -> void:
+	if _form_note != "":
+		Kit.text(col, _form_note, "body_strong", Paper.RED, true)
+
+
+## The join form again after a failed join: the address that was tried, the
+## name, and why, inside it.
+func reopen_join(address: String, captain: String, why: String) -> void:
+	_joining = true
+	_founding = false
+	_addr_draft = address
+	_who_draft = captain
+	_form_note = why
+	_build()
+
+
+## The found form again after its Charter could not open to the crew: as it
+## was filled in, with why inside it (and not twice, at the top).
+func reopen_found(charter_name: String, hardcore: bool, captain: String, color: String) -> void:
+	_founding = true
+	_joining = false
+	_charter_draft = charter_name
+	_hardcore = hardcore
+	_name_draft = captain
+	_color = color
+	_form_note = note
+	if _note_label != null:
+		_note_label.visible = false
+	_build()
 
 
 func _line(parent: Control, value: String, hint: String) -> LineEdit:

@@ -741,11 +741,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   STILL OPEN: steam/ids.json appIds are 0; the Steam lobby needs a real App ID (Kong's).
   - GO ON WITHOUT THEM: no clock still (Kong's 2026-10-03 rule stands), but a valve. Once a crew
     choice has waited a minute on someone (you answered, they did not), a "Go on without them"
-    button shows under the top bar (BattleStage._held_up). Pressed, the founder's game
+    button shows in the bottom bar beside "Waiting on Ben", flat night style, above any dive
+    sheet (2026-10-11; it had sat under the sheets and over the plates) (BattleStage._held_up);
+    the captain held up is told "The crew are waiting on you". Pressed, the founder's game
     (RaidTable/GauntletTable._nudge, its own clock from when the choice opened) gives the
     others the default: a ship reloads or braces; flares unanswered all get through; a tide
     takes its last choice; in a dive a curse is borne, the shrine walked past, the Fence left,
-    the shark Mark taken, a breather vote banks (dives when banking is shut), a Don's job is
+    the shark Mark taken, a breather voter ABSTAINS (Kong, 2026-10-11; was: a vote to bank), a Don's job is
     walked away from, a draft turn passes. They stay in the run.
   - DROPS NEVER STALL A DIVE: a gone captain is skipped in the draft order; a drop re-checks
     flares, the job verdict and the end screens; a drop at a breather or a Don's job casts no
@@ -905,7 +907,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   cards, picked in turn, the order rotating each draft, each pick stamped with the captain's face;
   each card is the next tier for whoever takes it; a private synergy card per captain; the one at
   the table may reroll what is left or banish a card (Blacklist). THE VOTE (Kong): bank or dive
-  at every breather; a majority carries, a tie banks. TOWED HOME (Kong): sunk in a fight the crew
+  at every breather; a majority carries, a tie banks. THE IDLE CAPTAIN ABSTAINS (Kong,
+  2026-10-11): when the crew press "Go on without them" at a breather, a captain who had not
+  voted casts nothing (it used to be a vote to bank, so one AFK captain in a pair always banked
+  the dive); the votes cast decide, a tie still banks, and the skipped captain is told on their
+  own screen ("The crew went on without you"). TOWED HOME (Kong): sunk in a fight the crew
   win, a ship rejoins at a quarter hull; the whole party sunk loses the pot. Shrine and Fence
   each captain's own; a job's stake is voted (a tie walks away); each captain takes their own
   Mark. No clocks anywhere. A Charter's table runs one dive at a time (solo or co-op).

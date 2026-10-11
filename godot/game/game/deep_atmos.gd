@@ -114,10 +114,15 @@ func _process(delta: float) -> void:
 	_mat.set_shader_parameter("u_fade", _fade)
 	_bias = lerpf(_bias, 0.17 if sea.stage != null else 0.0, 1.0 - exp(-delta * 1.2))
 	_mat.set_shader_parameter("u_bias", _bias)
-	_step_screen(delta, vp)
-	_step_water(delta)
-	_screen.queue_redraw()
-	_water.queue_redraw()
+	# Leaving a dive the stage reparents this to the Sea, and that frees the
+	# water layer (_exit_tree): the screen's motes fade on alone (the
+	# walkthrough, 2026-10-11: a freed-instance error every frame after a dive).
+	if is_instance_valid(_screen):
+		_step_screen(delta, vp)
+		_screen.queue_redraw()
+	if is_instance_valid(_water):
+		_step_water(delta)
+		_water.queue_redraw()
 
 
 # ── On screen ─────────────────────────────────────────────────────────────────

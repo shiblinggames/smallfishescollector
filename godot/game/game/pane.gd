@@ -339,17 +339,45 @@ class PaneButton:
 		if what == NOTIFICATION_ENTER_TREE and _ring != null:
 			_ring_ink.call_deferred()
 		if what == NOTIFICATION_ENTER_TREE and Pane.night_root(self) and normal.get("night", false) != true:
+			go_night(true)
+
+	## To the night paper (on) or back to the day's: the face and the words.
+	## A PAPER-FACED BUTTON (Kit.button's secondary, accent, danger) does not
+	## become torn night paper: on the night it is the flat lacquer secondary
+	## with a hairline (co-op walkthrough, 2026-10-11: DISBAND, LEAVE and ASK
+	## AGAIN came out torn-edged beside the flat primaries), and its day faces
+	## are kept to come back to. Its words go light, and so do its disabled
+	## words (a disabled "Invited" read as an empty dark box, and a breather's
+	## other votes lost their labels: the disabled ink stayed the day's dark).
+	func go_night(on: bool) -> void:
+		if on and normal.get("paper", false) and not normal.get("keep", false):
+			if not has_meta("day_specs"):
+				set_meta("day_specs", [normal, hot])
+			var ls: Array = Pane.lacquer(normal)
+			restyle(ls[0], ls[1])
+		elif not on and has_meta("day_specs"):
+			var ds: Array = get_meta("day_specs")
+			remove_meta("day_specs")
+			restyle(ds[0], ds[1])
+		else:
 			var nm: Dictionary = normal.duplicate()
 			var ht: Dictionary = hot.duplicate()
-			nm["night"] = true
-			ht["night"] = true
+			nm["night"] = on
+			ht["night"] = on
 			restyle(nm, ht)
-			set_meta("night", true)
-			if not has_meta("day_font"):
-				set_meta("day_font", get_theme_color("font_color"))
-			var col: Color = Kit.night_ink(get_meta("day_font"))
-			for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
-				add_theme_color_override(st, col)
+		if _bg.has_meta("paper"):
+			set_meta("paper", _bg.get_meta("paper"))
+		elif has_meta("paper") and on:
+			remove_meta("paper")
+		set_meta("night", on)
+		# The button's own words: kept for the day, lightened for the night.
+		if not has_meta("day_font"):
+			set_meta("day_font", get_theme_color("font_color"))
+		var day: Color = get_meta("day_font")
+		var col: Color = Kit.night_ink(day) if on else day
+		for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+			add_theme_color_override(st, col)
+		add_theme_color_override("font_disabled_color", Color(col, 0.6 if on else 0.4))
 
 	func restyle(n: Dictionary, h: Dictionary = {}) -> void:
 		normal = n
@@ -358,6 +386,23 @@ class PaneButton:
 			_blend.kill()
 		_bg.set_spec(hot if _lit else normal)
 
+
+
+## THE NIGHT SECONDARY: a paper-faced button's day spec as the flat lacquer
+## face the night paper's quiet buttons wear (Paper._button_specs), at the
+## button's own radius and padding, with a hairline in its own hue lightened
+## for the night; no torn edge, grain or shadow. [normal, hovered].
+static func lacquer(day: Dictionary) -> Array:
+	var face: Color = Color(0.27, 0.22, 0.18, 0.97)
+	var hair: Color = Paper.NIGHT_INK
+	var b: Variant = day.get("border")
+	if b != null:
+		hair = Kit.night_ink(Color(b[1] as Color, 1.0))
+	var n: Dictionary = { "radius": day.get("radius", 12), "fill": [face], "border": [1, Color(hair, 0.42)], "pad": day.get("pad", 12), "keep": true, "night": true }
+	var h: Dictionary = n.duplicate()
+	h["fill"] = [face.lightened(0.1)]
+	h["border"] = [1, Color(hair, 0.8)]
+	return [n, h]
 
 
 ## THE SIDE OF THE REEF (Kong, 2026-10-03: expedition menus are the dark night
@@ -377,22 +422,7 @@ static func set_night(root: Node, on: bool) -> void:
 		pn.set_spec(r)
 	for n: Node in root.find_children("", "Button", true, false):
 		if n is PaneButton:
-			var b: PaneButton = n
-			var nm: Dictionary = b.normal.duplicate()
-			var ht: Dictionary = b.hot.duplicate()
-			nm["night"] = on
-			ht["night"] = on
-			b.restyle(nm, ht)
-			if b._bg.has_meta("paper"):
-				b.set_meta("paper", b._bg.get_meta("paper"))
-			b.set_meta("night", on)
-			# The button's own words: kept for the day, lightened for the night.
-			if not b.has_meta("day_font"):
-				b.set_meta("day_font", b.get_theme_color("font_color"))
-			var day: Color = b.get_meta("day_font")
-			var col: Color = Kit.night_ink(day) if on else day
-			for st: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
-				b.add_theme_color_override(st, col)
+			(n as PaneButton).go_night(on)
 	for n: Node in root.find_children("", "Label", true, false):
 		if n.has_meta("raw_ink"):
 			Kit._settle(n as Label)

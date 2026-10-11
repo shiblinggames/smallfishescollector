@@ -18,6 +18,8 @@ var _screen: Node = null
 ## A crewmate's captain, from the founder's welcome.
 var _mine: Session = null
 var _joining_name: String = ""
+## The address being hailed, until the founder welcomes us ("" otherwise).
+var _join_addr: String = ""
 
 
 func _ready() -> void:
@@ -40,10 +42,18 @@ func _ready() -> void:
 	add_child(net)
 	net.welcomed.connect(_on_welcomed)
 	net.sailing.connect(_on_sailing)
-	net.refused_by_founder.connect(func(why: String) -> void: title(why))
+	# A join that fails (refused, or nobody answered) reopens the join form
+	# with the address kept and the cause inside it.
+	net.refused_by_founder.connect(func(why: String) -> void:
+		if _join_addr != "":
+			_join_failed(why)
+		else:
+			title(why))
 	net.ended.connect(func(why: String) -> void: title(why))
 	net.lost.connect(func(why: String) -> void:
-		if _screen is Title:
+		if _join_addr != "":
+			_join_failed(why)
+		elif _screen is Title:
 			(_screen as Title).note = why
 		else:
 			title(why))
@@ -98,33 +108,58 @@ func title(note: String) -> void:
 	t.host.connect(func(id: String) -> void: host(id))
 	t.found.connect(func(n: String, hardcore: bool, cap: String, color: String) -> void:
 		var c: Charter = Charter.found(n, hardcore, SteamLayer.player_key(), cap, color)
-		host(c.id()))
+		var cid: String = c.id()
+		c.close()
+		if not host(cid):
+			# Not open to the crew: not founded either (the walkthrough: a taken
+			# port still wrote the Charter). The form comes back as it was.
+			Charter.unfound(cid)
+			var again: Title = _screen as Title
+			if again != null:
+				again.reopen_found(n, hardcore, cap, color))
 	t.join.connect(func(address: String, cap: String) -> void: join(address, cap))
 	_show(t)
 
 
+## A join that did not take: the title, with the join form open on the address
+## that was tried and the cause written inside it.
+func _join_failed(why: String) -> void:
+	var addr: String = _join_addr
+	_join_addr = ""
+	net.leave()
+	title("")
+	(_screen as Title).reopen_join(addr, _joining_name, why)
+
+
 ## The founder opens their Charter: to the harbor while the crew gathers, or
-## straight onto the sea once it has sailed.
-func host(id: String) -> void:
+## straight onto the sea once it has sailed. False if it could not open.
+func host(id: String) -> bool:
 	var c: Charter = Charter.open(id)
 	if c == null:
 		title("That Charter's file would not open.")
-		return
+		return false
 	var err: Error = net.host(c)
 	if err != OK:
-		title("The Charter could not open to the crew (%s)." % error_string(err))
-		return
+		var first: int = CrewNet.base_port()
+		title("No port was free to host on (%d to %d): another game on this computer is already hosting a Charter. Close it, then try again." % [first, first + CrewNet.PORTS - 1] if err == ERR_ALREADY_IN_USE else "The Charter could not open to the crew.")
+		return false
 	if c.sailed():
 		_sea(c.session_for(net.key), true)
 	else:
 		_harbour(net._info())
+	return true
 
 
 func join(address: String, cap: String) -> void:
 	_joining_name = cap
+	_join_addr = address.strip_edges()
+	# A blank name came out as a machine-made "crew_f9f08" (the walkthrough).
+	if cap.strip_edges() == "":
+		_join_failed("Name your captain first.")
+		return
 	var err: Error = net.join_address(address, cap)
 	if err != OK:
-		title("Could not set out for that address (%s)." % error_string(err))
+		_join_failed("Could not find %s. An address looks like 192.168.1.39, or 192.168.1.39:%d with the port the founder's harbour shows." % [_join_addr if _join_addr != "" else "that address", CrewNet.base_port() + 1])
 		return
 	var wait: Label = Label.new()
 	wait.text = "Hailing the founder…"
@@ -133,6 +168,7 @@ func join(address: String, cap: String) -> void:
 
 
 func _on_welcomed(info: Dictionary, s: Session) -> void:
+	_join_addr = ""
 	_mine = s
 	net.bind(s)
 	if info.get("sailed", false):
@@ -200,9 +236,38 @@ func _open_menu() -> void:
 	var sea: Sea = _screen
 	var pm: PauseMenu = PauseMenu.new()
 	pm.session = sea.session
-	pm.captains_label = "Leave the Charter" if sea.net != null else "Captains"
+	pm.captains_label = "Captains"
+	if sea.net != null:
+		# Leaving asks first, naming who it sends back to port (the founder's
+		# leaving closes the Charter on everyone aboard).
+		var others: Array = []
+		for m: Dictionary in sea.net.last_roster:
+			if m.get("aboard", false) and str(m.get("key", "")) != sea.net.key:
+				others.append(str(m.get("name", "A crewmate")))
+		if sea.net.hosting:
+			pm.captains_label = "Close the Charter"
+			if not others.is_empty():
+				var back: String = "%s %s back to port." % [_names(others), "goes" if others.size() == 1 else "go"]
+				pm.leave_ask = back
+				pm.quit_ask = back
+		else:
+			pm.captains_label = "Leave the Charter"
+			pm.leave_ask = "Your captain waits in the Charter. Rejoin when %s hosts." % sea.net.founder_name()
+		# Quitting from here leaves the Charter properly (the crew hear why).
+		var cnet: CrewNet = sea.net
+		pm.on_quit = func() -> void:
+			if sea.session.charter != null:
+				sea.session.charter.flush()
+			cnet.leave()
 	pm.on_captains = func() -> void: sea.left.emit()
 	_menu_layer.add_child(pm)
+
+
+## "Ben", "Ben and Cal", "Ben, Cal and Dee".
+static func _names(list: Array) -> String:
+	if list.size() <= 1:
+		return "".join(PackedStringArray(list))
+	return "%s and %s" % [", ".join(PackedStringArray(list.slice(0, list.size() - 1))), list.back()]
 
 
 func _notification(what: int) -> void:

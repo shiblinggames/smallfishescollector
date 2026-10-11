@@ -155,10 +155,20 @@ func _ready() -> void:
 	if gauntlet == "":
 		SteamLayer.presence("#Raid", { "raid": str(_raid.get("raidTitle", "a raid")) })
 	if table != null:
-		b = (Js.obj(table.get("state"))["b"] as Dictionary).duplicate(true)
+		var st0: Dictionary = Js.obj(table.get("state"))
+		b = (st0["b"] as Dictionary).duplicate(true)
 		for i: int in (b["seats"] as Array).size():
 			if b["seats"][i].get("key") == my_key:
 				me = i
+		# What the line already knew as this screen opened is not news.
+		_dropped_seen = Js.obj(st0.get("dropped")).duplicate()
+		_dropped_seen.erase(my_key)
+		_afk_seen = int(Js.num(Js.obj(st0.get("afk")).get("n")))
+	# The sea's charting words ("+2.5", the Nav XP of fog lifting as she
+	# sails) rose over the fight with nothing to say what they were (the
+	# walkthrough, 2026-10-11): kept off while the fight holds the screen.
+	if sea._chart_fx != null:
+		sea._chart_fx.visible = false
 	else:
 		var seat: Dictionary = Battle.seat_for(sea.session.store, sea.session.uid, str(sea.session.profile().get("username", "You")))
 		b = Battle.begin(raid_id, [seat])
@@ -211,6 +221,8 @@ func _ready() -> void:
 		_ov = GauntletOverlay.new()
 		_ov.my_key = my_key
 		_ov.profile = sea.session.profile()
+		# The sheet keeps clear of the HP frames down the left (it clipped them).
+		_ov.left_room = func() -> float: return 300.0 if _frames_mode() else 0.0
 		_ov.face_of = func(k: String) -> Texture2D:
 			var si: int = _seat_index(k)
 			return _face(si) if si >= 0 else null
@@ -246,6 +258,11 @@ func _ready() -> void:
 	_auras[me] = aura
 	if table != null:
 		table.connect("changed", _pump)
+		if rejoin:
+			# Back on the line mid-fight: the field as it stands, and a word.
+			await _enemy_enters()
+			_say("Back in the line")
+			_log_line("Back in the line. The crew waited for you.")
 		BattleStageSync._pump(self, Js.obj(table.get("state")))
 		return
 	await _pre_fight_words()
@@ -286,8 +303,7 @@ func _frame() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if _nudge_btn != null:
-		_nudge_btn.visible = not _gone and Time.get_ticks_msec() - _wait_ms >= int(RaidTable.AFK_WAIT * 1000.0) and BattleStageSync._held_up(self)
+	BattleStageSync._nudge_tick(self)
 	# Every player ship in the line faces the enemy, bow to the right, for the
 	# whole fight (Kong, 2026-10-05: one hull was seen turned away); only a
 	# ship running from it (fled, the stage gone) turns about.
@@ -298,6 +314,10 @@ func _process(delta: float) -> void:
 				var sm: Shipmate = _mate_of(i0) if i0 != me else null
 				if sm != null and sm.face_lock != 1.0:
 					sm.face_lock = 1.0
+				# A crewmate back on the line comes in as a new Shipmate: its sea
+				# nametag gives way to the fight's plate too (it showed through).
+				if sm != null and sm._plate.visible:
+					sm._plate.visible = false
 	if not b.is_empty():
 		for i: int in (b["seats"] as Array).size():
 			var a0: HullAura = _aura(i)
@@ -404,6 +424,19 @@ func _mate_of(i: int) -> Shipmate:
 	var k: String = str(b["seats"][i].get("key", ""))
 	var m: Variant = sea._mates.get(k)
 	return m if m != null and is_instance_valid(m) else null
+
+
+## How near seat i's hull rides to its place in the line, as a share (1 in
+## place, 0 off sailing elsewhere or gone): a plate is drawn over a hull only
+## once it is there (the walkthrough, 2026-10-11: plates hung over empty
+## water when a crewmate's game dropped, or a sunk mate sailed for home).
+func _in_place(i: int) -> float:
+	if i == me:
+		return 1.0
+	var m: Shipmate = _mate_of(i)
+	if m == null or not m.visible or m.modulate.a < 0.1:
+		return 0.0
+	return 1.0 - smoothstep(500.0, 900.0, m.position.distance_to(_at + _offset(i)))
 
 
 func _mate_aura(i: int) -> HullAura:
@@ -591,12 +624,19 @@ func _wait(s: float) -> void:
 ## CRITICAL over it), set only where the event says so; word: a small source
 ## word over the figure ("Burning", "Raked"), in word_col.
 func _num(world_p: Vector2, text: String, col: Color, big: bool = false, crit: bool = false, word: String = "", word_col: Color = BattleLook.MUTED) -> void:
-	# Words landing on the same spot at once stack upward rather than overprint.
-	var stack: int = 0
+	# A vertical queue (the walkthrough, 2026-10-11: "18" landed through
+	# RELOADS; DODGING, CROSSFIRE and 15! piled on one spot): each figure
+	# takes the lowest row free of those still rising near it (rows 40px
+	# apart, counted from its own spot), so they stack instead of overprint.
+	var used: Dictionary = {}
 	for n: Dictionary in _numbers:
-		if float(n["t"]) < 0.7 and (n["p"] as Vector2).distance_to(world_p) < 90.0:
-			stack = maxi(stack, int(n.get("k", 0)) + 1)
-	_numbers.append({ "p": world_p, "text": text, "col": col, "big": big, "crit": crit, "word": word, "wcol": word_col, "t": 0.0, "k": stack, "dx": randf_range(-26.0, 26.0) })
+		var q: Vector2 = n["p"]
+		if float(n["t"]) < 1.05 and absf(q.x - world_p.x) < 170.0 and absf(q.y - world_p.y) < 150.0:
+			used[int(n.get("k", 0)) - int(round((q.y - world_p.y) / 40.0))] = true
+	var stack: int = 0
+	while used.has(stack):
+		stack += 1
+	_numbers.append({ "p": world_p, "text": text, "col": col, "big": big, "crit": crit, "word": word, "wcol": word_col, "t": 0.0, "k": stack, "dx": randf_range(-12.0, 12.0) })
 
 
 ## THE damage figure, one style: a bare number, cream on an enemy, the
@@ -770,6 +810,17 @@ func _lost() -> void:
 
 
 func _end(won: bool, fled: bool = false) -> void:
+	if _ended:
+		return
+	_ended = true
+	if sea._chart_fx != null:
+		sea._chart_fx.visible = true
+	# Every hull settled by a sinking rides up again (BattleStagePlayback._settle).
+	if not b.is_empty():
+		for i9: int in (b["seats"] as Array).size():
+			var rig9: HullRig = BattleStagePlayback._rig_of(self, i9)
+			if rig9 != null and rig9.sink > 0.0:
+				rig9.create_tween().tween_property(rig9, "sink", 0.0, 0.8).set_trans(Tween.TRANS_SINE)
 	# The ships' own auras (the enemies' go with their hulls).
 	for k: Variant in _auras:
 		var a0: HullAura = _aura(k)
@@ -891,10 +942,15 @@ func _pre_fight_words() -> void:
 	sc.allow_skip = sea.session.store.clear_count(sea.session.uid, raid_id) > 0
 	sc.cta = "To the guns"
 	add_child(sc)
+	# Together: the others see "Ben is reading", not "choosing", until it closes.
+	if table != null:
+		BattleStageSync._act(self, ["reading", true])
 	if autoplay:
 		await _wait(0.5)
 		sc._end(true)
 	await sc.finished
+	if table != null and is_inside_tree():
+		BattleStageSync._act(self, ["reading", false])
 
 
 ## Out of the fight: she comes about and runs for it, keeping what she earned.
@@ -924,8 +980,20 @@ func _aura(k: Variant) -> HullAura:
 ## (you have answered, they have not) can be moved on by you; they take the
 ## default (the tables, _nudge).
 var _nudge_btn: Button = null
+## Its row in the bottom bar, and the "Waiting on Ben" words beside it.
+var _nudge_row: HBoxContainer = null
+var _nudge_l: Label = null
 var _wait_tag: String = ""
 var _wait_ms: int = 0
+## The line's drops already logged (key: true), and the last "went on
+## without" note read (BattleStageSync._notes).
+var _dropped_seen: Dictionary = {}
+var _afk_seen: int = -1
+## Opened mid-fight (a captain back on the line after their game dropped):
+## the field is put on the water as it stands.
+var rejoin: bool = false
+## _end has begun (it runs once; a muster's late fallback may call it too).
+var _ended: bool = false
 
 
 ## A captain's avatar as a texture (game/avatar.gd, the web's CharacterAvatar:

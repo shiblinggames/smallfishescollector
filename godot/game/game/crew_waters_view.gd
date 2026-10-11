@@ -23,17 +23,20 @@ var _derby_rows: Label
 var _t: float = 0.0
 ## Whether the last frame drew anything (one more redraw clears it).
 var _drew: bool = false
+## The crew streak's count, this far under her hull's centre on the screen.
+const STREAK_W: float = 400.0
+const STREAK_BELOW: float = 78.0
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_streak_l = _label(18, Kit.SEA_GOLD)
-	_streak_l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_streak_l.offset_left = -200
-	_streak_l.offset_right = 200
-	_streak_l.offset_top = 330
-	_streak_l.offset_bottom = 358
+	# Under her own hull (co-op walkthrough, 2026-10-11: fixed at the top
+	# centre it sat at the catch word's height, and your own "+7 XP" rose
+	# through it into a smear). It follows the boat in _process.
+	_streak_l.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	_streak_l.size = Vector2(STREAK_W, 28)
 	_streak_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_streak_l.visible = false
 	_derby_box = VBoxContainer.new()
@@ -132,6 +135,9 @@ func _process(delta: float) -> void:
 		_call_t = 1.2
 	# The streak's count steps aside while the dial is up (it sat on the ring).
 	_streak_l.modulate.a = move_toward(_streak_l.modulate.a, 0.0 if dial_up else 1.0, delta * Motion.NEAR_RATE)
+	if _streak_l.visible and sea != null and is_instance_valid(sea._boat):
+		var hull: Vector2 = get_global_transform_with_canvas().affine_inverse() * sea._boat.get_global_transform_with_canvas().origin
+		_streak_l.position = hull + Vector2(-STREAK_W / 2.0, STREAK_BELOW)
 	# The derby sits under the top-right column and any note there.
 	if hud != null:
 		var y: float = hud.notes_bottom()

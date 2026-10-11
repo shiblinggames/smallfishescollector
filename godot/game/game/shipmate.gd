@@ -19,6 +19,10 @@ var _at: Vector2 = Vector2.ZERO
 var _vel: Vector2 = Vector2.ZERO
 var _age: float = 0.0
 var _placed: bool = false
+## How far below its place this plate steps so it never overprints another
+## crewmate's (Sea._plates_apart sets it; eased here).
+var plate_drop: float = 0.0
+var _drop_at: float = 0.0
 
 
 func _ready() -> void:
@@ -119,7 +123,7 @@ func state(st: Dictionary) -> void:
 		position = _at
 		_placed = true
 	skipper.set_frame(str(st.get("pose", "rest")))
-	var d: String = str(st.get("do", ""))
+	var d: String = at_rest(str(st.get("do", "")), _vel)
 	if d != status:
 		status = d
 		if _do_l != null:
@@ -139,7 +143,8 @@ func _process(delta: float) -> void:
 			skipper.scale.x = -face_lock
 		_hull.turn(1.0 if skipper.scale.x > 0.0 else -1.0)
 	_plate.modulate = lift
-	_plate.position = Vector2(-_plate.size.x / 2.0, 0)
+	_drop_at = lerpf(_drop_at, plate_drop, 1.0 - exp(-8.0 * delta))
+	_plate.position = Vector2(-_plate.size.x / 2.0, _drop_at)
 	var way: float = clampf(_vel.length() / 300.0, 0.0, 1.0)
 	var rough: float = 1.0 + clampf((position.length() - 1400.0) / 21200.0, 0.0, 1.0) * 1.4
 	var pitch: float = -signf(_vel.x) * way * 2.8 if absf(_vel.x) > 8.0 else 0.0
@@ -165,6 +170,19 @@ func wake_contact(id: String) -> Dictionary:
 		return _hull.wake_contact(id, position, -signf(skipper.scale.x))
 	return Boat.contact_for(id, position, skipper)
 
+
+
+## A boat lying still is "at rest", not "sailing" (co-op walkthrough,
+## 2026-10-11: a friend anchored read "sailing  ·  The Shallows", so the plate
+## never said whether she was about to fish beside you). Their game sends
+## "sailing ..." whenever nothing else fits; the speed it sends with it says
+## whether she is under way.
+static func at_rest(d: String, vel: Vector2) -> String:
+	if d.begins_with("sailing") and vel.length() < 6.0:
+		if d == "sailing north":
+			return "at rest in the north"
+		return "at rest" + d.substr(7)
+	return d
 
 
 ## In a fight: a crewmate's ship takes a blow, recoils or swerves.

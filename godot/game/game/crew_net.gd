@@ -12,14 +12,16 @@ extends Node
 ##   Steam, when it is up: the founder opens a friends-only lobby, friends
 ##     join by invite or from Join Game, and GodotSteam's peer carries it
 ##     (Valve's relay, no server of ours);
-##   the local network otherwise, on PORT, so two copies on one machine can
-##     sail together while there is no App ID.
+##   the local network otherwise, on the first free port from PORT (PORTS of
+##     them), so two copies on one machine can sail together while there is
+##     no App ID.
 ##
 ## The protocol:
 ##   hello(key, name)        crewmate -> founder, on connecting
 ##   welcome(info, captain)  founder -> crewmate: the Charter, and their captain
 ##   refused(why)            founder -> crewmate, then the line is dropped
 ##   roster(list)            founder -> all, whenever someone comes or goes
+##   bye()                   crewmate -> founder, just before leaving on purpose
 ##   sail()                  founder -> all: the roster is locked, to the sea
 ##   req(n, op, args)        crewmate -> founder: one action
 ##   res(n, result, captain, fresh) founder -> crewmate: its answer and the save
@@ -36,6 +38,11 @@ signal ended(why: String)
 signal mate_boat(key: String, state: Dictionary)
 signal mate_look(key: String, mate_name: String, look: Dictionary)
 signal mate_left(key: String)
+## The same, saying how: "left" (pressed Leave) or "dropped" (the line was
+## lost). Both fire; mate_left stays for whoever only needs the who.
+signal mate_gone(key: String, how: String)
+## A handover the crewmate's game could not take (the founder's sheet says so).
+signal hand_failed(why: String)
 ## A crewmate's ping on the water (game/crew_pings.gd).
 signal pinged(key: String, who: String, kind: String, at: Vector2)
 ## The crew is asked to agree to something (a prestige): its id, who asks,
@@ -45,6 +52,9 @@ signal _voted(id: int)
 signal _answered(n: int, result: Variant)
 
 const PORT: int = 24650
+## Hosting tries PORT and the next few (two copies on one machine, or another
+## game here hosting, used to fail outright and found the Charter anyway).
+const PORTS: int = 4
 ## How long a crewmate waits on one action before giving up on it.
 const REQUEST_WAIT: float = 20.0
 ## How long the crew have to answer a vote (ask_crew).
@@ -61,6 +71,13 @@ var charter: Charter = null
 var key: String = ""
 var captain_name: String = ""
 var lobby_id: int = 0
+## The port this game hosts on (the local network), or 0.
+var port: int = 0
+## The address a crewmate is hailing ("" once welcomed): what a failed join
+## names.
+var hailing: String = ""
+## The roster as last heard (both sides): who is aboard, and the founder's name.
+var last_roster: Array = []
 ## On the founder's game: peer id -> member key, and who is in port.
 var _members: Dictionary = {}
 var _next: int = 0
@@ -90,8 +107,9 @@ func _ready() -> void:
 	add_child(fishing)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected)
-	multiplayer.connection_failed.connect(func() -> void: _drop("Could not reach the founder's game."))
-	multiplayer.server_disconnected.connect(func() -> void: _drop("The founder has left port."))
+	multiplayer.connection_failed.connect(func() -> void:
+		_drop("No founder answered at %s. Check the address and that they are in their harbour." % (hailing if hailing != "" else "that address")))
+	multiplayer.server_disconnected.connect(func() -> void: _drop("Lost touch with %s's game." % founder_name()))
 	var steam: Object = SteamLayer.steam()
 	if steam != null:
 		steam.connect("lobby_created", _on_lobby_created)
@@ -137,9 +155,11 @@ func _on_sinking() -> void:
 func _sink_now() -> void:
 	var log: Array = Js.list(charter.data.get("lifeLog"))
 	var last: Dictionary = Js.obj(log.back()) if not log.is_empty() else {}
-	var why: String = "The %s has sunk. Its last life went down with %s. The Charter and its captains are gone." % [charter.data["name"], last.get("by", "a captain")]
+	# The name bare: a Charter's name often starts with "The" already.
+	var why: String = "%s has sunk. Its last life went down with %s. The Charter and its captains are gone." % [charter.data["name"], last.get("by", "a captain")]
 	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
 		_farewell.rpc(why)
+		_farewelled = true
 	charter.sink()
 	await get_tree().create_timer(0.5).timeout
 	leave()
@@ -149,6 +169,54 @@ func _sink_now() -> void:
 @rpc("authority", "reliable")
 func _farewell(why: String) -> void:
 	_end_note = why
+
+
+## The founder has already told the crew why the line is closing (sunk,
+## handed over), so leave() does not say it closed it.
+var _farewelled: bool = false
+
+
+## The founder's name, as the roster last said.
+func founder_name() -> String:
+	for m: Dictionary in last_roster:
+		if m.get("founder", false):
+			return str(m.get("name", "the founder"))
+	return "the founder"
+
+
+## What is queued goes out now: ENet clears its queues when a line closes, so
+## a reliable message sent just before it was lost.
+func _flush() -> void:
+	var p: MultiplayerPeer = multiplayer.multiplayer_peer
+	if p is ENetMultiplayerPeer and (p as ENetMultiplayerPeer).host != null:
+		(p as ENetMultiplayerPeer).host.flush()
+
+
+## The first port, given with --charter-port=N (tests run on a private one, so
+## another run on this machine never lands in theirs), else PORT.
+static func base_port() -> int:
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with("--charter-port="):
+			var n: int = int(a.trim_prefix("--charter-port="))
+			if n > 0 and n < 65536 - PORTS:
+				return n
+	return PORT
+
+
+## "192.168.1.39", "192.168.1.39:24651" or ":24651" -> [address, port]: the
+## port is base_port() when none is given, -1 when it is not a port.
+static func split_address(text: String) -> Array:
+	var t: String = text.strip_edges()
+	var at: int = t.rfind(":")
+	# One colon only (an IPv6 address has many, and no port here).
+	if at < 0 or t.count(":") > 1:
+		return [t, base_port()]
+	var host_part: String = t.left(at).strip_edges()
+	var tail: String = t.substr(at + 1).strip_edges()
+	var n: int = int(tail) if tail.is_valid_int() else -1
+	if n <= 0 or n > 65535:
+		n = -1
+	return [host_part if host_part != "" else "127.0.0.1", n]
 
 
 ## The Charter is on its way to a crewmate (hand_over): until they answer,
@@ -206,6 +274,7 @@ func _handed(why: String) -> void:
 		push_error("a handover did not take: " + why)
 		_handing = false
 		charter.busy_why = ""
+		hand_failed.emit(why)
 		return
 	var who: String = charter.berth_of(_hand_to).get("name", "your crewmate")
 	var cname: String = str(charter.data["name"])
@@ -213,11 +282,12 @@ func _handed(why: String) -> void:
 		if int(p) == 1:
 			continue
 		var mine: bool = _members[p] == _hand_to
-		_farewell.rpc_id(int(p), "The %s is yours now. Host it from the title screen and your crew can join." % cname if mine else "%s has the %s now. Join them when they host it." % [who, cname])
+		_farewell.rpc_id(int(p), "%s is yours now. Host it from the title screen and your crew can join." % cname if mine else "%s has %s now. Join them when they host it." % [who, cname])
+	_farewelled = true
 	charter.handed_off()
 	await get_tree().create_timer(0.5).timeout
 	leave()
-	ended.emit("You handed the %s to %s. They host it from now on." % [cname, who])
+	ended.emit("You handed %s to %s. They host it from now on." % [cname, who])
 
 
 # ── Opening and joining ────────────────────────────────────────────────────────
@@ -247,23 +317,46 @@ func host(c: Charter) -> Error:
 	if SteamLayer.up:
 		SteamLayer.steam().call("createLobby", LOBBY_FRIENDS_ONLY, Charter.BERTHS)
 		return OK
-	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
-	var err: Error = peer.create_server(PORT, Charter.BERTHS - 1)
-	if err != OK:
-		return err
-	multiplayer.multiplayer_peer = peer
-	_send_roster()
-	return OK
+	# The first free port of PORTS (another copy on this machine may hold one).
+	for i: int in PORTS:
+		var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
+		if peer.create_server(base_port() + i, Charter.BERTHS - 1) == OK:
+			port = base_port() + i
+			multiplayer.multiplayer_peer = peer
+			_send_roster()
+			return OK
+	# None free: nothing of this Charter is left half-hosted here.
+	_unhost()
+	return ERR_ALREADY_IN_USE
 
 
-## A crewmate joins over the local network (no Steam).
+## Hosting failed before any line opened: the tables and the Charter let go.
+func _unhost() -> void:
+	if charter != null:
+		if charter.shared_changed.is_connected(_on_shared_changed):
+			charter.shared_changed.disconnect(_on_shared_changed)
+		if charter.sinking.is_connected(_on_sinking):
+			charter.sinking.disconnect(_on_sinking)
+		charter.close()
+	charter = null
+	hosting = false
+	port = 0
+	_reset()
+
+
+## A crewmate joins over the local network (no Steam). The address may carry
+## a port ("192.168.1.39:24651"); without one, the first port.
 func join_address(address: String, as_name: String) -> Error:
 	_reset()
 	hosting = false
 	key = SteamLayer.player_key()
 	captain_name = as_name
+	hailing = address.strip_edges()
+	var parts: Array = split_address(address)
+	if int(parts[1]) < 0 or str(parts[0]) == "":
+		return ERR_INVALID_PARAMETER
 	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
-	var err: Error = peer.create_client(address, PORT)
+	var err: Error = peer.create_client(str(parts[0]), int(parts[1]))
 	if err == OK:
 		multiplayer.multiplayer_peer = peer
 	return err
@@ -283,6 +376,10 @@ func join_lobby(lobby: int, as_name: String = "") -> void:
 
 func _reset() -> void:
 	_members.clear()
+	_leaving.clear()
+	last_roster = []
+	_farewelled = false
+	_end_note = ""
 	_looks.clear()
 	_open.clear()
 	_answering.clear()
@@ -354,6 +451,16 @@ func leave() -> void:
 		charter.sink()
 	_sink_due = false
 	_sink_wait = 0.0
+	var mp: MultiplayerPeer = multiplayer.multiplayer_peer
+	var line_up: bool = mp != null and mp.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED and not multiplayer.get_peers().is_empty()
+	if line_up and hosting and not _farewelled and charter != null:
+		# The crew hear who closed it, and that their captains are safe in it.
+		_farewell.rpc("%s closed %s. Your captain is safe aboard it; rejoin when %s hosts again." % [captain_name, charter.data["name"], captain_name])
+		_flush()
+	elif line_up and not hosting:
+		# The founder hears this was on purpose (not a lost line).
+		_bye.rpc_id(1)
+		_flush()
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
@@ -370,7 +477,10 @@ func leave() -> void:
 	_hand_parts = []
 	_hand_to = ""
 	_handing = false
+	_farewelled = false
 	hosting = false
+	port = 0
+	hailing = ""
 	charter = null
 	_answering.clear()
 	_skipped.clear()
@@ -405,6 +515,8 @@ func _on_peer_disconnected(id: int) -> void:
 		return
 	var k: Variant = _members.get(id)
 	_members.erase(id)
+	var how: String = "left" if _leaving.has(id) else "dropped"
+	_leaving.erase(id)
 	for n: Variant in _votes.keys():
 		if k != null and _votes.has(n) and (_votes[n]["asked"] as Array).has(k):
 			_tally(int(n), str(k), false)
@@ -413,10 +525,28 @@ func _on_peer_disconnected(id: int) -> void:
 		gauntlets.drop(str(k))
 		tables.drop(str(k))
 		fishing.drop(str(k))
+		# A drop mid-fight goes out in every phase, so no screen keeps waiting
+		# on (and showing as choosing) a captain who is gone: a table's drop
+		# pushes only some phases itself (the plan phase did not).
+		if raids.busy():
+			raids._push()
+		if gauntlets.busy():
+			gauntlets._push()
 		mate_left.emit(k)
-		_left.rpc(k)
+		mate_gone.emit(k, how)
+		_left.rpc(k, how)
 		charter.write()
 	_send_roster()
+
+
+## Crewmates (peer ids) who said they are leaving on purpose (bye).
+var _leaving: Dictionary = {}
+
+
+@rpc("any_peer", "reliable")
+func _bye() -> void:
+	if hosting:
+		_leaving[multiplayer.get_remote_sender_id()] = true
 
 
 @rpc("any_peer", "reliable")
@@ -446,6 +576,7 @@ func _hello(k: String, as_name: String) -> void:
 	if s == null:
 		s = charter.add_member(k, as_name)
 	_members[id] = k
+	_leaving.erase(id)
 	_welcome.rpc_id(id, _info(), _ship(s))
 	# What is going on at the tables now (a muster, a dive): the newcomer's
 	# screens catch up at once rather than at the next change.
@@ -475,6 +606,7 @@ func roster() -> Array:
 
 func _send_roster() -> void:
 	var list: Array = roster()
+	last_roster = list
 	roster_changed.emit(list)
 	if multiplayer.multiplayer_peer != null and multiplayer.get_peers().size() > 0:
 		_roster.rpc(list)
@@ -497,6 +629,7 @@ func _welcome(info: Dictionary, captain: String) -> void:
 		return
 	var s: Session = Session.new(loaded["save"], loaded["carried"])
 	s.remote = self
+	hailing = ""
 	welcomed.emit(info, s)
 
 
@@ -507,6 +640,7 @@ func _refused(why: String) -> void:
 
 @rpc("authority", "reliable")
 func _roster(list: Array) -> void:
+	last_roster = list
 	roster_changed.emit(list)
 
 
@@ -516,8 +650,9 @@ func _sail() -> void:
 
 
 @rpc("authority", "reliable")
-func _left(k: String) -> void:
+func _left(k: String, how: String) -> void:
 	mate_left.emit(k)
+	mate_gone.emit(k, how)
 
 
 # ── Actions (a crewmate's rules run on the founder's game) ─────────────────────

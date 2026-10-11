@@ -115,10 +115,13 @@ class GCard:
 			draw_string(Kit.font("karla", 800), Vector2(x0, rr.end.y - 14.0), "Voted:  " + ", ".join(PackedStringArray(voters)), HORIZONTAL_ALIGNMENT_LEFT, size.x - 36.0, 12, Dossier.WARN)
 		# Taken: the captain's face, stamped.
 		if stamp != null or stamp_name != "":
-			draw_rect(rr.grow(-2), Color(0.03, 0.025, 0.02, 0.78))
-			var sc: Vector2 = Vector2(rr.get_center().x, rr.position.y + rr.size.y * 0.42)
+			# The face over the art, the words at the foot: the card's own
+			# name stays readable between them (TAKEN BY was drawn over it).
+			draw_rect(rr.grow(-2), Color(0.03, 0.025, 0.02, 0.62))
+			var sc: Vector2 = Vector2(rr.get_center().x, rr.position.y + (86.0 if not short else rr.size.y * 0.42))
 			BattleLook.medallion(self, sc, 34.0, stamp, BattleLook.GOLD, stamp_name.substr(0, 1), 1.0, Vector2(0.5, 0.5), 0.5)
-			BattleLook.say(self, Kit.font("cinzel", 700), sc.x, sc.y + 56.0, "Taken by %s" % stamp_name if stamp_name != "You" else "Yours", 15, BattleLook.GOLD)
+			var sy: float = rr.end.y - 16.0 if not short else sc.y + 52.0
+			BattleLook.say(self, Kit.font("cinzel", 700), sc.x, sy, "Taken by %s" % stamp_name if stamp_name != "You" else "Yours", 15, BattleLook.GOLD, 5)
 
 	## The role's mark: a shield (tank), a cross (healer), a pennant (support),
 	## a gunsight (gunner), drawn in one ink: the shape carries the role (no
@@ -401,11 +404,15 @@ class CrewPane:
 			var share: float = clampf(float(r["hp"]) / maxf(1.0, float(r["max"])), 0.0, 1.0)
 			var col: Color = Dossier.HARM if share < 0.3 else (Dossier.WARN if share < 0.6 else Dossier.HELP)
 			BattleLook.bar(self, Rect2(48, y + 22, size.x - 150.0, 8), share, share, 0.0, col, col.darkened(0.5))
-			draw_string(Kit.font("karla", 700), Vector2(48, y + 46), "%d / %d hull  ·  %d powers%s" % [int(r["hp"]), int(r["max"]), int(r["boons"]), ("  ·  %d Marks" % int(r["marks"])) if int(r["marks"]) > 0 else ""], HORIZONTAL_ALIGNMENT_LEFT, size.x - 150.0, 12, Dossier.SOFT)
+			draw_string(Kit.font("karla", 700), Vector2(48, y + 46), "%d / %d hull  ·  %s%s" % [int(r["hp"]), int(r["max"]), BattleLook.count(int(r["boons"]), "power"), ("  ·  " + BattleLook.count(int(r["marks"]), "Mark")) if int(r["marks"]) > 0 else ""], HORIZONTAL_ALIGNMENT_LEFT, size.x - 150.0, 12, Dossier.SOFT)
+			# Every row says where its captain stands in the vote (only the ones
+			# who had voted showed, so nobody could see who was still deciding).
 			var v: String = str(r.get("vote", ""))
 			if v != "":
-				var t: String = "Bank" if v == "bank" else "Dive"
-				BattleLook.pill(self, Vector2(size.x - 84, y + 8), t, Dossier.WARN if v == "bank" else Dossier.HELP)
+				var t: String = str({ "bank": "Bank", "hold": "Hold" }.get(v, "Dive"))
+				BattleLook.pill(self, Vector2(size.x - 84, y + 8), t, Dossier.WARN if v != "dive" else Dossier.HELP)
+			elif r.get("voting", false) == true:
+				BattleLook.pill(self, Vector2(size.x - 96, y + 8), "Deciding...", Dossier.SOFT)
 			y += 64.0
 		y += 6.0
 		draw_string(Kit.font("karla", 800), Vector2(0, y), "CURSES ON THE CREW", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Dossier.SOFT)

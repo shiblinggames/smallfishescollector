@@ -10,7 +10,9 @@ const KINDS: Array = [
 	["hotspot", "Hotspot here", Kit.SEA_GOLD],
 	["here", "Over here", Color(0.6, 0.92, 0.88)],
 	["help", "Need a hand", Color(1.0, 0.58, 0.42)],
-	["look", "Look", Kit.SEA_INK],
+	## Look in a light cream of its own (co-op walkthrough, 2026-10-11: it
+	## read dark on the night water beside the coloured three).
+	["look", "Look", Color(1.0, 0.97, 0.9)],
 ]
 const LIFE: float = 12.0
 const GROUND: float = Chart.GROUND
@@ -32,6 +34,14 @@ var _t: float = 0.0
 ## rest, larger when it is the one picked), eased rather than switched.
 var _open_k: float = 0.0
 var _opt_k: Array = [0.0, 0.0, 0.0, 0.0]
+## THE ONE-TIME NOTE (co-op walkthrough, 2026-10-11: nothing ever taught G):
+## the first time this machine is at sea with a crewmate aboard, a quiet line
+## on the water says how to call them, once (remembered on this machine).
+const HINT_PREF: String = "ping_hint_seen"
+const HINT_AFTER: float = 3.0
+const HINT_FOR: float = 7.0
+var _hint_wait: float = 0.0
+var _hint_t: float = -1.0
 
 
 func _ready() -> void:
@@ -39,6 +49,16 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if sea.net != null:
 		sea.net.pinged.connect(_on_ping)
+	# Under the HUD's own sheets (the Charter sheet, the chest): the pings
+	# drew across them (co-op walkthrough, 2026-10-11). The sea's panels held
+	# on this layer later stay above it as before.
+	_under_hud.call_deferred()
+
+
+func _under_hud() -> void:
+	var hud: Node = sea._hud if sea != null else null
+	if hud != null and is_instance_valid(hud) and hud.get_parent() == get_parent():
+		get_parent().move_child(self, hud.get_index())
 
 
 static func kind_of(id: String) -> Array:
@@ -98,7 +118,28 @@ func _process(delta: float) -> void:
 	for p: Dictionary in pings:
 		p["t"] = float(p["t"]) + delta
 	pings = pings.filter(func(p: Dictionary) -> bool: return float(p["t"]) < LIFE)
+	_hint_step(delta)
 	queue_redraw()
+
+
+func _hint_step(delta: float) -> void:
+	if _hint_t >= 0.0:
+		_hint_t += delta
+		if _hint_t > HINT_FOR:
+			_hint_t = -1.0
+		return
+	if _hint_wait < 0.0:
+		return
+	if sea.net == null or sea._mates.is_empty() or sea.stage != null or sea._hud.busy():
+		return
+	_hint_wait += delta
+	if _hint_wait < HINT_AFTER:
+		return
+	_hint_wait = -1.0
+	if bool(Prefs.get_value(HINT_PREF, false)):
+		return
+	Prefs.set_value(HINT_PREF, true)
+	_hint_t = 0.0
 
 
 func _draw() -> void:
@@ -123,8 +164,10 @@ func _draw() -> void:
 		var tw: float = f_big.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
 		_text(f_big, at + Vector2(-tw / 2.0, -34), title, 20, Color(col, a))
 		var who: String = str(p["name"])
-		var ww: float = f_small.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
-		_text(f_small, at + Vector2(-ww / 2.0, -16), who, 13, Color(Kit.INK_2, a))
+		# The sender in the lifted cream of the water's lettering (it was a
+		# small grey, hard to read on the water).
+		var ww: float = f_small.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		_text(f_small, at + Vector2(-ww / 2.0, -15), who, 14, Color(Kit.SEA_INK, a))
 	# The wheel while G is held: it opens out over WHEEL_S and closes the
 	# same way; the option picked grows to it and lights, rather than jumping.
 	if _open_k > 0.0:
@@ -138,8 +181,13 @@ func _draw() -> void:
 			var sc: float = lerpf(1.0, 19.0 / 16.0, pk)
 			var sw: float = f_big.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 			draw_set_transform(pos, 0.0, Vector2.ONE * sc)
-			_text(f_big, Vector2(-sw / 2.0, 6), s, 16, Color(k2[2], lerpf(0.6, 1.0, pk) * ok))
+			_text(f_big, Vector2(-sw / 2.0, 6), s, 16, Color(k2[2], lerpf(0.82, 1.0, pk) * ok))
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if _hint_t >= 0.0:
+		var ha: float = clampf(minf(_hint_t / 0.6, (HINT_FOR - _hint_t) / 1.0), 0.0, 1.0)
+		var line: String = "Hold G to call the crew"
+		var hw: float = f_small.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+		_text(f_small, Vector2((size.x - hw) / 2.0, size.y * 0.66), line, 17, Color(Kit.SEA_INK, ha * 0.92))
 
 
 ## Lettering on the water, in the one recipe (Kit.sea_string).

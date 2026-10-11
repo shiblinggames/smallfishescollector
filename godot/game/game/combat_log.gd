@@ -714,7 +714,10 @@ func _fmt(x: Dictionary) -> Array:
 		"checkArm":
 			return ["enemy", false, "%s readies [b]%s[/b]" % [_E(x), _esc(str(x.get("name", "")))]]
 		"towed":
-			return ["sys", false, "%s is towed home" % _S(si)]
+			# By key (the event has no seat): who, and the hull she comes back
+			# with (the rule is towed ALONG, not home; it named nobody).
+			var ti2: int = stage._seat_index(str(x.get("key", "")))
+			return ["sys", false, "%s is towed along, back at a quarter hull (%d)" % [_S(ti2), int(Js.num(x.get("hp")))]]
 	return []
 
 

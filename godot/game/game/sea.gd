@@ -403,6 +403,10 @@ func _ready() -> void:
 	_compass.sea = self
 	FishingHud._place(_compass, Vector2(0.5, 0.0), Vector2(-CompassRibbon.W / 2.0 - 60.0, 56), Vector2(CompassRibbon.W + 120.0, 100))
 	hud_layer.add_child(_compass)
+	# The compass's labels go UNDER the raid's and the dive's banners (co-op
+	# walkthrough, 2026-10-11: they painted over the muster banner's title):
+	# first on the layer, behind the musters and the HUD.
+	hud_layer.move_child(_compass, 0)
 	if net != null:
 		SeaFolk.join_crew(self)
 
@@ -503,6 +507,8 @@ func _process(delta: float) -> void:
 		net.send_boat(delta, { "x": _boat.position.x, "y": _boat.position.y, "vx": _boat.velocity.x, "vy": _boat.velocity.y, "pose": _boat.skipper.frame, "facing": _boat.facing(), "do": _status })
 		for k: String in _mates:
 			(_mates[k] as Shipmate).lift = lift
+		_crew_spread(delta)
+		_plates_apart()
 
 	# The water she is IN (her hull, not the camera's lead ahead of her): the
 	# cast fishes this band, so it must be the one under her.
@@ -662,6 +668,82 @@ func _on_mate_boat(k: String, st: Dictionary) -> void:
 	if k == net.key:
 		return
 	_mate(k).state(st)
+
+
+## THE CREW ARRIVE SIDE BY SIDE (co-op walkthrough, 2026-10-11): every
+## captain came onto the water on the same pixel (Set Sail at the Mainland,
+## the way back from a dive, a rejoin), one hull hiding the others and their
+## plates overprinting. Each game moves only its own boat: while she lies
+## still and idle on top of crewmates, the cluster's ships are ranked by key
+## (the same order on every game), the first keeps her spot, and the others
+## sail a few lengths off it in a small fan. Nothing moves in a fight, with
+## the line out, or once she is clear of them.
+const SPREAD_NEAR: float = 70.0
+const SPREAD_FAN: Array[Vector2] = [Vector2.ZERO, Vector2(170, 50), Vector2(-170, 50), Vector2(0, 150)]
+var _spread_t: float = 0.0
+
+
+func _crew_spread(delta: float) -> void:
+	_spread_t += delta
+	if _spread_t < 0.3:
+		return
+	_spread_t = 0.0
+	if stage != null or _boat.hold_still or _boat.locked or _boat.target != null or _boat.velocity.length() > 5.0 or _hud.phase != "idle" or _hud.busy():
+		return
+	var me: Vector2 = _boat.position
+	var cluster: Array = [net.key]
+	var at: Dictionary = { net.key: me }
+	for k: String in _mates:
+		var m: Shipmate = _mates[k]
+		if not is_instance_valid(m) or m.is_queued_for_deletion() or m.has_meta("_leaving"):
+			continue
+		if m.position.distance_to(me) < SPREAD_NEAR:
+			cluster.append(k)
+			at[k] = m.position
+	if cluster.size() < 2:
+		return
+	cluster.sort()
+	var rank: int = cluster.find(net.key)
+	if rank <= 0:
+		return
+	var anchor: Vector2 = at[cluster[0]]
+	_boat.target = anchor + SPREAD_FAN[mini(rank, SPREAD_FAN.size() - 1)]
+
+
+## Crewmates' plates that would overprint each other step down a line, in key
+## order (the same on every game), so "CR BEN 08" reads as two names again.
+func _plates_apart() -> void:
+	var keys: Array = _mates.keys()
+	keys.sort()
+	var placed: Array = []
+	for k: String in keys:
+		var m: Shipmate = _mates[k]
+		if not is_instance_valid(m) or m._plate == null:
+			continue
+		var w: float = maxf(m._plate.size.x, 60.0)
+		var h: float = maxf(m._plate.size.y, 20.0) + 4.0
+		var base: Vector2 = Vector2(m.position.x, m.position.y * Chart.GROUND)
+		var drop: float = 0.0
+		var moved: bool = true
+		while moved:
+			moved = false
+			for p: Array in placed:
+				var o_at: Vector2 = p[0]
+				if absf(o_at.x - base.x) < (w + float(p[1])) / 2.0 and absf(o_at.y - (base.y + drop)) < h:
+					drop += h
+					moved = true
+		m.plate_drop = drop
+		placed.append([base + Vector2(0, drop), w])
+		# No sea plate while a fight has the stage: one for a crewmate who
+		# came back mid-fight (made after the fight hid the others) showed
+		# through beside his fight plate (co-op walkthrough, 2026-10-11).
+		# (The Locker sets the stage too: what is hidden here comes back here.)
+		if stage != null and m._plate.visible:
+			m._plate.visible = false
+			m.set_meta("stage_hid", true)
+		elif stage == null and m.has_meta("stage_hid"):
+			m.remove_meta("stage_hid")
+			m._plate.visible = true
 
 
 func _send_look() -> void:

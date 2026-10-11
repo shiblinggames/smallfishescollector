@@ -33,10 +33,10 @@ static func _draw(bs: BattleStage) -> void:
 	if bs.table != null and str(bs._latest.get("phase", "")) == "plan":
 		var who: Array = []
 		var given: Dictionary = Js.obj(bs._latest.get("plans"))
+		var cd: String = _turn_words(bs, given)
 		for st: Dictionary in Battle.alive(bs.b):
 			if not given.has(st.get("key")):
-				who.append("You" if st.get("key") == bs.my_key else str(st["name"]))
-		var cd: String = ("Choosing: " + ", ".join(PackedStringArray(who))) if not who.is_empty() else "Every order is in"
+				who.append(st.get("key"))
 		var cw: float = f.get_string_size(cd, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		var cr: Rect2 = Rect2(vp.x / 2.0 - cw / 2.0 - 22.0, hb * 0.5 - 15.0, cw + 44.0, 30.0)
 		BattleLook.draw_box(bs, cr, BattleLook.box(Color(BattleLook.LACQUER_HI, 0.95), Color(0, 0, 0, 0), 0, 15))
@@ -76,11 +76,23 @@ static func _draw(bs: BattleStage) -> void:
 			_hull_tag(bs, bs._screen(en.position) + Vector2(0, bs._tag_lift()), str(e1["name"]), float(bs._shown_hp.get("e%d" % j2, e1["hp"])) / maxf(1.0, float(e1["max"])), BattleLook.FOE, bs._strip_lit == -1 - j2 or (aiming and j2 == bs._target), 1.0 - float(en.sink))
 		else:
 			want.append(["e%d" % j2, bs._screen(en.position) + Vector2(0, bs._plate_lift(225.0))])
+	# A seat whose hull is not in its place (dropped, sunk and sailed home, got
+	# away) keeps its plate down the left like a frame, greyed, never over
+	# empty water; one still sailing into its slot shows it as it arrives.
+	var side: int = 0
+	var place: Dictionary = {}
 	for i: int in (bs.b["seats"] as Array).size():
+		var s1: Dictionary = bs.b["seats"][i]
+		var out1: bool = s1.get("sunk", false) or s1.get("fled", false)
+		place[i] = bs._in_place(i)
 		if frames:
 			want.append([i, Vector2(150.0, BattleStage.BAR + 22.0 + 76.0 * i)])
-			var s1: Dictionary = bs.b["seats"][i]
-			_hull_tag(bs, bs._screen(bs._seat_at(i)) + Vector2(0, bs._tag_lift()), "You" if i == bs.me else str(s1["name"]), float(bs._shown_hp.get(i, s1["hp"])) / maxf(1.0, float(s1["max"])), BattleLook.ALLY, bs._strip_lit == i, 1.0)
+			if float(place[i]) > 0.05:
+				_hull_tag(bs, bs._screen(bs._seat_at(i)) + Vector2(0, bs._tag_lift()), "You" if i == bs.me else str(s1["name"]), float(bs._shown_hp.get(i, s1["hp"])) / maxf(1.0, float(s1["max"])), BattleLook.ALLY, bs._strip_lit == i, float(place[i]) * (0.5 if out1 else 1.0))
+		elif out1 and float(place[i]) < 0.5:
+			want.append([i, Vector2(150.0, BattleStage.BAR + 22.0 + 76.0 * side)])
+			place[i] = 1.0
+			side += 1
 		else:
 			want.append([i, bs._screen(bs._seat_at(i)) + Vector2(0, bs._plate_lift(215.0))])
 	bs._plate_at = want.reduce(func(acc: Dictionary, w: Array) -> Dictionary:
@@ -112,8 +124,9 @@ static func _draw(bs: BattleStage) -> void:
 		var s: Dictionary = bs.b["seats"][i]
 		var sp: Vector2 = bs._plate_at[i]
 		var out_word: String = "SUNK" if s.get("sunk", false) else ("AWAY" if s.get("fled", false) else "")
-		_plate(bs, sp, str(s["name"]), float(bs._shown_hp.get(i, s["hp"])), float(s["max"]), float(s["shield"]), int(s["charges"]), int(s["maxCharges"]), s["statuses"], false, bs._strip_lit == i, i, "YOU" if bs.table != null and i == bs.me else "", bs._face(i), out_word, 1.0)
-		if bs.table != null and str(bs._latest.get("phase", "")) == "plan" and Battle.alive(bs.b).has(s):
+		var pa: float = 1.0 if frames else float(place.get(i, 1.0))
+		_plate(bs, sp, str(s["name"]), float(bs._shown_hp.get(i, s["hp"])), float(s["max"]), float(s["shield"]), int(s["charges"]), int(s["maxCharges"]), s["statuses"], false, bs._strip_lit == i, i, "YOU" if bs.table != null and i == bs.me else "", bs._face(i), out_word, pa)
+		if pa > 0.5 and bs.table != null and str(bs._latest.get("phase", "")) == "plan" and Battle.alive(bs.b).has(s):
 			if frames:
 				_order_chip(bs, sp + Vector2(136, 18), s, true)
 			else:
@@ -136,6 +149,11 @@ static func _draw(bs: BattleStage) -> void:
 		var pop: float = (lerpf(1.9, 0.92, e0) if e0 < 1.0 else 1.0) if dmg else lerpf(1.3, 1.0, e0)
 		if u > 0.16 and u < 0.26 and dmg:
 			pop = lerpf(0.92, 1.0, (u - 0.16) / 0.1)
+		# Kept on the screen, between the bars (a figure off a hull near the
+		# edge drifted half out of sight).
+		var half: float = w * pop * 0.5 + 14.0
+		p.x = clampf(p.x, half, maxf(half, vp.x - half))
+		p.y = clampf(p.y, hb + fs * pop + 26.0, maxf(hb + fs * pop + 26.0, vp.y - hb - 16.0))
 		var rot: float = (-0.09 if crit else 0.0) * (1.0 - e0 * 0.4)
 		bs.draw_set_transform(p, rot, Vector2(pop, pop))
 		if crit:
@@ -158,6 +176,35 @@ static func _draw(bs: BattleStage) -> void:
 		if dmg and u < 0.08:
 			bs.draw_string(f, Vector2(-w / 2.0, 0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.8 * (1.0 - u / 0.08)))
 		bs.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Whose turn it is, as the pill says it (the walkthrough, 2026-10-11:
+## "CHOOSING: YOU, BEN" read badly): you first, names joined with "and":
+## "Waiting on you and Ben", "Ben is choosing", "Ben is reading" (a captain
+## still in the boss's story), "Every order is in".
+static func _turn_words(bs: BattleStage, given: Dictionary) -> String:
+	var reading: Dictionary = Js.obj(bs._latest.get("reading"))
+	var me_left: bool = false
+	var choosing: Array = []
+	var readers: Array = []
+	for st: Dictionary in Battle.alive(bs.b):
+		var k: String = str(st.get("key", ""))
+		if given.has(k):
+			continue
+		if k == bs.my_key:
+			me_left = true
+		elif reading.has(k):
+			readers.append(str(st["name"]))
+		else:
+			choosing.append(str(st["name"]))
+	var parts: Array = []
+	if me_left:
+		parts.append("Waiting on %s" % BattleLook.join_names(["you"] + choosing))
+	elif not choosing.is_empty():
+		parts.append(BattleLook.names_are(choosing, "choosing"))
+	if not readers.is_empty():
+		parts.append(BattleLook.names_are(readers, "reading"))
+	return "  ·  ".join(PackedStringArray(parts)) if not parts.is_empty() else "Every order is in"
 
 
 static func _plate(bs: BattleStage, at: Vector2, name: String, hp: float, mx: float, shield: float, ch: int, mag: int, st: Dictionary, foe: bool, lit: bool, key: Variant, tag: String, portrait: Texture2D, out_word: String, alpha: float) -> void:
@@ -255,13 +302,21 @@ static func _fight_track(bs: BattleStage, hb: float) -> void:
 static func _draw_strip(bs: BattleStage, right: Vector2) -> void:
 	if bs._strip.is_empty():
 		return
-	var n: int = bs._strip.size()
+	# A captain out of this round (sunk, waiting to be towed; got away;
+	# dropped) stays at the end of the strip, greyed (the walkthrough,
+	# 2026-10-11: the strip dropped a sunk captain with no word).
+	var strip: Array = bs._strip.duplicate()
+	for si: int in (bs.b["seats"] as Array).size():
+		var out0: bool = bs.b["seats"][si].get("sunk", false) or bs.b["seats"][si].get("fled", false)
+		if out0 and not strip.has(si) and not strip.has(float(si)):
+			strip.append(si)
+	var n: int = strip.size()
 	var gap: float = 72.0
 	var x0: float = right.x - (n - 1) * gap - 26.0
 	bs.draw_line(Vector2(x0, right.y), Vector2(x0 + (n - 1) * gap, right.y), Color(1, 1, 1, 0.14), 1.5)
 	var cf: Font = Kit.font("karla", 800)
 	for k: int in n:
-		var who: int = bs._strip[k]
+		var who: int = int(strip[k])
 		var c: Vector2 = Vector2(x0 + k * gap, right.y)
 		var lit: bool = who == bs._strip_lit
 		var rad: float = 17.0 if lit else 14.0
@@ -287,7 +342,7 @@ static func _draw_strip(bs: BattleStage, right: Vector2) -> void:
 ## crew order with who it is for. "Choosing" until it is in.
 static func _order_chip(bs: BattleStage, at: Vector2, s: Dictionary, beside: bool = false) -> void:
 	var pl: Dictionary = Js.obj(Js.obj(bs._latest.get("plans")).get(s.get("key")))
-	var txt: String = "Choosing"
+	var txt: String = "Reading" if Js.obj(bs._latest.get("reading")).has(s.get("key")) else "Choosing"
 	var crit: bool = false
 	var kind: String = ""
 	if not pl.is_empty():

@@ -117,7 +117,27 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 			return _nudge(key)
 		"out":
 			return _out(key)
+		"reading":
+			return _reading(key, payload == true)
 	return { "error": "There is no such order." }
+
+
+## A captain's screen is reading the boss's words (the story over the water
+## before its fight): the others see "Ben is reading", not "choosing" (the
+## walkthrough, 2026-10-11). Only a flag for the screens; nothing waits on it.
+func _reading(key: String, yes: bool) -> Dictionary:
+	if ["idle", "muster", "done"].has(str(_r.get("phase", "idle"))) or _seat_of(key) < 0:
+		return { "ok": true }
+	if not _r.has("reading"):
+		_r["reading"] = {}
+	if yes:
+		_r["reading"][key] = true
+	elif not _r["reading"].has(key):
+		return { "ok": true }
+	else:
+		_r["reading"].erase(key)
+	_push()
+	return { "ok": true }
 
 
 ## May this captain take on that raid? Their own map must have reached it.
@@ -463,6 +483,14 @@ func _nudge(key: String) -> Dictionary:
 		return { "error": "You are out of this fight." }
 	if not _waited():
 		return { "error": "Give them a moment more." }
+	# Who it skips, told on their own screens (_went_on).
+	var field: String = { "plan": "plans", "flares": "flareRes", "tide": "tidePicks" }.get(str(_r["phase"]), "")
+	if field != "":
+		var idle: Array = []
+		for s0: Dictionary in Battle.alive(_r["b"]):
+			if not Js.obj(_r.get(field)).has(s0["key"]):
+				idle.append(str(s0["key"]))
+		_went_on(key, idle, str(_r["phase"]))
 	match str(_r["phase"]):
 		"plan":
 			_resolve()
@@ -479,6 +507,8 @@ func _nudge(key: String) -> Dictionary:
 ## A captain's game has dropped out of the line (drop, in the base: as one who
 ## got away, paid nothing more): nothing waits on them.
 func _after_drop(_key: String) -> void:
+	if _r.has("reading"):
+		(_r["reading"] as Dictionary).erase(_key)
 	var b: Dictionary = _r["b"]
 	if Battle.alive(b).is_empty():
 		b["state"] = "fled"

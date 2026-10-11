@@ -220,6 +220,64 @@ static func pill_w(s: String) -> float:
 	return tag_font().get_string_size(s.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, Kit.role_px("tag")).x + 12.0
 
 
+## Words wrapped to w and drawn centred on x, one line under the other from
+## the baseline y (seat cards, whose lines ran into the next seat). Returns the
+## baseline of the last line.
+static func say_wrapped(ci: CanvasItem, f: Font, x: float, y: float, s: String, fs: int, col: Color, w: float, max_lines: int = 2) -> float:
+	var lines: Array = BattleLook.wrap(f, s, fs, w)
+	if lines.size() > max_lines:
+		lines = lines.slice(0, max_lines)
+	for i: int in lines.size():
+		say(ci, f, x, y + i * (fs + 4.0), str(lines[i]), fs, col)
+	return y + maxi(0, lines.size() - 1) * (fs + 4.0)
+
+
+## Names joined as a sentence says them: "Anna", "you and Anna", "you, Anna
+## and Ben" (the walkthrough, 2026-10-11: "Waiting on Anna, you." read badly;
+## a caller puts "you" first).
+static func join_names(names: Array) -> String:
+	var n: Array = names.map(func(x: Variant) -> String: return str(x))
+	if n.is_empty():
+		return ""
+	if n.size() == 1:
+		return str(n[0])
+	return "%s and %s" % [", ".join(PackedStringArray(n.slice(0, n.size() - 1))), n[n.size() - 1]]
+
+
+## "Ben is choosing", "Ben and Cal are choosing".
+static func names_are(names: Array, doing: String) -> String:
+	return "%s %s %s" % [join_names(names), "is" if names.size() == 1 else "are", doing]
+
+
+## A count with its word, pluralised: "1 power", "3 powers".
+static func count(n: int, word: String, plural: String = "") -> String:
+	return "%d %s" % [n, word if n == 1 else (plural if plural != "" else word + "s")]
+
+
+## A flat button on the night side (the fight's own, never the day paper's
+## torn edge): lacquer, a gold hairline, cream words; lighter under the
+## pointer. For "Go on without them" and its kin.
+static func night_button(text: String, wide: float = 0.0) -> Button:
+	var b: Button = Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_override("font", Kit.font("karla", 800))
+	b.add_theme_font_size_override("font_size", 14)
+	for st: Array in [["normal", 0.0], ["hover", 0.1], ["pressed", -0.05], ["disabled", 0.0], ["focus", 0.0]]:
+		var sb: StyleBoxFlat = box(LACQUER_HI.lightened(float(st[1])) if float(st[1]) >= 0.0 else LACQUER_HI.darkened(-float(st[1])), Color(GOLD, 0.7), 1, 10)
+		sb.content_margin_left = 16
+		sb.content_margin_right = 16
+		sb.content_margin_top = 6
+		sb.content_margin_bottom = 6
+		b.add_theme_stylebox_override(str(st[0]), sb)
+	for c: Array in [["font_color", CREAM], ["font_hover_color", Kit.GOLD_HI], ["font_pressed_color", CREAM], ["font_disabled_color", MUTED]]:
+		b.add_theme_color_override(str(c[0]), c[1])
+	if wide > 0.0:
+		b.custom_minimum_size = Vector2(wide, 0)
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	return b
+
+
 ## A dot on the fight track.
 static func knot(ci: CanvasItem, c: Vector2, s: float, fill: Color, rim: Color) -> void:
 	ci.draw_circle(c, s * 0.8, fill)

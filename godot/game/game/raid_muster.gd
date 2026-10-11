@@ -17,6 +17,11 @@ var _opened_seq: int = -1
 var _screen: ReadyScreen = null
 var _join: Button = null
 var _rang: Array = [-1]
+## The invite's own buttons (On my way far off, Join near), swapped by _tick.
+var _inv: Dictionary = {}
+## When a fight screen of this table last left (a rejoin never reopens one
+## that is closing, or one that just closed).
+var _stage_left_ms: int = -100000
 
 
 func _ready() -> void:
@@ -59,19 +64,81 @@ func _on_table(st: Dictionary) -> void:
 			if _member(st) and int(Js.num(st.get("seq"))) != _opened_seq and Js.list(st.get("ev")).any(func(e: Dictionary) -> bool: return e["t"] == "begin"):
 				_opened_seq = int(Js.num(st.get("seq")))
 				sea.open_coop_battle(st, _my_key())
-		_:
+			else:
+				_back_in(st)
+		"idle", "done":
 			if str(st.get("result", "")) == "called off" and _card != null:
 				sea._hud.toast("The raid was called off.")
 			_close()
+			RaidMuster.end_left_open(sea, RaidTable.live, st)
+		_:
+			_close()
+			_back_in(st)
 
 
-## An invite to this captain on the banner: who is asking, and On my way
-## (the place pinned on the compass, a road to it on the water: they sail
-## there themselves) or Not now. A chime the first time it arrives.
-static func invite_block(body: VBoxContainer, st: Dictionary, my_key: String, by: String, what: String, sea: Sea, op: String, pin_id: String, rang: Array) -> void:
+## BACK IN THE LINE (the walkthrough, 2026-10-11: a crewmate whose game
+## dropped mid-raid was seated again by the founder but sat on the open sea,
+## the line waiting on a captain with no screen). Any in-fight state for a
+## line this captain is still in (not fled, sunk or gone), with no fight
+## screen up for it: the fight opens where it stands.
+func _back_in(st: Dictionary) -> void:
+	if not st.has("b") or not _member(st) or Js.obj(st.get("gone")).has(_my_key()):
+		return
+	# Ending (the last round playing out, or a result in): nothing to go back to.
+	if str(st.get("after", "")) == "end" or str(st.get("result", "")) != "":
+		return
+	for s: Dictionary in Js.list(Js.obj(st["b"]).get("seats")):
+		if s.get("key") == _my_key() and (s.get("fled", false) or s.get("sunk", false)):
+			return
+	if RaidMuster.stage_up(sea, RaidTable.live) or Time.get_ticks_msec() - _stage_left_ms < 4000:
+		return
+	_opened_seq = int(Js.num(st.get("seq")))
+	sea.open_coop_battle(st, _my_key())
+	var bs: BattleStage = RaidMuster.stage_of(sea, RaidTable.live)
+	if bs != null:
+		bs.rejoin = true
+		bs.tree_exiting.connect(func() -> void: _stage_left_ms = Time.get_ticks_msec())
+
+
+## The fight screen up for this table on this sea (even one closing), or null.
+static func stage_of(sea: Sea, table: Node) -> BattleStage:
+	if sea == null or table == null:
+		return null
+	for c: Node in sea._hud_layer.get_children():
+		if c is BattleStage and (c as BattleStage).table == table:
+			return c
+	return null
+
+
+static func stage_up(sea: Sea, table: Node) -> bool:
+	return stage_of(sea, table) != null
+
+
+## The table has finished but a screen of it is still up and has not begun
+## to end (a moment it was waiting on held it): it ends after a grace, so the
+## sea (and the crew's "diving · depth 3" under this captain's name) moves on.
+static func end_left_open(sea: Sea, table: Node, st: Dictionary) -> void:
+	var bs: BattleStage = stage_of(sea, table)
+	if bs == null or bs._ended:
+		return
+	var won: bool = str(st.get("result", "")) in ["won", "banked"]
+	bs.get_tree().create_timer(6.0).timeout.connect(func() -> void:
+		if is_instance_valid(bs) and not bs._ended:
+			bs._gone = true
+			bs._end(won))
+
+
+## An invite to this captain on the banner: who is asking, and (far off) On
+## my way (the place pinned on the compass, a road to it on the water: they
+## sail there themselves) or (near) Join, with Not now either way. A chime the
+## first time it arrives. Returns { go, join } for the caller's tick to swap
+## by distance (the walkthrough, 2026-10-11: all three showed at once, and a
+## toast repeated the banner over it).
+static func invite_block(body: VBoxContainer, st: Dictionary, my_key: String, by: String, what: String, sea: Sea, op: String, pin_id: String, rang: Array, join_label: String = "Join") -> Dictionary:
 	var inv: String = str(Js.obj(st.get("invites")).get(my_key, ""))
 	if inv == "":
-		return
+		return {}
+	var out: Dictionary = {}
 	if inv == "asked":
 		if int(rang[0]) != int(Js.num(st.get("seq"))):
 			rang[0] = int(Js.num(st.get("seq")))
@@ -86,9 +153,20 @@ static func invite_block(body: VBoxContainer, st: Dictionary, my_key: String, by
 			go.disabled = true
 			await sea.session.act(op, ["answer", true])
 			if sea._compass != null:
-				sea._compass.pinned = pin_id
-			sea._hud.toast("Pinned on your compass. Sail there to join."))
+				sea._compass.pinned = pin_id)
 		row.add_child(go)
+		out["go"] = go
+		var jn: Button = Kit.button(join_label, "primary")
+		jn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		jn.visible = false
+		jn.pressed.connect(func() -> void:
+			jn.disabled = true
+			var r: Variant = await sea.session.act(op, ["join", { "x": sea._boat.position.x, "y": sea._boat.position.y }])
+			if r is Dictionary and (r as Dictionary).has("error"):
+				jn.disabled = false
+				sea._hud.toast(str(r["error"])))
+		row.add_child(jn)
+		out["join"] = jn
 		var no: Button = Kit.button("Not now", "secondary")
 		no.pressed.connect(func() -> void:
 			no.disabled = true
@@ -96,12 +174,14 @@ static func invite_block(body: VBoxContainer, st: Dictionary, my_key: String, by
 		row.add_child(no)
 	elif inv == "coming":
 		Kit.text(body, "On your way. It is pinned on your compass.", "small", Kit.GOLD, true)
+	return out
 
 
 ## The banner going: it fades away (fade = false: freed at once, for a
 ## repaint that puts the next one straight in its place).
 func _close(fade: bool = true) -> void:
 	_join = null
+	_inv = {}
 	if _holder != null and is_instance_valid(_holder):
 		if fade:
 			Motion.note_out(_holder)
@@ -145,11 +225,12 @@ func _paint(st: Dictionary) -> void:
 	Kit.text(_body, "%s is forming a raid" % by, "small", Dossier.SOFT)
 	Kit.text(_body, str(raid.get("raidTitle", node.get("label", "A raid"))), "title")
 	Kit.text(_body, "In the line: %s  ·  %d of %d seats" % [", ".join(PackedStringArray(names)), names.size(), RaidTable.MAX_SEATS], "small", Dossier.SOFT, true)
-	invite_block(_body, st, _my_key(), by, str(raid.get("raidTitle", "a raid")), sea, "raidTable", "muster", _rang)
+	_inv = invite_block(_body, st, _my_key(), by, str(raid.get("raidTitle", "a raid")), sea, "raidTable", "muster", _rang, "Join the raid")
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	_body.add_child(row)
-	if Js.list(st.get("members")).size() < RaidTable.MAX_SEATS:
+	# Asked: the invite's own Join (near) or On my way (far) stands in for it.
+	if _inv.is_empty() and Js.list(st.get("members")).size() < RaidTable.MAX_SEATS:
 		var jn: Button = Kit.button("Join the raid", "primary")
 		jn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_join = jn
@@ -167,8 +248,23 @@ func _process(_delta: float) -> void:
 
 
 func _tick() -> void:
+	if _last.is_empty() or str(_last.get("phase", "")) != "muster":
+		return
+	var at: bool = sea._boat.position.distance_to(RaidTable.dock_of(str(_last["nodeId"]))) <= RaidTable.NEAR
 	# Join lights only near the raid.
-	if _join != null and is_instance_valid(_join) and not _last.is_empty():
-		var at: bool = sea._boat.position.distance_to(RaidTable.dock_of(str(_last["nodeId"]))) <= RaidTable.NEAR
+	if _join != null and is_instance_valid(_join):
 		_join.disabled = not at
 		_join.text = "Join the raid" if at else "Sail to the raid to join"
+	invite_swap(_inv, at)
+
+
+## The invite's buttons by distance: near, Join; far, On my way.
+static func invite_swap(inv: Dictionary, at: bool) -> void:
+	if inv.is_empty():
+		return
+	var go: Variant = inv.get("go")
+	var jn: Variant = inv.get("join")
+	if go is Button and is_instance_valid(go):
+		(go as Button).visible = not at
+	if jn is Button and is_instance_valid(jn):
+		(jn as Button).visible = at

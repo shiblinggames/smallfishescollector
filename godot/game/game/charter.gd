@@ -108,7 +108,12 @@ static func list() -> Array:
 			var lv: float = -1.0
 			if d.get("hardcore", false):
 				lv = Js.num(d.get("lives", float(keys.size() + 1)))
-			out.append({ "id": d["id"], "name": d["name"], "hardcore": d.get("hardcore", false), "sailed": d.get("sailed", false), "crew": names, "looks": looks, "keys": keys, "lives": lv, "founder": d.get("founder", ""), "at": FileAccess.get_modified_time(_path(d["id"])) })
+			# Released captains, shown faintly on the title's card.
+			var released: Array = []
+			for r: Variant in Js.list((d as Dictionary).get("released")):
+				if r is Dictionary:
+					released.append(str((r as Dictionary).get("name", "?")))
+			out.append({ "id": d["id"], "name": d["name"], "hardcore": d.get("hardcore", false), "sailed": d.get("sailed", false), "crew": names, "looks": looks, "keys": keys, "released": released, "lives": lv, "founder": d.get("founder", ""), "at": FileAccess.get_modified_time(_path(d["id"])) })
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["at"]) > int(b["at"]))
 	return out
 
@@ -168,14 +173,31 @@ func key_of(s: Session) -> String:
 
 
 ## Why this player cannot take a berth, or "" if they can (or already have one).
+## The refusals name the Charter and its founder (the walkthrough, 2026-10-11:
+## "This Charter has set sail" named nobody and said nothing of what to do).
 func refusal(key: String) -> String:
 	if not berth_of(key).is_empty():
 		return ""
+	var cname: String = str(data.get("name", "This Charter"))
+	var founder: String = str(berth_of(str(data.get("founder", ""))).get("name", "its founder"))
+	# A released captain hears that, not the stranger's refusal.
+	for r: Variant in Js.list(data.get("released")):
+		if r is Dictionary and str((r as Dictionary).get("key", "")) == key:
+			return "%s released your berth on %s. Your captain is kept in its file, but sails no more." % [founder, cname]
 	if sailed():
-		return "This Charter has set sail. Its crew is fixed."
+		return "%s has already set sail, so its crew is fixed. Found your own Charter, or ask %s to start a new one." % [cname, founder]
 	if (data["berths"] as Array).size() >= BERTHS:
-		return "Every berth in this Charter is taken."
+		return "Every berth in %s is taken." % cname
 	return ""
+
+
+## A Charter founded a moment ago whose hosting failed (no free port): it
+## never opened, so its file goes (Found it then makes a fresh one). Only ever
+## for one that has not sailed.
+static func unfound(charter_id: String) -> void:
+	var d: Variant = JsJson.parse(FileAccess.get_file_as_string(_path(charter_id)))
+	if d is Dictionary and (d as Dictionary).get("sailed", false) != true:
+		DirAccess.remove_absolute(_path(charter_id))
 
 
 ## A new member's Charter captain, in a new berth. The first one's state

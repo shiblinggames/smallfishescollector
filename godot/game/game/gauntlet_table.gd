@@ -162,6 +162,13 @@ static func shut(s: Session, variant: String) -> String:
 
 
 func _call(key: String, s: Session, p: Dictionary) -> Dictionary:
+	# The maelstrom pressed while a crewmate's dive gathers there (the
+	# walkthrough, 2026-10-11: it answered "already in a dive"): a join, or
+	# nothing for a captain already in the line.
+	if str(_r["phase"]) == "muster" and str(p.get("variant", "davy")) == str(_r.get("variant", "")):
+		if (_r["members"] as Array).any(func(m: Dictionary) -> bool: return m["key"] == key):
+			return { "ok": true }
+		return _join(key, s, p)
 	if _r["phase"] not in ["idle", "done"]:
 		return { "error": "The crew are already in a dive." }
 	var variant: String = str(p.get("variant", "davy"))
@@ -212,7 +219,7 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 	if mem.size() >= MAX_SEATS:
 		return { "error": "The line is full." }
 	if str(_r.get("mode", "solo")) == "solo":
-		return { "error": "That is a solo dive. The caller can switch it to Co-op." }
+		return { "error": "%s is diving alone. They can switch the dive to Co-op." % _name_of(str(_r.get("by", ""))) }
 	var why: String = shut(s, str(_r["variant"]))
 	if why != "":
 		return { "error": why }
@@ -227,6 +234,12 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 
 func _under_way() -> String:
 	return "The dive is under way."
+
+
+## The muster says whether the Charter is hardcore (its entry screen states
+## the hardcore rule then, not the towing promise alone).
+func _muster_extras() -> void:
+	_r["hardcore"] = charter != null and charter.data.get("hardcore", false) == true
 
 
 ## Solo or Co-op, the caller's pick. Solo sends anyone else in the line back.
@@ -773,7 +786,8 @@ func _breather() -> void:
 	var blocked: bool = run["tm"]["cashOutOnlyAfterBoss"] and not run["roll"]["prevWasBoss"]
 	run["offer"] = Gauntlet.roll_offer(run["offer"], cleared, hp_pct, true, blocked)
 	_r["votes"] = {}
-	_r["bankShut"] = "No Second Thoughts: you may bank only after a boss." if blocked else ""
+	_r["abstain"] = {}
+	_r["bankShut"] ="No Second Thoughts: you may bank only after a boss." if blocked else ""
 	# Each captain's look at what banking pays them (the chest, the chase).
 	var view: Dictionary = {}
 	for k: String in _keys_in():
@@ -826,18 +840,33 @@ func _vote(key: String, v: String) -> Dictionary:
 
 ## The breather settles once every captain still in has voted (a captain who
 ## drops is not counted, and casts nothing).
+## THE IDLE CAPTAIN ABSTAINS (Kong, 2026-10-11): when the crew press "Go on
+## without them", a captain who had not voted casts nothing (it was a vote
+## to bank, so one AFK captain in a pair always banked the dive, the opposite
+## of what the button promised); the votes cast decide, a tie still banks.
 func _vote_check() -> void:
-	var ks: Array = _keys_in()
+	var abstain: Dictionary = Js.obj(_r.get("abstain"))
+	var ks: Array = _keys_in().filter(func(k: String) -> bool: return not abstain.has(k))
+	if ks.is_empty():
+		# Nobody left to vote (cannot come from a nudge, whose presser votes):
+		# the safe end, as a tie is.
+		if str(_r.get("bankShut", "")) == "":
+			_bank()
+		else:
+			_dive()
+		return
 	for k: String in ks:
 		if not _r["votes"].has(k):
 			_push()
 			return
 	# Everyone to hold it: held. Otherwise a vote to hold counts as banking.
-	var holds: int = _r["votes"].values().filter(func(x: Variant) -> bool: return x == "hold").size()
+	# Only the votes of the captains counted (ks): an abstainer has none.
+	var cast: Array = ks.map(func(k: String) -> String: return str(_r["votes"][k]))
+	var holds: int = cast.filter(func(x: String) -> bool: return x == "hold").size()
 	if holds == ks.size():
 		_hold()
 		return
-	var banks: int = _r["votes"].values().filter(func(x: Variant) -> bool: return x == "bank" or x == "hold").size()
+	var banks: int = cast.filter(func(x: String) -> bool: return x == "bank" or x == "hold").size()
 	# A majority carries; a tie banks.
 	if banks * 2 >= ks.size() and str(_r.get("bankShut", "")) == "":
 		_bank()
@@ -1003,12 +1032,21 @@ func _nudge(key: String) -> Dictionary:
 		return { "error": "You are out of this dive." }
 	if not _waited():
 		return { "error": "Give them a moment more." }
+	_went_on(key, _idle_keys(ph, key), ph)
 	match ph:
 		"plan":
 			_resolve()
 			return { "ok": true }
 		"flares":
 			_flares_check(true)
+			return { "ok": true }
+		"breather":
+			# The idle ABSTAIN (Kong, 2026-10-11; _vote_check): no vote is
+			# cast for them, the votes cast decide.
+			for k0: String in _keys_in():
+				if k0 != key and not _r["votes"].has(k0):
+					_r["abstain"][k0] = true
+			_vote_check()
 			return { "ok": true }
 		"draft":
 			var tk: String = _turn_key()
@@ -1040,9 +1078,6 @@ func _nudge(key: String) -> Dictionary:
 			"marks":
 				if not _r["marks"]["picks"].has(k):
 					_mark(k, "shark")
-			"breather":
-				if not _r["votes"].has(k):
-					_vote(k, "dive" if str(_r.get("bankShut", "")) != "" else "bank")
 			"contract":
 				if not _r["job"]["votes"].has(k):
 					_contract_vote(k, 0)
@@ -1050,6 +1085,33 @@ func _nudge(key: String) -> Dictionary:
 				if not _r["acks"].has(k):
 					_home(k)
 	return { "ok": true }
+
+
+## Who a nudge in this phase moves on without (not the captain pressing it):
+## the ones still to answer the choice in front of the crew.
+func _idle_keys(ph: String, by: String) -> Array:
+	var given: Dictionary = {}
+	match ph:
+		"plan": given = Js.obj(_r.get("plans"))
+		"flares": given = Js.obj(_r.get("flareRes"))
+		"curse": given = Js.obj(Js.obj(_r.get("curse")).get("acks"))
+		"shrine": given = Js.obj(Js.obj(_r.get("shrine")).get("picks"))
+		"fence": given = Js.obj(Js.obj(_r.get("fence")).get("done"))
+		"marks": given = Js.obj(Js.obj(_r.get("marks")).get("picks"))
+		"breather": given = Js.obj(_r.get("votes"))
+		"contract": given = Js.obj(Js.obj(_r.get("job")).get("votes"))
+		"jobResult", "haul", "dead", "held": given = Js.obj(_r.get("acks"))
+		"draft":
+			var tk: String = _turn_key()
+			return [tk] if tk != "" and tk != by else []
+		_:
+			return []
+	var pool: Array = _keys_in()
+	if ["haul", "dead", "held"].has(ph):
+		pool = Js.obj(_r.get("caps")).keys().filter(func(k: Variant) -> bool: return not Js.obj(_r.get("gone")).has(k))
+	if ph in ["plan", "flares"]:
+		pool = Battle.alive(_r["b"]).map(func(s: Dictionary) -> String: return str(s.get("key", "")))
+	return pool.filter(func(k: Variant) -> bool: return str(k) != by and not given.has(k)).map(func(k: Variant) -> String: return str(k))
 
 
 func _invite_refusal(s: Session) -> String:

@@ -14,6 +14,18 @@ var _toasts: VBoxContainer
 ## Toasts held back while a side banner has the sky.
 var _toast_wait: Array = []
 var _now: float = 0.0
+## The lane's stub (an empty hidden label standing for "no toast yet"), kept
+## as a reference: it used to be read as the lane's child 0, so anything that
+## reordered or freed it made a real toast the "stub", which then never left
+## (co-op walkthrough, 2026-10-11: a gold toast stayed up all session).
+var _stub: Label
+## THE TOAST QUEUE (co-op walkthrough, 2026-10-11: callouts flooded the lane
+## and toasts piled on each other): at most TOAST_MAX show; the rest wait
+## their turn here, [text, tone], and while any wait the oldest showing one
+## leaves once it has been read (TOAST_READ) rather than holding its full time.
+var _toast_q: Array = []
+const TOAST_READ: float = 1.6
+const TOAST_Q_MAX: int = 8
 
 
 func _init(hud: FishingHud) -> void:
@@ -28,9 +40,10 @@ func build() -> void:
 	_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	FishingHud._place(_toasts, Vector2(0.5, 0.0), Vector2(-FishingHud.TOAST_W / 2.0, FishingHud.LANE_Y), Vector2(FishingHud.TOAST_W, 0))
 	h.add_child(_toasts)
-	_toast = Label.new()
-	_toast.visible = false
-	_toasts.add_child(_toast)
+	_stub = Label.new()
+	_stub.visible = false
+	_toasts.add_child(_stub)
+	_toast = _stub
 
 
 ## [title, line, art] waiting to be shown, one at a time.
@@ -171,14 +184,20 @@ func toast(text: String, tone: String = "") -> void:
 		if tone != "name":
 			_toast_wait.append([text, tone])
 		return
-	var live: Array = []
-	for n: Node in _toasts.get_children():
-		if n is Label and n != _toast_stub() and n.visible and not n.has_meta("gone"):
-			live.append(n)
-			if (n as Label).text == text:
-				n.set_meta("until", _now + Motion.NOTE_HOLD)
-				_toast = n
-				return
+	var live: Array = _live()
+	for n: Label in live:
+		if n.text == text:
+			n.set_meta("until", _now + Motion.NOTE_HOLD)
+			_toast = n
+			return
+	# The lane is full: it waits its turn (once; a repeat already waiting
+	# is not queued twice).
+	if live.size() >= FishingHud.TOAST_MAX:
+		if not _toast_q.any(func(q: Array) -> bool: return q[0] == text):
+			_toast_q.append([text, tone])
+			if _toast_q.size() > TOAST_Q_MAX:
+				_toast_q.pop_front()
+		return
 	var l: Label
 	match tone:
 		"name":
@@ -196,23 +215,30 @@ func toast(text: String, tone: String = "") -> void:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.set_meta("until", _now + Motion.NOTE_IN + Motion.NOTE_HOLD)
+	l.set_meta("born", _now)
 	Motion.note_in(l)
 	_toast = l
-	# Too many at once: the oldest leaves early.
-	if live.size() >= FishingHud.TOAST_MAX:
-		_toast_out(live[0] as Label)
 
 
-## The first child of the lane: an empty, hidden label that stands for "no
-## toast yet" (so _toast is never null).
+## The toasts showing now (not the stub, not one already leaving).
+func _live() -> Array:
+	var live: Array = []
+	for n: Node in _toasts.get_children():
+		if n is Label and n != _stub and n.visible and not n.has_meta("gone") and not n.is_queued_for_deletion():
+			live.append(n)
+	return live
+
+
+## The stub (kept for anything that still asks for it).
 func _toast_stub() -> Node:
-	return _toasts.get_child(0) if _toasts != null and _toasts.get_child_count() > 0 else null
+	return _stub
 
 
 func _toast_out(l: Label) -> void:
 	if l.has_meta("gone"):
 		return
 	l.set_meta("gone", true)
+	l.set_meta("gone_at", _now)
 	Motion.note_out(l)
 
 
@@ -227,8 +253,26 @@ func _toast_step(delta: float) -> void:
 		for w: Array in held:
 			toast(w[0], w[1])
 	for n: Node in _toasts.get_children():
-		if n is Label and n != _toast_stub() and not n.has_meta("gone") and _now >= float(n.get_meta("until", 0.0)):
+		if not (n is Label) or n == _stub:
+			continue
+		if not n.has_meta("gone") and _now >= float(n.get_meta("until", 0.0)):
 			_toast_out(n as Label)
+		elif n.has_meta("gone") and _now - float(n.get_meta("gone_at", _now)) > Motion.NOTE_OUT + 0.6 and not n.is_queued_for_deletion():
+			# A toast sent out in the same frame it arrived: its fade-in (which
+			# waits a frame to be laid out) killed the fade-out, and it stayed
+			# up for good. Whatever is still here this long after leaving goes.
+			n.queue_free()
+	# The queue: while toasts wait, the oldest showing one leaves once read;
+	# a waiting one comes in as soon as there is room.
+	if not _toast_q.is_empty() and not is_instance_valid(h._side_banner):
+		var live: Array = _live()
+		if live.size() >= FishingHud.TOAST_MAX:
+			var oldest: Label = live[0]
+			if _now - float(oldest.get_meta("born", 0.0)) >= TOAST_READ:
+				_toast_out(oldest)
+		else:
+			var q: Array = _toast_q.pop_front()
+			toast(q[0], q[1])
 	if h._dial != null and h._dial.visible:
 		var bottom: float = h._dial.position.y - (80.0 if h._status.text != "" else 10.0)
 		_toasts.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -236,6 +280,10 @@ func _toast_step(delta: float) -> void:
 		_toasts.offset_bottom = bottom
 	else:
 		var y: float = h._lane.position.y + h._lane.get_combined_minimum_size().y + (6.0 if h._lane.get_combined_minimum_size().y > 0.0 else 0.0)
+		# Never under the story line (Finn's chapter banner) when it has
+		# grown past its row.
+		if h._story != null and h._story.visible and h._story.modulate.a > 0.1:
+			y = maxf(y, h._story.position.y + maxf(h._story.size.y, h._story.get_combined_minimum_size().y) + 6.0)
 		_toasts.grow_vertical = Control.GROW_DIRECTION_END
 		_toasts.offset_top = y
 		_toasts.offset_bottom = y

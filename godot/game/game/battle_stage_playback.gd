@@ -196,8 +196,16 @@ static func _one_play(bs: BattleStage, x: Dictionary) -> void:
 			bs._shown_hp[int(x["seat"])] = float(x["hp"])
 			await bs._wait(0.9)
 		"sunk":
-			bs._sunk_said = true
-			bs._say("Holed below the waterline")
+			# The ship that went down settles low on the water (yours or a
+			# crewmate's; the walkthrough, 2026-10-11: a sunk Man-o-War sat
+			# upright as if still fighting). Its plate greys (SUNK).
+			var sk: int = int(x.get("seat", bs.me))
+			_settle(bs, sk)
+			if sk == bs.me:
+				bs._sunk_said = true
+				bs._say("Holed below the waterline")
+			else:
+				bs._say("%s is holed below the waterline" % str(bs.b["seats"][sk].get("name", "A crewmate")) if sk >= 0 and sk < (bs.b["seats"] as Array).size() else "Holed below the waterline")
 			await bs._wait(0.8)
 		"burn":
 			bs._fx.flare_up(bs._seat_at(int(x["seat"])))
@@ -435,7 +443,12 @@ static func _one_play(bs: BattleStage, x: Dictionary) -> void:
 			var tk: int = bs._seat_index(str(x["key"]))
 			if tk >= 0:
 				bs._num(bs._seat_at(tk) + Vector2(0, -80), "Towed along", Color(0.6, 0.85, 1.0), true)
-			bs._log_line("%s towed along, back in the line at a quarter hull." % ("You are" if x["key"] == bs.my_key else str(bs.b["seats"][maxi(0, tk)]["name"]) + " is"))
+				# Afloat again: the settled hull rides back up.
+				var rig: HullRig = _rig_of(bs, tk)
+				if rig != null:
+					rig.create_tween().tween_property(rig, "sink", 0.0, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+				bs._shown_hp[tk] = Js.num(x.get("hp"))
+			# The log's own line (CombatLog "towed") names them and the hull.
 			await bs._wait(1.0)
 		"drowned":
 			var dk2: int = bs._seat_index(str(x["key"]))
@@ -831,6 +844,33 @@ static func _defeat_sequence(bs: BattleStage, ds: Dictionary) -> void:
 
 ## The hull of a ship in the fight: a seat (yours, or a crewmate's), or an
 ## enemy (-1 - its index).
+## A seat's HullRig on this screen (yours: the boat's ship; a crewmate's: the
+## Shipmate's hull), or null (a fishing boat, a ship not on the water).
+static func _rig_of(bs: BattleStage, si: int) -> HullRig:
+	if si == bs.me:
+		var r: Variant = bs.sea._boat.get("_ship_rig")
+		return r if r is HullRig and is_instance_valid(r) else null
+	var m: Shipmate = bs._mate_of(si)
+	return m._hull if m != null and m._hull != null and is_instance_valid(m._hull) else null
+
+
+## A sunk ship settles: low in the water and listing, a small local wake of
+## bubbles and rings round it (not the whole screen), never quite under (in a
+## dive she may yet be towed along; _end and "towed" lift her again).
+static func _settle(bs: BattleStage, si: int) -> void:
+	if si < 0 or si >= (bs.b["seats"] as Array).size():
+		return
+	var at: Vector2 = bs._seat_at(si)
+	if bs._fx != null:
+		bs._fx.burst(at, false)
+		bs._fx.glyph_burst(at, "bubble", BattleLook.CREAM, 10, 90.0, 18.0, -120.0)
+	for k: int in 3:
+		bs.sea._field.ring(at + Vector2(randf_range(-50, 50), 10), 110.0, 1.2, 0.45)
+	var rig: HullRig = _rig_of(bs, si)
+	if rig != null:
+		rig.create_tween().tween_property(rig, "sink", 0.42, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
 static func _hull_of(bs: BattleStage, who: int) -> Object:
 	if who < 0:
 		var j: int = -1 - who

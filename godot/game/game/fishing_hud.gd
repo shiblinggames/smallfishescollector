@@ -1394,6 +1394,14 @@ func _process(delta: float) -> void:
 	var k: float = Motion.hover_k(delta)
 	_lane.modulate.a = lerpf(_lane.modulate.a, 0.0 if banner else 1.0, k)
 	_story.modulate.a = lerpf(_story.modulate.a, 0.0 if banner or (_dial.visible and _status.text != "") else 1.0, k)
+	# The bottom row steps back while a raid's or a dive's entry screen is up
+	# (co-op walkthrough, 2026-10-11: Crew, Recruits and Ship showed under
+	# it). Not while the row is changing sides (that tween owns its alpha).
+	var entry: bool = _modal != null and is_instance_valid(_modal) and (_modal is ReadyScreen or _modal is GauntletEntry)
+	if _side_tw == null or not _side_tw.is_valid():
+		for row: HBoxContainer in [_bottom_fish, _bottom_exp]:
+			if row != null and row.visible:
+				row.modulate.a = lerpf(row.modulate.a, 0.0 if entry else 1.0, k)
 	if _log_dot and _log_dot_c != null:
 		_log_dot_c.queue_redraw()
 	if _recruit_dot != null and _recruit_dot.get_meta("on", false):

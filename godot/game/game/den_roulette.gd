@@ -46,6 +46,12 @@ var _deadline: float = -1.0
 var _seats_l: Label
 var _ready_sent: bool = false
 var _phase: String = "betting"
+## THE SLIP AS IT IS PLACED (co-op walkthrough, 2026-10-11: the crew's chips
+## only showed once they pressed Ready): at a shared wheel each change to the
+## slip goes to the founder this long after the last one, not Ready, so the
+## others' ringed chips land as they are put down. Ready only flips the flag.
+const SLIP_WAIT: float = 0.3
+var _slip_due: float = -1.0
 
 
 func _ready() -> void:
@@ -136,7 +142,11 @@ func _fit() -> void:
 		_holder.custom_minimum_size = Vector2(d, d + 34.0)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if _shared and _slip_due >= 0.0:
+		_slip_due -= delta
+		if _slip_due < 0.0:
+			_send_slip()
 	if _shared and _seats_l != null:
 		var left: int = int(ceil((_deadline - Time.get_ticks_msec() / 1000.0)))
 		if _phase == "betting" and _deadline > 0.0 and left >= 0:
@@ -199,12 +209,14 @@ func _shared_spin(res: Dictionary, st: Dictionary) -> void:
 	if not mine.is_empty() and not mine.has("error"):
 		var wk: Array = Js.list(mine.get("won"))
 		_sweep_losers(wk)
+		_total_left(wk)
 		if not wk.is_empty() and float(mine["payout"]) > 0.0:
 			await get_tree().create_timer(0.35).timeout
 			den.fly_chips(_board.cell_center(str(wk[0])), float(mine["payout"]))
 			for k: String in wk:
 				_board.shown.erase(k)
 			_board.queue_redraw()
+			_total_left([])
 		if float(mine["net"]) > 0.0:
 			Sound.chest(false)
 			Rumble.buzz([0, 40, 30, 60])
@@ -220,7 +232,22 @@ func _shared_spin(res: Dictionary, st: Dictionary) -> void:
 	_spin_b.disabled = false
 
 
+## The slip so far, not Ready (debounced by SLIP_WAIT).
+func _send_slip() -> void:
+	if not _shared or _phase != "betting" or _ready_sent or _busy:
+		return
+	var r: Dictionary = await session.act("denTable", ["roulette", "bets", { "bets": _bets.values(), "ready": false }])
+	if r.has("error") and is_inside_tree():
+		den.toast(str(r["error"]), DenRoom.RED)
+
+
+func _slip_soon() -> void:
+	if _shared and _phase == "betting" and not _ready_sent:
+		_slip_due = SLIP_WAIT
+
+
 func _send_ready() -> void:
+	_slip_due = -1.0
 	if _bets.is_empty():
 		den.toast("Place a chip on the board first", DenRoom.RED)
 		return
@@ -263,6 +290,7 @@ func place(type: String, target: Variant) -> void:
 			_board.shown[key] = float(_board.shown.get(key, 0.0)) + amt
 			_board.land(key))
 	_changed()
+	_slip_soon()
 
 
 ## Clear: every chip on the board slides home.
@@ -274,6 +302,7 @@ func _clear() -> void:
 	_bets.clear()
 	_board.shown.clear()
 	_changed()
+	_slip_soon()
 
 
 ## Same again: last spin's chips go down again, each sliding to its spot.
@@ -297,6 +326,7 @@ func _same_again() -> void:
 				_board.shown[key] = amt
 				_board.land(key))
 	_changed()
+	_slip_soon()
 
 
 func _slip_sum() -> float:
@@ -388,6 +418,7 @@ func spin() -> void:
 	Motion.rise_word(_says)
 	# The house takes the losers first, then the winners come home.
 	_sweep_losers(won)
+	_total_left(won)
 	await get_tree().create_timer(0.4).timeout
 	for pb: Dictionary in r["perBet"]:
 		if pb["won"]:
@@ -397,6 +428,7 @@ func spin() -> void:
 	if float(r["net"]) >= stake * 5.0:
 		den.burst(_board.cell_center(won[0]) if not won.is_empty() else _board.get_global_rect().get_center(), 14)
 	_board.queue_redraw()
+	_total_left([])
 	_last = _bets.duplicate(true)
 	den.roll_chips(chips - stake, float(r["chipsAfter"]))
 	await get_tree().create_timer(1.6).timeout
@@ -407,6 +439,17 @@ func spin() -> void:
 	_changed()
 	_busy = false
 	_spin_b.disabled = false
+
+
+## The total under the board as the chips leave it (co-op walkthrough,
+## 2026-10-11: after a lost spin it still read "On the board: 50" through the
+## hold): only the winning spots still have chips down; none once they fly.
+func _total_left(won: Array) -> void:
+	var sum: float = 0.0
+	for k: String in _bets:
+		if won.has(k):
+			sum += float(_bets[k]["amount"])
+	_total.text = "On the board: %s" % Js.thousands(sum) if sum > 0.0 else "No chips down"
 
 
 ## The losing chips swept off the felt toward the house (past the board's top

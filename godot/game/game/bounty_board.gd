@@ -47,12 +47,29 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 
 
+## ONE CREW BOARD: in a Charter the board is the founder's (session.act runs
+## it there: a crewmate's own game dealt a board of its own, with no crew
+## order, the walkthrough 2026-10-11). Until a crewmate's arrives the sheet
+## says it is being read; a repaint keeps the old board up until then.
 func _paint() -> void:
+	if session.remote != null and _body.get_child_count() == 0:
+		Paper.night = true
+		Paper.header(_body, "Bounties", "The Posting House", close)
+		Paper.text(_body, "Reading the board...", "body", Paper.ink_soft())
+		Paper.night = false
+	var r: Variant = await session.act("bountyState", [])
+	if not is_instance_valid(self) or Motion.closing(self) or not is_inside_tree():
+		return
 	Paper.night = true
 	for c: Node in _body.get_children():
 		_body.remove_child(c)
 		c.queue_free()
-	var st: Dictionary = RulesApi.run(session.store, session.uid, "bountyState", [])
+	if not (r is Dictionary) or (r as Dictionary).has("error") or not (r as Dictionary).has("unlocked"):
+		Paper.header(_body, "Bounties", "The Posting House", close)
+		Paper.text(_body, str((r as Dictionary).get("error", "The board could not be read.")) if r is Dictionary else "The board could not be read.", "body", Paper.ink_soft(), true)
+		Paper.night = false
+		return
+	var st: Dictionary = r
 	# THE shared header (eyebrow and title on the left, "Close  Esc" on the
 	# right, the rule), then the feedback line: a claim's word fades in there
 	# instead of pushing the board down.

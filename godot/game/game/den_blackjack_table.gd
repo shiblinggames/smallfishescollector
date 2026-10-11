@@ -219,8 +219,14 @@ func _apply(st: Dictionary) -> void:
 		_clear_cards()
 	_layout_seats(st)
 	var order: Array = st["order"]
-	# Chips into the circles: mine slide from my pile, the others' land.
-	for k: String in order:
+	# Chips into the circles: mine slide from my pile, the others' land. Not in
+	# the result: the founder sends the table again each second while the
+	# result stands, and after the payout emptied the circles (staked 0) the
+	# pass saw every wager as new and flew the chips back in (co-op
+	# walkthrough, 2026-10-11). The first result still runs it (a double on
+	# the last move lands its chips before the pay).
+	var paid: bool = st["phase"] == "result" and _paid_round == int(st["round"])
+	for k: String in (order if not paid else []):
 		var seat: Dictionary = st["seats"][k]
 		var hands_ui: Array = _seat_ui[k]["hands"]
 		var wagers: Array = []
@@ -325,8 +331,11 @@ func _apply(st: Dictionary) -> void:
 			for hd: DenBlackjack.Hand in hands_ui:
 				hd.add_chips(-hd.amount)
 				hd.staked = 0.0
-			var tail: Label = first.top_l
-			tail.text = "%s   %s%s" % [_name_of(k, seat, me), "+" if float(seat["net"]) >= 0.0 else "-", Js.thousands(absf(float(seat["net"])))]
+			# The seat's word stays with the seat: _layout_seats writes the
+			# plain name again on every resend, so it puts this back.
+			_seat_ui[k]["tail"] = "%s   %s%s" % [_name_of(k, seat, me), "+" if float(seat["net"]) >= 0.0 else "-", Js.thousands(absf(float(seat["net"])))]
+			_seat_ui[k]["tail_round"] = int(st["round"])
+			first.top_l.text = str(_seat_ui[k]["tail"])
 		var mine: Dictionary = Js.obj(st["seats"].get(me))
 		if mine.get("playing", false):
 			if float(mine["net"]) > 0.0:
@@ -369,9 +378,15 @@ func _layout_seats(st: Dictionary) -> void:
 			changed = true
 		for i: int in (ui["hands"] as Array).size():
 			var hd: DenBlackjack.Hand = ui["hands"][i]
-			hd.top_l.text = _name_of(k, seat, me) if i == 0 else ""
-			hd.top_l.add_theme_color_override("font_color", ui["color"])
+			var shown: String = _name_of(k, seat, me)
+			if st["phase"] == "result" and int(ui.get("tail_round", -1)) == int(st["round"]):
+				shown = str(ui["tail"])
+			hd.top_l.text = shown if i == 0 else ""
+			# The seat's colour after the lift: Kit.lift puts the label's raw
+			# ink back, which wiped the colour set before it.
+			hd.top_l.set_meta("raw_ink", ui["color"])
 			Kit.lift(hd.top_l)
+			hd.top_l.add_theme_color_override("font_color", ui["color"])
 			if st["phase"] == "betting":
 				hd.word.text = ""
 	_order = order.duplicate()

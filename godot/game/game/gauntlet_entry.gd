@@ -40,6 +40,11 @@ var _side_tab: String = "descent"
 var _side_bar: HBoxContainer
 var _fathoms: Label
 var _scrim: ColorRect
+## The foot's status line (refreshed with the invitees' distances), the mode
+## change's pulse, the half-second tick.
+var _status_l: Label = null
+var _pulse_ms: int = -100000
+var _tick_t: float = 0.0
 
 
 func _ready() -> void:
@@ -68,7 +73,13 @@ func _on_table(st: Dictionary) -> void:
 			sea._hud.toast("The dive was called off.")
 		_close()
 		return
+	var was: Dictionary = _st
 	_st = st
+	# A new mode clears every Ready: said, and its tab pulses (as the raid's tier).
+	if not was.is_empty() and str(was.get("mode", "")) != str(st.get("mode", "")) and st.get("by") != my_key and sea != null:
+		_pulse_ms = Time.get_ticks_msec()
+		sea._hud.toast("%s chose %s  ·  ready again" % [ReadyScreen.name_in(st, str(st.get("by", ""))), "Co-op" if str(st.get("mode", "")) == "coop" else "Solo"])
+	ReadyScreen.invite_news(sea, was, st)
 	_paint()
 	if _side_tab == "descent":
 		_side_paint()
@@ -139,6 +150,7 @@ func _paint() -> void:
 		tab.shut = "Needs a Charter's crew." if t[0] == "coop" and table.solo != null else ""
 		tab.chosen = (t[0] == "held" and resume) or (not resume and t[0] == mode)
 		tab.can = caller
+		tab.pulse_ms = _pulse_ms if tab.chosen else -100000
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.custom_minimum_size = Vector2(0, 74)
 		var id: String = t[0]
@@ -163,9 +175,10 @@ func _paint() -> void:
 	for i: int in GauntletTable.MAX_SEATS:
 		var sc: DiveSeat = DiveSeat.new()
 		sc.solo = table.solo != null
+		sc.where = "at the maelstrom"
 		sc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if i >= members.size() and i - members.size() < crew.size():
-			ReadyScreen.invite_seat(sc, crew[i - members.size()], sea, pool, func(a: Array) -> void: _act(a))
+			ReadyScreen.invite_seat(sc, crew[i - members.size()], sea, pool, func(a: Array) -> void: _act(a), GauntletTable.NEAR)
 		if i < members.size():
 			var m: Dictionary = members[i]
 			ReadyScreen.fill_seat(sc, m, _face_tex(Js.obj(Js.obj(m.get("card")).get("face"))), m["key"] == my_key, m["key"] == _st.get("by"))
@@ -181,16 +194,17 @@ func _paint() -> void:
 	for m3: Dictionary in members:
 		if m3["key"] != _st.get("by") and not m3.get("ready", false):
 			waiting.append("you" if m3["key"] == my_key else str(m3["name"]))
-	var status: String = "Everyone is ready." if waiting.is_empty() else "Waiting on %s." % ", ".join(PackedStringArray(waiting))
-	if members.size() == 1 and mode == "solo":
-		status = "Diving alone."
-	elif members.size() == 1:
-		status = "Co-op: waiting for a crewmate to sail to the maelstrom and join."
-	_label(Vector2(pad, foot_y + 18), status, "karla", 800, 15, Dossier.INK)
+	# The foot's words fit beside the buttons (they ran under them): the room
+	# left of the button row, wrapped.
+	var words_w: float = (w - right_w - 424.0) - pad - 12.0
+	_status_l = _label(Vector2(pad, foot_y + 12), _status(), "karla", 800, 14, Dossier.INK, words_w)
 	var foot2: String = "Solo: sink and the pot is lost; your Fathoms are always paid." if mode == "solo" else "Co-op: the crew dive together. Each captain banks the whole pot; a ship sunk in a fight the crew win is towed along."
+	if _st.get("hardcore", false) == true:
+		# A hardcore Charter: its own rule, not the towing promise alone.
+		foot2 = "Hardcore: a lost dive costs each captain in it a life; a ship towed along in a won fight costs none." + ("" if mode == "solo" else " Each captain banks the whole pot.")
 	if resume:
 		foot2 = "Resuming at depth %d with %s ⟡ in the pot. The whole crew of that dive must be here." % [int(Js.num(held.get("depth"))), Js.thousands(Js.num(held.get("pot")))]
-	_label(Vector2(pad, foot_y + 42), foot2, "karla", 500, 13, Dossier.SOFT, w - right_w - 420.0)
+	_label(Vector2(pad, foot_y + 34), foot2, "karla", 500, 12, Dossier.SOFT, words_w)
 	var btns: HBoxContainer = HBoxContainer.new()
 	btns.add_theme_constant_override("separation", 10)
 	btns.alignment = BoxContainer.ALIGNMENT_END
@@ -213,6 +227,30 @@ func _paint() -> void:
 		_button(btns, "Leave", "secondary", func() -> void: _act(["leave"]), 120.0)
 		_button(btns, "Not ready" if my_ready else "Ready", "secondary" if my_ready else "primary", func() -> void: _act(["ready", not my_ready]), 150.0)
 	Pane.set_night(_body, true)
+
+
+## The foot's status: who is still to say ready, you first; alone; anyone on
+## their way, counting down.
+func _status() -> String:
+	var members: Array = Js.list(_st.get("members"))
+	var mode: String = str(_st.get("mode", "solo"))
+	if members.size() == 1 and mode == "solo":
+		return "Diving alone."
+	var pool: Vector2 = GauntletTable.maelstrom_of(_variant())
+	var s: String = ReadyScreen.status_line(_st, my_key, table.solo != null, sea, pool, GauntletTable.NEAR, "at the maelstrom")
+	if members.size() == 1 and not s.contains("on the way"):
+		s = "Co-op: waiting for a crewmate to sail to the maelstrom and join."
+	return s
+
+
+## Every half second: the invitees' distances and the foot's line with them.
+func _process(delta: float) -> void:
+	_tick_t += delta
+	if _tick_t < 0.5 or _st.is_empty():
+		return
+	_tick_t = 0.0
+	if _status_l != null and is_instance_valid(_status_l):
+		_status_l.text = _status()
 
 
 func _label(at: Vector2, s: String, family: String, weight: int, fs: int, c: Color, w: float = -1.0) -> Label:

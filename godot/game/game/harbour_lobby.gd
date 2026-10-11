@@ -70,7 +70,10 @@ func _ready() -> void:
 			inv.pressed.connect(net.invite)
 			v.add_child(inv)
 		else:
-			Kit.text(v, "Crewmates join from their title screen at %s." % _address(), "small", Kit.PAPER_INK_SOFT, true)
+			# With its port (hosting takes the first free one of a few), so a
+			# crewmate types exactly this.
+			var at: String = _address() if net.port == 0 else "%s:%d" % [_address(), net.port]
+			Kit.text(v, "Crewmates join from their title screen at %s." % at, "small", Kit.PAPER_INK_SOFT, true)
 		Kit.text(v, "Set Sail locks the crew for good: nobody joins afterwards. A crewmate who stops playing keeps their berth.", "note", Kit.PAPER_INK_SOFT, true)
 		_sail = Kit.button("Set Sail", "primary")
 		_sail.custom_minimum_size = Vector2(0, 50)

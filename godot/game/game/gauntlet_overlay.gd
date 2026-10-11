@@ -43,6 +43,9 @@ var my_key: String = ""
 var profile: Dictionary = {}
 ## (key) -> Texture2D: a captain's avatar.
 var face_of: Callable
+## () -> float: how much of the screen's left edge the fight's HP frames
+## take (the sheet keeps clear of them; it clipped "225 /").
+var left_room: Callable
 var _st: Dictionary = {}
 var _sheet: Panel
 var _body: Control
@@ -118,6 +121,11 @@ func _paint(fresh: bool) -> void:
 	var h: float = minf(_height(), vp.y - 150.0)
 	_ss = Vector2(minf(W, vp.x - 40.0), h)
 	var at: Vector2 = Vector2((vp.x - _ss.x) / 2.0, maxf(84.0, (vp.y - h) / 2.0 - 30.0))
+	var room: float = float(left_room.call()) if left_room.is_valid() else 0.0
+	if room > 0.0 and at.x < room:
+		# Beside the frames, narrowed if it must be to keep a margin right.
+		at.x = room
+		_ss.x = minf(_ss.x, vp.x - room - 20.0)
 	var ph: String = str(_st["phase"])
 	# A phase change on an open sheet crossfades: the old body fades out, the
 	# sheet eases to its new size, the new body fades in. Same-phase repaints
@@ -286,15 +294,22 @@ func _foot(y: float) -> HBoxContainer:
 	return row
 
 
-## Who still has to answer, as a line.
+## Who still has to answer, as a line: you first, names joined with "and"
+## ("Waiting on you and Anna."; it read "Waiting on Anna, you.").
 func _waiting_on(given: Dictionary) -> String:
 	var names: Array = []
+	var me_too: bool = false
 	for k: String in _keys():
 		if not given.has(k):
-			names.append("you" if k == my_key else _name(k))
+			if k == my_key:
+				me_too = true
+			else:
+				names.append(_name(k))
+	if me_too:
+		names.push_front("you")
 	if names.is_empty():
 		return ""
-	return "Waiting on %s." % ", ".join(PackedStringArray(names))
+	return "Waiting on %s." % BattleLook.join_names(names)
 
 
 func _card(at: Vector2, sz: Vector2) -> GCard:
@@ -358,7 +373,9 @@ func _draft(fresh: bool) -> void:
 			strip.done.append(Js.obj(d.get("took")).has(k))
 		strip.at = turn
 		_body.add_child(strip)
-	var line: String = "Your pick. Take a card, or your synergy." if mine else ("%s is choosing." % _name(who) if who != "" else "The table is cleared.")
+	# The synergy is offered only when one was dealt to you.
+	var has_syn: bool = not Js.obj(Js.obj(d.get("syn")).get(my_key)).is_empty()
+	var line: String = ("Your pick. Take a card, or your synergy." if has_syn else "Your pick. Take a card.") if mine else ("%s is choosing." % _name(who) if who != "" else "The table is cleared.")
 	if order.size() == 1 and mine:
 		line = "Take one."
 	_label(Vector2(0, 160 if order.size() > 1 else 92), line, "karla", 800, 15, Dossier.WARN if mine else Dossier.SOFT, w, true)
@@ -753,7 +770,7 @@ func _breather() -> void:
 	for k: String in _keys():
 		var s: Dictionary = _seat(k)
 		crew.rows.append({ "name": _name(k), "face": face_of.call(k) if face_of.is_valid() else null, "hp": Js.num(s.get("hp")), "max": Js.num(s.get("max")),
-			"vote": Js.obj(_st.get("votes")).get(k, ""), "boons": Js.obj(_cap(k).get("boons")).size(), "marks": Js.list(_cap(k).get("marks")).size() })
+			"vote": Js.obj(_st.get("votes")).get(k, ""), "voting": true, "boons": Js.obj(_cap(k).get("boons")).size(), "marks": Js.list(_cap(k).get("marks")).size() })
 	crew.curses = Js.obj(run.get("curses"))
 	crew.boons = Js.obj(_cap().get("boons"))
 	_body.add_child(crew)
@@ -762,18 +779,30 @@ func _breather() -> void:
 	var row: HBoxContainer = _foot(_ss.y - 92.0)
 	var shut: String = str(_st.get("bankShut", ""))
 	var bank_t: String = "Take the deal" if not offer.is_empty() else "Bank the haul"
+	var mine: String = str(votes.get(my_key, ""))
 	var bb: Button = _btn(row, bank_t, "secondary", func() -> void: _send(["vote", "bank"]), 220.0)
-	bb.disabled = shut != "" or votes.has(my_key)
 	if shut != "":
-		bb.tooltip_text = shut
+		# Shut (No Second Thoughts): dimmed and deaf, its label kept; the line
+		# under the buttons says why.
+		bb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bb.modulate.a = 0.4
 	var dv: Button = _btn(row, "Dive deeper  ·  Depth %d" % (depth + 1), "primary", func() -> void: _send(["vote", "dive"]), 260.0)
-	dv.disabled = votes.has(my_key)
 	var keys: Array = _keys()
 	var hb: Button = _btn(row, "Hold the dive" if keys.size() == 1 else "Vote to hold", "secondary", func() -> void: _send(["vote", "hold"]), 180.0)
-	hb.disabled = votes.has(my_key)
 	hb.tooltip_text = "Leave the dive where it is and come back to the maelstrom to resume it, depth, pot and powers all kept."
+	# Voted: every label stays (disabled, they drew as empty boxes), the
+	# others dimmed, yours saying so ("Your vote: Dive"); none takes a press.
+	if mine != "":
+		for pair: Array in [[bb, "bank", bank_t], [dv, "dive", "Dive"], [hb, "hold", "Hold"]]:
+			var b0: Button = pair[0]
+			b0.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b0.disabled = false
+			if pair[1] == mine:
+				b0.text = "Your vote: %s" % (pair[2] if pair[1] != "bank" else "Bank")
+			else:
+				b0.modulate.a = 0.4
 	_btn(row, "Codex", "secondary", func() -> void: _codex(), 120.0)
-	var line: String = "Alone: bank, dive, or hold the dive for later." if keys.size() == 1 else "The crew votes. A majority carries; a tie banks. Holding takes everyone (a vote to hold counts as banking)."
+	var line: String = "Alone: bank, dive, or hold the dive for later." if keys.size() == 1 else "The crew votes. A majority carries; a tie banks. Holding takes everyone (a vote to hold counts as banking). A captain the crew go on without casts no vote."
 	if votes.has(my_key):
 		line = "You voted to %s.  %s" % [{ "bank": "bank", "dive": "dive", "hold": "hold the dive" }.get(str(votes[my_key]), "bank"), _waiting_on(votes)]
 	if shut != "":

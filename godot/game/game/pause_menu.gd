@@ -13,9 +13,20 @@ var session: Session
 var on_captains: Callable
 var on_quit: Callable
 var captains_label: String = "Captains"
+## In a Charter, what leaving (the captains button) and quitting do to the
+## crew ("" for no question): the first press asks, with these words under
+## the buttons, and the second goes (the walkthrough: Leave went at once and
+## the founder's sent everyone home without a word).
+var leave_ask: String = ""
+var quit_ask: String = ""
 ## The night paper (true) or the day's (false); null: read off the sea.
 var night_side: Variant = null
 var _parts: Dictionary = {}
+var _ask_line: Label
+## Which button is asking now ("leave", "quit" or "").
+var _asking: String = ""
+var _leave_btn: Button
+var _quit_btn: Button
 
 
 func _ready() -> void:
@@ -25,7 +36,8 @@ func _ready() -> void:
 	# THE TWO PAPERS (M12): the day's paper on the fishing grounds, the night
 	# paper north of the reef and in a fight.
 	var nt: bool = _night_side()
-	_parts = Paper.open(self, Vector2(340, 400), nt, _resume, 30)
+	# Taller when a leave may ask (its words go under the buttons).
+	_parts = Paper.open(self, Vector2(340, 470 if leave_ask != "" or quit_ask != "" else 400), nt, _resume, 30)
 	var col: VBoxContainer = _parts["body"]
 	Paper.night = nt
 	var t: Label = Paper.text(col, "Paused", "display_sm", Paper.ink())
@@ -40,6 +52,13 @@ func _ready() -> void:
 		col.add_child(bt)
 		if first == null:
 			first = bt
+		if b[0] == captains_label:
+			_leave_btn = bt
+		elif b[0] == "Quit to Desktop":
+			_quit_btn = bt
+	_ask_line = Paper.text(col, "", "small", Paper.ink_soft(), true)
+	_ask_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ask_line.visible = false
 	var v: Label = Paper.text(col, GameSettings.build(), "small", Paper.ink_faint())
 	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Paper.night = false
@@ -88,8 +107,27 @@ func _settings() -> void:
 	add_child(s)
 
 
+## The first press of a button that sends the crew home: it asks, in words
+## under the buttons. True when this press is only the asking.
+func _ask(which: String, words: String, btn: Button) -> bool:
+	if words == "" or _asking == which:
+		return false
+	Sound.plip()
+	if _leave_btn != null:
+		_leave_btn.text = captains_label
+	if _quit_btn != null:
+		_quit_btn.text = "Quit to Desktop"
+	_asking = which
+	btn.text = "%s?" % (captains_label if which == "leave" else "Quit to Desktop")
+	_ask_line.text = words
+	_ask_line.visible = true
+	return true
+
+
 func _captains() -> void:
 	if Motion.closing(self):
+		return
+	if _ask("leave", leave_ask, _leave_btn):
 		return
 	Sound.plip()
 	Paper.close(self, _parts)
@@ -98,6 +136,8 @@ func _captains() -> void:
 
 
 func _quit() -> void:
+	if _ask("quit", quit_ask, _quit_btn):
+		return
 	if session != null:
 		session.persist()
 	if on_quit.is_valid():
