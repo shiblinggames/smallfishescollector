@@ -1557,6 +1557,8 @@ func _init() -> void:
 						await process_frame
 			# CREW_FULL=1: the roster filled to its capacity, then Sign on
 			# pressed on the board's first card (the chooser of who to let go).
+			# CREW_FULL=2: filled, the first card chosen and focused instead (the
+			# side panel's and the card bar's "Roster full" words).
 			if what == "crewhall" and OS.get_environment("CREW_FULL") != "":
 				var stf: Dictionary = RulesApi.run(sea.session.store, sea.session.uid, "getCrewState", [])
 				var capn: int = int(stf["capacity"])
@@ -1567,13 +1569,24 @@ func _init() -> void:
 					(sea.session.save["crew"] as Array).append({ "id": sea.session.store.next_id(), "card_id": cd2["id"], "rarity": float(Crew.group_for(str(cd2["slug"]))), "power": 3.0 + k2 % 5, "dodge": 4.0 + k2 % 3, "fortune": 2.0 + k2 % 4, "effects": [], "pending_trait": null, "voyage_slot": null, "raid_slot": null, "xp": 400.0 * k2, "nickname": null, "recruited_at": "2026-10-01T00:00:00.000Z", "died_at": null })
 					k2 += 1
 				await ch._load()
-				ch._sign(Js.list(ch._state.get("board"))[0])
+				if OS.get_environment("CREW_FULL") == "2":
+					ch._pick = Js.list(ch._state.get("board"))[0]
+					ch._pick_kind = "board"
+					ch._draw_room()
+					ch._stage.cards[0].grab_focus()
+				else:
+					ch._sign(Js.list(ch._state.get("board"))[0])
 				for f: int in 30:
 					await process_frame
-			# CREW_HOVER=n: the pad's focus on board card n (its comparison).
+			# CREW_HOVER=n: the pad's focus on board card n (its Sign on bar up);
+			# with CREW_PICK=1 that card is also chosen (the side panel's
+			# comparison against the hand put aboard, and its Sign on).
 			if what == "crewhall" and OS.get_environment("CREW_HOVER") != "" and OS.get_environment("CREW_PULL") == "":
 				# A hand of the same class aboard, to stack the card against.
 				var hn: int = int(OS.get_environment("CREW_HOVER"))
+				# Room on the roster (the shot's captain sails a full one).
+				var crew9: Array = Js.list(sea.session.save.get("crew"))
+				sea.session.save["crew"] = crew9.slice(0, mini(8, crew9.size()))
 				var hc: Dictionary = Js.list(ch._state.get("board"))[hn]
 				var want: Variant = Js.obj(Crew.t().get("classBySlug")).get(str(hc["slug"]))
 				for cd3: Dictionary in Crew.cards():
@@ -1581,6 +1594,10 @@ func _init() -> void:
 						(sea.session.save["crew"] as Array).append({ "id": sea.session.store.next_id(), "card_id": cd3["id"], "rarity": float(Crew.group_for(str(cd3["slug"]))), "power": 4.0, "dodge": 5.0, "fortune": 3.0, "effects": [], "pending_trait": null, "voyage_slot": null, "raid_slot": null, "xp": 2600.0, "nickname": null, "recruited_at": "2026-10-01T00:00:00.000Z", "died_at": null })
 						break
 				await ch._load()
+				if OS.get_environment("CREW_PICK") != "":
+					ch._pick = Js.list(ch._state.get("board"))[hn]
+					ch._pick_kind = "board"
+					ch._draw_room()
 				ch._stage.cards[hn].grab_focus()
 				for f: int in 20:
 					await process_frame
@@ -1609,6 +1626,8 @@ func _init() -> void:
 					# Room on the roster for one more.
 					var crew0: Array = Js.list(sea.session.save.get("crew"))
 					sea.session.save["crew"] = crew0.slice(0, mini(8, crew0.size()))
+					# The hall reads the trimmed roster (else it asks who to let go).
+					await ch._load()
 					var bd: Array = Js.list(ch._state.get("board"))
 					ch._sign(bd[1])
 				for f: int in cf:

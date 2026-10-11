@@ -12,8 +12,10 @@ extends Control
 ##            tears the board down, slams the notice up and turns three sealed
 ##            cards, each seal glowing its rarity first (a legendary last, in a
 ##            column of gold); a press skips to the end. A card opens the
-##            recruit; Sign on (under the card, or in the hand) takes them
-##            aboard with a moment and an ABOARD stamp.
+##            recruit in the side panel (how they stack against your best of
+##            their class, in bars, and a big Sign on); hovering a card raises
+##            a Sign on bar over its foot. Signed, the card takes its ABOARD
+##            stamp and flies to the Roster tab, whose count ticks up.
 ##   ROSTER   your crew, highest level first; the sheet names them (once) or
 ##            dismisses them.
 ##   THE HALL the building: its tier and painting, roster space, and the next
@@ -27,9 +29,8 @@ extends Control
 ## THE RECRUIT ROOM, DEEPER (Kong, 2026-10-10): the tickets say how near the
 ## bad-luck guarantee is; with three or more notices held, Post all posts
 ## them one board at a time (Next board between, signing as you go); a face
-## shows NEW, its line, its trait stamp and, on hover or focus, how it stacks
-## against your best hand of its class; signing onto a full roster asks, right
-## there, who to let go (weakest first).
+## shows NEW, its line and its trait stamp; signing onto a full roster asks,
+## right there, who to let go (weakest first).
 ## Every change is Crew.*, through the rules (core/crew.gd).
 
 signal closed
@@ -78,6 +79,14 @@ var _queue_total: int = 0
 var _next_btn: Pane.PaneButton
 ## ROSTER FULL: the chooser of who to let go, while it is open.
 var _release: Control
+## SIGN ON AS THE MOMENT (Kong, 2026-10-11): a signed card flying to the
+## Roster tab (nothing else acts meanwhile), the slot it left (its stamped
+## card fades back in), the card a pad selected (focus kept through the
+## redraw), and the Roster tab (where the card lands).
+var _flying: bool = false
+var _landed_id: Variant = null
+var _refocus_id: Variant = null
+var _roster_tab: Pane.PaneButton
 ## The board each captain last saw, by uid: a free board that came in since
 ## plays the light reveal (for the life of the game; a fresh start just shows it).
 static var _seen_boards: Dictionary = {}
@@ -223,6 +232,8 @@ func _build_room() -> void:
 			_pick_kind = ""
 			_draw_room())
 		_tabs.add_child(b)
+		if o[0] == "roster":
+			_roster_tab = b
 	# A redraw keeps the room's list where it was.
 	for sc: Node in _body.find_children("", "ScrollContainer", true, false):
 		_keep[_body.get_meta("room", "")] = (sc as ScrollContainer).scroll_vertical
@@ -309,26 +320,39 @@ func _recruit_room() -> void:
 		var off: float = Js.num(Crew.port().get("boardOffsetMs"))
 		_next_board_at = off + (floor((Clock.now_ms() - off) / every) + 1.0) * every
 	_tick_countdown()
+	var full: bool = _roster_full()
 	for c: Dictionary in board:
 		var cd: Pull.Card = Pull.Card.new(c, _thumb(str(c.get("filename", ""))))
-		cd.dress(c.get("isNew") == true, Crew.quip(str(c.get("slug", ""))), _compare(c))
-		if _pick.get("id") == c.get("id") and _pick_kind == "board":
-			ring_over(cd.holder)
-		art_hover(cd, cd.holder)
+		var tl: String = Crew.trait_label(Js.list(c.get("effects")))
+		var tip: String = ("%s: %s to their stats." % [tl, Crew.trait_effect(Js.list(c.get("effects")))]) if tl != "" else ""
+		cd.dress(c.get("isNew") == true, Crew.quip(str(c.get("slug", ""))), tip, "" if c.get("recruited") == true else ("Roster full" if full else "Sign on"))
+		# The chosen card wears a soft cream hairline (Card.set_chosen), not
+		# the gold inked ring; hover only lifts it (no art swell).
+		cd.set_chosen(_pick.get("id") == c.get("id") and _pick_kind == "board")
 		cd.pressed.connect(func() -> void:
+			# The pad's accept selects and keeps its focus through the redraw,
+			# so a second accept signs (Card's gui_input).
+			var pad: bool = cd.get_meta("pad_press", false) == true
+			cd.set_meta("pad_press", false)
 			_pick = c
 			_pick_kind = "board"
+			_refocus_id = c.get("id") if pad else null
 			Rumble.tap(8)
 			_draw_room())
-		var sign: Pane.PaneButton = null
-		if c.get("recruited") != true:
-			sign = Paper.button("Sign on", false, true)
-			sign.pressed.connect(func() -> void: _sign(c))
-		_stage.add_card(cd, sign)
+		cd.sign_wanted.connect(func() -> void: _sign(c))
+		_stage.add_card(cd)
 		if _stamp_id != null and c.get("id") == _stamp_id:
 			cd.stamp = -1.0
 			cd.stamp_on.call_deferred()
+		# The slot a signed card flew from: its stamped, faded self comes back.
+		if _landed_id != null and c.get("id") == _landed_id:
+			cd.modulate.a = 0.0
+			Motion.ease_fade(cd.create_tween(), cd, "modulate:a", 1.0, 0.3)
+		if _refocus_id != null and c.get("id") == _refocus_id:
+			cd.grab_focus.call_deferred()
 	_stamp_id = null
+	_landed_id = null
+	_refocus_id = null
 	# THE REVEAL: a notice just posted plays the pull; a free board the
 	# captain has not seen yet (it came in at sunrise, the room open or shut)
 	# plays the light version; anything else is simply there.
@@ -364,13 +388,13 @@ func _roster_full() -> bool:
 
 ## HOW A RECRUIT STACKS UP: against your best hand of the same class (the
 ## most Power, Dodge and Fortune together, as they would sail today), stat by
-## stat as this recruit would sign on. "+2 Power, -1 Dodge" over "vs your best
-## Snare (Ell, Lv 12)"; "Your first Snare" when there is none aboard.
-func _compare(c: Dictionary) -> String:
+## stat as this recruit would sign on. { cls, best ({} with none aboard),
+## best_st, mine }; {} for a recruit with no class.
+func _compare(c: Dictionary) -> Dictionary:
 	var slug: String = str(c.get("slug", ""))
 	var cls: Dictionary = Crew.class_of(slug)
 	if cls.is_empty():
-		return ""
+		return {}
 	var by: Dictionary = Js.obj(Crew.t().get("classBySlug"))
 	var want: Variant = by.get(slug)
 	var best: Dictionary = {}
@@ -385,18 +409,115 @@ func _compare(c: Dictionary) -> String:
 			best = m
 			best_st = st
 			best_sum = sum
-	if best.is_empty():
-		return "Your first %s" % cls["name"]
 	var mine: Dictionary = Crew.leveled_stats({ "power": c.get("power"), "dodge": c.get("dodge"), "fortune": c.get("fortune"), "xp": c.get("startXp", 0.0), "effects": Js.list(c.get("effects")) })
-	var bits: Array = []
+	return { "cls": cls, "best": best, "best_st": best_st, "mine": mine }
+
+
+## THE COMPARISON IN THE SIDE PANEL (Kong, 2026-10-11; it left the card): one
+## line naming who the recruit is set against, then a row a stat: the word,
+## the recruit's bar over a faint ghost bar at your best's value (one scale),
+## the recruit's number, and a drawn chevron with the difference (none when
+## level). With no hand of the class aboard, the bars alone.
+func _compare_block(c: Dictionary) -> void:
+	var cmp: Dictionary = _compare(c)
+	var mine: Dictionary = Js.obj(cmp.get("mine")) if not cmp.is_empty() else Crew.leveled_stats({ "power": c.get("power"), "dodge": c.get("dodge"), "fortune": c.get("fortune"), "xp": c.get("startXp", 0.0), "effects": Js.list(c.get("effects")) })
+	var best: Dictionary = Js.obj(cmp.get("best"))
+	var best_st: Dictionary = Js.obj(cmp.get("best_st"))
+	if not cmp.is_empty():
+		var cname: String = str((cmp["cls"] as Dictionary).get("name", ""))
+		var line: String = "Your first %s" % cname if best.is_empty() else "vs %s, your best %s (Lv %d)" % [str(best.get("name", "")), cname, Crew.level(Js.num(best.get("xp")))]
+		var l: Label = Paper.text(_detail, line, "body_strong", Paper.ink_soft())
+		l.clip_text = true
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var top: float = _stat_scale(c, best)
 	for s2: Array in [["power", "Power"], ["dodge", "Dodge"], ["fortune", "Fortune"]]:
-		var d: int = int(float(mine[s2[0]]) - float(best_st[s2[0]]))
-		if d != 0:
-			bits.append("%+d %s" % [d, s2[1]])
-	var who: String = "your best %s: %s, Lv %d" % [cls["name"], best.get("name", ""), Crew.level(Js.num(best.get("xp")))]
-	if bits.is_empty():
-		return "Level with %s" % who
-	return "%s\nvs %s" % [", ".join(PackedStringArray(bits)), who]
+		var v: float = float(mine[s2[0]])
+		var g: float = float(best_st[s2[0]]) if not best.is_empty() else -1.0
+		top = maxf(top, maxf(v, g))
+	var rows: VBoxContainer = VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 4)
+	_detail.add_child(rows)
+	for s2: Array in [["power", "Power"], ["dodge", "Dodge"], ["fortune", "Fortune"]]:
+		var v: float = float(mine[s2[0]])
+		var g: float = float(best_st[s2[0]]) if not best.is_empty() else -1.0
+		rows.add_child(_stat_row(String(s2[1]), v, g, top))
+
+
+## The bars' scale: the most one stat can stand at on a fresh card of the
+## higher rarity of the two (the rules' statBudget top, the other two stats at
+## 1 each, plus the trait cube's +4), so bars read the same on every card of
+## a rarity; a levelled hand past it stretches the scale to fit.
+func _stat_scale(c: Dictionary, best: Dictionary) -> float:
+	var rar: int = clampi(int(Js.num(c.get("rarity"))), 1, 4)
+	if not best.is_empty():
+		rar = maxi(rar, clampi(int(Js.num(best.get("rarity"))), 1, 4))
+	var band: Array = Js.list(Js.obj(Crew.t().get("statBudget")).get(str(rar)))
+	if band.size() < 2:
+		return 10.0
+	return float(band[1]) - 2.0 + 4.0
+
+
+## One stat row: word, bar (ghost behind), number, chevron and difference.
+## Up and down in the help and harm tokens, softened toward the cream ink.
+func _stat_row(word: String, v: float, ghost: float, top: float) -> Control:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.custom_minimum_size = Vector2(0, 24)
+	var wl: Label = Paper.text(row, word, "body_strong", Paper.ink())
+	wl.custom_minimum_size = Vector2(72, 0)
+	wl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var bar: Control = Control.new()
+	bar.custom_minimum_size = Vector2(0, 14)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.draw.connect(func() -> void:
+		var w: float = bar.size.x
+		var h: float = bar.size.y
+		var rad: float = h / 2.0
+		_pill(bar, Rect2(0, 0, w, h), Color(Paper.NIGHT_INK, 0.06), rad)
+		if ghost >= 0.0:
+			_pill(bar, Rect2(0, 0, maxf(h, w * clampf(ghost / top, 0.0, 1.0)), h), Color(Paper.NIGHT_INK, 0.2), rad)
+		_pill(bar, Rect2(0, 2, maxf(h - 4.0, w * clampf(v / top, 0.0, 1.0)), h - 4.0), Color(Paper.NIGHT_INK, 0.85), rad - 2.0)
+		if ghost >= 0.0:
+			# Your best's mark, so it reads even under a longer bar.
+			var x: float = clampf(w * ghost / top, 1.0, w - 1.0)
+			bar.draw_line(Vector2(x, -2), Vector2(x, h + 2), Color(Paper.NIGHT_INK_SOFT, 0.9) if ghost > v else Color(Paper.NIGHT_PAPER_DEEP, 0.75), 1.5))
+	row.add_child(bar)
+	var nl: Label = Paper.text(row, str(int(v)), "heading", Paper.ink())
+	nl.custom_minimum_size = Vector2(30, 0)
+	nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	nl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var d: int = int(v - ghost) if ghost >= 0.0 else 0
+	var diff: HBoxContainer = HBoxContainer.new()
+	diff.custom_minimum_size = Vector2(46, 0)
+	diff.add_theme_constant_override("separation", 3)
+	diff.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(diff)
+	if d != 0:
+		var up: bool = d > 0
+		var col: Color = (Kit.HELP if up else Kit.HARM).lerp(Paper.NIGHT_INK_SOFT, 0.35)
+		var chev: Control = Control.new()
+		chev.custom_minimum_size = Vector2(12, 12)
+		chev.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chev.draw.connect(func() -> void:
+			var cx: float = chev.size.x / 2.0
+			var cy: float = chev.size.y / 2.0
+			var k: float = -1.0 if up else 1.0
+			chev.draw_polyline(PackedVector2Array([Vector2(cx - 5, cy - 2.5 * k), Vector2(cx, cy + 2.5 * k), Vector2(cx + 5, cy - 2.5 * k)]), col, 2.0, true))
+		diff.add_child(chev)
+		Paper.text(diff, str(absi(d)), "body_strong", col)
+	return row
+
+
+## A flat rounded bar (a pill when it is short).
+static func _pill(ci: CanvasItem, r: Rect2, col: Color, rad: float) -> void:
+	var sb: StyleBoxFlat = StyleBoxFlat.new()
+	sb.bg_color = col
+	sb.set_corner_radius_all(int(maxf(0.0, minf(rad, r.size.x / 2.0))))
+	sb.anti_aliasing = true
+	ci.draw_style_box(sb, r)
 
 
 ## POST ALL, while a run is on: which board this is, Next board, Stop.
@@ -459,7 +580,7 @@ func _process(_delta: float) -> void:
 	_tick_countdown()
 	# Sunrise with the room open: the rules fill the fresh free board on the
 	# next read, and the room shows it coming in.
-	if _next_board_at > 0.0 and Clock.now_ms() >= _next_board_at and not _busy and not _pulling:
+	if _next_board_at > 0.0 and Clock.now_ms() >= _next_board_at and not _busy and not _pulling and not _flying:
 		_next_board_at = 0.0
 		_load()
 
@@ -536,7 +657,7 @@ func _notices_row() -> void:
 ## is the board shown. before_reveal is for tests/shot.gd and the trailer only
 ## (to set the board up for a picture before it is shown).
 func _pull(id: String, before_reveal: Callable = Callable()) -> void:
-	if _pulling or _busy:
+	if _pulling or _busy or _flying:
 		return
 	_pulling = true
 	_pick = {}
@@ -559,10 +680,11 @@ func _pull(id: String, before_reveal: Callable = Callable()) -> void:
 	_draw_room()
 
 
-## SIGN ON (from the card or the chosen hand): the rules sign them, the
-## moment plays, and their card takes an ABOARD stamp.
+## SIGN ON (from the card's bar or the side panel's button): the rules sign
+## them, then the moment: their card lifts, takes its ABOARD stamp and flies
+## to the Roster tab (_fly_aboard).
 func _sign(c: Dictionary) -> void:
-	if _pulling or _busy:
+	if _pulling or _busy or _flying:
 		return
 	# A full roster: choose who to let go, right here, then sign.
 	if _roster_full():
@@ -573,10 +695,94 @@ func _sign(c: Dictionary) -> void:
 		_open_release(c)
 		return
 	if r.has("state"):
+		var cd: Pull.Card = _board_card(c.get("id"))
+		if cd != null and _roster_tab != null and is_instance_valid(_roster_tab):
+			_fly_aboard(cd, c)
+			return
 		_sign_on_moment(str(c.get("name", "")), rarity_color(clampi(int(Js.num(c.get("rarity"))), 1, 4)))
 		_stamp_id = c["id"]
 		_pick = {}
 	_draw_room()
+
+
+## The card on the board for a recruit id (null if the board is not shown).
+func _board_card(id: Variant) -> Pull.Card:
+	if _stage == null or not is_instance_valid(_stage):
+		return null
+	for cd: Pull.Card in _stage.cards:
+		if cd.c.get("id") == id:
+			return cd
+	return null
+
+
+## THE CARD GOES ABOARD (Kong, 2026-10-11): it lifts, the ABOARD stamp thumps
+## on, then it flies, shrinking along a short arc, into the Roster tab in the
+## header; the tab ticks its count up with a small pop and the board shows the
+## stamped card faded in its slot. Local juice only (no screen shake).
+func _fly_aboard(cd: Pull.Card, c: Dictionary) -> void:
+	_flying = true
+	_stage.let_go(cd)
+	cd.set_locked(true)
+	cd.set_chosen(false)
+	cd.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cd.focus_mode = Control.FOCUS_NONE
+	# Lifted out of the board onto the hall itself, so it flies over the
+	# header without being clipped or laid by the stage.
+	var g: Vector2 = cd.global_position
+	cd.get_parent().remove_child(cd)
+	add_child(cd)
+	cd.global_position = g
+	var from: Vector2 = cd.position
+	var tab: Rect2 = _roster_tab.get_global_rect()
+	var to: Vector2 = cd.position + (tab.get_center() - (g + Pull.CARD / 2.0))
+	var bend: Vector2 = (from + to) / 2.0 + Vector2(0, -90)
+	var tw: Tween = cd.create_tween()
+	Motion.ease_rise(tw, cd, "position", from + Vector2(0, -14), 0.14)
+	Motion.ease_rise(tw.parallel(), cd, "scale", Vector2.ONE * 1.04, 0.14)
+	# The card is the moment now: the chest chord and the rumble of the old
+	# name bloom (_sign_on_moment) play, but its banner across the middle
+	# would sit over the board and the flight, so it is left out here.
+	tw.tween_callback(func() -> void:
+		cd.stamp_on()
+		Sound.chest(false)
+		Rumble.buzz([0, 30, 40, 70]))
+	tw.tween_interval(0.5)
+	var lifted: Vector2 = from + Vector2(0, -14)
+	tw.tween_method(func(u: float) -> void:
+		var a: Vector2 = lifted.lerp(bend, u)
+		var b: Vector2 = bend.lerp(to, u)
+		cd.position = a.lerp(b, u), 0.0, 1.0, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tw.parallel().tween_property(cd, "scale", Vector2.ONE * 0.1, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(cd, "rotation", -0.18, 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.parallel().tween_property(cd, "modulate:a", 0.0, 0.16).set_delay(0.4)
+	tw.parallel().tween_callback(func() -> void: Sound.whoosh()).set_delay(0.05)
+	tw.tween_callback(func() -> void: _landed(cd, c))
+
+
+## Landed: the room redrawn (the slot shows the stamped card fading back), and
+## the Roster tab pops as its count ticks from the old number to the new.
+func _landed(cd: Pull.Card, c: Dictionary) -> void:
+	cd.queue_free()
+	_flying = false
+	_landed_id = c.get("id")
+	if _pick_kind == "board" and _pick.get("id") == c.get("id"):
+		_pick = {}
+	_draw_room()
+	var tab: Pane.PaneButton = _roster_tab
+	if tab == null or not is_instance_valid(tab):
+		return
+	var n: int = Js.list(_state.get("roster")).size()
+	tab.text = ("Roster  %d" % (n - 1)).to_upper()
+	await get_tree().process_frame
+	if not is_instance_valid(tab):
+		return
+	tab.pivot_offset = tab.size / 2.0
+	Sound.plip()
+	Rumble.tap(10)
+	var tw: Tween = tab.create_tween()
+	Motion.ease_rise(tw, tab, "scale", Vector2.ONE * 1.22, 0.09)
+	tw.tween_callback(func() -> void: tab.text = ("Roster  %d" % n).to_upper())
+	Motion.ease_pop(tw, tab, "scale", Vector2.ONE, 0.26)
 
 
 # ── Roster full: who to let go ─────────────────────────────────────────────────
@@ -1296,22 +1502,33 @@ func _draw_detail() -> void:
 	if _pick_kind == "roster":
 		var lv: int = Crew.level(Js.num(c.get("xp")))
 		Paper.text(_detail, "Level %d  ·  %s XP" % [lv, Js.thousands(Js.num(c.get("xp")))], "note", Paper.ink_soft())
-	var stats: HBoxContainer = HBoxContainer.new()
-	stats.add_theme_constant_override("separation", 18)
-	_detail.add_child(stats)
-	for s: Array in [["Power", "power"], ["Dodge", "dodge"], ["Fortune", "fortune"]]:
-		var sv: VBoxContainer = VBoxContainer.new()
-		sv.add_theme_constant_override("separation", 0)
-		stats.add_child(sv)
-		Paper.text(sv, s[0], "eyebrow", Paper.ink_soft())
-		Paper.text(sv, str(int(Js.num(c.get(s[1])))), "heading", Paper.ink())
+	if _pick_kind == "board":
+		# A RECRUIT: the comparison in bars, then the one big thing to do.
+		Paper.rule(_detail)
+		_compare_block(c)
+		var gap: Control = Control.new()
+		gap.custom_minimum_size = Vector2(0, 4)
+		_detail.add_child(gap)
+		if c.get("recruited") == true:
+			Paper.text(_detail, "Already aboard.", "body_strong", Paper.ink_soft())
+		else:
+			var sign: Pane.PaneButton = Paper.primary("Roster full  ·  choose who leaves" if _roster_full() else "Sign on %s" % str(c.get("name", "")), true)
+			sign.add_theme_stylebox_override("focus", Pull.Card.soft_ring(12))
+			sign.pressed.connect(func() -> void: _sign(c))
+			_detail.add_child(sign)
+	else:
+		var stats: HBoxContainer = HBoxContainer.new()
+		stats.add_theme_constant_override("separation", 18)
+		_detail.add_child(stats)
+		for s: Array in [["Power", "power"], ["Dodge", "dodge"], ["Fortune", "fortune"]]:
+			var sv: VBoxContainer = VBoxContainer.new()
+			sv.add_theme_constant_override("separation", 0)
+			stats.add_child(sv)
+			Paper.text(sv, s[0], "eyebrow", Paper.ink_soft())
+			Paper.text(sv, str(int(Js.num(c.get(s[1])))), "heading", Paper.ink())
 	var tl: String = Crew.trait_label(Js.list(c.get("effects")))
 	if tl != "":
 		Paper.text(_detail, "Trait: %s  (%s to their stats)" % [tl, Crew.trait_effect(Js.list(c.get("effects")))], "small", Paper.ink(), true)
-	if _pick_kind == "board":
-		var cmp: String = _compare(c)
-		if cmp != "":
-			Paper.text(_detail, cmp.replace("\n", " "), "small", Paper.ink_soft(), true)
 	if not cls.is_empty():
 		Paper.text(_detail, str(cls["blurb"]), "note", Paper.ink_soft(), true)
 		var lvl: int = Crew.level(Js.num(c.get("xp"))) if _pick_kind == "roster" else 1
@@ -1322,15 +1539,8 @@ func _draw_detail() -> void:
 				now_m = m
 		if not now_m.is_empty():
 			Paper.text(_detail, "Special: %s" % now_m["desc"], "small", Paper.ink(), true)
-	Paper.rule(_detail)
-	if _pick_kind == "board":
-		if c.get("recruited") == true:
-			Paper.text(_detail, "Already aboard.", "note", Paper.ink_soft())
-		else:
-			var sign: Pane.PaneButton = Paper.primary("Sign on", true)
-			sign.pressed.connect(func() -> void: _sign(c))
-			_detail.add_child(sign)
-	else:
+	if _pick_kind != "board":
+		Paper.rule(_detail)
 		_skin_row(c)
 		if c.get("nickname") == null:
 			var row: HBoxContainer = HBoxContainer.new()

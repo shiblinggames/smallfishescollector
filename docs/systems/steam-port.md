@@ -2642,6 +2642,33 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   CREW_PICK=i; CREW_HOVER=i (a hand of that class put aboard, the card focused);
   CREW_POSTALL=1 with CREW_F, CREW_NEXT=1 and SHOT_F; CREW_FULL=1 (the roster filled, Sign
   on pressed).
+  SIGN ON AS THE MOMENT (Kong, 2026-10-11: the on-card comparison "looks messy and is hard to
+  read", the Sign on button "a bit hidden but also boring"; he approved this design). The
+  COMPARE above LEFT THE CARD: a face up card shows only its art on its rarity glow, name,
+  rarity and class, and the trait stamp; hover or the pad's focus lifts it a touch and puts
+  the trait's one line on the painting's foot ("Mercurial: +1 Power, +1 Dodge, -1 Fortune to
+  their stats."). The comparison is in the SIDE PANEL: "vs Bob, your best Anchor (Lv 11)" (or
+  "Your first Snare"), then Power, Dodge and Fortune each as the word, a cream bar of the
+  recruit's value over a faint ghost bar at your best's (a hairline mark at its end), the
+  number, and a drawn chevron with the difference in the help/harm tokens softened toward the
+  cream (none when level). One scale: the most one stat can be on a fresh card of the higher
+  rarity of the two (statBudget top - 2 + 4 for the trait), stretched if a levelled hand is
+  past it. "Your best" is unchanged (Crew.leveled_stats, the most of the three together). THE
+  PLAIN BUTTON UNDER EACH CARD IS GONE: hovering or focusing a face up card slides a flat
+  cream "Sign on" bar (Paper.button "on": the night primary, dark words) up over its foot;
+  the bar signs, the rest of the card selects. Pad: accept selects (focus kept through the
+  redraw), accept again on the chosen card signs, or move onto the bar. Under the panel's
+  comparison a big primary "Sign on <Name>". SIGNED: the card lifts, the ABOARD stamp thumps
+  on (with the chest chord and rumble; the old centred name banner is not shown here, it sat
+  over the board and the flight), then the card shrinks along a short arc into the Roster
+  tab, whose count ticks up with a small pop (Sound.plip); the slot keeps the stamped card,
+  faded back in. ROSTER FULL: the panel's button reads "Roster full · choose who leaves" and
+  the card's bar "Roster full"; both open the release chooser, then sign. The selection is a
+  soft cream hairline round the card (focus and chosen alike), never the gold ring. Rules,
+  the pull, NEW, lines, pity, Post all, the Book and sounds are unchanged. tests/shot.gd
+  crewhall: CREW_HOVER=i now makes room on the roster, CREW_HOVER=i with CREW_PICK=1 also
+  chooses that card (the panel), CREW_FULL=2 (filled, card 0 chosen and focused, not signed),
+  CREW_SIGN=1 with CREW_F 8 to 26 catches the flight and the tab's pop.
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

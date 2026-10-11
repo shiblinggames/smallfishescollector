@@ -20,18 +20,26 @@ extends RefCounted
 ## DEEPER (Kong, 2026-10-10): a face never had before wears a small NEW stamp
 ## as it turns (the rules' isNew); each crewmate says their one line as they
 ## turn, typed on the card for a moment (port_rules crewQuips); the trait is
-## a small ink stamp with its meaning on hover; hovering or focusing a face
-## shows how it stacks against your best hand of the same class (worked out
-## by the hall, crew_hall.gd); the tickets say how near the bad-luck
-## guarantee is. Sounds made in code (Sound.wax_crack, card_flip, fanfare).
+## a small ink stamp; the tickets say how near the bad-luck guarantee is.
+## Sounds made in code (Sound.wax_crack, card_flip, fanfare).
+##
+## SIGN ON AS THE MOMENT (Kong, 2026-10-11: the on-card comparison "looks
+## messy and is hard to read", the Sign on button "a bit hidden but also
+## boring"): a face up card carries only its art, name, rarity and class and
+## the trait stamp. Hover or focus lifts it a touch, says the trait in one
+## line, and slides a flat cream "Sign on" bar up over its foot (the night
+## paper's primary look); the bar signs (sign_wanted), the rest of the card
+## selects. The comparison lives in the hall's side panel (crew_hall.gd).
 
 ## A card on the board, and the gaps the stage keeps round them.
 const CARD: Vector2 = Vector2(224, 292)
 const GAP: float = 22.0
 ## The notice's own strip at the top of the board (its name, the countdown).
 const STRIP: float = 38.0
-const SIGN_H: float = 32.0
 const PAD: float = 12.0
+## The Sign on bar over a card's foot, and how far a card lifts when hot.
+const BAR_H: float = 38.0
+const LIFT_PX: float = 6.0
 ## Sealing wax, and the card's two faces on the night paper (flat fills).
 const WAX: Color = Color(0.6, 0.14, 0.12)
 const BACK: Color = Color(0.255, 0.21, 0.175)
@@ -226,6 +234,8 @@ class Ticket:
 ## and the ABOARD stamp are all drawn here, local to the card.
 class Card:
 	extends Button
+	## The Sign on bar was pressed (or the pad's accept on a chosen card).
+	signal sign_wanted
 	var c: Dictionary
 	var rar: int = 1
 	var rc: Color
@@ -254,13 +264,33 @@ class Card:
 	## Their one line, said as the card turns on a reveal (speak).
 	var quip: String = ""
 	var speak: bool = false
-	## The line against your best hand of the same class (on hover or focus).
+	## The trait in one line, shown on hover or focus ("" with no trait).
 	var tip_text: String = ""
 	var _quip_box: PanelContainer
 	var _quip_l: Label
 	var _tip_box: PanelContainer
 	var _tip_l: Label
 	var _quip_tw: Tween
+	## THE SIGN ON BAR (null on a card already aboard): flat cream with dark
+	## words, risen over the card's foot while it is hot (bar_k 0 to 1).
+	var bar: Pane.PaneButton
+	var bar_k: float = 0.0
+	var _bar_tw: Tween
+	## Held still by the stage while it deals, turns or tears the board down,
+	## and by the hall while a signed card flies (no hover, no bar).
+	var locked: bool = false
+	## The card on show in the side panel: a soft cream hairline round it
+	## (never gold: Kong, 2026-10-11, coloured borders look cheap).
+	var chosen: bool = false
+	## Where the stage lays it; lift raises it from there by up to LIFT_PX.
+	var home: Vector2 = Vector2.ZERO
+	var lift: float = 0.0:
+		set(v):
+			lift = v
+			if not locked:
+				position = home + Vector2(0, -LIFT_PX * v)
+	var _hot: bool = false
+	var _lift_tw: Tween
 
 	func _init(card: Dictionary, thumb: Texture2D) -> void:
 		c = card
@@ -321,8 +351,8 @@ class Card:
 			tsb.content_margin_top = 1
 			tsb.content_margin_bottom = 1
 			tr.add_theme_stylebox_override("normal", tsb)
-			tr.mouse_filter = Control.MOUSE_FILTER_PASS
-			tr.tooltip_text = "%s: %s to their stats." % [tl, Crew.trait_effect(Js.list(c.get("effects")))]
+			# Its meaning is the card's hover line (dress), not a tooltip.
+			tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_quip_box = _strip(Color(0.1, 0.085, 0.07, 0.9))
 		_quip_l = _quip_box.get_child(0)
 		_tip_box = _strip(Color(0.07, 0.06, 0.05, 0.94))
@@ -346,23 +376,124 @@ class Card:
 		linger = 1.0 if rar >= 3 else 0.0
 		resized.connect(func() -> void: pivot_offset = size / 2.0)
 		pivot_offset = CARD / 2.0
-		mouse_entered.connect(func() -> void: _show_tip(true))
-		mouse_exited.connect(func() -> void: _show_tip(false))
-		focus_entered.connect(func() -> void: _show_tip(true))
-		focus_exited.connect(func() -> void: _show_tip(false))
+		# A pad can reach it; its focus is a soft cream hairline, not gold.
+		focus_mode = Control.FOCUS_ALL
+		add_theme_stylebox_override("focus", soft_ring(Kit.R_SMALL))
+		Kit.tap(self)
+		# Hot is worked out, not toggled: the pointer moving from the card onto
+		# its own bar must keep it hot whatever order the signals come in.
+		mouse_entered.connect(_check_hot.call_deferred)
+		mouse_exited.connect(_check_hot.call_deferred)
+		focus_entered.connect(_check_hot.call_deferred)
+		focus_exited.connect(_check_hot.call_deferred)
+		# The pad: accept on the card already chosen signs (the bar is up on
+		# it); on any other it selects, and the hall gives focus back after
+		# its redraw (pad_press).
+		gui_input.connect(func(ev: InputEvent) -> void:
+			if not ev.is_action_pressed("ui_accept") or ev.is_echo():
+				return
+			if chosen and bar != null and not locked:
+				accept_event()
+				sign_wanted.emit()
+			else:
+				set_meta("pad_press", true))
 		set_process(false)
 
+	## A soft cream hairline ring a few pixels out (focus and chosen).
+	static func soft_ring(radius: int) -> StyleBoxFlat:
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.draw_center = false
+		sb.border_color = Color(Paper.NIGHT_INK, 0.5)
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(radius + 3)
+		sb.set_expand_margin_all(4)
+		sb.anti_aliasing = true
+		return sb
+
 	## What the hall adds: NEW (shown at once on a board at rest), the line
-	## to say, the comparison.
-	func dress(fresh: bool, line: String, tip: String) -> void:
+	## to say, the trait's meaning for the hover, and the bar's words
+	## ("Sign on", "Roster full"; "" for a card already aboard, no bar).
+	func dress(fresh: bool, line: String, tip: String, sign_words: String = "") -> void:
 		is_new = fresh and c.get("recruited") != true
 		new_k = 1.0 if is_new else -1.0
 		quip = line
 		tip_text = tip
 		_tip_l.text = tip
+		if sign_words != "" and c.get("recruited") != true and bar == null:
+			_make_bar(sign_words)
+
+	## THE SIGN ON BAR: the night paper's primary (Paper.button "on": flat
+	## cream, dark words), hidden till the card is hot, then risen over its
+	## foot. The name stays clear above it.
+	func _make_bar(words: String) -> void:
+		bar = Paper.button(words, true, true)
+		bar.custom_minimum_size = Vector2(CARD.x - 12.0, BAR_H)
+		bar.size = Vector2(CARD.x - 12.0, BAR_H)
+		bar.add_theme_stylebox_override("focus", soft_ring(Kit.R_SMALL))
+		bar.visible = false
+		bar.modulate.a = 0.0
+		bar.pressed.connect(func() -> void:
+			if not locked:
+				sign_wanted.emit())
+		bar.mouse_entered.connect(_check_hot.call_deferred)
+		bar.mouse_exited.connect(_check_hot.call_deferred)
+		bar.focus_entered.connect(_check_hot.call_deferred)
+		bar.focus_exited.connect(_check_hot.call_deferred)
+		add_child(bar)
+		_place_bar()
+
+	func _place_bar() -> void:
+		if bar == null:
+			return
+		bar.position = Vector2(6.0, CARD.y - BAR_H - 6.0 + (1.0 - bar_k) * 14.0)
+		bar.modulate.a = bar_k
+		bar.visible = bar_k > 0.01
+
+	## Hot: face up, not held still, and the pointer over it (or its bar) or
+	## the pad's focus on it. Hot lifts it, says the trait, raises the bar.
+	func _check_hot() -> void:
+		if not is_inside_tree():
+			return
+		var over: bool = is_visible_in_tree() and get_global_rect().has_point(get_global_mouse_position())
+		var on: bool = revealed and not sealed and not locked and (over or has_focus() or (bar != null and bar.has_focus()))
+		set_hot(on)
+
+	func set_hot(on: bool) -> void:
+		if on == _hot:
+			return
+		_hot = on
+		if _lift_tw != null:
+			_lift_tw.kill()
+		_lift_tw = create_tween()
+		Motion.ease_rise(_lift_tw, self, "lift", 1.0 if on else 0.0, 0.16)
+		_show_tip(on)
+		if bar != null:
+			if _bar_tw != null:
+				_bar_tw.kill()
+			_bar_tw = create_tween()
+			_bar_tw.tween_method(func(k: float) -> void:
+				bar_k = k
+				_place_bar(), bar_k, 1.0 if on else 0.0, 0.18 if on else 0.12).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT if on else Tween.EASE_IN)
+
+	## Held still (the stage dealing, a flight): hot is dropped at once.
+	func set_locked(on: bool) -> void:
+		locked = on
+		if on:
+			_hot = false
+			lift = 0.0
+			bar_k = 0.0
+			_place_bar()
+			if _tip_box != null:
+				_tip_box.visible = false
+		else:
+			_check_hot.call_deferred()
+
+	func set_chosen(on: bool) -> void:
+		chosen = on
+		queue_redraw()
 
 	## A slim dark strip along the foot of the painting (the line said, or
-	## the comparison), hidden until wanted.
+	## the trait's meaning), hidden until wanted.
 	func _strip(fill: Color) -> PanelContainer:
 		var box: PanelContainer = PanelContainer.new()
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -538,6 +669,8 @@ class Card:
 		# A plain hairline: the rarity is the glow behind the painting, never
 		# the card's edge (Kong, 2026-10-10: coloured borders "look cheap").
 		draw_style_box(_box(FACE, Color(Paper.NIGHT_INK, 0.22), 1), r)
+		if chosen:
+			draw_style_box(soft_ring(Kit.R_SMALL), r)
 
 	## The tell behind the seal: none for a common; a soft shimmer for a rare;
 	## rays for an epic; for a legendary, longer rays in gold and a glow that
@@ -636,16 +769,16 @@ class Card:
 # ── The board ─────────────────────────────────────────────────────────────────
 
 ## THE BOARD: the notice it was posted from (a flat paper sheet pinned up, its
-## name and the countdown to the free board in a strip along its top), the
-## three cards across it, and a Sign on under each once it is turned. It lays
-## its own children (no container) so the cards can slide, fly and flip.
+## name and the countdown to the free board in a strip along its top) and the
+## three cards across it (each signs from its own bar since 2026-10-11, so no
+## button sits under it). It lays its own children (no container) so the
+## cards can slide, fly and flip.
 class Stage:
 	extends Control
 	signal finished
 	var title: String = ""
 	var countdown: Label
 	var cards: Array = []
-	var signs: Array = []
 	var revealing: bool = false
 	## Torn down for a fresh board (a press then has nothing to skip).
 	var torn: bool = false
@@ -657,7 +790,7 @@ class Stage:
 	func _init(t: String) -> void:
 		title = t
 		mouse_filter = Control.MOUSE_FILTER_PASS
-		custom_minimum_size = Vector2(3 * CARD.x + 2 * GAP + 2 * PAD, STRIP + CARD.y + SIGN_H + PAD * 2.0 + 6.0)
+		custom_minimum_size = Vector2(3 * CARD.x + 2 * GAP + 2 * PAD, STRIP + CARD.y + PAD * 2.0 + 6.0)
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_title_l = Kit.text(self, title.to_upper(), "eyebrow", Paper.NIGHT_INK_SOFT)
 		_title_l.position = Vector2(PAD + 4, 12)
@@ -665,13 +798,15 @@ class Stage:
 		countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		resized.connect(_lay)
 
-	func add_card(cd: Card, sign: Control) -> void:
+	func add_card(cd: Card) -> void:
 		cards.append(cd)
-		signs.append(sign)
 		add_child(cd)
-		if sign != null:
-			add_child(sign)
 		_lay()
+
+	## A signed card taken off the board to fly (the hall flies it): the
+	## stage stops laying it.
+	func let_go(cd: Card) -> void:
+		cards.erase(cd)
 
 	func _slot(i: int) -> Vector2:
 		var w: float = 3 * CARD.x + 2 * GAP
@@ -682,12 +817,9 @@ class Stage:
 		countdown.size = Vector2(size.x / 2.0 - PAD - 4, 18)
 		for i: int in cards.size():
 			var cd: Card = cards[i]
+			cd.home = _slot(i)
 			if not revealing:
-				cd.position = _slot(i)
-			var sg: Control = signs[i]
-			if sg != null:
-				sg.position = _slot(i) + Vector2(0, CARD.y + 10)
-				sg.size = Vector2(CARD.x, SIGN_H)
+				cd.lift = cd.lift
 		queue_redraw()
 
 	func _draw() -> void:
@@ -711,7 +843,8 @@ class Stage:
 	## Everything at rest: face up, in place.
 	func rest() -> void:
 		for cd: Card in cards:
-			cd.position = _slot(cards.find(cd))
+			cd.home = _slot(cards.find(cd))
+			cd.position = cd.home
 
 	## THE PULL, or the free board's light version. order: which cards turn
 	## when (a legendary always last).
@@ -726,14 +859,11 @@ class Stage:
 				order.append(i)
 		for i: int in cards.size():
 			var cd: Card = cards[i]
+			cd.set_locked(true)
 			cd.speak = true
 			cd.seal_up()
 			cd.modulate.a = 0.0
 			cd.position = _slot(i) + (Vector2(0, 46) if mode == "pull" else Vector2(36, 0))
-		for sg: Control in signs:
-			if sg != null:
-				sg.modulate.a = 0.0
-				sg.visible = false
 		var pull: bool = mode == "pull"
 		_tw = create_tween()
 		if pull:
@@ -828,16 +958,12 @@ class Stage:
 
 	func _end() -> void:
 		revealing = false
-		for i: int in signs.size():
-			var sg: Control = signs[i]
-			if sg != null:
-				sg.visible = true
-				var t4: Tween = create_tween()
-				Motion.ease_fade(t4, sg, "modulate:a", 1.0, 0.2).set_delay(0.05 * i)
+		for cd: Card in cards:
+			cd.set_locked(false)
 		finished.emit()
 
 	## THE OLD BOARD TORN DOWN: each card flies up and off, a little turned,
-	## one after another; the Sign on buttons fade. The tween, to wait on.
+	## one after another. The tween, to wait on.
 	func tear_down() -> Tween:
 		revealing = true
 		torn = true
@@ -846,14 +972,12 @@ class Stage:
 		var tw: Tween = create_tween().set_parallel()
 		for i: int in cards.size():
 			var cd: Card = cards[i]
+			cd.set_locked(true)
 			cd.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			var dir: float = float(i - 1)
 			Motion.ease_exit(tw, cd, "position", cd.position + Vector2(dir * 70.0, -120.0), 0.3).set_delay(i * 0.05)
 			Motion.ease_exit(tw, cd, "rotation", dir * 0.22 + 0.06, 0.3).set_delay(i * 0.05)
 			Motion.ease_exit(tw, cd, "modulate:a", 0.0, 0.3).set_delay(i * 0.05)
-		for sg: Control in signs:
-			if sg != null:
-				Motion.ease_exit(tw, sg, "modulate:a", 0.0, 0.15)
 		Motion.ease_exit(tw, _title_l, "modulate:a", 0.0, 0.15)
 		Sound.whoosh()
 		return tw
