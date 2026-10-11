@@ -2547,6 +2547,39 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   "set", a lot, a claim; each board's play_for_shot) and CHART_SLOW (the clock slowed after
   SHOT_F frames, to shoot mid-move). Unchanged: the rules, scoring, weekly boards, limits and
   their messages, the save, the keys (the Hold's digits, arrows, N/P, Backspace).
+- NO WOOD LEFT (Kong, 2026-10-10: "that faux wood styling", then "yeah wooden back buttons"; the
+  Crew Hall's Sign On was one). The three shared wood pieces are flat now: the primary button
+  (Kit.button "primary", Paper.primary) is solid ink with paper words on the day paper and solid
+  cream with dark words on the night's (Kit.primary_specs, applied as it lands, by its root); a
+  paper button's "on" state is the same; the back pill (Kit.back_pill) is a hairline pill with
+  the chevron, ink by day and cream by night. No gradient, grain or shadow on any of them.
+- THE RECRUIT ROOM AS A PULL (Kong, 2026-10-10: "the 'post a notice' section should feel more
+  like you're rerolling for a crew... more like a game gacha style"; rarity colour glows
+  approved for this room). game/crew_pull.gd (preloaded by game/crew_hall.gd; Ticket, Card,
+  Stage). THE BANNER: the board large across the top on the notice it came from (a flat sheet,
+  "Tavern Notice" or the notice posted, from the board's source) with "Free board at sunrise ·
+  in 3h 12m" on it (the sea clock: boardEveryMs is 24 sea hours); three 224x292 cards, a Sign
+  on under each. Under it each notice is a ticket-style PULL button ("Post a Harbor Bill"): a
+  drawn stack of the notices held with "x2" on the stub, and its odds in one line worked from
+  its weights (the chance of at least one face of that rarity on a board of dailyRecruits
+  faces: "Epic about 1 in 7 · Legendary about 1 in 100"; never typed by hand). Held none, it is
+  greyed and says where it is found (from crewPort.noticeDrops: caskets, crates). The long
+  explanation sits behind a "?" that opens and shuts in place. THE PULL: the board's cards are
+  torn down (fly up and off, turned) while postNotice runs; the notice slams on (a sheet landing
+  from a touch large, a stamp's thump); three SEALED cards (face down, a wax seal) slide in; each
+  seal glows its rarity before it flips (none for common, a soft shimmer for rare, rays for epic;
+  a legendary always turns LAST, after a held pause, its seal straining in gold, then breaks
+  open with a gold column of light and sparks, drawn on the card, no screen shake). Cards flip
+  left to right (scale-x), face up with the art, name, rarity word and a thin rim in the
+  rarity's colour (CrewHall.rarity_color: crew rarity 2 is "rare", not Kit's number 2); epics
+  and legendaries keep a soft glow of their colour behind them. A press or a key during the
+  reveal turns the rest at once. A signed card takes an ABOARD ink stamp that thumps on (the
+  sign-on moment is unchanged). A free board not yet seen (sunrise passed, the room open or
+  next opened in the session) plays the light version: slide in and flip, no seal tell. The
+  reveal is presentation only: the board shown is the rules' board, slot for slot; no rule,
+  odds, notice, save or rule call changed. tests/shot.gd crewhall: CREW_NOTICES ("id:n,..."),
+  CREW_PULL=<notice id> with CREW_F frames, CREW_LEGEND=1 (the pulled board's first face made a
+  Legendary on the shot's save), CREW_SIGN=1 (skip to the end and sign the second card).
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

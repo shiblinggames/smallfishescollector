@@ -1523,18 +1523,55 @@ func _init() -> void:
 					RulesApi.run(sea.session.store, sea.session.uid, "recruitCrew", [c["id"]])
 				p["last_free_recruit_date"] = "old%d" % d
 			p["crew_notices"] = { "harbor_bill": 2.0 }
+			# CREW_NOTICES: the notices held, e.g. "harbor_bill:2,captains_proclamation:0".
+			if OS.get_environment("CREW_NOTICES") != "":
+				var held: Dictionary = {}
+				for kv: String in OS.get_environment("CREW_NOTICES").split(","):
+					held[kv.get_slice(":", 0)] = float(kv.get_slice(":", 1))
+				p["crew_notices"] = held
 			var ch: CrewHall = CrewHall.new()
 			ch.session = sea.session
 			ch.room = { "crewhall": "recruit", "crewroster": "roster", "crewhalltier": "hall" }[what]
 			sea._room_layer.add_child(ch)
 			for f: int in 20:
 				await process_frame
+			# CREW_PULL=<notice id>: post it as a press would and shoot CREW_F
+			# frames in (mid-reveal); CREW_LEGEND=1 makes the first face of the
+			# pulled board a Legendary (the shot's own setup, set on the save;
+			# the rules are untouched); CREW_SIGN=1 skips to the end and signs the
+			# second card (its ABOARD stamp), shooting CREW_F frames after.
+			if what == "crewhall" and OS.get_environment("CREW_PULL") != "":
+				var hook: Callable = func() -> void:
+					if OS.get_environment("CREW_LEGEND") == "":
+						return
+					var recs: Array = Js.list(sea.session.save.get("recruits"))
+					for cc: Dictionary in Crew.cards():
+						if str(cc.get("slug", "")).to_lower() == "catfish" and not recs.is_empty():
+							recs[0]["card_id"] = cc["id"]
+							recs[0]["rarity"] = 4.0
+				ch._pull(OS.get_environment("CREW_PULL"), hook)
+				var cf: int = int(OS.get_environment("CREW_F")) if OS.get_environment("CREW_F") != "" else 60
+				if OS.get_environment("CREW_SIGN") != "":
+					for f: int in 40:
+						await process_frame
+					ch._stage.skip()
+					for f: int in 30:
+						await process_frame
+					# Room on the roster for one more.
+					var crew0: Array = Js.list(sea.session.save.get("crew"))
+					sea.session.save["crew"] = crew0.slice(0, mini(8, crew0.size()))
+					var bd: Array = Js.list(ch._state.get("board"))
+					ch._sign(bd[1])
+				for f: int in cf:
+					await process_frame
 			var list: Array = Js.list(ch._state.get("board" if what == "crewhall" else "roster"))
+			if OS.get_environment("CREW_PULL") != "":
+				list = []
 			if not list.is_empty() and what != "crewhalltier":
 				ch._pick = list[0]
 				ch._pick_kind = "board" if what == "crewhall" else "roster"
 				ch._draw_room()
-			for f: int in 30:
+			for f: int in (30 if OS.get_environment("CREW_PULL") == "" else 0):
 				await process_frame
 		"levels":
 			if OS.get_environment("GUIDE") == "renown":

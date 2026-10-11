@@ -566,9 +566,8 @@ func _recruit() -> void:
 		ch._draw_room()
 	for f: int in 55:
 		await tree.process_frame
-	var sign: BaseButton = _button(ch, "Sign on")
-	if sign != null:
-		sign.pressed.emit()
+	if not ch._pick.is_empty():
+		ch._sign(ch._pick)
 	await _hold()
 
 
@@ -782,25 +781,19 @@ func _recruits() -> void:
 	for k: int in 3:
 		await tree.create_timer(0.9 if k == 0 else 1.15).timeout
 		if k == 2:
-			# The last board: a Legendary among them (the game's own moment).
-			var r: Dictionary = await ch._act("postNotice", ["harbor_bill"])
-			var recs: Array = Js.list(sea.session.save.get("recruits"))
-			var cat: Dictionary = {}
-			for c: Dictionary in Crew.cards():
-				if str(c.get("slug", "")).to_lower() == "catfish":
-					cat = c
-			if not recs.is_empty() and not cat.is_empty():
-				recs[1]["card_id"] = cat["id"]
-				recs[1]["rarity"] = 4.0
-			await ch._load()
-			ch._pick = {}
-			ch._draw_room()
-			Sound.chest(true)
-			ch._sign_on_moment("A Legendary answers!", Color("#f0c040"))
+			# The last board: a Legendary among them (the pull's own moment:
+			# it turns last, in its column of gold).
+			ch._pull("harbor_bill", func() -> void:
+				var recs: Array = Js.list(sea.session.save.get("recruits"))
+				for c: Dictionary in Crew.cards():
+					if str(c.get("slug", "")).to_lower() == "catfish" and not recs.is_empty():
+						recs[1]["card_id"] = c["id"]
+						recs[1]["rarity"] = 4.0)
+			await tree.create_timer(4.6).timeout
 		else:
-			var post: BaseButton = _button(ch, "Post it")
-			if post != null:
-				post.pressed.emit()
+			ch._pull("harbor_bill")
+			# The whole reveal plays before the next notice goes up.
+			await tree.create_timer(3.0).timeout
 	await tree.create_timer(1.6).timeout
 	for c2: Dictionary in Js.list(ch._state.get("board")):
 		if float(c2.get("rarity", 1.0)) >= 4.0:
@@ -808,9 +801,8 @@ func _recruits() -> void:
 			ch._pick_kind = "board"
 	ch._draw_room()
 	await tree.create_timer(1.0).timeout
-	var sign: BaseButton = _button(ch, "Sign on")
-	if sign != null:
-		sign.pressed.emit()
+	if not ch._pick.is_empty():
+		ch._sign(ch._pick)
 	await _hold()
 
 

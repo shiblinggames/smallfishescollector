@@ -5,8 +5,15 @@ extends Control
 ## Crew Hall in the anchorage. One sheet: the rooms down the left (Recruit,
 ## Roster, The Hall), a grid of portrait cards, and the chosen hand on the
 ## right, painting first (Kong, 2026-09-24: "crew cards are art first").
-##   RECRUIT  the free board (it reloads every few sea days); a card opens the
-##            recruit, and Sign on takes them aboard, with a moment for it.
+##   RECRUIT  A PULL SCREEN (Kong, 2026-10-10; game/crew_pull.gd): the board
+##            large across the top, on the notice it came from, with the
+##            countdown to the free board at sunrise; the notices under it as
+##            pull tickets (the stack held, the odds in one line). Posting one
+##            tears the board down, slams the notice up and turns three sealed
+##            cards, each seal glowing its rarity first (a legendary last, in a
+##            column of gold); a press skips to the end. A card opens the
+##            recruit; Sign on (under the card, or in the hand) takes them
+##            aboard with a moment and an ABOARD stamp.
 ##   ROSTER   your crew, highest level first; the sheet names them (once) or
 ##            dismisses them.
 ##   THE HALL the building: its tier and painting, roster space, and the next
@@ -44,6 +51,20 @@ var _parts: Dictionary = {}
 ## Where each room's list was scrolled to (a redraw keeps it).
 var _keep: Dictionary = {}
 var _busy: bool = false
+## THE RECRUIT ROOM AS A PULL (game/crew_pull.gd): the board on show, the
+## countdown on it, a reveal waiting ("pull" after a notice is posted), a
+## reveal running, the card to stamp ABOARD, the "?" open.
+const Pull = preload("res://game/crew_pull.gd")
+var _stage: Pull.Stage
+var _count_label: Label
+var _next_board_at: float = 0.0
+var _reveal_mode: String = ""
+var _pulling: bool = false
+var _stamp_id: Variant = null
+var _help_open: bool = false
+## The board each captain last saw, by uid: a free board that came in since
+## plays the light reveal (for the life of the game; a fresh start just shows it).
+static var _seen_boards: Dictionary = {}
 
 
 func _ready() -> void:
@@ -248,55 +269,173 @@ static func ring_over(holder: Control) -> void:
 	holder.add_child(r)
 
 
+## THE RECRUIT ROOM AS A PULL (Kong, 2026-10-10): the board large across the
+## top (Pull.Stage: the notice it came from, the countdown to the free board,
+## three cards, a Sign on under each), the notices as pull tickets under it.
 func _recruit_room() -> void:
+	var board: Array = Js.list(_state.get("board"))
+	var src: String = str((board[0] as Dictionary).get("source", "free")) if not board.is_empty() else "free"
+	var defs: Dictionary = Crew.notice_defs()
+	var title: String = str(Js.obj(defs.get(src)).get("name", "Tavern Notice")) if src != "free" else "Tavern Notice"
+	_stage = Pull.Stage.new(title)
+	_body.add_child(_stage)
+	_count_label = _stage.countdown
 	var every: float = Js.num(Crew.port().get("boardEveryMs"))
-	Paper.text(_body, "Hands looking for a ship. Sign on whoever you want aboard; %s." % ("new hopefuls come in at sunrise each sea day" if every > 0.0 else "the board fills again each day"), "note", Paper.ink_soft(), true)
-	var grid: GridContainer = GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 12)
-	_body.add_child(grid)
-	for c: Dictionary in Js.list(_state.get("board")):
-		grid.add_child(_card(c, "board"))
+	_next_board_at = 0.0
+	if every > 0.0:
+		var off: float = Js.num(Crew.port().get("boardOffsetMs"))
+		_next_board_at = off + (floor((Clock.now_ms() - off) / every) + 1.0) * every
+	_tick_countdown()
+	for c: Dictionary in board:
+		var cd: Pull.Card = Pull.Card.new(c, _thumb(str(c.get("filename", ""))))
+		if _pick.get("id") == c.get("id") and _pick_kind == "board":
+			ring_over(cd.holder)
+		art_hover(cd, cd.holder)
+		cd.pressed.connect(func() -> void:
+			_pick = c
+			_pick_kind = "board"
+			Rumble.tap(8)
+			_draw_room())
+		var sign: Pane.PaneButton = null
+		if c.get("recruited") != true:
+			sign = Paper.button("Sign on", false, true)
+			sign.pressed.connect(func() -> void: _sign(c))
+		_stage.add_card(cd, sign)
+		if _stamp_id != null and c.get("id") == _stamp_id:
+			cd.stamp = -1.0
+			cd.stamp_on.call_deferred()
+	_stamp_id = null
+	# THE REVEAL: a notice just posted plays the pull; a free board the
+	# captain has not seen yet (it came in at sunrise, the room open or shut)
+	# plays the light version; anything else is simply there.
+	var ids: String = ",".join(PackedStringArray(board.map(func(c: Dictionary) -> String: return str(c.get("id")))))
+	var uid: String = str(session.uid)
+	var mode: String = _reveal_mode
+	if mode == "" and _seen_boards.has(uid) and _seen_boards[uid] != ids and not board.is_empty():
+		mode = "light"
+	_seen_boards[uid] = ids
+	_reveal_mode = ""
+	if mode != "":
+		_pulling = true
+		_stage.finished.connect(func() -> void: _pulling = false)
+		_stage.run.call_deferred(mode)
 	_notices_row()
 
 
-## POST A NOTICE (port rules, core/crew.gd): the notices held, each with its
-## odds in plain words and a button that posts a fresh board.
+## The countdown to the free board, on the sea's clock.
+func _tick_countdown() -> void:
+	if _count_label == null or not is_instance_valid(_count_label):
+		return
+	if _next_board_at <= 0.0:
+		_count_label.text = "A free board each day"
+		return
+	_count_label.text = "Free board at sunrise  ·  %s" % Pull.sea_left(_next_board_at - Clock.now_ms(), Js.num(Crew.port().get("boardEveryMs")))
+
+
+func _process(_delta: float) -> void:
+	if _count_label == null or not is_instance_valid(_count_label) or room != "recruit":
+		return
+	_tick_countdown()
+	# Sunrise with the room open: the rules fill the fresh free board on the
+	# next read, and the room shows it coming in.
+	if _next_board_at > 0.0 and Clock.now_ms() >= _next_board_at and not _busy and not _pulling:
+		_next_board_at = 0.0
+		_load()
+
+
+## A press or a key during the reveal turns every card left at once.
+func _input(event: InputEvent) -> void:
+	if _stage == null or not is_instance_valid(_stage) or not _stage.revealing or not _pulling:
+		return
+	var press: bool = false
+	if event is InputEventMouseButton:
+		press = (event as InputEventMouseButton).pressed
+	elif event is InputEventKey:
+		press = (event as InputEventKey).pressed and not (event as InputEventKey).echo
+	elif event is InputEventJoypadButton:
+		press = (event as InputEventJoypadButton).pressed
+	if press:
+		get_viewport().set_input_as_handled()
+		_stage.skip()
+
+
+## POST A NOTICE (port rules, core/crew.gd): each notice a ticket to pull,
+## with the stack held and its odds in one line worked from its weights; the
+## long explanation behind the "?" (open and shut in place).
 func _notices_row() -> void:
 	var defs: Dictionary = Crew.notice_defs()
 	if defs.is_empty():
 		return
-	Paper.rule(_body)
-	Paper.text(_body, "Post a notice", "eyebrow", Paper.ink_soft())
-	Paper.text(_body, "The board each sunrise is the Tavern Notice: mostly commons and rares, an Epic now and then, never a Legendary. A posted notice replaces the board standing with a fresh one at its own odds. Notices are found in treasure-hunt caskets and fishing crates.", "note", Paper.ink_soft(), true)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	_body.add_child(head)
+	var eb: Label = Paper.text(head, "Post a notice for a fresh board", "eyebrow", Paper.ink_soft())
+	eb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var q: Pane.PaneButton = Paper.button("?", _help_open, true)
+	q.custom_minimum_size = Vector2(28, 26)
+	q.tooltip_text = "How notices work"
+	head.add_child(q)
+	var free_w: Array = Js.list(Crew.port().get("freeWeights", Crew.t()["freeWeights"]))
+	var faces: int = int(Crew.t()["dailyRecruits"])
+	var help: Label = Paper.text(_body, "The free board each sunrise is the Tavern Notice (%s). Posting a notice spends one and replaces the board standing with three fresh recruits at that notice's odds; a Legendary only answers a posted notice. Notices are found in treasure-hunt caskets and fishing crates." % Pull.odds_line(free_w, faces).to_lower(), "note", Paper.ink_soft(), true)
+	help.visible = _help_open
+	q.pressed.connect(func() -> void:
+		_help_open = not _help_open
+		help.visible = _help_open
+		var s2: Array = Paper._button_specs(_help_open, true)
+		q.restyle(s2[0], s2[1])
+		Paper._button_ink(q, _help_open, true))
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	_body.add_child(row)
 	var held: Dictionary = Js.obj(_state.get("notices"))
 	for id: Variant in defs:
 		var d: Dictionary = defs[id]
 		var n: int = int(Js.num(held.get(id)))
-		var row: HBoxContainer = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		_body.add_child(row)
-		var v: VBoxContainer = VBoxContainer.new()
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		v.add_theme_constant_override("separation", 0)
-		row.add_child(v)
-		Paper.text(v, "%s  ·  %d held" % [d["name"], n], "body_strong", Paper.ink() if n > 0 else Paper.ink_faint())
-		Paper.text(v, str(d["blurb"]), "small", Paper.ink_soft(), true)
-		var b: Pane.PaneButton = Paper.button("Post it", n > 0)
-		b.disabled = n <= 0
-		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		b.pressed.connect(func() -> void:
-			var r: Dictionary = await _act("postNotice", [id])
-			if r.has("state"):
-				Sound.chest(true)
-				Rumble.buzz([0, 30, 30, 60])
-				_pick = {}
-				for c: Dictionary in Js.list(_state.get("board")):
-					if float(c["rarity"]) >= 4.0:
-						_sign_on_moment("A Legendary answers!", rarity_color(4))
-			_draw_room())
-		row.add_child(b)
+		var tk: Pull.Ticket = Pull.Ticket.new("Post a %s" % d["name"], Pull.odds_line(Js.list(d.get("weights")), faces), n, Pull.found_in(str(id)))
+		tk.pressed.connect(func() -> void: _pull(str(id)))
+		row.add_child(tk)
+
+
+## THE PULL: the board standing is torn down while the notice posts; the
+## fresh board comes in sealed and turns (Pull.Stage.run). The rules' board
+## is the board shown. before_reveal is for tests/shot.gd and the trailer only
+## (to set the board up for a picture before it is shown).
+func _pull(id: String, before_reveal: Callable = Callable()) -> void:
+	if _pulling or _busy:
+		return
+	_pulling = true
+	_pick = {}
+	_pick_kind = ""
+	var tear: Tween = _stage.tear_down() if _stage != null and is_instance_valid(_stage) else null
+	var r: Dictionary = await _act("postNotice", [id])
+	if tear != null and tear.is_running():
+		await tear.finished
+	if not r.has("state"):
+		_pulling = false
+		_draw_room()
+		return
+	Rumble.buzz([0, 30, 30, 60])
+	if before_reveal.is_valid():
+		await before_reveal.call()
+		var s: Variant = await session.act("getCrewState")
+		if s is Dictionary:
+			_state = s
+	_reveal_mode = "pull"
+	_draw_room()
+
+
+## SIGN ON (from the card or the chosen hand): the rules sign them, the
+## moment plays, and their card takes an ABOARD stamp.
+func _sign(c: Dictionary) -> void:
+	if _pulling:
+		return
+	var r: Dictionary = await _act("recruitCrew", [c["id"]])
+	if r.has("state"):
+		_sign_on_moment(str(c.get("name", "")), rarity_color(clampi(int(Js.num(c.get("rarity"))), 1, 4)))
+		_stamp_id = c["id"]
+		_pick = {}
+	_draw_room()
 
 
 func _roster_room() -> void:
@@ -775,12 +914,7 @@ func _draw_detail() -> void:
 			Paper.text(_detail, "Already aboard.", "note", Paper.ink_soft())
 		else:
 			var sign: Pane.PaneButton = Paper.primary("Sign on", true)
-			sign.pressed.connect(func() -> void:
-				var r: Dictionary = await _act("recruitCrew", [c["id"]])
-				if r.has("state"):
-					_sign_on_moment(str(c.get("name", "")), rc)
-					_pick = {}
-				_draw_room())
+			sign.pressed.connect(func() -> void: _sign(c))
 			_detail.add_child(sign)
 	else:
 		_skin_row(c)
