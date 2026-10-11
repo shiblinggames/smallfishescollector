@@ -195,9 +195,12 @@ static func panel_in(c: Control, rise: bool = true, pace: float = 1.0) -> void:
 	ease_fade(tw, c, "modulate:a", 1.0, PANEL_FADE * pace)
 	ease_rise(tw, c, "scale", Vector2.ONE, PANEL_IN * pace)
 	if rise and _slides(c):
-		var goal: Vector2 = c.position
-		c.position = goal + Vector2(0, PANEL_RISE)
-		ease_rise(tw, c, "position", goal, PANEL_IN * pace)
+		# Only the height moves: a tween of the whole position held the left
+		# edge where it began, so a panel that widened as it came in (the
+		# Locker opening on its Log) was dragged off the right of the screen.
+		var goal_y: float = c.position.y
+		c.position.y = goal_y + PANEL_RISE
+		ease_rise(tw, c, "position:y", goal_y, PANEL_IN * pace)
 
 
 ## A panel leaving: fades and drops a little. `done` runs after.
@@ -207,7 +210,7 @@ static func panel_out(c: Control, done: Callable = Callable()) -> Tween:
 	var tw: Tween = _own(c, c.create_tween().set_parallel(true))
 	ease_exit(tw, c, "modulate:a", 0.0, PANEL_OUT)
 	if _slides(c):
-		ease_exit(tw, c, "position", c.position + Vector2(0, PANEL_DROP), PANEL_OUT)
+		ease_exit(tw, c, "position:y", c.position.y + PANEL_DROP, PANEL_OUT)
 	if done.is_valid():
 		tw.chain().tween_callback(done)
 	return tw
@@ -333,9 +336,9 @@ static func rise_word(c: CanvasItem, delay: float = 0.0) -> void:
 	ease_fade(tw, c, "modulate:a", 1.0, WORD_IN).set_delay(delay)
 	if _slides(c):
 		var cc: Control = c
-		var goal: Vector2 = cc.position
-		cc.position = goal + Vector2(0, WORD_RISE)
-		ease_rise(tw, cc, "position", goal, WORD_TIME).set_delay(delay)
+		var goal_y: float = cc.position.y
+		cc.position.y = goal_y + WORD_RISE
+		ease_rise(tw, cc, "position:y", goal_y, WORD_TIME).set_delay(delay)
 
 
 ## A toast or note arriving: fade with an 8px rise.
@@ -347,9 +350,9 @@ static func note_in(c: CanvasItem) -> void:
 	ease_fade(tw, c, "modulate:a", 1.0, NOTE_IN)
 	if _slides(c):
 		var cc: Control = c
-		var goal: Vector2 = cc.position
-		cc.position = goal + Vector2(0, NOTE_RISE)
-		ease_rise(tw, cc, "position", goal, NOTE_IN + 0.1)
+		var goal_y: float = cc.position.y
+		cc.position.y = goal_y + NOTE_RISE
+		ease_rise(tw, cc, "position:y", goal_y, NOTE_IN + 0.1)
 
 
 ## A toast or note going: a slow fade, then freed (or hidden, free = false).
