@@ -190,8 +190,8 @@ class Ticket:
 # ── A card ────────────────────────────────────────────────────────────────────
 
 ## ONE RECRUIT ON THE BOARD: face down under a wax seal until it is turned,
-## then the painting on a pool of its rarity, the name, the rarity word and a
-## thin rim in the rarity's colour. Epics and legendaries keep a soft glow of
+## then the painting on a glow of its rarity's colour, the name and the rarity
+## word, on a plain hairline card (no coloured rim). Epics and legendaries keep a soft glow of
 ## their colour behind them. Its seal's tell, the flip, the legendary's column
 ## and the ABOARD stamp are all drawn here, local to the card.
 class Card:
@@ -390,7 +390,9 @@ class Card:
 			_draw_seal(size / 2.0)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 			return
-		draw_style_box(_box(FACE, Color(rc, 0.85), 2), r)
+		# A plain hairline: the rarity is the glow behind the painting, never
+		# the card's edge (Kong, 2026-10-10: coloured borders "look cheap").
+		draw_style_box(_box(FACE, Color(Paper.NIGHT_INK, 0.22), 1), r)
 
 	## The tell behind the seal: none for a common; a soft shimmer for a rare;
 	## rays for an epic; for a legendary, longer rays in gold and a glow that
