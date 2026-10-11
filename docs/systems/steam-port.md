@@ -2064,9 +2064,9 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     each captain SUNK IN A LOST FIGHT: a lost raid (every sunk ship in the line) or a lost
     dive (every captain in it). A ship sunk in a fight the crew wins (towed home in a dive)
     spends none. AT NONE THE CHARTER SINKS (Kong: it sinks, not plays on): once the fight
-    that spent the last life has ended and been seen (8s), every crewmate is told and sent
-    to the title, and the file moves to charters/sunk (never deleted). Lives show on the
-    title card and in the Charter sheet.
+    that spent the last life has ended (2.5s now, was 8 silent seconds), every captain plays
+    THE HARDCORE ENDING (see CONNECTING AND COMING BACK, 2026-10-11) and the file moves to
+    charters/sunk (never deleted). Lives show on the title card and in the Charter sheet.
   - RELEASING A BERTH: on the title screen the founder can release a crewmate (asks once).
     Their captain is kept in the file under "released" but sails no more; a Charter that
     has sailed cannot fill the berth again.
@@ -2675,6 +2675,119 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   crewhall: CREW_HOVER=i now makes room on the roster, CREW_HOVER=i with CREW_PICK=1 also
   chooses that card (the panel), CREW_FULL=2 (filled, card 0 chosen and focused, not signed),
   CREW_SIGN=1 with CREW_F 8 to 26 catches the flight and the tab's pop.
+- CONNECTING AND COMING BACK (Kong, 2026-10-11: the first of three co-op design sets from the
+  two-copy walkthrough, approved as written). game/charter_cards.gd (no class_name; main.gd
+  preloads it), main.gd, title.gd, crew_net.gd, charter.gd, sea_folk.gd.
+  - THE HAILING CARD: joining or rejoining shows a night-paper card on the harbour art (it was
+    a bare grey screen for about 30 seconds): "Hailing 192.168.1.39:24651", or for a
+    remembered Charter "Hailing The Salt Ledger" with "Anna's Charter · address" and "Your
+    captain Ben waits aboard it"; a lantern swinging on its hook, its light going out in
+    rings, drawn in code; "Calling across the water" filling with dots. Cancel (Esc) leaves
+    (net.leave) and opens the title's join form with the address kept. NOBODY ANSWERING is
+    said after Main.JOIN_WAIT (9s; ENet's own wait was about 30) in the form: "No founder
+    answered at <address>. Check the address and that they are in their harbour."
+  - REMEMBERED CHARTERS: a crewmate's game remembers every Charter it joins (Charter.remember,
+    a ConfigFile next to the charters folder, joined_charters.cfg, one section per player key
+    so two copies on one machine keep their own): its name, the founder's name (the welcome
+    now carries it), the last address:port hailed, this game's captain there (name and look),
+    when last sailed, and how it stands. The title's Charters sheet lists them under the ones
+    founded here: the captain's portrait, the Charter's name, "Anna hosts · your captain
+    Ben", a state line, "Last sailed ...", Rejoin and a small Forget (asks once, "Forget
+    it?"). STATES: "Waiting for Anna to host" (a rejoin nobody answered, or the founder closed
+    or was lost); "Cal hosts it now" (a handover learned: the founder sends who and the new
+    founder's address as their game saw it; the port is then the usual one); "Handed to Ben"
+    (this game founded it and handed it on; its Rejoin hails Ben). A Charter whose file is on
+    this machine (founded or handed here) shows only as its own card. A sunk one is forgotten.
+    A refused rejoin (a released berth) says why on the card. Rejoin is off for a Steam join
+    (no address; join from the friends list). THE JOIN FORM starts on the address last hailed
+    (it always said 127.0.0.1), and when the address is a remembered Charter's the name field
+    gives way to "Rejoining The Salt Ledger as your captain Ben" (the founder keeps the
+    berth's captain; the remembered name is sent).
+  - THE FOUNDER LEFT CARD: when the founder closes the Charter, their game is lost, or it
+    changes hands, the crew get a night-paper card on the harbour art (it was one line on the
+    title): "Anna closed The Salt Ledger" / "Lost touch with Anna's game" / "Anna handed The
+    Salt Ledger to Cal", "Your captain is safe aboard it.", when to come back, Rejoin (the
+    remembered card's rejoin) and Back to port (Esc). The founder now says how the line ends
+    before closing it (CrewNet._ending: closed, handed, yours); silence is "lost". A LINE
+    CLOSED ON PURPOSE LINGERS 0.6s (CrewNet._linger, serviced out of the game's hands): its
+    last packets arrived with the close and were dropped, so a closed Charter read as a lost
+    game (and a crewmate's bye as a drop). AT SEA, while the line is timing out, "Lost touch
+    with Anna's game..." breathes on the water once nothing has come from the founder for
+    2.5s (CrewNet.heard_ms; not in a sea's first 6s), and fades if the line comes back.
+  - THE HARDCORE ENDING: the founder's game sends every captain the end card's facts
+    (Charter.ending, read before the file moves) and plays it on its own water: "The Salt
+    Ledger is lost" (the name bare) and "The last life went down with Anna." in words on the
+    water under the boat, every boat settling (a hull rig sinks low, a skiff dims) with rings
+    and a short local wake of bubbles, the sea held still; then the END CARD over it on the
+    night paper: "A hardcore Charter, lost", the name, "Sailed 6 days · 5 lives spent · 3
+    captains" (days from the new sailed_at, else founded_at), THE LIFE LOG (who, where, lives
+    left, "the last life" in red) and EACH CAPTAIN'S BEST (portrait, Fishing level, biggest
+    catch in the crew's book held in their name, deepest dive of Davy's or the Don's, raids
+    cleared), and Back to port. The line stays up until each captain presses it (nothing more
+    runs on the Charter meanwhile: busy_why). Not at sea: the card alone on the harbour art.
+  - Checked: two copies on a private port (a scratch driver, not in the project): a dead hail
+    back in 8.9s, join and remember, the founder closing (the card says closed), Rejoin after
+    they host again, a hardcore Charter spent to nothing (both seas play the ending, both see
+    the card, the file moved, the crewmate's memory cleared); the founder's game killed at
+    sea (Lost touch on the water, then the card, the memory waiting); a handover (the old
+    founder's card Handed to Ben, the new founder's Charter not listed twice).
+    smoke_charter, charter_crew_check, playtest_check and smoke_docking pass.
+- ENDING TOGETHER (Kong, 2026-10-11: the third co-op design set from the two-copy walkthrough,
+  approved as written). game/crew_spoils.gd and game/crew_ending.gd (new, no class_name; the sea
+  makes the second for a Charter), raid_table.gd, crew_table.gd, gauntlet_table.gd,
+  gauntlet_pay.gd, gauntlet_overlay.gd, battle_stage.gd, battle_stage_playback.gd,
+  crew_fishing.gd, crew_waters_view.gd, sea.gd.
+  - THE SHARED SPOILS SHEET: a co-op raid's end (won, lost, or the whole line fled) and a
+    co-op dive's (banked or lost) is one night-paper sheet, a column per captain: their
+    avatar, name ("YOU" over your own), a line for how their part ended ("Saw it to the
+    end", "Fled at fight 2", "Sank at fight 3", "Lost touch at fight 2", "Banked", "Towed
+    along, 2 times", "Sank at depth 7"), the tier's seal (the Stamp's flat gold disc and
+    check, "CO-OP · FIRST CLEAR"; "No crate" for a captain without one) or the depth ("Your
+    deepest yet"), Doubloons and Navigation XP (and Fathoms in a dive; a lost dive shows only
+    the Fathoms), and each item as a row: its art on its rarity's glow (a ship skin takes its
+    biggest hull and the chase's glow; a voucher a glow alone), the name beside it, "and 2
+    more" past what fits. A loss is headed with what happened: "The line was broken at
+    fight 3" (or "The line fell back at fight 3"; a dive's "The Locker took the crew at depth
+    7", the Don's "The green ...") and says what was banked (each kill's pay to the purse and
+    the XP; the Fathoms). It stays up until Continue; pressed, "Waiting on Ben and Cal" until
+    all have, or CrewSpoils.WAIT_MAX (10s), then it goes. A raid win's Stamp lands first (the
+    crate's banner and its 3.2s pause are skipped for a crew; the Stamp plays out over the
+    sea as the fight screen closes), then the sheet. Solo raids and dives (one captain in the
+    line) keep their own endings (the banner and crate; the chest roll).
+  - FROM THE TABLE'S STATE: the founder's table keeps `spoils` as it pays (RaidTable:
+    _spoils_open at the start, _spoils_add at each kill's pay and each crate with its items
+    as { id, name, rarity, image } and the seal, _spoils_mark before every push reading who
+    fled, sank or lost touch and at which fight, _spoils_end with the result and the fight;
+    GauntletPay.spoils from the pays just made, each cap's tows counted at the tow), so every
+    captain sees the same sheet. Every run carries `rid` (crew_table _before_push), so a
+    screen shows a run's sheet once and only for a run it saw under way. Continue is `seen`
+    on a raid (any captain of it; nothing waits on it, the table is already done) and the
+    end acks ("home") on a dive. tests: raid_table_check (the columns equal what the events
+    paid, the seal, the line's order, Ben's "fled" at a fight, seen), gauntlet_check (a column
+    each, the pays, the depth, sank on a loss, every tow counted, a banked crew's coin and XP).
+  - WHERE IT SHOWS: on the sea (CrewEnding opens it once your fight screen has closed, or
+    for a captain who followed from outside), and inside the dive's own sheet for the
+    captains still in the dive (GauntletOverlay._coop_end: Continue is its "Back to the
+    sea"; after the wait the fight screen leaves on its own, leave_now).
+  - THE FOLLOW CARD: a captain who fled or sank out of a co-op raid, or is out of a dive, gets
+    a small night card under the compass while it goes on: "The crew fight on · Ben and Cal
+    · fight 2 of 5" (a dive: "The crew dive on · ... · depth 4"), the raid or descent under it
+    with "you will see the spoils when it ends", updating with each state; Hide puts it away.
+    At the end the spoils sheet; for a captain who hid the card, or is in another screen,
+    a toast with the result and their share ("The crew won Barnacle Pete's Raid · Your
+    share: 640 ⟡, +980 XP").
+  - THE DERBY FINISH: the founder's game sends the final standings once, marked final
+    (CrewFishing._derby_finish; the winner's toast is gone, the standings say it). Every
+    screen holds them FINISH_HOLD (6s) where the live ones stood: "Derby over: biggest
+    fish", the winner lettered larger ("Ben_the_Bold won", their catch under it), the rest,
+    and your line ("You came 2nd", or "You won", or "You did not land one this time"); a
+    small burst of gold motes and "Derby winner" over the winner's hull on the water, local
+    (3.2s); then it all fades. During a derby your own row reads "You" in gold, kept on the
+    board below the top four. charter_crew_check now checks the final standings.
+  - tests/shot.gd: "ending" with ENDING win, loss, dive, divelost, follow, derby, derbylive
+    (ENDING_PRESS: Continue pressed); "dive" with DIVE_PARTY=1 on DIVE_STEP haul or dead (a
+    crew of three at the end, the overlay's sheet; DIVE_WAIT=500 SHOT_F=300 to let the
+    fight's opening play out first).
 - DOCKING AND THE MAINLAND, BUILT (2026-09-30). The rules came first (committed 2af98918):
   `core/market.gd` (the hourly market), `core/selling.gd` (a stack, the whole hold, the buyer
   in each water) and `core/harbour.gd` (bait, rods, reels, hooks, the hold's upgrade, the

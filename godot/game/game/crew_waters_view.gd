@@ -5,8 +5,13 @@ extends Control
 ## water; the crew's callouts in the HUD's toast lane (queued with the other
 ## toasts, held while the dial is up); the crew streak as motes rising round
 ## every hull in it, with its count; and a derby's standings and clock at the
-## right, under the top-right column and its notes. Flat words, no boxes, no
-## icons.
+## right, under the top-right column and its notes, your own row in gold.
+## Flat words, no boxes, no icons.
+##
+## THE DERBY FINISH (ENDING TOGETHER, Kong, 2026-10-11): when a derby ends the
+## final standings hold FINISH_HOLD seconds where the live ones stood, the
+## winner lettered larger and a small burst of gold motes over their hull on
+## the water, and a line for you ("You came 2nd"); then they fade.
 
 var sea: Sea
 var fishing: CrewFishing
@@ -19,13 +24,20 @@ var _call_t: float = 0.0
 var _streak_l: Label
 var _derby_box: VBoxContainer
 var _derby_title: Label
-var _derby_rows: Label
+## The standings' rows (rebuilt with each state), and the finish's clock.
+var _derby_lines: Array = []
+const FINISH_HOLD: float = 6.0
+const FINISH_FADE: float = 0.6
+var _finish_t: float = -1.0
+var _winner: String = ""
 var _t: float = 0.0
 ## Whether the last frame drew anything (one more redraw clears it).
 var _drew: bool = false
 ## The crew streak's count, this far under her hull's centre on the screen.
 const STREAK_W: float = 400.0
 const STREAK_BELOW: float = 78.0
+## How long the winner's burst and words stay over their hull.
+const BURST_S: float = 3.2
 
 
 func _ready() -> void:
@@ -50,8 +62,6 @@ func _ready() -> void:
 	add_child(_derby_box)
 	_derby_title = _label(17, Kit.SEA_GOLD, _derby_box)
 	_derby_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_derby_rows = _label(15, Kit.SEA_INK, _derby_box)
-	_derby_rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_derby_box.visible = false
 	fishing.popped.connect(_on_pop)
 	fishing.called.connect(_on_call)
@@ -98,19 +108,67 @@ func _paint_streak() -> void:
 
 func _paint_derby() -> void:
 	var st: Dictionary = fishing.derby
+	for l: Variant in _derby_lines:
+		(l as Node).queue_free()
+	_derby_lines.clear()
+	_derby_box.modulate.a = 1.0
 	_derby_box.visible = not st.is_empty()
 	if st.is_empty():
+		_finish_t = -1.0
 		return
-	var lines: PackedStringArray = []
-	var i: int = 0
-	for r: Dictionary in Js.list(st.get("rows")):
-		i += 1
-		lines.append("%d.  %s   %s" % [i, r.get("name", "?"), r.get("label", "")])
-		if i >= 4:
-			break
-	if lines.is_empty():
-		lines.append("No catches yet")
-	_derby_rows.text = "\n".join(lines)
+	var rows: Array = Js.list(st.get("rows"))
+	var final: bool = st.get("final", false) == true
+	_finish_t = 0.0 if final else -1.0
+	_winner = str(Js.obj(rows[0]).get("key", "")) if final and not rows.is_empty() else ""
+	if final:
+		_derby_title.text = "Derby over: %s" % st.get("title", "")
+		# The winner, lettered larger.
+		if not rows.is_empty():
+			var w0: Dictionary = rows[0]
+			_line("%s won" % ("You" if str(w0.get("key", "")) == my_key else str(w0.get("name", "?"))), 26, Kit.SEA_GOLD)
+			_line(str(w0.get("label", "")), 15, Kit.SEA_INK)
+		else:
+			_line("Nobody landed a thing", 18, Kit.SEA_INK)
+	# The standings (the winner's row is the line above, at the finish); your
+	# own row marked, and kept on the board below the top four.
+	var mine_at: int = -1
+	for i: int in rows.size():
+		if str(Js.obj(rows[i]).get("key", "")) == my_key:
+			mine_at = i
+	var first: int = 1 if final else 0
+	var shown: int = 0
+	for i2: int in range(first, rows.size()):
+		if shown >= 4 and i2 != mine_at:
+			continue
+		var r: Dictionary = rows[i2]
+		var me: bool = i2 == mine_at
+		_line("%d.  %s   %s" % [i2 + 1, "You" if me else str(r.get("name", "?")), r.get("label", "")], 15, Kit.SEA_GOLD if me else Kit.SEA_INK)
+		shown += 1
+	if rows.is_empty() and not final:
+		_line("No catches yet", 15, Kit.SEA_INK)
+	if final and mine_at > 0:
+		_line("You came %s" % _ordinal(mine_at + 1), 18, Kit.SEA_GOLD)
+	elif final and mine_at < 0 and not rows.is_empty():
+		_line("You did not land one this time", 15, Kit.SEA_INK)
+	if final:
+		Sound.streak(3)
+
+
+func _line(t: String, px: int, col: Color) -> void:
+	var l: Label = _label(px, col, _derby_box)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.text = t
+	_derby_lines.append(l)
+	# The finish's lines come up one after another; the live board just changes.
+	if _finish_t >= 0.0:
+		Motion.rise_word(l, 0.06 * _derby_lines.size())
+
+
+static func _ordinal(n: int) -> String:
+	var suf: String = "th"
+	if n % 100 < 11 or n % 100 > 13:
+		suf = { 1: "st", 2: "nd", 3: "rd" }.get(n % 10, "th")
+	return "%d%s" % [n, suf]
 
 
 func _node_of(key: String) -> Node2D:
@@ -143,15 +201,23 @@ func _process(delta: float) -> void:
 		var y: float = hud.notes_bottom()
 		_derby_box.offset_top = lerpf(_derby_box.offset_top, y, Motion.hover_k(delta))
 		_derby_box.offset_bottom = _derby_box.offset_top + 210.0
-	if _derby_box.visible:
+	if _derby_box.visible and _finish_t < 0.0:
 		var left: float = maxf(0.0, Js.num(fishing.derby.get("left")) - float(Time.get_ticks_msec() - fishing.derby_got_ms) / 1000.0)
 		_derby_title.text = "Derby: %s   %d:%02d" % [fishing.derby.get("title", ""), int(left) / 60, int(left) % 60]
+	# The finish holds, then fades away (the standings go with it).
+	if _finish_t >= 0.0:
+		_finish_t += delta
+		_derby_box.modulate.a = 1.0 - smoothstep(FINISH_HOLD, FINISH_HOLD + FINISH_FADE, _finish_t)
+		if _finish_t > FINISH_HOLD + FINISH_FADE:
+			_finish_t = -1.0
+			_winner = ""
+			_derby_box.visible = false
 	for p: Dictionary in _pops:
 		p["t"] = float(p["t"]) + delta
 	_pops = _pops.filter(func(p: Dictionary) -> bool: return float(p["t"]) < 2.6)
 	# Only redrawn while there is something to draw (a pop, a streak), and
 	# once more after, to clear the last of it.
-	var drawing: bool = not _pops.is_empty() or fishing.streak >= 2
+	var drawing: bool = not _pops.is_empty() or fishing.streak >= 2 or (_winner != "" and _finish_t < BURST_S + 0.1)
 	if drawing or _drew:
 		queue_redraw()
 	_drew = drawing
@@ -169,6 +235,23 @@ func _draw() -> void:
 		var col: Color = Kit.SEA_GOLD if p["golden"] else Kit.SEA_INK
 		var w: float = font.get_string_size(str(p["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
 		Kit.sea_string(self, font, at - Vector2(w / 2.0, 0), str(p["text"]), 20, col, HORIZONTAL_ALIGNMENT_LEFT, -1.0, a)
+	# The derby's winner: a small burst of gold motes over their hull, and the
+	# words on the water, local to them (no screen-wide flash).
+	if _winner != "" and _finish_t >= 0.0 and _finish_t < BURST_S:
+		var wn: Node2D = _node_of(_winner)
+		if wn != null and is_instance_valid(wn):
+			var c0: Vector2 = wn.get_global_transform_with_canvas().origin + Vector2(0, -90)
+			var u: float = clampf(_finish_t / BURST_S, 0.0, 1.0)
+			var fade: float = 1.0 - smoothstep(0.55, 1.0, u)
+			for q: int in 22:
+				var ang: float = TAU * q / 22.0 + float(q % 3) * 0.4
+				var spd: float = 70.0 + 50.0 * float((q * 7) % 5) / 4.0
+				var d: float = spd * (1.0 - pow(1.0 - u, 3.0))
+				var p: Vector2 = c0 + Vector2(cos(ang), sin(ang) * 0.7) * d + Vector2(0, 40.0 * u * u)
+				draw_circle(p, 2.6 * (1.0 - u) + 0.8, Color(Kit.SEA_GOLD, fade))
+			var word: String = "Derby winner"
+			var ww: float = font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
+			Kit.sea_string(self, font, c0 + Vector2(-ww / 2.0, -36.0 - 14.0 * u), word, 22, Kit.SEA_GOLD, HORIZONTAL_ALIGNMENT_LEFT, -1.0, clampf(minf(_finish_t / 0.25, (BURST_S - _finish_t) / 0.6), 0.0, 1.0))
 	# The crew streak: motes rising off the water round every hull in it, more
 	# as it climbs.
 	var n2: int = fishing.streak

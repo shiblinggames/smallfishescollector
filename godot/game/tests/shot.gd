@@ -23,7 +23,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "tavern", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive", "log", "trailer"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "tavern", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive", "log", "trailer", "ending"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -1201,7 +1201,9 @@ func _init() -> void:
 									if fn != null and is_instance_valid(fn):
 										(fn as Node).queue_free()
 					var gr: Dictionary = gt._r
-					if gstep == "party":
+					# DIVE_PARTY (haul, dead): a crew of three at the end (the shared
+					# spoils sheet, ENDING TOGETHER).
+					if gstep == "party" or OS.get_environment("DIVE_PARTY") != "":
 						# Two more captains at the table (copies of this one).
 						var ss: Array = gr["b"]["seats"]
 						for nm: Array in [["ben", "Ben", "blue"], ["cal", "Cal", "pink"]]:
@@ -1247,6 +1249,17 @@ func _init() -> void:
 							gr["run"]["pot"] = 9240.0
 							gr["run"]["roll"] = { "cleared": 19.0, "prevWasBoss": true, "roundsSinceBoss": 0.0 }
 							gt._bank()
+							if OS.get_environment("DIVE_PARTY") != "":
+								# The others' pays (a solo table pays only "me"):
+								# copies of hers, one towed along twice.
+								for pk: String in ["ben", "cal"]:
+									gr["pays"][pk] = (gr["pays"]["me"] as Dictionary).duplicate(true)
+									gr["pays"][pk]["record"] = false
+								gr["pays"]["ben"]["items"] = ["davys_hand_cannon"]
+								gr["pays"]["ben"]["vouchers"] = ["captain"]
+								gr["caps"]["ben"]["towed"] = 2.0
+								preload("res://game/gauntlet_pay.gd").spoils(gt, "banked", 19)
+								gt._enter("haul")
 							# HAUL_LOOT: the chest's chase drops a film shows off.
 							if OS.get_environment("HAUL_LOOT") != "":
 								var py: Dictionary = gr["pays"]["me"]
@@ -1257,6 +1270,12 @@ func _init() -> void:
 							gr["run"]["pot"] = 3100.0
 							gt._dive_lost([])
 							gt._advance()
+							if OS.get_environment("DIVE_PARTY") != "":
+								for pk2: String in ["ben", "cal"]:
+									gr["pays"][pk2] = (gr["pays"]["me"] as Dictionary).duplicate(true)
+									gr["caps"][pk2]["out"] = "sunk"
+								preload("res://game/gauntlet_pay.gd").spoils(gt, "lost", int(Js.num(gr["pays"]["me"].get("depth"))))
+								gt._enter("dead")
 			for f: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 60:
 				await process_frame
 			# ENTRY: replay the enemy's arrival as this boss (or "elite").
@@ -1862,6 +1881,97 @@ func _init() -> void:
 			if what == "crateopen":
 				sea._locker._open_crate("gold")
 				await create_timer(float(OS.get_environment("CRATE_T")) if OS.get_environment("CRATE_T") != "" else 2.6).timeout
+		"ending":
+			# ENDING TOGETHER (Kong, 2026-10-11). ENDING: "win" / "loss" (a
+			# crew's raid: the shared spoils sheet on the sea), "dive" /
+			# "divelost" (a dive's, as a follower sees it), "follow" (the follow
+			# card while the crew fight on), "derby" (the derby's finish) or
+			# "derbylive" (its live standings, your row marked). ENDING_PRESS:
+			# Continue pressed (the sheet waits on the others).
+			var en: String = OS.get_environment("ENDING") if OS.get_environment("ENDING") != "" else "win"
+			var ert: RaidTable = RaidTable.new()
+			root.add_child(ert)
+			var faces: Array = [{ "characterColor": str(Js.nz(p.get("character_color"), "default")), "hat": p.get("equipped_hat") }, { "characterColor": "blue", "hat": "golden" }, { "characterColor": "pink", "hat": null }]
+			var loot: Array = Js.list(Battle.raid_def("corsairs_reckoning").get("loot"))
+			var row_of: Callable = func(id: String) -> Dictionary:
+				for lr: Dictionary in loot:
+					if lr["id"] == id:
+						return RaidTable.spoils_item(lr)
+				return {}
+			var esp: Dictionary = {}
+			match en:
+				"win":
+					esp = { "kind": "raid", "raid": "Barnacle Pete's Raid", "tier": "coop", "of": 5.0, "result": "won", "at": 5.0, "order": ["anna", "ben", "cal"], "seats": {
+						"anna": { "name": "Anna", "face": faces[0], "coin": 2140.0, "xp": 1860.0, "items": [row_of.call("corsair_cannon")], "seal": { "tier": "coop", "first": true }, "out": "", "outAt": 0.0 },
+						"ben": { "name": "Ben_the_Bold", "face": faces[1], "coin": 1975.0, "xp": 1860.0, "items": [row_of.call("corsair_prime_cannon"), row_of.call("finndicate_hull")], "seal": { "tier": "coop", "first": false }, "out": "", "outAt": 0.0 },
+						"cal": { "name": "Cal", "face": faces[2], "coin": 420.0, "xp": 740.0, "items": [], "seal": {}, "out": "fled", "outAt": 2.0 } } }
+				"loss":
+					esp = { "kind": "raid", "raid": "Barnacle Pete's Raid", "tier": "coop", "of": 5.0, "result": "lost", "at": 3.0, "order": ["anna", "ben", "cal"], "seats": {
+						"anna": { "name": "Anna", "face": faces[0], "coin": 640.0, "xp": 980.0, "items": [], "seal": {}, "out": "sank", "outAt": 3.0 },
+						"ben": { "name": "Ben_the_Bold", "face": faces[1], "coin": 640.0, "xp": 980.0, "items": [], "seal": {}, "out": "sank", "outAt": 3.0 },
+						"cal": { "name": "Cal", "face": faces[2], "coin": 310.0, "xp": 420.0, "items": [], "seal": {}, "out": "away", "outAt": 2.0 } } }
+				"dive", "divelost":
+					var lost: bool = en == "divelost"
+					var hc: Dictionary = RaidTable.spoils_row("davys_hand_cannon", "Davy's Hand Cannon", "", null)
+					var gh: Dictionary = RaidTable.spoils_row("galaxy_hull", "Galaxy Hull", "", null, "galaxy_hull")
+					esp = { "kind": "dive", "variant": "davy", "result": "lost" if lost else "banked", "at": 14.0, "pot": 9240.0, "order": ["anna", "ben", "cal"], "seats": {
+						"anna": { "name": "Anna", "face": faces[0], "coin": 0.0 if lost else 10164.0, "xp": 0.0 if lost else 3200.0, "fathoms": 46.0, "items": [] if lost else [hc], "depth": 14.0, "record": not lost, "out": "sank" if lost else "", "towed": 0.0 },
+						"ben": { "name": "Ben_the_Bold", "face": faces[1], "coin": 0.0 if lost else 10164.0, "xp": 0.0 if lost else 3200.0, "fathoms": 46.0, "items": [] if lost else [gh, { "id": "voucher_captain", "name": "Captain's skin voucher", "rarity": "legendary", "image": "" }], "depth": 14.0, "record": false, "out": "sank" if lost else "towed", "towed": 2.0 },
+						"cal": { "name": "Cal", "face": faces[2], "coin": 0.0 if lost else 10164.0, "xp": 0.0 if lost else 3200.0, "fathoms": 46.0, "items": [], "depth": 14.0, "record": false, "out": "sank" if lost else "", "towed": 0.0 } } }
+			if not esp.is_empty():
+				var est: Dictionary = { "phase": "done", "seq": 9, "rid": "shot-1", "result": esp["result"], "spoils": esp, "seen": {} }
+				ert._state(est)
+				var sh: Control = (load("res://game/crew_spoils.gd") as GDScript).new()
+				sh.set("sea", sea)
+				sh.set("table", ert)
+				sh.set("op", "gauntletTable" if esp["kind"] == "dive" else "raidTable")
+				sh.set("my_key", "anna")
+				sh.set("st", est)
+				sea._hud_layer.add_child(sh)
+				if OS.get_environment("ENDING_PRESS") != "":
+					for f: int in 30:
+						await process_frame
+					sh.set("sea", null)
+					sh.call("_press")
+			elif en == "follow":
+				var s0f: Dictionary = Battle.seat_for(sea.session.store, sea.session.uid, "Anna")
+				s0f["key"] = "anna"
+				var fseats: Array = [s0f]
+				for nm: Array in [["ben", "Ben_the_Bold"], ["cal", "Cal"]]:
+					var cpf: Dictionary = s0f.duplicate(true)
+					cpf["key"] = nm[0]
+					cpf["name"] = nm[1]
+					fseats.append(cpf)
+				var fb: Dictionary = Battle.begin("corsairs_reckoning", fseats, "coop")
+				fb["seats"][0]["fled"] = true
+				fb["fight"] = 1.0
+				var ce: Control = (load("res://game/crew_ending.gd") as GDScript).new()
+				ce.set("sea", sea)
+				ce.set("my_key", "anna")
+				ce.set("tables", [[ert, "raidTable"]])
+				sea._hud_layer.add_child(ce)
+				await process_frame
+				ert._state({ "phase": "plan", "seq": 4, "rid": "shot-2", "raidId": "corsairs_reckoning", "b": fb, "gone": { "anna": true }, "result": "",
+					"members": [{ "key": "anna", "name": "Anna" }, { "key": "ben", "name": "Ben_the_Bold" }, { "key": "cal", "name": "Cal" }] })
+			else:
+				var cfx: CrewFishing = CrewFishing.new()
+				root.add_child(cfx)
+				for mk: Array in [["ben", "Ben_the_Bold", Vector2(520, -120)], ["cal", "Cal", Vector2(-560, 160)]]:
+					var dm: Shipmate = sea._mate(str(mk[0]))
+					dm.set_mate_name(str(mk[1]))
+					dm.set_look(Skipper.look_of(p))
+					var mp2: Vector2 = sea._boat.position + (mk[2] as Vector2)
+					dm.state({ "x": mp2.x, "y": mp2.y, "facing": 1.0 })
+				var cwv: CrewWatersView = CrewWatersView.new()
+				cwv.sea = sea
+				cwv.fishing = cfx
+				cwv.my_key = "anna"
+				sea._hud_layer.add_child(cwv)
+				var drows: Array = [{ "key": "ben", "name": "Ben_the_Bold", "v": 61.0, "label": "Marlin, 61 in" }, { "key": "anna", "name": "Anna", "v": 44.0, "label": "Tuna, 44 in" }, { "key": "cal", "name": "Cal", "v": 22.0, "label": "Cod, 22 in" }]
+				for f: int in 20:
+					await process_frame
+				cfx._derby_state({ "kind": "biggest", "title": "biggest fish", "by": "Ben_the_Bold", "rows": drows, "left": 0.0 if en == "derby" else 312.0, "final": en == "derby" })
+				await create_timer(float(OS.get_environment("FX_S")) if OS.get_environment("FX_S") != "" else 0.9).timeout
 		"golden":
 			var g: GoldenChoice = GoldenChoice.new()
 			g.session = sea.session

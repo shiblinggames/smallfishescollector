@@ -264,6 +264,9 @@ func _crew_for(uid: String) -> Array:
 
 func set_sail() -> void:
 	data["sailed"] = true
+	## When it sailed: the hardcore end card counts the days from here.
+	if not data.has("sailed_at"):
+		data["sailed_at"] = Js.iso(Clock.now_ms())
 	if data.get("hardcore", false) and not data.has("lives"):
 		data["lives"] = float(lives_max())
 	write()
@@ -462,6 +465,57 @@ func sink() -> void:
 	_closed = true
 
 
+## THE HARDCORE END CARD's facts (Kong, 2026-10-11), read before the file
+## moves: the Charter's name, the days it sailed, the life log (who was lost
+## where), and each captain's best from what the Charter records (their
+## biggest catch in the crew's book, their deepest dive, raids cleared, their
+## fishing level). Plain data, so it goes down the wire to every captain.
+func ending() -> Dictionary:
+	var start: float = Js.parse_ms(data.get("sailed_at", data.get("founded_at", "")))
+	var now: float = Clock.now_ms()
+	var days: int = maxi(1, int(ceil((now - start) / 86400000.0))) if start > 0.0 else 1
+	var sh: Dictionary = data.get("shared", {})
+	var bests: Dictionary = Js.obj(Js.obj(sh.get("save")).get("bests"))
+	var best_by: Dictionary = Js.obj(sh.get("best_by"))
+	var log: Array = []
+	for e: Variant in Js.list(data.get("lifeLog")):
+		if e is Dictionary:
+			log.append({ "by": str((e as Dictionary).get("by", "A captain")), "what": str((e as Dictionary).get("what", "")), "left": Js.num((e as Dictionary).get("left")) })
+	var crew: Array = []
+	for b: Dictionary in data["berths"]:
+		var s: Session = session_for(str(b["key"]))
+		if s == null:
+			continue
+		var who: String = s.captain_name()
+		var p: Dictionary = s.profile()
+		# Their biggest: the longest fish in the crew's book held in their name.
+		var big_len: float = 0.0
+		var big_name: String = ""
+		for k: Variant in bests:
+			if str(best_by.get(str(k), "")) != who:
+				continue
+			var ln: float = Js.num(Js.obj(bests[k]).get("len"))
+			if ln > big_len:
+				big_len = ln
+				big_name = str(k)
+				for sp: Variant in Js.list(s.save.get("species")):
+					if sp is Dictionary and Js.key((sp as Dictionary).get("id")) == str(k):
+						big_name = str((sp as Dictionary).get("name", k))
+		var lost_n: int = 0
+		for e: Dictionary in log:
+			if e["by"] == who:
+				lost_n += 1
+		crew.append({
+			"name": who, "look": Skipper.look_of(p),
+			"level": float(Rules.level_from_xp(Js.num(p.get("fishing_xp")))),
+			"big": big_name, "big_len": big_len,
+			"deepest": maxf(Js.num(p.get("gauntlet_deepest")), Js.num(p.get("dons_gauntlet_deepest"))),
+			"raids": float(Js.list(s.save.get("raidClears")).size()),
+			"lost": float(lost_n),
+		})
+	return { "id": id(), "name": str(data.get("name", "The Charter")), "days": float(days), "log": log, "crew": crew }
+
+
 ## A sunk Charter's file, moved to charters/sunk.
 static func _bury(charter_id: String) -> void:
 	var to_dir: String = "%s/sunk" % _dir()
@@ -556,6 +610,98 @@ static func take_handover(text: String, my_key: String) -> String:
 	DirAccess.make_dir_recursive_absolute(_dir())
 	var err: Error = SaveFile.write_file(ProjectSettings.globalize_path(_path(str(d["id"]))), text)
 	return "" if err == OK else "The Charter could not be written: %s" % error_string(err)
+
+
+# ── Charters this game has joined (a crewmate's memory) ───────────────────────
+
+## REMEMBERED CHARTERS (Kong, 2026-10-11): a crewmate's game kept nothing of a
+## Charter it sailed in, so after leaving, a drop, the founder closing or a
+## handover its title said "No Charters yet" (the walkthrough). Now every
+## Charter joined is remembered here: its name, the founder's name, the last
+## address:port, this game's captain in it (name and look), when last sailed,
+## and how it stands ("waiting": nobody answered last time; "moved": it changed
+## hands; "handed": this game founded it and handed it on). A local file of
+## conveniences (next to the charters folder, so a test's folder override
+## keeps its own), one section per player key (two copies on one machine
+## each keep their own).
+static func _memory_path() -> String:
+	return _dir().get_base_dir().path_join("joined_charters.cfg")
+
+
+static func _memory() -> ConfigFile:
+	var cf: ConfigFile = ConfigFile.new()
+	cf.load(_memory_path())
+	return cf
+
+
+static func _memory_list(cf: ConfigFile) -> Array:
+	var v: Variant = cf.get_value(SteamLayer.player_key(), "charters", [])
+	return (v as Array).duplicate(true) if v is Array else []
+
+
+## Every remembered Charter, most recently sailed first. One whose file is on
+## this machine (founded here, or handed here) is left out: its own card shows.
+static func remembered() -> Array:
+	var out: Array = []
+	for m: Variant in _memory_list(_memory()):
+		if m is Dictionary and not FileAccess.file_exists(_path(str((m as Dictionary).get("id", "")))):
+			out.append(m)
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(Js.num(a.get("at"))) > int(Js.num(b.get("at"))))
+	return out
+
+
+static func memory_of(charter_id: String) -> Dictionary:
+	for m: Variant in _memory_list(_memory()):
+		if m is Dictionary and str((m as Dictionary).get("id", "")) == charter_id:
+			return m
+	return {}
+
+
+## The remembered Charter at this address (the join form hides the name field
+## for a berth this game already has), or {}.
+static func memory_at(address: String) -> Dictionary:
+	var a: String = address.strip_edges()
+	if a == "":
+		return {}
+	for m: Dictionary in remembered():
+		if str(m.get("addr", "")) == a:
+			return m
+	return {}
+
+
+## Remember (or update) a Charter: the fields given are laid over what is kept.
+static func remember(charter_id: String, fields: Dictionary) -> void:
+	if charter_id == "":
+		return
+	var cf: ConfigFile = _memory()
+	var list: Array = _memory_list(cf)
+	var found_it: bool = false
+	for m: Variant in list:
+		if m is Dictionary and str((m as Dictionary).get("id", "")) == charter_id:
+			(m as Dictionary).merge(fields, true)
+			found_it = true
+	if not found_it:
+		var fresh: Dictionary = { "id": charter_id, "at": Time.get_unix_time_from_system() }
+		fresh.merge(fields, true)
+		list.append(fresh)
+	cf.set_value(SteamLayer.player_key(), "charters", list)
+	if str(fields.get("addr", "")) != "":
+		cf.set_value(SteamLayer.player_key(), "last_address", str(fields["addr"]))
+	DirAccess.make_dir_recursive_absolute(_memory_path().get_base_dir())
+	cf.save(_memory_path())
+
+
+## Forget one (the card's Forget, or a Charter that sank).
+static func forget(charter_id: String) -> void:
+	var cf: ConfigFile = _memory()
+	var list: Array = _memory_list(cf).filter(func(m: Variant) -> bool: return not (m is Dictionary and str((m as Dictionary).get("id", "")) == charter_id))
+	cf.set_value(SteamLayer.player_key(), "charters", list)
+	cf.save(_memory_path())
+
+
+## The address last hailed (the join form starts on it, not on 127.0.0.1).
+static func last_address() -> String:
+	return str(_memory().get_value(SteamLayer.player_key(), "last_address", ""))
 
 
 # ── The crew chest ────────────────────────────────────────────────────────────

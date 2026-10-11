@@ -88,6 +88,54 @@ func _muster_extras() -> void:
 	pass
 
 
+## Last word on the state before it goes out (each table keeps its spoils
+## sheet's ledger in step here).
+func _before_push() -> void:
+	# THE RUN'S ID (ENDING TOGETHER, Kong, 2026-10-11): one per line that
+	# sails, so each screen shows a run's spoils sheet once (and only for a
+	# run it saw under way; game/crew_ending.gd).
+	if _r.has("b") and str(_r.get("rid", "")) == "":
+		_r["rid"] = "%d-%d" % [Time.get_ticks_msec(), randi() % 100000]
+
+
+## A captain's screen has pressed Continue on the spoils sheet (ENDING
+## TOGETHER): marked so every sheet can say who it still waits on. Nothing
+## waits on it (the table is already done; a new call may replace it).
+func _seen(key: String) -> Dictionary:
+	var sp: Dictionary = Js.obj(_r.get("spoils"))
+	if sp.is_empty() or not Js.obj(sp.get("seats")).has(key):
+		return { "ok": true }
+	if not _r.has("seen"):
+		_r["seen"] = {}
+	if (_r["seen"] as Dictionary).has(key):
+		return { "ok": true }
+	_r["seen"][key] = true
+	_push()
+	return { "ok": true }
+
+
+## An item on the spoils sheet, as it is drawn there: { id, name, rarity,
+## image }. A ship skin takes its biggest hull's art (its loot row carries
+## none) and the chase's rarity; a raid item without a rarity takes its own.
+static func spoils_row(id: String, nm: String, rarity: String, image: Variant, skin: String = "") -> Dictionary:
+	var img: String = str(image) if image != null else ""
+	if skin != "":
+		for sk: Variant in Js.list(Rules.data().get("shipSkins")):
+			if sk is Dictionary and str((sk as Dictionary).get("id", "")) == skin:
+				var by: Dictionary = Js.obj((sk as Dictionary).get("imageByTier"))
+				img = str(by.get("6", by.get("5", img))) if img == "" else img
+				if nm == "":
+					nm = str((sk as Dictionary).get("name", skin))
+		if Kit.rarity_key(rarity) == "":
+			rarity = "chase"
+	elif Kit.rarity_key(rarity) == "":
+		var it: Dictionary = Armory.item(id)
+		rarity = str(it.get("rarity", "common"))
+		if img == "":
+			img = str(it.get("image", ""))
+	return { "id": id, "name": nm if nm != "" else id, "rarity": rarity, "image": img }
+
+
 ## The copy of the state that goes out on a push.
 func _public() -> Dictionary:
 	return _r.duplicate(true)
@@ -237,6 +285,7 @@ func _process(delta: float) -> void:
 ## Send the state to everyone (and to this game's own screens).
 func _push() -> void:
 	_clock()
+	_before_push()
 	if str(_r.get("phase", "")) == "muster":
 		_r["crew"] = _crew_view()
 		_muster_extras()

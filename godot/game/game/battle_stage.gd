@@ -230,6 +230,12 @@ func _ready() -> void:
 			var r: Variant = await BattleStageSync._act(self, a)
 			if r is Dictionary and (r as Dictionary).has("error"):
 				_log_line(str(r["error"])))
+		# The crew's spoils sheet waited its while after Continue: this screen
+		# goes back to the sea now (the others still deciding keep theirs).
+		_ov.leave_now.connect(func() -> void:
+			if not _ended:
+				_gone = true
+				_end(str(_latest.get("phase", "")) == "haul"))
 		add_child(_ov)
 		_moments = GauntletMoments.new()
 		_moments.field = sea._field
@@ -828,6 +834,11 @@ func _end(won: bool, fled: bool = false) -> void:
 			a0.queue_free()
 	if table != null and table.is_connected("changed", _pump):
 		table.disconnect("changed", _pump)
+	# A tier's Stamp still landing plays out over the sea (it was cut off as
+	# the screen freed; a crew's spoils sheet comes up as it fades).
+	for c0: Node in get_children():
+		if c0 is BattleStageHud.Stamp and not c0.is_queued_for_deletion():
+			c0.reparent(sea._hud_layer)
 	if _ov != null:
 		# The sheet fades away before it goes.
 		_ov._hide()

@@ -374,6 +374,14 @@ func _ready() -> void:
 		gm.table = net.gauntlets
 		gm.my_key = net.key
 		hud_layer.add_child(gm)
+	# ENDING TOGETHER (Kong, 2026-10-11): the follow card for a captain out of
+	# a crew's raid or dive, and the shared spoils sheet when it ends.
+	if net != null:
+		var ce: Control = (load("res://game/crew_ending.gd") as GDScript).new()
+		ce.set("sea", self)
+		ce.set("my_key", net.key)
+		ce.set("tables", [[RaidTable.live, "raidTable"], [net.gauntlets, "gauntletTable"]])
+		hud_layer.add_child(ce)
 	_room_layer = CanvasLayer.new()
 	_room_layer.layer = 20
 	add_child(_room_layer)

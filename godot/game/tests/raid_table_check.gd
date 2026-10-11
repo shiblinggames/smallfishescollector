@@ -93,6 +93,8 @@ func _init() -> void:
 	# ── Played to the end ──
 	var rounds: int = 0
 	var pays: Dictionary = { "anna-key": 0, "ben-key": 0 }
+	# What the events paid each captain, to hold the spoils sheet against.
+	var paid: Dictionary = { "anna-key": [0.0, 0.0], "ben-key": [0.0, 0.0] }
 	var tides: int = 0
 	var flares: int = 0
 	var seen_seq: int = -1
@@ -105,6 +107,10 @@ func _init() -> void:
 					for e: Dictionary in st["ev"]:
 						if e["t"] == "pay":
 							pays[e["key"]] = int(pays[e["key"]]) + 1
+							paid[e["key"]][0] += Js.num(e.get("doubloons"))
+							paid[e["key"]][1] += Js.num(e.get("xp"))
+						elif e["t"] == "crate":
+							paid[e["key"]][0] += Js.num(e.get("coin"))
 				# Both screens say they have played it.
 				await c.run(a, "raidTable", ["played", st["seq"]])
 				await c.run(b, "raidTable", ["played", st["seq"]])
@@ -139,6 +145,27 @@ func _init() -> void:
 	if t.state.get("result") == "won":
 		check(a.store.clear_count(a.uid, "corsairs_reckoning") == 1 and b.store.clear_count(b.uid, "corsairs_reckoning") == 1, "the clear is each captain's")
 		check(x.store.clear_count(x.uid, "corsairs_reckoning") == 0, "and not Cal's")
+	# THE SHARED SPOILS SHEET (ENDING TOGETHER, 2026-10-11): every captain's
+	# column in the state that went out, the same numbers the events paid.
+	var sp: Dictionary = Js.obj(t.state.get("spoils"))
+	check(sp.get("kind") == "raid" and str(sp.get("result", "")) == str(t.state.get("result", "")), "the spoils go out with the result (%s)" % sp.get("result", "none"))
+	check(Js.obj(sp.get("seats")).size() == 2 and Js.list(sp.get("order")) == ["anna-key", "ben-key"], "a column for each captain, in the line's order")
+	check(str(t.state.get("rid", "")) != "", "the run carries its id")
+	for k: String in ["anna-key", "ben-key"]:
+		var col: Dictionary = Js.obj(sp["seats"].get(k))
+		check(absf(Js.num(col.get("coin")) - float(paid[k][0])) < 0.5 and absf(Js.num(col.get("xp")) - float(paid[k][1])) < 0.5, "%s's column is what they were paid (%s / %s)" % [k, col.get("coin"), paid[k][0]])
+		check(str(col.get("name", "")) != "" and col.has("face"), "%s's column has a name and a face" % k)
+		if sp.get("result") == "won":
+			check(Js.obj(col.get("seal")).get("tier") == "normal", "%s's seal is the tier" % k)
+			for it: Variant in Js.list(col.get("items")):
+				check(str(Js.obj(it).get("name", "")) != "" and str(Js.obj(it).get("rarity", "")) != "", "an item names its rarity")
+		else:
+			check(int(Js.num(sp.get("at"))) >= 1, "a loss says the fight it broke at")
+	# Continue: each captain's press is marked for every sheet's "Waiting on".
+	await c.run(a, "raidTable", ["seen"])
+	check(Js.obj(t.state.get("seen")).has("anna-key") and not Js.obj(t.state.get("seen")).has("ben-key"), "Anna's Continue is marked; Ben is still waited on")
+	await c.run(x, "raidTable", ["seen"])
+	check(not Js.obj(t.state.get("seen")).has("cal-key"), "a captain not in the raid marks nothing")
 
 	# ── A flee: Ben gets away, and is paid no more ──
 	await c.run(a, "raidTable", ["call", pete.merged(at)])
@@ -179,6 +206,9 @@ func _init() -> void:
 				await c.run(a, "raidTable", ["tide", ch2[0]["id"]])
 				await c.run(b, "raidTable", ["tide", ch2[0]["id"]])
 	check(fled, "Ben got away at last")
+	var sp2: Dictionary = Js.obj(Js.obj(t.state.get("spoils")).get("seats"))
+	check(str(Js.obj(sp2.get("ben-key")).get("out", "")) == "fled" and int(Js.num(Js.obj(sp2.get("ben-key")).get("outAt"))) >= 1, "Ben's column says he fled, and at which fight")
+	check(str(Js.obj(sp2.get("anna-key")).get("out", "")) != "fled", "Anna's does not")
 
 	# ── Co-op: a field of enemies, paid for every one, the tier's clear ──
 	var a_xp: float = Js.num(a.profile().get("expedition_xp"))

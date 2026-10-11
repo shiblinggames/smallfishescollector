@@ -158,7 +158,10 @@ func _init() -> void:
 	check(Js.list(cf.derby.get("rows")).size() == 2 and cf.derby["rows"][0]["name"] == "Anna", "the standings lead with the biggest fish")
 	cf._derby_end_ms = 0
 	cf._process(0.1)
-	check(cf.derby.is_empty() and calls.back().contains("Anna won the derby"), "the derby ends and its winner is called")
+	# The derby finish (ENDING TOGETHER, Kong, 2026-10-11): the final standings
+	# go out marked final (each screen holds them, then fades), the winner first.
+	check(cf.derby.get("final", false) == true and str(cf.derby["rows"][0].get("key", "")) == "anna-key" and str(cf.derby["rows"][1].get("key", "")) == "ben-key", "the derby ends on its final standings, Anna first")
+	check(cf._derby.is_empty() and (await c.run(a, "crewDerby", ["start", "species"])).get("ok", false), "and a new derby may start")
 	check(Js.list(c.data.get("derbies")).size() == 1, "and kept in the Charter's records")
 
 	# ── Release and handover ──

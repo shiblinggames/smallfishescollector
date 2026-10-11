@@ -25,6 +25,9 @@ extends Control
 ## Rules: core/gauntlet.gd; the table: game/gauntlet_table.gd.
 
 signal acted(args: Array)
+## The shared spoils sheet's wait ran out (CrewSpoils.WAIT_MAX after this
+## captain pressed Continue): the fight screen goes now, the rest still deciding.
+signal leave_now
 
 const W: float = 1120.0
 
@@ -37,6 +40,8 @@ const ArtStrip = GauntletPieces.ArtStrip
 const ChestArt = GauntletPieces.ChestArt
 const BankPane = GauntletPieces.BankPane
 const CrewPane = GauntletPieces.CrewPane
+## The shared spoils sheet's columns (ENDING TOGETHER, Kong, 2026-10-11).
+const CrewSpoils = preload("res://game/crew_spoils.gd")
 
 var my_key: String = ""
 ## This captain's profile (the Codex reads what they have discovered).
@@ -185,7 +190,8 @@ func _height() -> float:
 		"held": return 420.0
 		"draft": return 640.0
 		"breather": return 660.0 if not Js.obj(Js.obj(_run().get("offer")).get("live")).is_empty() else 560.0
-		"haul", "dead": return 600.0
+		# A crew's end is the spoils sheet's columns (room for each one's items).
+		"haul", "dead": return 680.0 if Js.obj(Js.obj(_st.get("spoils")).get("seats")).size() >= 2 else 600.0
 		"curse", "jobResult": return 470.0
 	return 560.0
 
@@ -817,6 +823,8 @@ func _breather() -> void:
 ## counts up a line at a time, the drops landing last. Seen once (fresh); a
 ## repaint shows it as it ended.
 func _haul(fresh: bool = false) -> void:
+	if _coop_end():
+		return
 	var p: Dictionary = Js.obj(Js.obj(_st.get("pays")).get(my_key))
 	var w: float = _ss.x
 	_head("Banked at depth %d" % int(Js.num(p.get("depth"))), "You climbed back into the light")
@@ -890,6 +898,8 @@ func _haul(fresh: bool = false) -> void:
 
 
 func _dead() -> void:
+	if _coop_end():
+		return
 	var p: Dictionary = Js.obj(Js.obj(_st.get("pays")).get(my_key))
 	if p.is_empty():
 		p = Js.obj(_cap().get("paid"))
@@ -920,6 +930,43 @@ func _dead() -> void:
 		y += 42.0
 	_label(Vector2(380, y + 10), "Your Fathoms are always paid. Spend them in the Locker." , "karla", 600, 13, Dossier.SOFT, w - 420.0)
 	_home_foot()
+
+
+## ENDING TOGETHER (Kong, 2026-10-11): a crew's dive ends on the shared spoils
+## sheet, a column per captain (game/crew_spoils.gd; its numbers are the
+## table's, game/gauntlet_pay.gd), banked or lost alike. Continue is this
+## sheet's "Back to the sea" (the table's end acks); pressed, it says who it
+## still waits on, and after CrewSpoils.WAIT_MAX the screen goes regardless.
+## A dive alone keeps the chest and its roll (false: not a crew's).
+func _coop_end() -> bool:
+	var sp: Dictionary = Js.obj(_st.get("spoils"))
+	if Js.obj(sp.get("seats")).size() < 2:
+		return false
+	var w: float = _ss.x
+	var top: float = CrewSpoils.head(_body, sp, w)
+	CrewSpoils.board(_body, Rect2(36, top + 6.0, w - 72.0, _ss.y - top - 96.0), sp, my_key)
+	var acks: Dictionary = Js.obj(_st.get("acks"))
+	var foot: Array = CrewSpoils.foot_row(_body, Vector2(0, _ss.y - 78.0), w, func() -> void:
+		if _left_ms < 0:
+			_left_ms = Time.get_ticks_msec()
+		_send(["home"]))
+	if acks.has(my_key) or _left_ms >= 0:
+		var g: Dictionary = acks.merged({ my_key: true })
+		var names: Array = CrewSpoils.waiting_names(sp, g, my_key)
+		(foot[0] as Button).visible = false
+		(foot[1] as Label).visible = true
+		(foot[1] as Label).text = ("Waiting on %s" % BattleLook.join_names(names)) if not names.is_empty() else "Back to the sea"
+	return true
+
+
+## When Continue was pressed on the crew's spoils sheet (-1: not yet).
+var _left_ms: int = -1
+
+
+func _process(_delta: float) -> void:
+	if _left_ms >= 0 and Time.get_ticks_msec() - _left_ms > int(CrewSpoils.WAIT_MAX * 1000.0):
+		_left_ms = -1
+		leave_now.emit()
 
 
 ## The dive held: where it waits, and how to come back to it.

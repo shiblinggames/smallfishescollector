@@ -119,6 +119,8 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 			return _out(key)
 		"reading":
 			return _reading(key, payload == true)
+		"seen":
+			return _seen(key)
 	return { "error": "There is no such order." }
 
 
@@ -213,6 +215,7 @@ func _start() -> void:
 	_r["b"] = Battle.begin(str(_r["raidId"]), seats, str(_r.get("tier", "normal")))
 	_began_ms = Time.get_ticks_msec()
 	_feats = {}
+	_spoils_open()
 	_step("plan", [{ "t": "begin" }])
 
 
@@ -269,6 +272,7 @@ func _next_fight() -> void:
 	if nx["done"]:
 		var ev: Array = _crates()
 		_r["result"] = "won"
+		_spoils_end("won")
 		# The crew's bounty order: a co-op clear (2 on Co-op Challenge), a line.
 		var rank: float = 2.0 if str(_r.get("tier", "")) == "coopc" else (1.0 if str(_r.get("tier", "")) == "coop" else 0.0)
 		if rank > 0.0:
@@ -314,6 +318,7 @@ func _resolve() -> void:
 			_r["result"] = str(b["state"])
 			if b["state"] == "lost":
 				_lives_lost()
+			_spoils_end(str(b["state"]))
 			_step("end", ev)
 		_:
 			_step("plan", ev)
@@ -366,6 +371,7 @@ func _pay_kill() -> Array:
 		if coin > 0.0:
 			charter._note(ss.captain_name(), coin, "%s: %s sunk" % [raid.get("raidTitle", "Raid"), b["foes"][0]["name"] if b.has("foes") else b["enemy"]["name"]])
 		out.append({ "t": "pay", "key": s["key"], "xp": xp, "doubloons": coin })
+		_spoils_add(str(s["key"]), coin, xp)
 	_settle_saves()
 	return out
 
@@ -388,6 +394,7 @@ func _crates() -> Array:
 		RaidFeats.grant(ss.store, ss.uid, str(_r["raidId"]), Js.obj(_feats.get(s["key"])) if _feats.has(s["key"]) else RaidFeats.fresh())
 		charter._take(ss)
 		out.append({ "t": "tierClear", "key": s["key"], "tier": str(b.get("tier", "normal")), "first": first })
+		_spoils_add(str(s["key"]), Js.num(r.get("coin")), 0.0, Js.list(r.get("items")), { "tier": str(b.get("tier", "normal")), "first": first })
 		if Js.num(r.get("coin")) > 0.0:
 			charter._note(ss.captain_name(), float(r["coin"]), "%s: the crate" % raid.get("raidTitle", "Raid"))
 		out.append({ "t": "crate", "key": s["key"], "coin": r.get("coin", 0.0), "items": (Js.list(r.get("items"))).map(func(x: Dictionary) -> String: return str(x.get("label", x["id"]))) })
@@ -423,6 +430,7 @@ func _land_flares() -> void:
 	if b["state"] == "lost":
 		_r["result"] = "lost"
 		_lives_lost()
+		_spoils_end("lost")
 	_step("end" if b["state"] == "lost" else "plan", ev)
 
 
@@ -513,6 +521,7 @@ func _after_drop(_key: String) -> void:
 	if Battle.alive(b).is_empty():
 		b["state"] = "fled"
 		_r["result"] = "fled"
+		_spoils_end("fled")
 		_r["phase"] = "done"
 		_push()
 		return
@@ -529,6 +538,83 @@ func _after_drop(_key: String) -> void:
 		"tide":
 			if _all_in("tidePicks"):
 				_step("tided", [{ "t": "tided", "picks": _r["tidePicks"] }])
+
+
+# ── THE SHARED SPOILS SHEET (ENDING TOGETHER, Kong, 2026-10-11) ───────────────
+## At the end of a co-op raid, won or lost, every captain sees one sheet with a
+## column per captain (game/crew_spoils.gd). Its numbers are kept HERE, on the
+## founder's game, as the raid pays them, and go out in the state (`spoils`),
+## so every screen shows the same sheet:
+##   { kind: "raid", raid, tier, of (fights), result ("" until it ends; won,
+##     lost, fled), at (the fight it ended on), seats: { key: { name, face,
+##     coin, xp, items [{ id, name, rarity, image }], seal { tier, first },
+##     out ("", fled, sank, away), outAt (the fight it happened at) } },
+##     order [keys, the line's order] }
+
+func _spoils_open() -> void:
+	var raid: Dictionary = Battle.raid_def(str(_r["raidId"]))
+	var seats: Dictionary = {}
+	var order: Array = []
+	for s: Dictionary in _r["b"]["seats"]:
+		var k: String = str(s.get("key", ""))
+		order.append(k)
+		seats[k] = { "name": str(s.get("name", _name_of(k))), "face": Js.obj(s.get("face")), "coin": 0.0, "xp": 0.0, "items": [], "seal": {}, "out": "", "outAt": 0.0 }
+	_r["spoils"] = { "kind": "raid", "raid": str(raid.get("raidTitle", "The raid")), "tier": str(_r.get("tier", "normal")),
+		"of": float(Battle.fight_at(raid, 0)["of"]), "result": "", "at": 0.0, "seats": seats, "order": order }
+	_r["seen"] = {}
+
+
+## Pay into a captain's column: coin, XP, a crate's items (as the sheet
+## draws them: name, rarity, art), the tier's seal.
+func _spoils_add(key: String, coin: float, xp: float, items: Array = [], seal: Dictionary = {}) -> void:
+	var sp: Dictionary = Js.obj(_r.get("spoils"))
+	var c: Dictionary = Js.obj(Js.obj(sp.get("seats")).get(key))
+	if c.is_empty():
+		return
+	c["coin"] = Js.num(c.get("coin")) + coin
+	c["xp"] = Js.num(c.get("xp")) + xp
+	for it: Variant in items:
+		(c["items"] as Array).append(spoils_item(Js.obj(it)))
+	if not seal.is_empty():
+		c["seal"] = seal
+
+
+## A crate's loot row as the sheet shows it (game/crew_table.gd).
+static func spoils_item(row: Dictionary) -> Dictionary:
+	return spoils_row(str(row.get("id", "")), str(row.get("label", row.get("name", row.get("id", "")))), str(row.get("rarity", "")), row.get("image"), str(row.get("shipSkinId", "")) if row.get("shipSkinId") != null else "")
+
+
+func _spoils_end(result: String) -> void:
+	var sp: Dictionary = Js.obj(_r.get("spoils"))
+	if sp.is_empty():
+		return
+	sp["result"] = result
+	sp["at"] = float(int(Js.num(Js.obj(_r.get("b")).get("fight"))) + 1)
+	_spoils_mark()
+
+
+## Who is out of the line, and since which fight: read off the seats before
+## every push (a sinking, a flight, a lost line; a captain back on the line is
+## in again).
+func _spoils_mark() -> void:
+	var sp: Dictionary = Js.obj(_r.get("spoils"))
+	if sp.is_empty() or not (_r.get("b") is Dictionary):
+		return
+	var dropped: Dictionary = Js.obj(_r.get("dropped"))
+	var fight: float = float(int(Js.num(_r["b"].get("fight"))) + 1)
+	for s: Dictionary in _r["b"]["seats"]:
+		var c: Dictionary = Js.obj(Js.obj(sp["seats"]).get(str(s.get("key", ""))))
+		if c.is_empty():
+			continue
+		var now: String = "away" if dropped.has(s.get("key")) else ("sank" if s.get("sunk", false) else ("fled" if s.get("fled", false) else ""))
+		if now != str(c.get("out", "")):
+			c["out"] = now
+			c["outAt"] = fight if now != "" else 0.0
+
+
+func _before_push() -> void:
+	super()
+	_spoils_mark()
 
 
 ## Why each tier is shut for this line ("" when open).

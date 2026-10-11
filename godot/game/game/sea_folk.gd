@@ -136,6 +136,42 @@ class CrewLink:
 	# (A captain back mid-fight is taken into the line by the raid and dive
 	# musters, RaidMuster._back_in and GauntletMuster's: one place, not two.)
 
+	## THE LINE GOING QUIET (Kong, 2026-10-11): on a crewmate's sea, when
+	## nothing has come from the founder's game for QUIET seconds, "Lost touch
+	## with Anna's game..." on the water, so the seconds before the line is
+	## given up are not silent; it fades if the line comes back. Not in the
+	## first seconds of a sea (the founder's own sea may still be opening).
+	const QUIET: float = 2.5
+	const SETTLING: float = 6.0
+	var _age: float = 0.0
+	var _quiet: Label = null
+	var _quiet_t: float = 0.0
+
+	func _process(delta: float) -> void:
+		_age += delta
+		var net: CrewNet = sea.net
+		var silent: bool = false
+		if net != null and not net.hosting and net.sunk_info.is_empty() and net.heard_ms > 0 and _age > SETTLING:
+			var mp: MultiplayerPeer = net.multiplayer.multiplayer_peer
+			silent = mp != null and mp.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED and Time.get_ticks_msec() - net.heard_ms > int(QUIET * 1000.0)
+		if silent and _quiet == null:
+			_quiet = Kit.lift(Kit.text(sea._hud_layer, "Lost touch with %s's game..." % net.founder_name(), "heading", Kit.SEA_INK))
+			_quiet.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+			_quiet.offset_left = -360
+			_quiet.offset_right = 360
+			_quiet.offset_top = 190
+			_quiet.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_quiet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_quiet_t = 0.0
+			Motion.note_in(_quiet)
+		elif not silent and _quiet != null:
+			Motion.note_out(_quiet)
+			_quiet = null
+		if _quiet != null and _quiet.modulate.a > 0.5:
+			# A slow breath while it waits (not a blink).
+			_quiet_t += delta
+			_quiet.self_modulate.a = 0.7 + 0.3 * cos(_quiet_t * 2.2)
+
 
 ## The crew is asked to agree to something: a small panel over the sea,
 ## Agree or Not now.

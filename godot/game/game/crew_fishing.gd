@@ -209,11 +209,9 @@ func _derby_finish() -> void:
 	for k: String in _derby["scores"]:
 		rows.append([k, float(_derby["scores"][k]["v"]), str(_derby["scores"][k]["label"])])
 	rows.sort_custom(func(a: Array, b: Array) -> bool: return float(a[1]) > float(b[1]))
-	var line: String = "The derby is over. Nobody landed a thing."
 	var rec: Dictionary = { "kind": _derby["kind"], "at": Js.iso(Clock.now_ms()), "winner": "", "label": "" }
 	if not rows.is_empty():
 		var win: String = _derby["names"].get(rows[0][0], "?")
-		line = "%s won the derby (%s): %s" % [win, DERBY_KINDS[_derby["kind"]], rows[0][2]]
 		rec["winner"] = win
 		rec["label"] = rows[0][2]
 	if not charter.data.has("derbies"):
@@ -226,9 +224,16 @@ func _derby_finish() -> void:
 	if (charter.data["derbies"] as Array).size() > 30:
 		charter.data["derbies"] = (charter.data["derbies"] as Array).slice(-30)
 	charter.write()
+	# THE DERBY FINISH (ENDING TOGETHER, Kong, 2026-10-11): the final
+	# standings go out once, marked final, and every screen holds them a few
+	# seconds (game/crew_waters_view.gd) before they fade; the next state (a
+	# new derby) replaces them. The standings say who won: no toast on top.
+	var fin: Array = []
+	for r: Array in rows:
+		fin.append({ "key": r[0], "name": _derby["names"].get(r[0], "?"), "v": r[1], "label": r[2] })
+	var final_st: Dictionary = { "kind": _derby["kind"], "title": DERBY_KINDS[_derby["kind"]], "by": _derby["by"], "rows": fin, "left": 0.0, "final": true }
 	_derby = {}
-	_derby_push()
-	_send("_call", [line, ""])
+	_send("_derby_state", [final_st])
 
 
 ## A crew moment for the crew's bounty order, written down once (in the

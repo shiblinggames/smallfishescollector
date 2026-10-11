@@ -126,6 +126,7 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 		"contract": return _contract_vote(key, int(Js.num(p)))
 		"mark": return _mark(key, str(p))
 		"vote": return _vote(key, str(p))
+		"seen": return _seen(key)
 		"invite": return _invite(key, str(p))
 		"answer": return _answer(key, p == true)
 		"home": return _home(key)
@@ -586,6 +587,8 @@ func _after_fight() -> void:
 			s["sunk"] = false
 			s["hp"] = maxf(1.0, float(Js.round(float(s["max"]) * TOW_HP)))
 			ev.append({ "t": "towed", "key": s["key"], "hp": s["hp"] })
+			# Counted for the spoils sheet's "Towed along" line (ENDING TOGETHER).
+			c["towed"] = Js.num(c.get("towed")) + 1.0
 		# Powder Hoard: balls still loaded ride into the next fight.
 		var cap: float = 0.0
 		for e0: Dictionary in Gauntlet.boon_effects(c["boons"]):

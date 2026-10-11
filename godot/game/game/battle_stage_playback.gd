@@ -425,11 +425,17 @@ static func _one_play(bs: BattleStage, x: Dictionary) -> void:
 				await bs._wait(2.0)
 		"crate":
 			if x["key"] == bs.my_key:
-				bs._say(str(bs._raid.get("bossDefeatedText", "Victory")) if str(bs._raid.get("bossDefeatedText", "")) != "" else "Victory")
 				var items: Array = Js.list(x.get("items"))
 				bs._log_line("Your crate: %s ⟡%s" % [Js.thousands(Js.num(x.get("coin"))), ("  ·  " + ", ".join(PackedStringArray(items))) if not items.is_empty() else ""])
-				Sound.chest(true)
-				await bs._wait(3.2)
+				# A crew's raid ends on the shared spoils sheet (ENDING TOGETHER,
+				# Kong, 2026-10-11: the 2-second stamp, then the sheet), which
+				# carries the crate; alone, the banner and the pause carry it.
+				if Js.list(bs._latest.get("members")).size() >= 2:
+					await bs._wait(0.4)
+				else:
+					bs._say(str(bs._raid.get("bossDefeatedText", "Victory")) if str(bs._raid.get("bossDefeatedText", "")) != "" else "Victory")
+					Sound.chest(true)
+					await bs._wait(3.2)
 		"tierClear":
 			if x["key"] == bs.my_key:
 				BattleStageHud._stamp(bs, str(x.get("tier", "normal")), x.get("first", false) == true)

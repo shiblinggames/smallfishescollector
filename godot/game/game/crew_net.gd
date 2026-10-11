@@ -33,8 +33,11 @@ signal welcomed(info: Dictionary, session: Session)
 signal refused_by_founder(why: String)
 signal sailing
 signal lost(why: String)
-## The founder's own game is done with this Charter (sunk, or handed over).
+## The founder's own game is done with this Charter (handed over).
 signal ended(why: String)
+## A hardcore Charter has sunk (its last life spent): every captain's game
+## plays the ending and shows the end card (Charter.ending's facts).
+signal sunk(summary: Dictionary)
 signal mate_boat(key: String, state: Dictionary)
 signal mate_look(key: String, mate_name: String, look: Dictionary)
 signal mate_left(key: String)
@@ -78,6 +81,16 @@ var port: int = 0
 var hailing: String = ""
 ## The roster as last heard (both sides): who is aboard, and the founder's name.
 var last_roster: Array = []
+## A crewmate's game: the Charter as the founder's welcome gave it ({} until
+## welcomed), what the founder said of how the line is ending ({} until then:
+## kind "closed", "handed", "yours"; "lost" when they said nothing), and the
+## sinking's end card once it came.
+var joined_info: Dictionary = {}
+var end_info: Dictionary = {}
+var sunk_info: Dictionary = {}
+## When the founder's game was last heard from (msec): a crewmate's sea says
+## "Lost touch..." while the line is going quiet, before ENet gives up on it.
+var heard_ms: int = 0
 ## On the founder's game: peer id -> member key, and who is in port.
 var _members: Dictionary = {}
 var _next: int = 0
@@ -136,7 +149,9 @@ func _process(delta: float) -> void:
 
 # ── A hardcore Charter sinks; a Charter handed over ───────────────────────────
 
-const SINK_AFTER: float = 8.0
+## Once the fight that spent the last life is over, this long before the
+## Charter goes down (it was 8 silent seconds; the ending is on the water now).
+const SINK_AFTER: float = 2.5
 const CHUNK: int = 48000
 var _sink_due: bool = false
 var _sink_wait: float = 0.0
@@ -152,18 +167,34 @@ func _on_sinking() -> void:
 	_sink_wait = 0.0
 
 
+## THE HARDCORE ENDING (Kong, 2026-10-11): every captain is sent the end
+## card's facts and plays the ending on their own water (game/charter_cards.gd);
+## the file moves to charters/sunk as before. The line stays up until each
+## captain presses Back to port (the founder's leave then says nothing more:
+## the crew already know), and nothing more is run on the Charter meanwhile.
 func _sink_now() -> void:
-	var log: Array = Js.list(charter.data.get("lifeLog"))
-	var last: Dictionary = Js.obj(log.back()) if not log.is_empty() else {}
-	# The name bare: a Charter's name often starts with "The" already.
-	var why: String = "%s has sunk. Its last life went down with %s. The Charter and its captains are gone." % [charter.data["name"], last.get("by", "a captain")]
+	var summary: Dictionary = charter.ending()
+	_farewelled = true
 	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
-		_farewell.rpc(why)
-		_farewelled = true
+		_went_down.rpc(summary)
+		_flush()
+	charter.busy_why = "%s is lost." % summary["name"]
 	charter.sink()
-	await get_tree().create_timer(0.5).timeout
-	leave()
-	ended.emit(why)
+	sunk_info = summary
+	sunk.emit(summary)
+
+
+@rpc("authority", "reliable")
+func _went_down(summary: Dictionary) -> void:
+	sunk_info = summary
+	Charter.forget(str(summary.get("id", "")))
+	sunk.emit(summary)
+
+
+## How the founder's line is ending, said before it closes (closed, handed).
+@rpc("authority", "reliable")
+func _ending(info: Dictionary) -> void:
+	end_info = info
 
 
 @rpc("authority", "reliable")
@@ -278,12 +309,22 @@ func _handed(why: String) -> void:
 		return
 	var who: String = charter.berth_of(_hand_to).get("name", "your crewmate")
 	var cname: String = str(charter.data["name"])
+	# Where the new founder can be hailed (as this game sees them; their game
+	# hosts on the first free port, the usual one unless it is taken).
+	var to_addr: String = ""
+	var mp: MultiplayerPeer = multiplayer.multiplayer_peer
+	if mp is ENetMultiplayerPeer and (mp as ENetMultiplayerPeer).get_peer(from) != null:
+		to_addr = (mp as ENetMultiplayerPeer).get_peer(from).get_remote_address()
 	for p: Variant in _members:
 		if int(p) == 1:
 			continue
 		var mine: bool = _members[p] == _hand_to
+		_ending.rpc_id(int(p), { "kind": "yours" if mine else "handed", "id": charter.id(), "charter": cname, "founder": captain_name, "to": who, "to_addr": to_addr })
 		_farewell.rpc_id(int(p), "%s is yours now. Host it from the title screen and your crew can join." % cname if mine else "%s has %s now. Join them when they host it." % [who, cname])
 	_farewelled = true
+	# This game remembers it as a crewmate would: "Handed to Ben", with Rejoin.
+	var me: Session = charter.session_for(key)
+	Charter.remember(charter.id(), { "name": cname, "founder": who, "addr": to_addr, "captain": captain_name, "look": Skipper.look_of(me.profile()) if me != null else {}, "hardcore": charter.data.get("hardcore", false), "at": Time.get_unix_time_from_system(), "handed": true, "moved": false, "waiting": false })
 	charter.handed_off()
 	await get_tree().create_timer(0.5).timeout
 	leave()
@@ -380,6 +421,10 @@ func _reset() -> void:
 	last_roster = []
 	_farewelled = false
 	_end_note = ""
+	joined_info = {}
+	end_info = {}
+	sunk_info = {}
+	heard_ms = 0
 	_looks.clear()
 	_open.clear()
 	_answering.clear()
@@ -455,6 +500,7 @@ func leave() -> void:
 	var line_up: bool = mp != null and mp.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED and not multiplayer.get_peers().is_empty()
 	if line_up and hosting and not _farewelled and charter != null:
 		# The crew hear who closed it, and that their captains are safe in it.
+		_ending.rpc({ "kind": "closed", "id": charter.id(), "charter": str(charter.data["name"]), "founder": captain_name })
 		_farewell.rpc("%s closed %s. Your captain is safe aboard it; rejoin when %s hosts again." % [captain_name, charter.data["name"], captain_name])
 		_flush()
 	elif line_up and not hosting:
@@ -462,8 +508,12 @@ func leave() -> void:
 		_bye.rpc_id(1)
 		_flush()
 	if multiplayer.multiplayer_peer != null:
-		multiplayer.multiplayer_peer.close()
+		var old: MultiplayerPeer = multiplayer.multiplayer_peer
 		multiplayer.multiplayer_peer = null
+		if line_up and old is ENetMultiplayerPeer:
+			_linger(old)
+		else:
+			old.close()
 	if SteamLayer.up and lobby_id != 0:
 		SteamLayer.steam().call("leaveLobby", lobby_id)
 	lobby_id = 0
@@ -487,6 +537,23 @@ func leave() -> void:
 	_reset_tables()
 
 
+## A line closed on purpose is kept open a moment longer, out of the game's
+## hands (this game is already done with it), so the last words (who closed
+## it, a crewmate's bye) are read before the line is seen to close: a packet
+## arriving with the close was dropped, and the crew were told the founder's
+## game was lost when they had closed the Charter (2026-10-11).
+const LINGER: float = 0.6
+
+
+func _linger(old: MultiplayerPeer) -> void:
+	var t: float = 0.0
+	while t < LINGER:
+		old.poll()
+		await get_tree().create_timer(0.05).timeout
+		t += 0.05
+	old.close()
+
+
 func _drop(why: String) -> void:
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
@@ -494,6 +561,9 @@ func _drop(why: String) -> void:
 	if _end_note != "":
 		why = _end_note
 		_end_note = ""
+	# A crewmate aboard whose founder said nothing first: their game was lost.
+	if not hosting and end_info.is_empty() and not joined_info.is_empty():
+		end_info = { "kind": "lost", "id": str(joined_info.get("id", "")), "charter": str(joined_info.get("name", "the Charter")), "founder": founder_name() }
 	_fail_open(why)
 	lost.emit(why)
 
@@ -591,7 +661,9 @@ func _hello(k: String, as_name: String) -> void:
 
 
 func _info() -> Dictionary:
-	return { "id": charter.id(), "name": charter.data["name"], "hardcore": charter.data.get("hardcore", false), "sailed": charter.sailed() }
+	# With the founder's name: a crewmate's game remembers whose it is.
+	var founder: String = str(charter.berth_of(str(charter.data.get("founder", ""))).get("name", captain_name))
+	return { "id": charter.id(), "name": charter.data["name"], "hardcore": charter.data.get("hardcore", false), "sailed": charter.sailed(), "founder": founder }
 
 
 func roster() -> Array:
@@ -630,6 +702,8 @@ func _welcome(info: Dictionary, captain: String) -> void:
 	var s: Session = Session.new(loaded["save"], loaded["carried"])
 	s.remote = self
 	hailing = ""
+	joined_info = info
+	heard_ms = Time.get_ticks_msec()
 	welcomed.emit(info, s)
 
 
@@ -640,6 +714,7 @@ func _refused(why: String) -> void:
 
 @rpc("authority", "reliable")
 func _roster(list: Array) -> void:
+	heard_ms = Time.get_ticks_msec()
 	last_roster = list
 	roster_changed.emit(list)
 
@@ -744,6 +819,7 @@ var _skipped: Dictionary = {}
 
 @rpc("authority", "reliable")
 func _res(n: int, result: Variant, captain: String, fresh: bool) -> void:
+	heard_ms = Time.get_ticks_msec()
 	# A late answer (given up on at the wait) still brings the save as it now
 	# stands: a vote that ran long may have passed and changed it.
 	if captain != "" and _mine != null:
@@ -950,6 +1026,8 @@ func _ping(k: String, who: String, kind: String, x: float, y: float) -> void:
 
 @rpc("any_peer", "unreliable_ordered")
 func _boat(k: String, state: Dictionary) -> void:
+	# Ten a second from every ship: the line is alive while they come.
+	heard_ms = Time.get_ticks_msec()
 	if hosting:
 		fishing.note_pos(k, state)
 	mate_boat.emit(k, state)

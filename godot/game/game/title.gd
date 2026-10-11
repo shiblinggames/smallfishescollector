@@ -20,6 +20,9 @@ signal new_captain(captain_name: String, color: String)
 signal host(charter_id: String)
 signal found(charter_name: String, hardcore: bool, captain_name: String, color: String)
 signal join(address: String, captain_name: String)
+## Rejoin a remembered Charter (one this game sailed in as a crewmate, or
+## founded and handed on).
+signal rejoin(charter_id: String)
 
 const STARTING: Array = ["default", "gray", "blue", "pink"]
 const SEA_DYE: Color = Color(0.36, 0.6, 0.58)
@@ -45,6 +48,10 @@ var _who_draft: String = ""
 var _form_note: String = ""
 ## A word on the Charters sheet (a berth released).
 var _charter_note: String = ""
+## A word on one remembered Charter's card (why a rejoin was refused).
+var _card_notes: Dictionary = {}
+## The remembered Charter asked once about forgetting.
+var _forgetting: String = ""
 var _note_label: Label = null
 var _cols: HBoxContainer
 var _first: Control = null
@@ -355,7 +362,8 @@ func _ago(unix: int) -> String:
 func _charters(v: VBoxContainer) -> void:
 	var mine: String = SteamLayer.player_key()
 	var list: Array = Charter.list()
-	if list.is_empty():
+	var joined: Array = Charter.remembered()
+	if list.is_empty() and joined.is_empty():
 		Kit.text(v, "No Charters yet. Found one and your friends can join it.", "note", Kit.PAPER_INK_SOFT, true)
 	for c: Dictionary in list:
 		var card: Pane = Kit.pane(v, { "radius": 12, "fill": [Kit.PAPER.lerp(SEA_DYE, 0.1).lightened(0.04)], "border": [1, Color(Kit.ink(SEA_DYE), 0.45)], "shadow": [Color(0, 0, 0, 0.18), 8, Vector2(0, 3)], "pad": 12, "paper": true })
@@ -430,6 +438,9 @@ func _charters(v: VBoxContainer) -> void:
 		Kit.text(col, "At sea  ·  crew fixed at sailing" if c["sailed"] else "In harbor, the crew still gathering", "note", Kit.ink(SEA_DYE) if c["sailed"] else Paper.MONEY)
 		if c["founder"] != mine:
 			Kit.text(col, "Only its founder can host it.", "note", Kit.PAPER_INK_SOFT)
+	# The Charters this game sailed in as a crewmate, beside the ones it founded.
+	for m: Dictionary in joined:
+		_remembered_card(v, m)
 	if _charter_note != "":
 		Kit.text(v, _charter_note, "note", Kit.PAPER_INK_SOFT, true)
 	var acts: HBoxContainer = HBoxContainer.new()
@@ -486,6 +497,94 @@ func _found_form(v: VBoxContainer) -> void:
 	cname.grab_focus.call_deferred()
 
 
+## A REMEMBERED CHARTER (Kong, 2026-10-11): "<Charter> · <Founder> hosts ·
+## your captain <Name>", how it stands, Rejoin, and a small Forget (asks once).
+func _remembered_card(v: VBoxContainer, m: Dictionary) -> void:
+	var cid: String = str(m.get("id", ""))
+	var cname: String = str(m.get("name", "A Charter"))
+	var founder: String = str(m.get("founder", "the founder"))
+	var cap: String = str(m.get("captain", ""))
+	var card: Pane = Kit.pane(v, { "radius": 12, "fill": [Kit.PAPER.lerp(SEA_DYE, 0.1).lightened(0.04)], "border": [1, Color(Kit.ink(SEA_DYE), 0.45)], "shadow": [Color(0, 0, 0, 0.18), 8, Vector2(0, 3)], "pad": [10, 10, 12, 10], "paper": true })
+	var h: HBoxContainer = HBoxContainer.new()
+	h.add_theme_constant_override("separation", 14)
+	card.add_child(h)
+	var pic: Control = _portrait(Js.obj(m.get("look")) if not Js.obj(m.get("look")).is_empty() else { "color": "default" }, Vector2(96, 74))
+	pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(pic)
+	var info: VBoxContainer = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	info.add_theme_constant_override("separation", 2)
+	h.add_child(info)
+	var top: HBoxContainer = HBoxContainer.new()
+	top.add_theme_constant_override("separation", 8)
+	info.add_child(top)
+	Kit.text(top, cname, "title", Kit.PAPER_INK)
+	if m.get("hardcore", false) == true:
+		Kit.chip(top, "Hardcore", Paper.RED)
+	var handed: bool = m.get("handed", false) == true
+	Kit.text(info, "%s hosts  ·  your captain %s" % [founder, cap] if cap != "" else "%s hosts" % founder, "small", Kit.PAPER_INK)
+	# How it stands, in a word: handed on by this game, moved to a new
+	# founder, or nobody answered the last hail.
+	var state: String = ""
+	var tone: Color = Kit.PAPER_INK_SOFT
+	if handed:
+		state = "Handed to %s" % founder
+		tone = Kit.ink(SEA_DYE)
+	elif m.get("moved", false) == true:
+		state = "%s hosts it now" % founder
+		tone = Kit.ink(SEA_DYE)
+	elif m.get("waiting", false) == true:
+		state = "Waiting for %s to host" % founder
+		tone = Paper.MONEY
+	if state != "":
+		Kit.text(info, state, "body_strong", tone)
+	Kit.text(info, "Last sailed %s" % _ago(int(Js.num(m.get("at")))), "note", Kit.PAPER_INK_SOFT)
+	var why: String = str(_card_notes.get(cid, ""))
+	if why != "":
+		Kit.text(info, why, "small", Paper.RED, true)
+	var btns: VBoxContainer = VBoxContainer.new()
+	btns.alignment = BoxContainer.ALIGNMENT_CENTER
+	btns.add_theme_constant_override("separation", 4)
+	h.add_child(btns)
+	var go: Button = Kit.button("Rejoin", "primary", "large")
+	go.custom_minimum_size = Vector2(118, 42)
+	var addr: String = str(m.get("addr", ""))
+	if addr == "":
+		go.disabled = true
+		go.tooltip_text = "Join from their name in your Steam friends list when they host."
+	else:
+		go.tooltip_text = "Hail %s at %s" % [founder, addr]
+	go.pressed.connect(func() -> void:
+		_card_notes.erase(cid)
+		rejoin.emit(cid))
+	btns.add_child(go)
+	if _first == null and not go.disabled:
+		_first = go
+	var asking: bool = _forgetting == cid
+	var fg: Button = Kit.button("Forget it?" if asking else "Forget", "danger" if asking else "secondary", "small")
+	fg.tooltip_text = "Take this card off your title. Your captain stays in the Charter on the founder's game."
+	fg.pressed.connect(func() -> void:
+		if _forgetting != cid:
+			_forgetting = cid
+			_build()
+			return
+		_forgetting = ""
+		Charter.forget(cid)
+		_build())
+	btns.add_child(fg)
+
+
+## A remembered Charter's card after a rejoin: why it was refused ("" for
+## none; a rejoin nobody answered marks the card waiting instead).
+func card_note(charter_id: String, why: String) -> void:
+	if why == "":
+		_card_notes.erase(charter_id)
+	else:
+		_card_notes[charter_id] = why
+	_build()
+
+
 func _join_form(v: VBoxContainer) -> void:
 	var card: Pane = Kit.pane(v, { "radius": 12, "fill": [Kit.PAPER.lerp(SEA_DYE, 0.08).lightened(0.05)], "border": [1, Color(Kit.PAPER_INK, 0.35)], "pad": 14, "paper": true })
 	var col: VBoxContainer = VBoxContainer.new()
@@ -499,22 +598,37 @@ func _join_form(v: VBoxContainer) -> void:
 	var jr: HBoxContainer = HBoxContainer.new()
 	jr.add_theme_constant_override("separation", 8)
 	col.add_child(jr)
-	# The address and name are kept across a rebuild and a failed join.
-	var addr: LineEdit = _line(jr, _addr_draft if _addr_draft != "" else "127.0.0.1", "The founder's address, with :port if the harbour shows one")
-	addr.text_changed.connect(func(t: String) -> void: _addr_draft = t)
+	# The address and name are kept across a rebuild and a failed join; a new
+	# form starts on the address last hailed (it always said 127.0.0.1).
+	var last: String = Charter.last_address()
+	var addr: LineEdit = _line(jr, _addr_draft if _addr_draft != "" else (last if last != "" else "127.0.0.1"), "The founder's address, with :port if the harbour shows one")
 	var who: LineEdit = _line(jr, _who_draft if _who_draft != "" else SteamLayer.suggested_name(), "Your captain's name")
 	who.text_changed.connect(func(t: String) -> void: _who_draft = t)
+	# A berth this game already has at that address: no name to give (the
+	# founder keeps the captain), so the field gives way to who sails.
+	var known: Label = Kit.text(col, "", "small", Kit.ink(SEA_DYE), true)
+	var show_known: Callable = func(t: String) -> void:
+		var m: Dictionary = Charter.memory_at(t)
+		who.visible = m.is_empty()
+		known.visible = not m.is_empty()
+		if not m.is_empty():
+			known.text = "Rejoining %s as your captain %s." % [m.get("name", "the Charter"), m.get("captain", "")]
+	addr.text_changed.connect(func(t: String) -> void:
+		_addr_draft = t
+		show_known.call(t))
+	show_known.call(addr.text)
 	var j: Button = Kit.button("Join", "primary", "large")
 	j.custom_minimum_size = Vector2(100, 42)
 	j.pressed.connect(func() -> void:
 		_addr_draft = addr.text
 		_who_draft = who.text
+		var berth: bool = not Charter.memory_at(addr.text).is_empty()
 		# A blank name is refused here (it came out as "crew_f9f08").
-		if who.text.strip_edges() == "":
+		if not berth and who.text.strip_edges() == "":
 			_form_note = "Name your captain first."
 			_build()
 			return
-		join.emit(addr.text.strip_edges(), who.text.strip_edges()))
+		join.emit(addr.text.strip_edges(), "" if berth else who.text.strip_edges()))
 	jr.add_child(j)
 	Kit.text(col, "The founder's harbour shows their address, and its port when it is not the usual one (for example 192.168.1.39:24651).", "note", Kit.PAPER_INK_SOFT, true)
 	_form_line(col)

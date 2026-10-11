@@ -23,6 +23,7 @@ static func bank(t: GauntletTable) -> void:
 		t._take(s)
 	t._r["pays"] = pays
 	t._r["result"] = "banked"
+	spoils(t, "banked", cleared + int(run["skip"]))
 	t._held_clear()
 	t._settle()
 	t._enter("haul")
@@ -187,9 +188,47 @@ static func dive_lost(t: GauntletTable, ev: Array) -> void:
 	t._r["pays"] = pays
 	t._r["result"] = "lost"
 	t._r["lostPot"] = run["pot"]
+	spoils(t, "lost", cd)
 	t._held_clear()
 	t._settle()
 	t._step("dead", ev)
+
+
+## THE SHARED SPOILS SHEET for a co-op dive (ENDING TOGETHER, Kong,
+## 2026-10-11; drawn by game/crew_spoils.gd, its shape as the raid's in
+## game/raid_table.gd): a column per captain of the dive, read off the pays
+## just made, so every screen shows the same sheet. Kept for a dive alone too
+## (the solo haul screen does not show it).
+static func spoils(t: GauntletTable, result: String, depth: int) -> void:
+	var run: Dictionary = t._r["run"]
+	var pays: Dictionary = Js.obj(t._r.get("pays"))
+	var gone: Dictionary = Js.obj(t._r.get("gone"))
+	var seats: Dictionary = {}
+	var order: Array = []
+	for k: String in Js.obj(t._r.get("caps")):
+		var c: Dictionary = t._r["caps"][k]
+		var si: int = t._seat_of(k)
+		var seat: Dictionary = t._r["b"]["seats"][si] if si >= 0 else {}
+		var p: Dictionary = Js.obj(pays.get(k))
+		var items: Array = []
+		for it: Variant in Js.list(p.get("items")):
+			items.append(t.spoils_row(str(it), str(Gauntlet.DROP_NAMES.get(str(it), "")), "", null))
+		for sk: Variant in Js.list(p.get("skins")):
+			items.append(t.spoils_row(str(sk), str(Gauntlet.DROP_NAMES.get(str(sk), "")), "", null, str(sk)))
+		for vk: Variant in Js.list(p.get("vouchers")):
+			items.append({ "id": "voucher_" + str(vk), "name": "%s skin voucher" % ("Captain's" if str(vk) == "captain" else "Bosun's"), "rarity": "legendary" if str(vk) == "captain" else "epic", "image": "" })
+		var out: String = ""
+		if gone.has(k) or (p.is_empty() and str(c.get("out", "")) == ""):
+			out = "away"
+		elif str(c.get("out", "")) != "":
+			out = "sank" if result == "lost" else str(c["out"])
+		elif Js.num(c.get("towed")) > 0.0:
+			out = "towed"
+		order.append(k)
+		seats[k] = { "name": str(seat.get("name", Js.obj(run.get("names")).get(k, "A captain"))), "face": Js.obj(seat.get("face")),
+			"coin": Js.num(p.get("doubloons")), "xp": Js.num(p.get("navXp")), "fathoms": Js.num(p.get("fathoms")), "items": items,
+			"depth": float(depth), "record": p.get("record", false) == true, "out": out, "towed": Js.num(c.get("towed")) }
+	t._r["spoils"] = { "kind": "dive", "variant": str(run["variant"]), "result": result, "at": float(depth), "pot": Js.num(run.get("pot")), "seats": seats, "order": order }
 
 
 static func death_pay(t: GauntletTable, key: String, s: Session, cd: int) -> Dictionary:

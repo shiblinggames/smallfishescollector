@@ -225,6 +225,23 @@ func _init() -> void:
 		if o.size() == 3:
 			firsts[o[0]] = true
 	check(firsts.size() >= 2 or int(r2["drafts"]) < 3, "the draft order rotates")
+	# THE SHARED SPOILS SHEET (ENDING TOGETHER, 2026-10-11): a column per
+	# captain in the state that went out, read off the table's own pays.
+	var sp: Dictionary = Js.obj(gt.state.get("spoils"))
+	check(sp.get("kind") == "dive" and str(sp.get("result", "")) == r2["result"], "the dive's spoils go out with its end (%s)" % sp.get("result", "none"))
+	check(Js.obj(sp.get("seats")).size() == 3 and Js.list(sp.get("order")).size() == 3, "a column for each of the three captains")
+	check(str(gt.state.get("rid", "")) != "", "the run carries its id")
+	var towed_cols: float = 0.0
+	for k: String in Js.obj(sp.get("seats")):
+		var col: Dictionary = sp["seats"][k]
+		var py: Dictionary = Js.obj(Js.obj(gt._r.get("pays")).get(k))
+		check(Js.num(col.get("coin")) == Js.num(py.get("doubloons")) and Js.num(col.get("fathoms")) == Js.num(py.get("fathoms")), "%s's column is their pay" % k)
+		check(int(Js.num(col.get("depth"))) == int(Js.num(sp.get("at"))), "%s's column has the depth" % k)
+		check(col.has("face") and str(col.get("name", "")) != "", "%s's column has a name and a face" % k)
+		if r2["result"] == "lost":
+			check(str(col.get("out", "")) == "sank", "%s sank with the crew" % k)
+		towed_cols += Js.num(col.get("towed"))
+	check(int(towed_cols) == int(r2["towed"]), "every tow is counted on the sheet (%d of %d)" % [int(towed_cols), int(r2["towed"])])
 	gt._r = { "phase": "idle", "seq": 0 }
 
 	# ── Held: a co-op dive voted to hold, then resumed by the same crew ──
@@ -252,6 +269,9 @@ func _init() -> void:
 		var r4: Dictionary = await _play(gt, ["anna-key", "ben-key"], party_act, int(r3["depth"]) + 2)
 		print("  resumed, Don's: %s at depth %d" % [r4["result"], r4["depth"]])
 		check(r4["result"] in ["banked", "lost"], "the resumed dive ends")
+		if r4["result"] == "banked":
+			var sp4: Dictionary = Js.obj(gt.state.get("spoils"))
+			check(sp4.get("result") == "banked" and Js.obj(sp4.get("seats")).values().all(func(cl: Dictionary) -> bool: return Js.num(cl.get("coin")) > 0.0 and Js.num(cl.get("xp")) > 0.0), "a banked crew's columns carry the pot and the XP")
 		check(Js.obj(Js.obj(c.data.get("gauntletHeld")).get("don")).is_empty(), "and its hold is cleared")
 		check(Js.num(a.profile().get("dons_gauntlet_coop_runs_completed")) + Js.num(a.profile().get("dons_gauntlet_coop_runs_sunk")) >= 1.0, "co-op records kept")
 	else:

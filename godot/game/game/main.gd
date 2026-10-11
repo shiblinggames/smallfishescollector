@@ -20,6 +20,20 @@ var _mine: Session = null
 var _joining_name: String = ""
 ## The address being hailed, until the founder welcomes us ("" otherwise).
 var _join_addr: String = ""
+## The remembered Charter being rejoined ("" for a plain join): a rejoin
+## nobody answered marks its card "Waiting for <founder> to host".
+var _rejoin_id: String = ""
+## The Charter this game sails in as a crewmate (its memory is kept fresh).
+var _joined_id: String = ""
+## Each hail's number: a wait timer from an older hail does nothing.
+var _join_n: int = 0
+
+## CONNECTING AND COMING BACK (Kong, 2026-10-11): the hailing card, the
+## founder-left card and the hardcore end card (game/charter_cards.gd).
+const Cards = preload("res://game/charter_cards.gd")
+## How long a hail waits on an answer before saying nobody answered (it was
+## ENet's own ~30 seconds on a dead address).
+const JOIN_WAIT: float = 9.0
 
 
 func _ready() -> void:
@@ -46,17 +60,12 @@ func _ready() -> void:
 	# with the address kept and the cause inside it.
 	net.refused_by_founder.connect(func(why: String) -> void:
 		if _join_addr != "":
-			_join_failed(why)
+			_join_failed(why, false)
 		else:
 			title(why))
 	net.ended.connect(func(why: String) -> void: title(why))
-	net.lost.connect(func(why: String) -> void:
-		if _join_addr != "":
-			_join_failed(why)
-		elif _screen is Title:
-			(_screen as Title).note = why
-		else:
-			title(why))
+	net.lost.connect(_on_lost)
+	net.sunk.connect(_on_sunk)
 	if straight_to_sea:
 		_sea(Session.open_latest(), false)
 		return
@@ -118,16 +127,29 @@ func title(note: String) -> void:
 			if again != null:
 				again.reopen_found(n, hardcore, cap, color))
 	t.join.connect(func(address: String, cap: String) -> void: join(address, cap))
+	t.rejoin.connect(rejoin)
 	_show(t)
 
 
 ## A join that did not take: the title, with the join form open on the address
-## that was tried and the cause written inside it.
-func _join_failed(why: String) -> void:
+## that was tried and the cause written inside it. A rejoin from a remembered
+## card goes back to that card instead: nobody answered ("Waiting for Anna to
+## host"), or why it was refused, on the card.
+func _join_failed(why: String, no_answer: bool = true) -> void:
 	var addr: String = _join_addr
+	var rid: String = _rejoin_id
 	_join_addr = ""
+	_rejoin_id = ""
+	_join_n += 1
 	net.leave()
 	title("")
+	if rid != "":
+		if no_answer:
+			Charter.remember(rid, { "waiting": true })
+			(_screen as Title).card_note(rid, "")
+		else:
+			(_screen as Title).card_note(rid, why)
+		return
 	(_screen as Title).reopen_join(addr, _joining_name, why)
 
 
@@ -153,22 +175,129 @@ func host(id: String) -> bool:
 func join(address: String, cap: String) -> void:
 	_joining_name = cap
 	_join_addr = address.strip_edges()
+	# A berth this game already has keeps its captain's name (the form hides
+	# the field for one).
+	var known: Dictionary = Charter.memory_of(_rejoin_id) if _rejoin_id != "" else Charter.memory_at(_join_addr)
+	if cap.strip_edges() == "" and not known.is_empty():
+		cap = str(known.get("captain", ""))
+		_joining_name = cap
 	# A blank name came out as a machine-made "crew_f9f08" (the walkthrough).
 	if cap.strip_edges() == "":
-		_join_failed("Name your captain first.")
+		_join_failed("Name your captain first.", false)
 		return
 	var err: Error = net.join_address(address, cap)
 	if err != OK:
-		_join_failed("Could not find %s. An address looks like 192.168.1.39, or 192.168.1.39:%d with the port the founder's harbour shows." % [_join_addr if _join_addr != "" else "that address", CrewNet.base_port() + 1])
+		_join_failed("Could not find %s. An address looks like 192.168.1.39, or 192.168.1.39:%d with the port the founder's harbour shows." % [_join_addr if _join_addr != "" else "that address", CrewNet.base_port() + 1], false)
 		return
-	var wait: Label = Label.new()
-	wait.text = "Hailing the founder…"
-	wait.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_show(wait)
+	# THE HAILING CARD (it was a bare grey screen for 30 seconds): who is being
+	# hailed, Cancel (Esc) back to the join form with the address kept.
+	var card: Control = Cards.Hailing.new()
+	card.set("address", _join_addr)
+	if not known.is_empty():
+		card.set("charter_name", str(known.get("name", "")))
+		card.set("founder", str(known.get("founder", "")))
+		card.set("captain", cap)
+	card.connect("cancelled", func() -> void:
+		var addr: String = _join_addr
+		_join_addr = ""
+		_rejoin_id = ""
+		_join_n += 1
+		net.leave()
+		title("")
+		(_screen as Title).reopen_join(addr, _joining_name, ""))
+	_show(card)
+	# Nobody answering is said in about nine seconds, not thirty.
+	_join_n += 1
+	var n: int = _join_n
+	get_tree().create_timer(JOIN_WAIT).timeout.connect(func() -> void:
+		if n == _join_n and _join_addr != "":
+			_join_failed("No founder answered at %s. Check the address and that they are in their harbour." % _join_addr, true))
+
+
+## Rejoin a remembered Charter (its card on the title, or the founder-left
+## card): hail its last address as its captain.
+func rejoin(charter_id: String) -> void:
+	var m: Dictionary = Charter.memory_of(charter_id)
+	if m.is_empty():
+		title("")
+		return
+	_rejoin_id = charter_id
+	join(str(m.get("addr", "")), str(m.get("captain", "")))
+
+
+## The line to the founder went (a crewmate), or a hail did not take.
+func _on_lost(why: String) -> void:
+	if _join_addr != "":
+		_join_failed(why, true)
+		return
+	# The Charter sank: the ending on the water (or its card) says it all.
+	if not net.sunk_info.is_empty():
+		return
+	var info: Dictionary = net.end_info
+	var kind: String = str(info.get("kind", ""))
+	if kind in ["closed", "lost", "handed"]:
+		_parted(info)
+		return
+	if kind == "yours":
+		# Handed to this game: it is in the founder's list now.
+		Charter.forget(str(info.get("id", "")))
+	if _screen is Title:
+		(_screen as Title).note = why
+	else:
+		title(why)
+
+
+## THE FOUNDER LEFT CARD: who closed it (or lost touch, or handed it on),
+## that your captain is safe, Rejoin and Back to port. The remembered card is
+## updated first (waiting on the founder; a new founder after a handover).
+func _parted(info: Dictionary) -> void:
+	var cid: String = str(info.get("id", ""))
+	_joined_id = ""
+	if str(info.get("kind", "")) == "handed":
+		var upd: Dictionary = { "founder": str(info.get("to", "")), "moved": true, "waiting": false, "at": Time.get_unix_time_from_system() }
+		if str(info.get("to_addr", "")) != "":
+			upd["addr"] = str(info["to_addr"])
+		Charter.remember(cid, upd)
+	else:
+		Charter.remember(cid, { "waiting": true, "at": Time.get_unix_time_from_system() })
+	var card: Control = Cards.Parted.new()
+	card.set("info", info)
+	card.set("can_rejoin", str(Charter.memory_of(cid).get("addr", "")) != "")
+	card.connect("rejoin", func() -> void: rejoin(cid))
+	card.connect("back", func() -> void: title(""))
+	_show(card)
+
+
+## A hardcore Charter sank: the ending on this captain's water, then the end
+## card, or the card alone when no sea is up.
+func _on_sunk(summary: Dictionary) -> void:
+	_joined_id = ""
+	if _screen is Sea:
+		var sea: Sea = _screen
+		Cards.sink_on_sea(sea, summary, func() -> void: sea.left.emit())
+		return
+	var e: Control = Cards.Ending.new()
+	e.set("summary", summary)
+	e.set("standalone", true)
+	e.connect("back", func() -> void:
+		net.leave()
+		title(""))
+	_show(e)
 
 
 func _on_welcomed(info: Dictionary, s: Session) -> void:
+	# A crewmate's game remembers the Charter: whose it is, where it was
+	# hailed, and its captain here (the title's card, and Rejoin).
+	var addr: String = _join_addr
 	_join_addr = ""
+	_rejoin_id = ""
+	_join_n += 1
+	_joined_id = str(info.get("id", ""))
+	if not net.hosting:
+		var mem: Dictionary = { "name": str(info.get("name", "")), "founder": str(info.get("founder", "")), "captain": s.captain_name(), "look": Skipper.look_of(s.profile()), "hardcore": info.get("hardcore", false) == true, "at": Time.get_unix_time_from_system(), "waiting": false, "moved": false, "handed": false }
+		if addr != "":
+			mem["addr"] = addr
+		Charter.remember(_joined_id, mem)
 	_mine = s
 	net.bind(s)
 	if info.get("sailed", false):
@@ -202,6 +331,9 @@ func _sea(s: Session, crewed: bool) -> void:
 	sea.menu_wanted.connect(_open_menu)
 	sea.left.connect(func() -> void:
 		s.persist()
+		# When this crewmate last sailed it, and how their captain looks now.
+		if crewed and not net.hosting and _joined_id != "" and net.sunk_info.is_empty():
+			Charter.remember(_joined_id, { "captain": s.captain_name(), "look": Skipper.look_of(s.profile()), "at": Time.get_unix_time_from_system() })
 		if crewed:
 			net.leave()
 		title(""))
