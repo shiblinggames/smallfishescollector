@@ -137,6 +137,8 @@ func _fit() -> void:
 
 
 func _new_run() -> void:
+	if _again != null:
+		_again.visible = true
 	_rng = Dice.Mulberry32.new(int(_st["seed"]))
 	_board = ChartRoom.initial_board(_rng, _cols, _rows, _types)
 	_moves = []
@@ -462,6 +464,9 @@ func _finish() -> void:
 		if not _busy:
 			_new_run())
 	_result.add_child(again)
+	# One way on from an ended run: Play again (the foot's fresh-run button
+	# comes back with the new run).
+	_again.visible = false
 	var d: float = 0.0
 	for c: CanvasItem in [l1, l2, l3, again]:
 		Motion.rise_word(c, d)
