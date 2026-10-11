@@ -63,11 +63,23 @@ func _init() -> void:
 	var r: Dictionary = RulesApi.run(db, uid, "postNotice", ["harbor_bill"])
 	check(r.has("state"), "a Bill posts")
 	var b1: Array = r["state"]["board"]
-	check(b1.all(func(x: Dictionary) -> bool: return x.get("isNew") == true), "a board on an empty book: every face NEW")
+	# An emptied book is rebuilt from every crew row (aboard or lost): NEW is
+	# every face that is not one of them (a face shown twice on one board is
+	# NEW both times; both are new to you).
+	# (every crew row the save holds, the lost too, as the backfill reads them)
+	var aboard: Array = Js.list(db.save.get("crew")).map(func(m: Dictionary) -> float: return float(m.get("card_id", -1.0)))
+	var shown: Array = []
+	var right: bool = true
+	for x: Dictionary in b1:
+		var want: bool = not aboard.has(float(x["cardId"]))
+		if (x.get("isNew") == true) != want:
+			right = false
+		shown.append(float(x["cardId"]))
+	check(right, "a board on an emptied book: NEW is every face not had aboard")
 	for x: Dictionary in b1:
 		check(Js.list(r["state"]["crewSeen"]).has(float(x["cardId"])), "a posted face is seen")
 	r = RulesApi.run(db, uid, "postNotice", ["harbor_bill"])
-	var had: Array = b1.map(func(x: Dictionary) -> float: return float(x["cardId"]))
+	var had: Array = b1.map(func(x: Dictionary) -> float: return float(x["cardId"])) + aboard
 	for x: Dictionary in r["state"]["board"]:
 		check((x.get("isNew") == true) == (not had.has(float(x["cardId"]))), "NEW only for a face not had before (%s)" % x["name"])
 
@@ -146,6 +158,9 @@ func _init() -> void:
 	r = Voyages.reveal(db, uid, float(sent["voyage"]["id"]))
 	check(Js.num(Js.obj(r.get("notices")).get("harbor_bill")) == 1.0 and Js.num(Crew.notices_held(p).get("harbor_bill")) == 2.0, "Massive Booty brings its Bill")
 	sent = Voyages.send(db, uid, "coastal")
+	# (no Massive Booty on this one: its Bill is not a chance)
+	for ev: Dictionary in sent["voyage"]["events"]:
+		ev["booty"] = false
 	now[0] += float(sent["voyage"]["duration_ms"])
 	r = Voyages.reveal(db, uid, float(sent["voyage"]["id"]))
 	check(Js.obj(r.get("notices")).is_empty(), "no chance, no notice")
