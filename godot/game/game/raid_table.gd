@@ -75,15 +75,7 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 		"leave":
 			return _leave(key)
 		"go":
-			if _r["phase"] != "muster" or _r.get("by") != key:
-				return { "error": "Only the captain who called it can sail." }
-			if str(Js.obj(_r.get("tiers")).get(_r["tier"], "")) != "":
-				return { "error": str(_r["tiers"][_r["tier"]]) }
-			for m: Dictionary in _r["members"]:
-				if m["key"] != key and not m.get("ready", false):
-					return { "error": "Not everyone is ready." }
-			_start()
-			return { "ok": true }
+			return _go_counted(key)
 		"ready":
 			return _ready_up(key, payload == true)
 		"tier":
@@ -94,6 +86,7 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 			if str(Js.obj(_r.get("tiers")).get(str(payload), "")) != "":
 				return { "error": str(_r["tiers"][str(payload)]) }
 			_r["tier"] = str(payload)
+			_count_off("The tier changed.")
 			# A new tier: everyone is asked again.
 			for m: Dictionary in _r["members"]:
 				m["ready"] = false
@@ -183,6 +176,8 @@ static func dock_of(node_id: String) -> Vector2:
 func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 	if _r["phase"] != "muster":
 		return { "error": "That raid has already sailed." }
+	if _r.has("count"):
+		return { "error": "The line is counting down to sail. Catch the next one." }
 	var mem: Array = _r["members"]
 	if mem.any(func(m: Dictionary) -> bool: return m["key"] == key):
 		return { "ok": true }
@@ -200,6 +195,24 @@ func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 		_r["invites"].erase(key)
 	_push()
 	return { "ok": true }
+
+
+## May the caller sail now? Only the caller, on an open tier, with every
+## other captain ready.
+func _go_why(key: String) -> String:
+	if _r["phase"] != "muster" or _r.get("by") != key:
+		return "Only the captain who called it can sail."
+	if str(Js.obj(_r.get("tiers")).get(_r["tier"], "")) != "":
+		return str(_r["tiers"][_r["tier"]])
+	for m: Dictionary in _r["members"]:
+		if m["key"] != key and not m.get("ready", false):
+			return "Not everyone is ready."
+	return ""
+
+
+func _launch() -> String:
+	_start()
+	return ""
 
 
 ## The muster is over: every ship joins the line, the first fight begins.
@@ -456,6 +469,8 @@ func _timed_out() -> void:
 			_advance()
 		"flares":
 			_land_flares()
+		"muster":
+			_count_done()
 
 
 ## The muster's tiers go out with it (a shut tier falls back to Normal).

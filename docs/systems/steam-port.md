@@ -2732,6 +2732,91 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
     sea (Lost touch on the water, then the card, the memory waiting); a handover (the old
     founder's card Handed to Ben, the new founder's Charter not listed twice).
     smoke_charter, charter_crew_check, playtest_check and smoke_docking pass.
+- STARTING TOGETHER (Kong, 2026-10-11: the second of three co-op design sets from the
+  two-copy walkthrough, approved as written). game/charter_start.gd (new, no class_name;
+  main.gd, harbour_lobby.gd, ready_screen.gd and gauntlet_entry.gd preload it),
+  harbour_lobby.gd (rebuilt), crew_net.gd, main.gd, crew_table.gd, raid_table.gd,
+  gauntlet_table.gd, ready_screen.gd, gauntlet_entry.gd, raid_muster.gd, gauntlet_muster.gd.
+  - THE HARBOUR LOBBY, on the night paper now (it was the title's day paper, plain text
+    rows, a card that grew as crew came): four berth rows of ONE fixed height (78px; the
+    card never changes size), each with the captain's portrait as they look on their boat
+    (CrewNet.roster carries each berth's look), their name, a quiet "you" on your own row,
+    and where they are (Founder, Aboard, Ashore, Choosing a look). An empty berth is a quiet
+    open seat ("Open berth", "Waiting for a crewmate"). A new arrival slides in from the
+    right with a soft plip. Only a row whose captain, look, place or Ready changed is drawn
+    again.
+  - READY-UP: each crewmate has a Ready toggle on their own row ("Ready up" / "Ready",
+    CrewNet.harbour_ready, a flag on the founder's game only, never saved); everyone else
+    sees a READY stamp thump onto that row (charter_start.gd Stamp: a tilted ink box in
+    Cinzel capitals, landing from larger with a few specks of ink, drawn in code, a soft
+    Sound.seal). The founder is always ready. The founder's button reads "Set Sail (2 of 3
+    ready)" (ready of those aboard) and is pressable whenever two berths are filled (the old
+    rule): the founder sails with whoever is aboard, ready or not, since the roster locks
+    for EVERY berth at Set Sail as it always did (an ashore crewmate sails too). One line
+    says where things stand ("Everyone aboard is ready." / "Ben is not ready. You can sail
+    anyway: everyone with a berth sails." / a crewmate's "Waiting on Anna to set sail.
+    Ready up when you are."). The "Set Sail locks the crew for good" note shows to everyone.
+  - CASTING OFF: the founder's Set Sail is CrewNet.cast_off(): every harbour card hears
+    `casting` and runs CrewNet.CAST_OFF (3s): the button reads Casting off, a gold hairline
+    fills, the berths seal one by one (SAILS stamped on a filled one, CLOSED on an open one,
+    which goes quiet; a Ready toggle gives way to its SAILS), and from 2.55s the card fades
+    into the night. Then the founder's game calls set_sail() (unchanged, and still the
+    immediate path the tests use) and every game goes to the sea, where sets_sail() lifts
+    the night off the water and "<Charter> sets sail" rises in words on the water under the
+    boat ("The crew is fixed. Fair winds, all of you."), each hull ringing the water and a
+    horn, for every captain; gone after about 4.4s. Nothing is held: the sea is live under
+    it. A hello for a NEW berth while casting off is refused ("The Salt Ledger is casting
+    off, so its crew is fixed..."); a known berth may still come aboard.
+  - THE CREWMATE'S LOOK: a new berth (made by this hello) is welcomed with `fresh`, and
+    its first step is LookCard on the harbour art: the Found form's captain card on the
+    night paper (a big portrait that follows the pick, the name, the four free starting
+    colours as tiles, "More colours are earned as you play."), Come aboard and Leave (Esc
+    asks once). A blank name is refused in the card ("Name your captain first."; the join
+    form's own refusal is kept). Come aboard sends CrewNet.set_look (rpc my_look, taken
+    only from a berth made this session and only for its own captain; the name and a
+    STARTING colour are written into the Charter captain, the berth renamed, the save sent
+    back, the roster sent) and opens the harbour; the founder's row shows "Choosing a look"
+    until it comes. If the crew sail while the card is open, what it holds is sent then. A
+    rejoining known berth never sees it. This covers a Steam invite too (the card comes
+    after the founder answers, not in the join form).
+  - THE READY AND THE COUNT INTO RAIDS AND DIVES: in the raid's entry screen and the dive's,
+    each seat's Ready is a READY stamp that thumps on as that captain readies (in turn: each
+    change stamps then, with one soft thump; a screen opening on a ready line shows them
+    still), "Not ready" a quiet pill, and the seat's rim a plain hairline (it was a green
+    border). The caller's Sail or Dive with two or more in the line starts THE COUNT in the
+    table's state (crew_table.gd: `count` { n, secs } with `left`, CrewTable.COUNT 3s, run
+    by the founder's clock through `left` and _timed_out in the muster); every screen shows
+    3, 2, 1 in the foot where the status stood (charter_start.gd CountDial: the numeral
+    popping, a gold ring draining each second, a tick each, "The line sails in" / "The line
+    dives in" / "The line resumes in", "Leave is still open."), the caller's button reads
+    Sailing or Diving (disabled), a crewmate's Ready is held; Leave and Disband stay open.
+    When it runs out the founder's game checks again and the line goes (_launch: the first
+    fight, or the held dive resumed); the fight opens for all as before. THE COUNT STOPS
+    (`countOff` { n, why }, said once on each screen as a toast "The count stopped · Ben
+    left the line.") when a captain leaves the line or drops, stands down, or the caller
+    changes the tier or mode; nobody joins during it ("The line is counting down to sail.
+    Catch the next one."; the sea banner's Join reads "The line is casting off" / "The line
+    is going down"). A line of one (a solo dive, a raid alone) goes at once, as before.
+    The caller's disabled Sail or Dive says why under it ("Waiting on Ben to ready", a shut
+    tier's reason, "Needs a second captain" on Co-op alone, which used to look live and then
+    fail). A ready crewmate with everyone ready reads "Waiting on Anna to sail" (or "to
+    dive"). Found on the way: the dive entry's foot words were given their width before
+    they wrapped and so ran under the buttons (the walkthrough's overflow, still there):
+    they wrap first now; the "on the way" line drops its trailing dot when no distance is
+    known.
+  - Checks: raid_table_check and gauntlet_check now check the count (it goes out in the
+    state with its secs and left; a second press keeps it; a change of tier, Ben leaving
+    or Cal standing down stops it and says who; nobody joins during it; a second in it is
+    still a muster; when it runs out the line forms) and a Co-op dive alone refused; the
+    other checks that sail a line set `count_secs = 0` (the table's own setting) so the
+    line goes at once (breather_abstain_check, reaction_check, gauntlet_balance, and the
+    rest of the two above). tests/smoke_charter.gd now has the crewmate pick their look
+    (a blank name refused, then Ben in blue), the founder see the look and the Ready,
+    "SET SAIL (2 OF 2 READY)", the cast-off on both harbour cards, both seas, and the words
+    on the water on each. tests/shot.gd "ready": READY_COUNT=1 (the line on Co-op mid-
+    count), READY_MODE=dive (Anna alone on Co-op: Dive disabled, "Needs a second captain")
+    and READY_MODE=divecrew (Ben's screen, his READY just stamped, "Waiting on Anna to
+    dive").
 - ENDING TOGETHER (Kong, 2026-10-11: the third co-op design set from the two-copy walkthrough,
   approved as written). game/crew_spoils.gd and game/crew_ending.gd (new, no class_name; the sea
   makes the second for a Charter), raid_table.gd, crew_table.gd, gauntlet_table.gd,

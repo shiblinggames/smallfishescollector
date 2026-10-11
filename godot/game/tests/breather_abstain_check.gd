@@ -105,6 +105,8 @@ func _init() -> void:
 	root.add_child(gt)
 	gt.charter = c
 	c.gauntlets = gt
+	# The line goes as Dive is pressed (the 3, 2, 1 is gauntlet_check's).
+	gt.count_secs = 0.0
 	var by_key: Dictionary = { "anna-key": a, "ben-key": b, "cal-key": x }
 	var act: Callable = func(k: String, args: Array) -> Dictionary:
 		var r: Variant = await c.run(by_key[k], "gauntletTable", args)

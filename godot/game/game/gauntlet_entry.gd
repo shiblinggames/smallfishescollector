@@ -18,6 +18,14 @@ extends Control
 ##                RECORDS (yours, Solo and Co-op).
 ##   THE FOOT     who is still to say ready; Dive / Leave.
 ## Flat and clean on the night side's browns, as the raid's entry screen is.
+##
+## STARTING TOGETHER (Kong, 2026-10-11): the raid's beat into the fight, here
+## too: READY stamps in turn, the caller's Dive starts a 3, 2, 1 in the foot
+## on every screen (Leave still open); Dive disabled says why under it
+## ("Needs a second captain" on Co-op alone); a ready crewmate reads "Waiting
+## on Anna to dive".
+
+const Start = preload("res://game/charter_start.gd")
 
 signal closed
 
@@ -45,6 +53,11 @@ var _scrim: ColorRect
 var _status_l: Label = null
 var _pulse_ms: int = -100000
 var _tick_t: float = 0.0
+## The READY stamps' times, each count's start here, the last stopped count
+## said (as the raid's entry screen).
+var _ready_ms: Dictionary = {}
+var _count_seen: Dictionary = {}
+var _off_seen: float = -1.0
 
 
 func _ready() -> void:
@@ -80,6 +93,8 @@ func _on_table(st: Dictionary) -> void:
 		_pulse_ms = Time.get_ticks_msec()
 		sea._hud.toast("%s chose %s  ·  ready again" % [ReadyScreen.name_in(st, str(st.get("by", ""))), "Co-op" if str(st.get("mode", "")) == "coop" else "Solo"])
 	ReadyScreen.invite_news(sea, was, st)
+	ReadyScreen.ready_news(was, st, _ready_ms)
+	_off_seen = ReadyScreen.count_news(sea, st, _off_seen)
 	_paint()
 	if _side_tab == "descent":
 		_side_paint()
@@ -182,6 +197,7 @@ func _paint() -> void:
 		if i < members.size():
 			var m: Dictionary = members[i]
 			ReadyScreen.fill_seat(sc, m, _face_tex(Js.obj(Js.obj(m.get("card")).get("face"))), m["key"] == my_key, m["key"] == _st.get("by"))
+			sc.stamp_ms = int(_ready_ms.get(m["key"], -100000))
 		seats.add_child(sc)
 	# THE FOOT.
 	var foot_y: float = h - 88.0
@@ -204,7 +220,19 @@ func _paint() -> void:
 		foot2 = "Hardcore: a lost dive costs each captain in it a life; a ship towed along in a won fight costs none." + ("" if mode == "solo" else " Each captain banks the whole pot.")
 	if resume:
 		foot2 = "Resuming at depth %d with %s ⟡ in the pot. The whole crew of that dive must be here." % [int(Js.num(held.get("depth"))), Js.thousands(Js.num(held.get("pot")))]
-	_label(Vector2(pad, foot_y + 34), foot2, "karla", 500, 12, Dossier.SOFT, words_w)
+	var f2: Label = _label(Vector2(pad, foot_y + 34), foot2, "karla", 500, 12, Dossier.SOFT, words_w)
+	# THE COUNT: 3, 2, 1 where the status stood, on every screen alike.
+	var counting: bool = not Js.obj(_st.get("count")).is_empty()
+	if counting:
+		_status_l.visible = false
+		f2.visible = false
+		var dial: Start.CountDial = Start.CountDial.new()
+		dial.position = Vector2(pad, foot_y + 14)
+		dial.size = Vector2(words_w, 60)
+		dial.secs = Js.num(Js.obj(_st["count"]).get("secs"))
+		dial.start_ms = Start.count_start(_st, _count_seen)
+		dial.words = "The line resumes in" if resume else "The line dives in"
+		_body.add_child(dial)
 	var btns: HBoxContainer = HBoxContainer.new()
 	btns.add_theme_constant_override("separation", 10)
 	btns.alignment = BoxContainer.ALIGNMENT_END
@@ -219,13 +247,23 @@ func _paint() -> void:
 	var my_ready: bool = members.any(func(m: Dictionary) -> bool: return m["key"] == my_key and m.get("ready", false))
 	if caller:
 		_button(btns, "Leave" if table.solo != null else "Disband", "secondary", func() -> void: _act(["leave"]), 120.0)
-		var go: Button = _button(btns, "Resume" if resume else "Dive", "primary", func() -> void:
+		var go: Button = _button(btns, ("Resuming" if resume else "Diving") if counting else ("Resume" if resume else "Dive"), "primary", func() -> void:
 			Sound.horn()
 			_act(["go"]), 130.0)
-		go.disabled = not waiting.is_empty()
+		# Why it cannot go, under it (Co-op alone looked live, then failed).
+		var why: String = ""
+		if not waiting.is_empty():
+			why = "Waiting on %s to ready" % BattleLook.join_names(waiting)
+		elif not resume and mode == "coop" and members.size() < 2:
+			why = "Needs a second captain"
+		go.disabled = counting or why != ""
+		go.tooltip_text = why
+		if why != "" and not counting:
+			ReadyScreen.go_reason(_body, why, Vector2(w - right_w - 400 - 24, foot_y + 68), 400.0)
 	else:
 		_button(btns, "Leave", "secondary", func() -> void: _act(["leave"]), 120.0)
-		_button(btns, "Not ready" if my_ready else "Ready", "secondary" if my_ready else "primary", func() -> void: _act(["ready", not my_ready]), 150.0)
+		var rb: Button = _button(btns, "Not ready" if my_ready else "Ready", "secondary" if my_ready else "primary", func() -> void: _act(["ready", not my_ready]), 150.0)
+		rb.disabled = counting
 	Pane.set_night(_body, true)
 
 
@@ -237,7 +275,7 @@ func _status() -> String:
 	if members.size() == 1 and mode == "solo":
 		return "Diving alone."
 	var pool: Vector2 = GauntletTable.maelstrom_of(_variant())
-	var s: String = ReadyScreen.status_line(_st, my_key, table.solo != null, sea, pool, GauntletTable.NEAR, "at the maelstrom")
+	var s: String = ReadyScreen.status_line(_st, my_key, table.solo != null, sea, pool, GauntletTable.NEAR, "at the maelstrom", "dive")
 	if members.size() == 1 and not s.contains("on the way"):
 		s = "Co-op: waiting for a crewmate to sail to the maelstrom and join."
 	return s
@@ -255,6 +293,11 @@ func _process(delta: float) -> void:
 
 func _label(at: Vector2, s: String, family: String, weight: int, fs: int, c: Color, w: float = -1.0) -> Label:
 	var l: Label = Label.new()
+	# Wrapping before the words: a label given its words first grew to the
+	# whole line and never shrank to the width, so the foot ran under the
+	# buttons (the walkthrough's overflow, still there after step 1).
+	if w > 0.0:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.text = s
 	l.position = at
 	l.add_theme_font_override("font", Kit.font(family, weight))
@@ -262,7 +305,6 @@ func _label(at: Vector2, s: String, family: String, weight: int, fs: int, c: Col
 	l.add_theme_color_override("font_color", c)
 	if w > 0.0:
 		l.size = Vector2(w, 0)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.add_child(l)
 	return l
 

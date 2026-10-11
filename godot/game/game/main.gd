@@ -31,6 +31,9 @@ var _join_n: int = 0
 ## CONNECTING AND COMING BACK (Kong, 2026-10-11): the hailing card, the
 ## founder-left card and the hardcore end card (game/charter_cards.gd).
 const Cards = preload("res://game/charter_cards.gd")
+## STARTING TOGETHER (Kong, 2026-10-11): the crewmate's look card, and the
+## Charter's name rising on the water as it sails (game/charter_start.gd).
+const Start = preload("res://game/charter_start.gd")
 ## How long a hail waits on an answer before saying nobody answered (it was
 ## ENet's own ~30 seconds on a dead address).
 const JOIN_WAIT: float = 9.0
@@ -302,15 +305,46 @@ func _on_welcomed(info: Dictionary, s: Session) -> void:
 	net.bind(s)
 	if info.get("sailed", false):
 		_sea(s, true)
+	elif info.get("fresh", false) and not net.hosting:
+		_look(info, s)
 	else:
 		_harbour(info)
+
+
+## THE CREWMATE'S LOOK (STARTING TOGETHER): a new berth's first step, the
+## Found form's name-and-colour captain card, before the harbour. A known
+## berth (a rejoin) never sees it.
+func _look(info: Dictionary, s: Session) -> void:
+	var card: Control = Start.LookCard.new()
+	card.set("charter_name", str(info.get("name", "")))
+	card.set("founder", str(info.get("founder", "")))
+	card.set("captain", s.captain_name())
+	card.connect("chosen", func(n: String, color: String) -> void:
+		_send_look(n, color)
+		_harbour(info))
+	card.connect("leave", func() -> void:
+		net.leave()
+		title(""))
+	_show(card)
+
+
+## The look goes to the founder; this game's copy and its memory of the
+## Charter take it at once (the founder's save follows).
+func _send_look(n: String, color: String) -> void:
+	net.set_look(n, color)
+	if _mine != null:
+		if n.strip_edges() != "":
+			_mine.profile()["username"] = n.strip_edges()
+		_mine.profile()["character_color"] = color
+		if _joined_id != "":
+			Charter.remember(_joined_id, { "captain": _mine.captain_name(), "look": Skipper.look_of(_mine.profile()) })
 
 
 func _harbour(info: Dictionary) -> void:
 	var h: HarbourLobby = HarbourLobby.new()
 	h.net = net
 	h.info = info
-	h.set_sail.connect(func() -> void: net.set_sail())
+	h.set_sail.connect(func() -> void: net.cast_off())
 	h.leave.connect(func() -> void:
 		net.leave()
 		title(""))
@@ -318,10 +352,21 @@ func _harbour(info: Dictionary) -> void:
 
 
 func _on_sailing() -> void:
+	# From the harbour (or a look card still open): the Charter's name rises
+	# on the water as the sea fades in. A look not yet sent goes as it stands.
+	var from_harbour: bool = _screen is HarbourLobby or _screen is Start.LookCard
+	if _screen is Start.LookCard:
+		var pick: Array = (_screen as Start.LookCard).current()
+		_send_look(str(pick[0]), str(pick[1]))
+	var cname: String = str(net.charter.data.get("name", "")) if net.hosting and net.charter != null else str(net.joined_info.get("name", ""))
 	if net.hosting:
 		_sea(net.charter.session_for(net.key), true)
 	elif _mine != null:
 		_sea(_mine, true)
+	else:
+		return
+	if from_harbour and _screen is Sea:
+		Start.sets_sail(_screen as Sea, cname)
 
 
 func _sea(s: Session, crewed: bool) -> void:

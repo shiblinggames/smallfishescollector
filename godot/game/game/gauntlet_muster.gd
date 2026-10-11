@@ -156,6 +156,8 @@ func _process(_d: float) -> void:
 		return
 	var at: bool = GauntletTable.near(str(_last.get("variant", "davy")), { "x": sea._boat.position.x, "y": sea._boat.position.y })
 	if _join != null and is_instance_valid(_join):
-		_join.disabled = not at
-		_join.text = "Join the dive" if at else "Sail to the maelstrom to join"
+		# The line counting down to dive (STARTING TOGETHER) takes nobody more.
+		var counting: bool = not Js.obj(_last.get("count")).is_empty()
+		_join.disabled = not at or counting
+		_join.text = "The line is going down" if counting else ("Join the dive" if at else "Sail to the maelstrom to join")
 	RaidMuster.invite_swap(_inv, at)

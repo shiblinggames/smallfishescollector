@@ -23,6 +23,10 @@ extends Node
 ##   roster(list)            founder -> all, whenever someone comes or goes
 ##   bye()                   crewmate -> founder, just before leaving on purpose
 ##   sail()                  founder -> all: the roster is locked, to the sea
+##   casting()               founder -> all: Set Sail pressed, the harbour
+##                           cards cast off (CAST_OFF seconds), then sail()
+##   hready(yes)             crewmate -> founder: Ready in the harbour
+##   my_look(name, color)    crewmate -> founder: a new berth's name and colour
 ##   req(n, op, args)        crewmate -> founder: one action
 ##   res(n, result, captain, fresh) founder -> crewmate: its answer and the save
 ##   boat(key, state)        anyone -> all, ten times a second, unreliable
@@ -32,6 +36,8 @@ signal roster_changed(list: Array)
 signal welcomed(info: Dictionary, session: Session)
 signal refused_by_founder(why: String)
 signal sailing
+## Set Sail was pressed: every harbour card casts off (STARTING TOGETHER).
+signal casting_off
 signal lost(why: String)
 ## The founder's own game is done with this Charter (handed over).
 signal ended(why: String)
@@ -68,6 +74,9 @@ const VOTE_WAIT: float = 60.0
 const VOTED_OPS: Array[String] = ["prestigeZone"]
 const VOTED_WAIT: float = VOTE_WAIT + 15.0
 const LOBBY_FRIENDS_ONLY: int = 1
+## STARTING TOGETHER (Kong, 2026-10-11): Set Sail casts off for this long on
+## every harbour card (the berths seal one by one) before the crew sail.
+const CAST_OFF: float = 3.0
 
 var hosting: bool = false
 var charter: Charter = null
@@ -97,6 +106,15 @@ var _next: int = 0
 var _open: Dictionary = {}
 var _boat_t: float = 0.0
 var _looks: Dictionary = {}
+## STARTING TOGETHER, on the founder's game: who in the harbour said Ready
+## (key -> true; only for the harbour, never saved), the berths made this
+## session whose captain is still choosing their look (key -> true), and
+## whether Set Sail is casting off now (no new berths meanwhile).
+var _hready: Dictionary = {}
+var _fresh: Dictionary = {}
+var casting: bool = false
+## Each cast-off's number: a timer from an older one does nothing.
+var _cast_n: int = 0
 
 
 var tables: DenTables
@@ -429,6 +447,10 @@ func _reset() -> void:
 	_open.clear()
 	_answering.clear()
 	_skipped.clear()
+	_hready.clear()
+	_fresh.clear()
+	casting = false
+	_cast_n += 1
 	_mine = null
 	_reset_tables()
 
@@ -528,6 +550,10 @@ func leave() -> void:
 	_hand_to = ""
 	_handing = false
 	_farewelled = false
+	casting = false
+	_cast_n += 1
+	_hready.clear()
+	_fresh.clear()
 	hosting = false
 	port = 0
 	hailing = ""
@@ -591,6 +617,7 @@ func _on_peer_disconnected(id: int) -> void:
 		if k != null and _votes.has(n) and (_votes[n]["asked"] as Array).has(k):
 			_tally(int(n), str(k), false)
 	if k != null:
+		_hready.erase(k)
 		raids.drop(str(k))
 		gauntlets.drop(str(k))
 		tables.drop(str(k))
@@ -643,11 +670,24 @@ func _hello(k: String, as_name: String) -> void:
 			multiplayer.multiplayer_peer.disconnect_peer(id)
 		return
 	var s: Session = charter.session_for(k)
+	if s == null and casting:
+		# Set Sail is casting off: the roster is as good as locked.
+		_refused.rpc_id(id, "%s is casting off, so its crew is fixed. Ask %s to found another Charter." % [charter.data["name"], captain_name])
+		await get_tree().create_timer(0.5).timeout
+		if multiplayer.multiplayer_peer != null:
+			multiplayer.multiplayer_peer.disconnect_peer(id)
+		return
+	var info: Dictionary = _info()
 	if s == null:
 		s = charter.add_member(k, as_name)
+		# A new berth: its captain picks their look first (STARTING
+		# TOGETHER; the founder did in the Found form).
+		_fresh[k] = true
+	if _fresh.has(k):
+		info["fresh"] = true
 	_members[id] = k
 	_leaving.erase(id)
-	_welcome.rpc_id(id, _info(), _ship(s))
+	_welcome.rpc_id(id, info, _ship(s))
 	# What is going on at the tables now (a muster, a dive): the newcomer's
 	# screens catch up at once rather than at the next change.
 	raids.welcome(k, id)
@@ -672,7 +712,14 @@ func roster() -> Array:
 		return out
 	var aboard: Array = _members.values()
 	for b: Dictionary in charter.data["berths"]:
-		out.append({ "key": b["key"], "name": b["name"], "aboard": aboard.has(b["key"]), "founder": b["key"] == charter.data["founder"] })
+		# With each captain's look (the harbour's portraits), Ready (the
+		# founder is always ready: they set sail) and a new berth still
+		# choosing its look (STARTING TOGETHER).
+		var s: Session = charter.session_for(b["key"])
+		var founder: bool = b["key"] == charter.data["founder"]
+		out.append({ "key": b["key"], "name": b["name"], "aboard": aboard.has(b["key"]), "founder": founder,
+			"look": Skipper.look_of(s.profile()) if s != null else { "color": "default" },
+			"ready": founder or _hready.get(b["key"], false) == true, "fresh": _fresh.has(b["key"]) })
 	return out
 
 
@@ -684,13 +731,103 @@ func _send_roster() -> void:
 		_roster.rpc(list)
 
 
-## The founder locks the roster and everyone sails.
+## The founder locks the roster and everyone sails (at once: the harbour's
+## Set Sail goes through cast_off first).
 func set_sail() -> void:
 	if not hosting:
 		return
+	casting = false
+	_cast_n += 1
 	charter.set_sail()
-	_sail.rpc()
+	_hready.clear()
+	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
+		_sail.rpc()
 	sailing.emit()
+
+
+## CASTING OFF (STARTING TOGETHER, Kong, 2026-10-11): Set Sail in the harbour
+## starts a CAST_OFF-second "Casting off" on every harbour card (the berths
+## seal one by one), then the crew sail. The founder may sail with whoever is
+## aboard, ready or not: the roster locks for every berth, as it always did.
+func cast_off() -> void:
+	if not hosting or casting or charter == null or charter.sailed():
+		return
+	casting = true
+	_cast_n += 1
+	var n: int = _cast_n
+	if multiplayer.multiplayer_peer != null and not multiplayer.get_peers().is_empty():
+		_casting.rpc()
+	casting_off.emit()
+	get_tree().create_timer(CAST_OFF).timeout.connect(func() -> void:
+		if n == _cast_n and hosting and casting:
+			set_sail())
+
+
+@rpc("authority", "reliable")
+func _casting() -> void:
+	heard_ms = Time.get_ticks_msec()
+	casting = true
+	casting_off.emit()
+
+
+## A crewmate's Ready in the harbour (only a flag on the cards; the founder
+## sails when they choose).
+func harbour_ready(yes: bool) -> void:
+	if hosting:
+		return
+	if multiplayer.multiplayer_peer != null:
+		_hready_rpc.rpc_id(1, yes)
+
+
+@rpc("any_peer", "reliable")
+func _hready_rpc(yes: bool) -> void:
+	if not hosting or charter == null or charter.sailed() or casting:
+		return
+	var k: Variant = _members.get(multiplayer.get_remote_sender_id())
+	if k == null:
+		return
+	if yes:
+		_hready[k] = true
+	else:
+		_hready.erase(k)
+	_send_roster()
+
+
+## THE CREWMATE'S LOOK (STARTING TOGETHER): a new berth's captain picks their
+## name and one of the free starting colours before the harbour, as the
+## founder did in the Found form. Sent once; the founder's game writes it into
+## the captain and sends the save back.
+func set_look(as_name: String, color: String) -> void:
+	if hosting or multiplayer.multiplayer_peer == null:
+		return
+	captain_name = as_name.strip_edges()
+	_my_look.rpc_id(1, as_name, color)
+
+
+@rpc("any_peer", "reliable")
+func _my_look(as_name: String, color: String) -> void:
+	if not hosting or charter == null:
+		return
+	var id: int = multiplayer.get_remote_sender_id()
+	var k: Variant = _members.get(id)
+	# Only a berth made this session, and only its own captain.
+	if k == null or not _fresh.has(k):
+		return
+	_fresh.erase(k)
+	var s: Session = charter.session_for(k)
+	if s == null:
+		return
+	var n: String = as_name.strip_edges().left(24)
+	if n != "":
+		s.profile()["username"] = n
+		var b: Dictionary = charter.berth_of(k)
+		if not b.is_empty():
+			b["name"] = s.captain_name()
+	if Title.STARTING.has(color):
+		s.profile()["character_color"] = color
+	charter.write(k)
+	_sync.rpc_id(id, _ship(s))
+	_send_roster()
 
 
 @rpc("authority", "reliable")

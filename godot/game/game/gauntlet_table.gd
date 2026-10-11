@@ -214,6 +214,8 @@ static func _perks(p: Dictionary, variant: String) -> Array:
 func _join(key: String, s: Session, p: Dictionary) -> Dictionary:
 	if _r["phase"] != "muster":
 		return { "error": "That dive has already gone down." }
+	if _r.has("count"):
+		return { "error": "The line is counting down to dive. Catch the next one." }
 	var mem: Array = _r["members"]
 	if mem.any(func(m: Dictionary) -> bool: return m["key"] == key):
 		return { "ok": true }
@@ -250,6 +252,7 @@ func _mode(key: String, mode: String) -> Dictionary:
 	if not ["solo", "coop"].has(mode):
 		return { "error": "There is no such mode." }
 	_r["mode"] = mode
+	_count_off("The mode changed.")
 	if mode == "solo":
 		_r["members"] = (_r["members"] as Array).filter(func(m: Dictionary) -> bool: return m["key"] == key)
 	_r["resume"] = false
@@ -260,18 +263,27 @@ func _mode(key: String, mode: String) -> Dictionary:
 
 
 func _go(key: String) -> Dictionary:
+	return _go_counted(key)
+
+
+## May the caller dive now? Only the caller, with every other captain ready,
+## and a Co-op dive with a second captain (the button says so, disabled).
+func _go_why(key: String) -> String:
 	if _r["phase"] != "muster" or _r.get("by") != key:
-		return { "error": "Only the captain who called it can dive." }
+		return "Only the captain who called it can dive."
 	for m: Dictionary in _r["members"]:
 		if m["key"] != key and not m.get("ready", false):
-			return { "error": "Not everyone is ready." }
+			return "Not everyone is ready."
+	if not _r.get("resume", false) and _r["mode"] == "coop" and (_r["members"] as Array).size() < 2:
+		return "Co-op needs two or more captains. Wait for a crewmate, or dive solo."
+	return ""
+
+
+func _launch() -> String:
 	if _r.get("resume", false):
-		return _resume()
-	var n: int = (_r["members"] as Array).size()
-	if _r["mode"] == "coop" and n < 2:
-		return { "error": "Co-op needs two or more captains. Wait for a crewmate, or dive solo." }
+		return str(_resume().get("error", ""))
 	_start()
-	return { "ok": true }
+	return ""
 
 
 # ── The dive begins ───────────────────────────────────────────────────────────

@@ -6,8 +6,9 @@ extends SceneTree
 ##   godot --headless --path godot/game -s tests/smoke_charter.gd -- --role=crew --as=ben
 ##
 ## (Run both at once, the host first.) The founder founds a Charter
-## and hosts it; the crewmate joins and makes a captain; the founder sets sail
-## once both are aboard. On the sea the crewmate casts and reels for real (the
+## and hosts it; the crewmate joins, picks their captain's look (the look
+## card, STARTING TOGETHER) and readies up in the harbour; the founder's Set
+## Sail casts off on both harbour cards, then both sail. On the sea the crewmate casts and reels for real (the
 ## founder's game rolls every die and keeps the time), and buys bait. The
 ## crewmate's copy must show the catch and the bait; the founder's Charter file
 ## must hold them; each must see the other's ship, named. Then the crewmate
@@ -72,9 +73,25 @@ func _host(main: Main) -> void:
 	for m: Dictionary in net.roster():
 		if not m["founder"]:
 			ben = m["key"]
-	net.set_sail()
+	# STARTING TOGETHER: the crewmate's look arrives, then their Ready.
+	check(await until(func() -> bool:
+		for m2: Dictionary in net.roster():
+			if m2["key"] == ben:
+				return not m2.get("fresh", true) and str(Js.obj(m2.get("look")).get("color", "")) == "blue"
+		return false, 30.0), "the crewmate's chosen look reaches the founder's harbour")
+	check(str(c.session_for(ben).profile().get("character_color")) == "blue" and c.session_for(ben).captain_name() == "Ben", "and is written into their Charter captain")
+	check(await until(func() -> bool:
+		for m3: Dictionary in net.roster():
+			if m3["key"] == ben:
+				return m3.get("ready", false) == true
+		return false, 30.0), "the crewmate's Ready reaches the founder's harbour")
+	var lobby: HarbourLobby = main._screen
+	check(lobby._sail != null and lobby._sail.text.contains("2 OF 2 READY"), "Set Sail counts who is ready (%s)" % (lobby._sail.text if lobby._sail != null else "none"))
+	lobby._sail.pressed.emit()
 	await process_frame
-	check(main._screen is Sea, "Set Sail takes the founder to the sea")
+	check(net.casting and main._screen is HarbourLobby, "Set Sail casts off first, in the harbour")
+	check(await until(func() -> bool: return main._screen is Sea, CrewNet.CAST_OFF + 5.0), "then takes the founder to the sea")
+	check(main._screen.has_node("SetsSail"), "where the Charter's name rises on the water")
 	check(c.sailed() and c.refusal("local-somebody-else") != "", "the roster is locked")
 	var sea: Sea = main._screen
 	check(await until(func() -> bool: return sea._mates.has(ben) and (sea._mates[ben] as Shipmate).mate_name == "Ben", 20.0), "the crewmate's ship is on the founder's sea, named")
@@ -117,13 +134,27 @@ func _crew(main: Main) -> void:
 	var joined: bool = false
 	for attempt: int in 20:
 		main.join("127.0.0.1", "Ben")
-		joined = await until(func() -> bool: return main._screen is HarbourLobby or main._screen is Sea, 3.0)
+		joined = await until(func() -> bool: return main._screen is HarbourLobby or main._screen is Sea or main._screen.has_signal("chosen"), 3.0)
 		if joined:
 			break
 		net.leave()
 		await create_timer(0.5).timeout
-	check(joined, "the crewmate reaches the founder's harbor")
-	check(await until(func() -> bool: return main._screen is Sea, 40.0), "Set Sail takes the crewmate to the sea")
+	check(joined, "the crewmate is answered by the founder")
+	# STARTING TOGETHER: a new berth picks its look first, then the harbour.
+	check(main._screen.has_signal("chosen"), "a new crewmate's first step is their look")
+	var card: Control = main._screen
+	(card.get("_name") as LineEdit).text = ""
+	card.call("_go")
+	check(main._screen == card, "a blank name is refused")
+	(card.get("_name") as LineEdit).text = "Ben"
+	card.set("_color", "blue")
+	card.call("_go")
+	check(main._screen is HarbourLobby, "Come aboard opens the harbour")
+	check(await until(func() -> bool: return net.last_roster.any(func(m: Dictionary) -> bool: return m["key"] == net.key and str(Js.obj(m.get("look")).get("color", "")) == "blue"), 20.0), "the harbour shows the chosen look")
+	net.harbour_ready(true)
+	check(await until(func() -> bool: return main._screen is HarbourLobby and (main._screen as HarbourLobby)._cast_t >= 0.0, 40.0), "the founder's Set Sail casts off on the crewmate's harbour too")
+	check(await until(func() -> bool: return main._screen is Sea, 10.0), "then takes the crewmate to the sea")
+	check(main._screen.has_node("SetsSail"), "where the Charter's name rises on the water")
 	var sea: Sea = main._screen
 	var s: Session = sea.session
 	check(s.remote != null, "the crewmate's captain is remote (the founder runs the rules)")

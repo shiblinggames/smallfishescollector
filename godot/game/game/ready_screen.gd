@@ -18,6 +18,15 @@ extends Control
 ##              Ready / Not ready and Leave for a crewmate; Sail (when all are
 ##              ready) and Disband for the caller; Sail and Back alone.
 ## Flat and clean on the night side's browns, as the stat cards are.
+##
+## STARTING TOGETHER (Kong, 2026-10-11): each seat stamps READY as its captain
+## readies (in turn, a small thump each); the caller's Sail (or everyone's,
+## when all are ready, as the caller presses it) starts a 3, 2, 1 in the foot
+## on every screen, read off the table's `count`, with Leave still open; then
+## the fight opens for all. Sail disabled says why under it; a ready crewmate
+## reads "Waiting on Anna to sail".
+
+const Start = preload("res://game/charter_start.gd")
 
 signal sail(tier: String)
 signal closed
@@ -44,6 +53,12 @@ var _status_l: Label = null
 ## When the tier last changed under this captain (its tab pulses).
 var _pulse_ms: int = -100000
 var _tick_t: float = 0.0
+## When each captain's READY was stamped on this screen (key -> msec; one
+## already ready when the screen opened is simply there), each count's start
+## here (Start.count_start), and the last count stopped that was said.
+var _ready_ms: Dictionary = {}
+var _count_seen: Dictionary = {}
+var _off_seen: float = -1.0
 
 
 func _ready() -> void:
@@ -88,6 +103,8 @@ func _on_table(st: Dictionary) -> void:
 				_pulse_ms = Time.get_ticks_msec()
 				sea._hud.toast("%s chose %s  ·  ready again" % [ReadyScreen.name_in(st, str(st.get("by", ""))), { "normal": "Normal", "coop": "Co-op", "coopc": "Co-op Challenge" }.get(str(st.get("tier", "")), "a tier")])
 			ReadyScreen.invite_news(sea, was, st)
+			ReadyScreen.ready_news(was, st, _ready_ms)
+			_off_seen = ReadyScreen.count_news(sea, st, _off_seen)
 			_paint()
 		"playing":
 			# The line has sailed: the fight takes it from here (RaidMuster).
@@ -189,6 +206,7 @@ func _paint() -> void:
 		if i < members.size():
 			var m: Dictionary = members[i]
 			fill_seat(sc, m, _face_tex(Js.obj(Js.obj(m.get("card")).get("face"))), m["key"] == _mine(), m["key"] == _st.get("by"))
+			sc.stamp_ms = int(_ready_ms.get(m["key"], -100000))
 		seats.add_child(sc)
 	# THE BOSS.
 	var bp: BossPane = BossPane.new()
@@ -218,8 +236,22 @@ func _paint() -> void:
 	_status_l.size = Vector2(w - 520 - pad * 3.0, 0)
 	_status_l.clip_text = true
 	var terms: Label = _label(_body, Vector2(pad, foot_y + 44), _terms(str(_st.get("tier", "normal")), tc), "karla", 500, 13, Dossier.SOFT)
-	terms.size = Vector2(w - 520 - pad * 3.0, 0)
 	terms.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Deferred: a label given its words before it wrapped keeps the whole
+	# line's width otherwise (it ran under the buttons).
+	terms.set_deferred("size", Vector2(w - 520 - pad * 3.0, 0))
+	# THE COUNT: 3, 2, 1 where the status stood, on every screen alike.
+	var counting: bool = not Js.obj(_st.get("count")).is_empty()
+	if counting:
+		_status_l.visible = false
+		terms.visible = false
+		var dial: Start.CountDial = Start.CountDial.new()
+		dial.position = Vector2(pad, foot_y + 14)
+		dial.size = Vector2(w - 520 - pad * 2.0, 60)
+		dial.secs = Js.num(Js.obj(_st["count"]).get("secs"))
+		dial.start_ms = Start.count_start(_st, _count_seen)
+		dial.words = "The line sails in"
+		_body.add_child(dial)
 	var btns: HBoxContainer = HBoxContainer.new()
 	btns.add_theme_constant_override("separation", 10)
 	btns.alignment = BoxContainer.ALIGNMENT_END
@@ -234,11 +266,21 @@ func _paint() -> void:
 			_close())
 	elif caller:
 		_button(btns, "Disband", "secondary", func() -> void: _act(["leave"]))
-		var go: Button = _button(btns, "Sail", "primary", func() -> void: _act(["go"]))
-		go.disabled = not waiting.is_empty() or str(Js.obj(_st.get("tiers")).get(_st.get("tier"), "")) != ""
+		var go: Button = _button(btns, "Sailing" if counting else "Sail", "primary", func() -> void:
+			Sound.horn()
+			_act(["go"]))
+		var shut: String = str(Js.obj(_st.get("tiers")).get(_st.get("tier"), ""))
+		go.disabled = counting or not waiting.is_empty() or shut != ""
+		# Why it cannot go, under it (it only looked dead).
+		var why: String = shut if shut != "" else ("" if waiting.is_empty() else "Waiting on %s to ready" % BattleLook.join_names(waiting))
+		go.tooltip_text = why
+		if why != "" and not counting:
+			go_reason(_body, why, Vector2(w - 520 - pad, foot_y + 68), 520.0)
 	else:
 		_button(btns, "Leave", "secondary", func() -> void: _act(["leave"]))
-		_button(btns, "Not ready" if my_ready else "Ready", "secondary" if my_ready else "primary", func() -> void: _act(["ready", not my_ready]))
+		var rb: Button = _button(btns, "Not ready" if my_ready else "Ready", "secondary" if my_ready else "primary", func() -> void: _act(["ready", not my_ready]))
+		# Standing down during the count stops it (Leave is the way out).
+		rb.disabled = counting
 	Pane.set_night(_body, true)
 
 
@@ -257,7 +299,7 @@ func _process(delta: float) -> void:
 ## The foot's status for a line (the raid's and the dive's): who is still to
 ## say ready, you first; alone, and anyone on their way ("Ben is on the way
 ## · 13s").
-static func status_line(st: Dictionary, mine: String, solo: bool, sea: Sea, to: Vector2, near: float, where: String) -> String:
+static func status_line(st: Dictionary, mine: String, solo: bool, sea: Sea, to: Vector2, near: float, where: String, verb: String = "sail") -> String:
 	var members: Array = Js.list(st.get("members"))
 	var waiting: Array = []
 	var me_too: bool = false
@@ -270,15 +312,67 @@ static func status_line(st: Dictionary, mine: String, solo: bool, sea: Sea, to: 
 	if me_too:
 		waiting.push_front("you")
 	var status: String = "Everyone is ready." if waiting.is_empty() else "Waiting on %s." % BattleLook.join_names(waiting)
+	# A crewmate with everyone ready waits on the caller, by name.
+	if waiting.is_empty() and str(st.get("by", "")) != mine and members.size() > 1:
+		status = "Waiting on %s to %s." % [name_in(st, str(st.get("by", ""))), verb]
 	if members.size() == 1:
 		status = "Sailing alone." if solo else "Sailing alone, unless a crewmate %s joins." % where
 	var coming: Array = []
 	for c: Dictionary in Js.list(st.get("crew")):
 		if str(c.get("state", "")) == "coming":
-			coming.append("%s is on the way  ·  %s" % [str(c["name"]), away_of(c, sea, to, near)])
+			var away: String = away_of(c, sea, to, near)
+			coming.append("%s is on the way%s" % [str(c["name"]), ("  ·  " + away) if away != "" else ""])
 	if not coming.is_empty():
 		status = "  ·  ".join(PackedStringArray(coming)) if members.size() == 1 else status + "  " + "  ·  ".join(PackedStringArray(coming))
 	return status
+
+
+## A disabled Sail or Dive's reason, a small line under the buttons
+## (right-aligned to them).
+static func go_reason(parent: Control, why: String, at: Vector2, w: float) -> Label:
+	var l: Label = Label.new()
+	l.text = why
+	l.position = at
+	l.size = Vector2(w, 0)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.clip_text = true
+	l.add_theme_font_override("font", Kit.font("karla", 600))
+	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_color_override("font_color", Dossier.SOFT)
+	parent.add_child(l)
+	return l
+
+
+## Captains newly ready since the last state (the raid's line and the
+## dive's): their READY stamps now, one small thump for the change. A screen
+## opening on a line already ready shows the stamps simply there.
+static func ready_news(was: Dictionary, st: Dictionary, stamped: Dictionary) -> void:
+	if was.is_empty():
+		return
+	var before: Dictionary = {}
+	for m: Dictionary in Js.list(was.get("members")):
+		before[m["key"]] = m.get("ready", false) == true or m["key"] == was.get("by")
+	var any: bool = false
+	for m2: Dictionary in Js.list(st.get("members")):
+		var now: bool = m2.get("ready", false) == true or m2["key"] == st.get("by")
+		if now and before.get(m2["key"], false) != true:
+			stamped[m2["key"]] = Time.get_ticks_msec()
+			any = true
+		elif not now:
+			stamped.erase(m2["key"])
+	if any:
+		Sound.seal(false)
+
+
+## A count stopped (someone left, stood down, the tier changed): said once.
+## Returns the stopped count's n now said.
+static func count_news(sea: Sea, st: Dictionary, said: float) -> float:
+	var off: Dictionary = Js.obj(st.get("countOff"))
+	if off.is_empty() or Js.num(off.get("n")) == said:
+		return said
+	if sea != null and Js.obj(st.get("count")).is_empty():
+		sea._hud.toast("The count stopped  ·  %s" % str(off.get("why", "")))
+	return Js.num(off.get("n"))
 
 
 ## A crewmate's name in the line's state (its members, else the crew aboard).
@@ -434,7 +528,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 # ── Its pieces ────────────────────────────────────────────────────────────────
 
 ## A tier, side by side with the others: its name and what it means; the
-## chosen one in gold; a shut one faint, with why.
+## chosen one lifted with a cream hairline; a shut one faint, with why.
 class TierTab:
 	extends Button
 	var id: String = ""
@@ -460,13 +554,15 @@ class TierTab:
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
 		var hov: bool = is_hovered() and can and shut == "" and not chosen
 		var bg: Color = BattleLook.LACQUER_HI.lightened(0.08 if hov else 0.0)
+		# The chosen tier lifts (a lighter face and a cream hairline), never a
+		# gold rim (Kong, 2026-10-10: coloured borders "look cheap").
 		if chosen:
-			bg = bg.lerp(BattleLook.GOLD.darkened(0.6), 0.35)
-		BattleLook.draw_box(self, r, BattleLook.box(bg, Color(BattleLook.GOLD, 0.9) if chosen else Color(1, 1, 1, 0.07), 2 if chosen else 1, 12))
+			bg = bg.lightened(0.1)
+		BattleLook.draw_box(self, r, BattleLook.box(bg, Color(Dossier.INK, 0.5) if chosen else Color(1, 1, 1, 0.07), 1, 12))
 		var since: float = float(Time.get_ticks_msec() - pulse_ms) / 1000.0
 		if since >= 0.0 and since < 1.6:
 			var u: float = since / 1.6
-			BattleLook.draw_box(self, r.grow(3.0 + 8.0 * u), BattleLook.box(Color(0, 0, 0, 0), Color(BattleLook.GOLD, 0.8 * (1.0 - u)), 2, 14))
+			BattleLook.draw_box(self, r.grow(3.0 + 8.0 * u), BattleLook.box(Color(0, 0, 0, 0), Color(Dossier.INK, 0.6 * (1.0 - u)), 1, 14))
 		var a: float = 0.45 if shut != "" else 1.0
 		draw_string(Kit.font("cinzel", 700), Vector2(16, 32), title, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 18, Color(Dossier.INK, a))
 		draw_string(Kit.font("karla", 600), Vector2(16, 54), shut if shut != "" else note, HORIZONTAL_ALIGNMENT_LEFT, size.x - 56, 12, Color(Dossier.HARM if shut != "" else Dossier.SOFT, 0.8 if shut != "" else 1.0))
@@ -496,6 +592,8 @@ class SeatCard:
 	## Where an empty seat's crewmate must be to join ("at the raid", "at
 	## the maelstrom").
 	var where: String = "at the raid"
+	## When this seat's READY was stamped (msec): it thumps on, then stays.
+	var stamp_ms: int = -100000
 	var _frames: int = 0
 	var _tick: float = 0.0
 
@@ -503,6 +601,8 @@ class SeatCard:
 	func _process(d: float) -> void:
 		if _frames < 12:
 			_frames += 1
+			queue_redraw()
+		elif Time.get_ticks_msec() - stamp_ms < 500:
 			queue_redraw()
 		_tick += d
 		if _tick >= 0.5 and not invite_row.is_empty():
@@ -529,9 +629,10 @@ class SeatCard:
 			return
 		var c: Dictionary = Js.obj(member.get("card"))
 		var ready: bool = member.get("ready", false) or leader
-		BattleLook.draw_box(self, r, BattleLook.box(BattleLook.LACQUER_HI, Color(Dossier.HELP, 0.8) if ready else Color(1, 1, 1, 0.07), 2 if ready else 1, 14))
+		# A plain hairline either way: the READY stamp says it (no coloured rim).
+		BattleLook.draw_box(self, r, BattleLook.box(BattleLook.LACQUER_HI, Color(1, 1, 1, 0.1 if ready else 0.07), 1, 14))
 		var cx: float = r.size.x / 2.0
-		BattleLook.medallion(self, Vector2(cx, 60), 42.0, face, Dossier.HELP if ready else Color(1, 1, 1, 0.3), str(member.get("name", "?")).substr(0, 1), 1.0, Vector2(0.5, 0.5), 0.5)
+		BattleLook.medallion(self, Vector2(cx, 60), 42.0, face, Color(Dossier.INK, 0.55) if ready else Color(1, 1, 1, 0.3), str(member.get("name", "?")).substr(0, 1), 1.0, Vector2(0.5, 0.5), 0.5)
 		var nm: String = str(member.get("name", ""))
 		BattleLook.say(self, Kit.font("cinzel", 700), cx, 126, nm if nm.length() <= 14 else nm.substr(0, 13) + ".", 17, Dossier.INK)
 		var role: String = ("Leader" if leader else "") + ("  ·  you" if me else "")
@@ -561,17 +662,16 @@ class SeatCard:
 		for q: int in 3:
 			var tid: String = ["normal", "coop", "coopc"][q]
 			ReadyScreen.seal(self, Vector2(cx - 26.0 + q * 26.0, 300), 9.0, cl.get(tid, false) == true)
-		# Ready or not.
-		var st: String = "Ready" if ready else "Not ready"
-		var f: Font = Kit.font("karla", 800)
-		var sw: float = f.get_string_size(st, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + (40.0 if ready else 24.0)
-		var pr: Rect2 = Rect2(Vector2(cx - sw / 2.0, r.size.y - 44.0), Vector2(sw, 28))
-		BattleLook.draw_box(self, pr, BattleLook.box(Color(Dossier.HELP, 0.18) if ready else Color(1, 1, 1, 0.05), Color(0, 0, 0, 0), 0, 14))
-		var tx: float = pr.position.x + 12.0
+		# Ready: a READY stamp (thumping on as it came); not yet, a quiet pill.
 		if ready:
-			draw_polyline(PackedVector2Array([Vector2(tx, pr.get_center().y), Vector2(tx + 5, pr.get_center().y + 5), Vector2(tx + 13, pr.get_center().y - 5)]), Dossier.HELP, 2.2, true)
-			tx += 20.0
-		draw_string(f, Vector2(tx, pr.get_center().y + 5), st, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Dossier.HELP if ready else Dossier.SOFT)
+			Start.draw_stamp(self, Vector2(cx, r.size.y - 30.0), "READY", Dossier.HELP, float(Time.get_ticks_msec() - stamp_ms) / 1000.0, 15)
+			return
+		var st: String = "Not ready"
+		var f: Font = Kit.font("karla", 800)
+		var sw: float = f.get_string_size(st, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 24.0
+		var pr: Rect2 = Rect2(Vector2(cx - sw / 2.0, r.size.y - 44.0), Vector2(sw, 28))
+		BattleLook.draw_box(self, pr, BattleLook.box(Color(1, 1, 1, 0.05), Color(0, 0, 0, 0), 0, 14))
+		draw_string(f, Vector2(pr.position.x + 12.0, pr.get_center().y + 5), st, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Dossier.SOFT)
 
 	func _dashed(r: Rect2) -> void:
 		var pts: Array = [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y), r.position]

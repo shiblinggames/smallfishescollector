@@ -18,6 +18,15 @@ signal changed(state: Dictionary)
 const MAX_SEATS: int = 4
 ## How long a round's events may play before the table moves on regardless.
 const PLAY: float = 25.0
+## THE COUNT (STARTING TOGETHER, Kong, 2026-10-11): the caller's Sail or Dive
+## with two or more in the line starts a 3, 2, 1 on every screen (Leave still
+## open) before the fight opens for all. It is in the state as `count`
+## ({ n, secs }) with `left` (the seconds still to go when it was sent), so
+## every screen counts the same; the founder's game decides when it ends.
+const COUNT: float = 3.0
+## This table's count (tests that are not about it set 0: the line goes at once).
+var count_secs: float = COUNT
+var _count_n: int = 0
 
 ## On the founder's game: the Charter the table belongs to.
 var charter: Charter = null
@@ -79,8 +88,68 @@ func _under_way() -> String:
 
 ## A phase's clock ran out (_process): what moves on.
 func _timed_out() -> void:
-	if str(_r["phase"]) == "playing":
-		_advance()
+	match str(_r["phase"]):
+		"playing":
+			_advance()
+		"muster":
+			_count_done()
+
+
+## Why the caller may not set the line going now ("" when they may).
+func _go_why(_key: String) -> String:
+	return ""
+
+
+## The line goes: the first fight (or the held dive) opens. "" or why not.
+func _launch() -> String:
+	return ""
+
+
+# ── The count ─────────────────────────────────────────────────────────────────
+
+## The caller's Sail or Dive: checked, then the count (or at once, alone).
+func _go_counted(key: String) -> Dictionary:
+	if _r.has("count"):
+		return { "ok": true }
+	var why: String = _go_why(key)
+	if why != "":
+		return { "error": why }
+	if (_r["members"] as Array).size() < 2 or count_secs <= 0.0:
+		why = _launch()
+		return { "error": why } if why != "" else { "ok": true }
+	_count_n += 1
+	_r["count"] = { "n": float(_count_n), "secs": count_secs }
+	_r["left"] = count_secs
+	_r.erase("countOff")
+	_push()
+	return { "ok": true }
+
+
+## The count ran out: checked again (someone may have left), then the line goes.
+func _count_done() -> void:
+	if not _r.has("count"):
+		return
+	var why: String = _go_why(str(_r.get("by", "")))
+	if why != "":
+		_count_off(why)
+		_push()
+		return
+	_r.erase("count")
+	_r["left"] = -1.0
+	why = _launch()
+	if why != "":
+		_count_off(why)
+		_push()
+
+
+## The count stops (a captain left the line or stood down, the tier or mode
+## changed): every screen says why once (`countOff` with the count's n).
+func _count_off(why: String) -> void:
+	if not _r.has("count"):
+		return
+	_r["countOff"] = { "n": Js.obj(_r["count"]).get("n", 0.0), "why": why }
+	_r.erase("count")
+	_r["left"] = -1.0
 
 
 ## What the muster adds to the state before it goes out (after the crew view).
@@ -164,6 +233,8 @@ func _ready_up(key: String, yes: bool) -> Dictionary:
 		return { "error": "Not now." }
 	for m: Dictionary in _r["members"]:
 		if m["key"] == key:
+			if not yes and m.get("ready", false):
+				_count_off("%s stood down." % str(m.get("name", "A captain")))
 			m["ready"] = yes
 	_push()
 	return { "ok": true }
@@ -175,7 +246,11 @@ func _leave(key: String) -> Dictionary:
 	if _r.get("by") == key:
 		_r["phase"] = "idle"
 		_r["result"] = "called off"
+		_r.erase("count")
+		_r["left"] = -1.0
 	else:
+		if (_r["members"] as Array).any(func(m: Dictionary) -> bool: return m["key"] == key):
+			_count_off("%s left the line." % _name_of(key))
 		_r["members"] = (_r["members"] as Array).filter(func(m: Dictionary) -> bool: return m["key"] != key)
 	_push()
 	return { "ok": true }

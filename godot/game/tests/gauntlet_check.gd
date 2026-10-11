@@ -209,12 +209,29 @@ func _init() -> void:
 	check(not (await party_act.call("anna-key", ["call", here])).has("error"), "Anna calls Don's Gauntlet")
 	check((await party_act.call("ben-key", ["join", here])).has("error"), "a solo dive takes nobody else")
 	check(not (await party_act.call("anna-key", ["mode", "coop"])).has("error"), "Anna makes it a co-op dive")
+	# STARTING TOGETHER (2026-10-11): Co-op alone cannot go (the button says
+	# "Needs a second captain").
+	check(str((await party_act.call("anna-key", ["go"])).get("error", "")).contains("two or more"), "a co-op dive alone does not go")
 	check(not (await party_act.call("ben-key", ["join", here])).has("error"), "Ben joins")
 	check(not (await party_act.call("cal-key", ["join", here])).has("error"), "Cal joins")
 	check((await party_act.call("anna-key", ["go"])).has("error"), "not until the crew are ready")
 	await party_act.call("ben-key", ["ready", true])
 	await party_act.call("cal-key", ["ready", true])
-	check(not (await party_act.call("anna-key", ["go"])).has("error"), "down they go")
+	# THE COUNT (STARTING TOGETHER): Dive starts a 3, 2, 1 in the state, the
+	# same on every screen; a captain standing down stops it; when it runs
+	# out the dive opens for all.
+	check(not (await party_act.call("anna-key", ["go"])).has("error"), "Anna presses Dive")
+	var cnt: Dictionary = Js.obj(gt.state.get("count"))
+	check(str(gt.state.get("phase", "")) == "muster" and Js.num(cnt.get("secs")) == GauntletTable.COUNT and Js.num(gt.state.get("left")) == GauntletTable.COUNT, "the count goes out in the state (%s)" % str(cnt))
+	check(not (await party_act.call("anna-key", ["go"])).has("error") and Js.num(Js.obj(gt.state.get("count")).get("n")) == Js.num(cnt.get("n")), "a second press keeps the same count")
+	await party_act.call("cal-key", ["ready", false])
+	check(Js.obj(gt.state.get("count")).is_empty() and str(Js.obj(gt.state.get("countOff")).get("why", "")).contains("Cal"), "Cal standing down stops the count, and says who")
+	await party_act.call("cal-key", ["ready", true])
+	check(not (await party_act.call("anna-key", ["go"])).has("error") and Js.num(Js.obj(gt.state.get("count")).get("n")) > Js.num(cnt.get("n")), "a new count starts")
+	gt._process(1.0)
+	check(str(gt._r.get("phase", "")) == "muster", "a second in, still counting")
+	gt._process(GauntletTable.COUNT)
+	check(str(gt.state.get("phase", "")) == "playing" and not gt.state.has("count"), "down they go when it runs out")
 	check((gt._r["b"]["foes"] as Array).size() >= 1, "a field faces them")
 	var r2: Dictionary = await _play(gt, ["anna-key", "ben-key", "cal-key"], party_act, 24)
 	print("  together, Don's: %s at depth %d, %d fights, %d drafts, %d curses, %d shrines, %d fences, %d jobs, %d marks, %d towed, %d steps" % [r2["result"], r2["depth"], r2["fights"], r2["drafts"], r2["curses"], r2["shrines"], r2["fences"], r2["jobs"], r2["marks"], r2["towed"], r2["steps"]])
@@ -245,6 +262,8 @@ func _init() -> void:
 	gt._r = { "phase": "idle", "seq": 0 }
 
 	# ── Held: a co-op dive voted to hold, then resumed by the same crew ──
+	# (no count from here: the line goes as Dive is pressed)
+	gt.count_secs = 0.0
 	await party_act.call("anna-key", ["call", here])
 	await party_act.call("anna-key", ["mode", "coop"])
 	await party_act.call("ben-key", ["join", here])

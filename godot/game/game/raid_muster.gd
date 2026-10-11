@@ -253,8 +253,10 @@ func _tick() -> void:
 	var at: bool = sea._boat.position.distance_to(RaidTable.dock_of(str(_last["nodeId"]))) <= RaidTable.NEAR
 	# Join lights only near the raid.
 	if _join != null and is_instance_valid(_join):
-		_join.disabled = not at
-		_join.text = "Join the raid" if at else "Sail to the raid to join"
+		# The line counting down to sail (STARTING TOGETHER) takes nobody more.
+		var counting: bool = not Js.obj(_last.get("count")).is_empty()
+		_join.disabled = not at or counting
+		_join.text = "The line is casting off" if counting else ("Join the raid" if at else "Sail to the raid to join")
 	invite_swap(_inv, at)
 
 

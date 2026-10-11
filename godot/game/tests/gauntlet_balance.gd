@@ -38,6 +38,8 @@ func _init() -> void:
 				root.add_child(gt)
 				gt.charter = c
 				c.gauntlets = gt
+				# The line goes as Dive is pressed (the 3, 2, 1 is gauntlet_check's).
+				gt.count_secs = 0.0
 				var at: Vector2 = GauntletTable.maelstrom_of(variant)
 				var here: Dictionary = { "variant": variant, "x": at.x, "y": at.y }
 				var act: Callable = func(key: String, args: Array) -> Dictionary:

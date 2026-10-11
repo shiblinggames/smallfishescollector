@@ -969,9 +969,52 @@ func _init() -> void:
 				card3["face"] = { "characterColor": "pink", "hat": "golden" }
 				card3["crew"] = []
 				var mem: Array = [{ "key": "anna", "name": "Anna", "ready": true, "card": card }, { "key": "ben", "name": "Ben_the_Bold", "ready": true, "card": card2 }, { "key": "cal", "name": "Cal", "ready": false, "card": card3 }]
-				rt._state({ "phase": "muster", "seq": 1, "raidId": rraid, "nodeId": "pete", "by": "anna", "tier": "coop", "members": mem, "tiers": RaidTable.tiers_open(mem) })
+				var rst0: Dictionary = { "phase": "muster", "seq": 1, "raidId": rraid, "nodeId": "pete", "by": "anna", "tier": "coop", "members": mem, "tiers": RaidTable.tiers_open(mem) }
+				# READY_COUNT=1 (STARTING TOGETHER): everyone ready and the
+				# caller's Sail pressed: the 3, 2, 1 in the foot (SHOT_F ~70
+				# catches the 2).
+				if OS.get_environment("READY_COUNT") != "":
+					for m0: Dictionary in mem:
+						m0["ready"] = true
+					rst0["count"] = { "n": 1.0, "secs": 3.0 }
+					rst0["left"] = 3.0
+				rt._state(rst0)
 				rs.table = rt
 				rs.my_key = "anna"
+			elif OS.get_environment("READY_MODE") in ["dive", "divecrew"]:
+				# The dive's muster in a Charter (STARTING TOGETHER): "dive",
+				# Anna alone on Co-op (Dive disabled: "Needs a second
+				# captain"); "divecrew", Ben's screen, ready, with Anna yet to
+				# press Dive ("Waiting on Anna to dive"), his READY just stamped.
+				var ge: GauntletEntry = GauntletEntry.new()
+				var gtab: GauntletTable = GauntletTable.new()
+				root.add_child(gtab)
+				var gcard: Dictionary = RaidTable.card_of(sea.session, "")
+				gcard["deepest"] = 23.0
+				var gcard2: Dictionary = gcard.duplicate(true)
+				gcard2["face"] = { "characterColor": "blue", "hat": null }
+				var gmem: Array = [{ "key": "anna", "name": "Anna", "ready": true, "card": gcard }]
+				var gcrew: Array = [{ "key": "ben", "name": "Ben_the_Bold", "can": "", "state": "coming" }, { "key": "cal", "name": "Cal", "can": "", "state": "" }]
+				if OS.get_environment("READY_MODE") == "divecrew":
+					gmem.append({ "key": "ben", "name": "Ben_the_Bold", "ready": false, "card": gcard2 })
+					gcrew = [{ "key": "cal", "name": "Cal", "can": "", "state": "" }]
+				gtab._state({ "phase": "muster", "seq": 1, "variant": "davy", "by": "anna", "mode": "coop", "resume": false, "members": gmem, "crew": gcrew, "held": {} })
+				ge.sea = sea
+				ge.table = gtab
+				ge.my_key = "ben" if OS.get_environment("READY_MODE") == "divecrew" else "anna"
+				sea._hud_layer.add_child(ge)
+				if OS.get_environment("READY_MODE") == "divecrew":
+					for f0: int in 20:
+						await process_frame
+					var gst2: Dictionary = gtab.state.duplicate(true)
+					gst2["members"][1]["ready"] = true
+					gst2["seq"] = 2.0
+					gtab._state(gst2)
+				for f1: int in int(OS.get_environment("SHOT_F")) if OS.get_environment("SHOT_F") != "" else 30:
+					await process_frame
+				root.get_texture().get_image().save_png(out)
+				quit()
+				return
 			else:
 				rs.raid_id = rraid
 				rs.node_id = "pete"

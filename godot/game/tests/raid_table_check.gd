@@ -87,8 +87,29 @@ func _init() -> void:
 	await c.run(b, "raidTable", ["ready", true])
 	var a_coin: float = Js.num(a.profile().get("doubloons"))
 	var b_coin: float = Js.num(b.profile().get("doubloons"))
+	# THE COUNT (STARTING TOGETHER, 2026-10-11): Sail starts a 3, 2, 1 in the
+	# state with Leave still open; a change of tier stops it; nobody joins
+	# meanwhile; when it runs out the fight opens for all.
+	check(not (await c.run(a, "raidTable", ["go"])).has("error"), "Anna presses Sail")
+	var cnt: Dictionary = Js.obj(t.state.get("count"))
+	check(t.state["phase"] == "muster" and Js.num(cnt.get("secs")) == RaidTable.COUNT and Js.num(t.state.get("left")) == RaidTable.COUNT, "the count goes out in the state (%s)" % str(cnt))
+	check(str((await c.run(x, "raidTable", ["join", at])).get("error", "")).contains("counting down"), "nobody joins during the count")
+	await c.run(a, "raidTable", ["tier", "coop"])
+	check(Js.obj(t.state.get("count")).is_empty() and str(Js.obj(t.state.get("countOff")).get("why", "")) != "", "a change of tier stops the count")
+	await c.run(a, "raidTable", ["tier", "normal"])
+	await c.run(b, "raidTable", ["ready", true])
 	await c.run(a, "raidTable", ["go"])
-	check(t.state["phase"] == "playing" and (t.state["b"]["seats"] as Array).size() == 2, "the line forms with two ships")
+	await c.run(b, "raidTable", ["leave"])
+	check(Js.obj(t.state.get("count")).is_empty() and str(Js.obj(t.state.get("countOff")).get("why", "")).contains("Ben"), "Ben leaving the line stops it, and says who")
+	check(not (await c.run(b, "raidTable", ["join", at])).has("error"), "Ben comes back")
+	await c.run(b, "raidTable", ["ready", true])
+	await c.run(a, "raidTable", ["go"])
+	t._process(1.0)
+	check(t.state["phase"] == "muster" and not Js.obj(t.state.get("count")).is_empty(), "a second in, still counting")
+	t._process(RaidTable.COUNT)
+	check(t.state["phase"] == "playing" and (t.state["b"]["seats"] as Array).size() == 2 and not t.state.has("count"), "the line forms with two ships when it runs out")
+	# The rest of the checks sail at once.
+	t.count_secs = 0.0
 
 	# ── Played to the end ──
 	var rounds: int = 0
