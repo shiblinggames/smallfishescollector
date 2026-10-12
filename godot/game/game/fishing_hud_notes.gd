@@ -273,6 +273,15 @@ func _toast_step(delta: float) -> void:
 		else:
 			var q: Array = _toast_q.pop_front()
 			toast(q[0], q[1])
+	# A wrapping toast measures itself one letter wide the frame it is made
+	# (a name 400px tall) and does not say when it settles: the lane asks
+	# again each frame, or it keeps that height and, over the dial, grows
+	# off the top of the screen (2026-10-12). A box never shrinks on its own
+	# when its minimum drops, so it is cut back to it (the offsets below
+	# then set where it stands).
+	for n: Node in _toasts.get_children():
+		(n as Control).update_minimum_size()
+	_toasts.size = Vector2(_toasts.size.x, 0.0)
 	if h._dial != null and h._dial.visible:
 		var bottom: float = h._dial.position.y - (80.0 if h._status.text != "" else 10.0)
 		_toasts.grow_vertical = Control.GROW_DIRECTION_BEGIN

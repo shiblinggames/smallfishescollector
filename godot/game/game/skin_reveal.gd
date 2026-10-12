@@ -191,18 +191,20 @@ func _close() -> void:
 		queue_free())
 
 
-## The sealed card: a night-paper board with one hairline in the tier's
-## colour (no brass frame), the voucher's painting in the middle, and the
-## glow of the tier it is climbing through.
+## The sealed card: a night-paper board with a plain hairline (no brass
+## frame), the voucher's painting in the middle, and behind it the glow of
+## the tier it is climbing through.
 func _draw_back() -> void:
 	var g: Color = _col if _flipped and _face.visible else _glow_now()
 	var r: Rect2 = Rect2(Vector2.ZERO, CARD)
 	var pulse: float = 0.5 + 0.5 * sin(_t * 9.0)
+	# The tier is a soft glow behind the card, as on the recruit cards; the
+	# edge a plain hairline (Kong, 2026-10-10: coloured borders "look cheap";
+	# a tight tier-coloured shadow read as a thick gold rim).
+	_back.draw_texture_rect(FxSheet.glow(), r.grow_individual(130, 120, 130, 120), false, Color(g, 0.55 + 0.15 * pulse))
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.shadow_color = Color(g, 0.45 + 0.25 * pulse)
-	sb.shadow_size = 26
 	sb.bg_color = Paper.NIGHT_PAPER_DEEP
-	sb.border_color = Color(g, 0.6)
+	sb.border_color = Color(Paper.NIGHT_INK, 0.22)
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(Kit.R_LARGE)
 	_back.draw_style_box(sb, r)

@@ -236,7 +236,10 @@ func _init() -> void:
 	for deal: String in ["bait", "buy"]:
 		var t: Dictionary = {}
 		for x: Dictionary in Traders.around(0, 6000, 14000, day, now):
-			if x["deal"] == deal:
+			# One drifting clear of every berth and isle: near one, its landing
+			# rightly comes first (today's sea once put a salter at Wreckwood).
+			var xa: Dictionary = Folk.drift_pos(float(x["x"]), float(x["y"]), float(x["driftR"]), float(x["driftRate"]), float(x["driftPhase"]), now / 1000.0)
+			if x["deal"] == deal and Chart.berth_at(Vector2(float(xa["x"]), float(xa["y"]) + 80.0)).is_empty() and Explore.isle_near(float(xa["x"]), float(xa["y"]) + 80.0).is_empty():
 				t = x
 				break
 		if t.is_empty():

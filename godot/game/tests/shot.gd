@@ -275,6 +275,12 @@ func _init() -> void:
 					Clock.install(func() -> float: return then)
 					sea._trader_cell = ""
 					break
+			if t.is_empty():
+				# No trader with this deal in the 400 steps searched (the sea's
+				# day decides who sails): nothing to show, said plainly.
+				print("  no %s trader in reach today; nothing to shoot" % want)
+				quit()
+				return
 			var dp: Dictionary = Folk.drift_pos(float(t["x"]), float(t["y"]), float(t["driftR"]), float(t["driftRate"]), float(t["driftPhase"]), Clock.now_ms() / 1000.0)
 			sea._boat.position = Vector2(float(dp["x"]) - 120.0, float(dp["y"]) + 160.0)
 			for f: int in 4:

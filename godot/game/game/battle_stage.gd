@@ -164,14 +164,16 @@ func _ready() -> void:
 		_dropped_seen = Js.obj(st0.get("dropped")).duplicate()
 		_dropped_seen.erase(my_key)
 		_afk_seen = int(Js.num(Js.obj(st0.get("afk")).get("n")))
-	# The sea's charting words ("+2.5", the Nav XP of fog lifting as she
-	# sails) rose over the fight with nothing to say what they were (the
-	# walkthrough, 2026-10-11): kept off while the fight holds the screen.
-	if sea._chart_fx != null:
-		sea._chart_fx.visible = false
 	else:
 		var seat: Dictionary = Battle.seat_for(sea.session.store, sea.session.uid, str(sea.session.profile().get("username", "You")))
 		b = Battle.begin(raid_id, [seat])
+	# The sea's charting words ("+2.5", the Nav XP of fog lifting as she
+	# sails) rose over the fight with nothing to say what they were (the
+	# walkthrough, 2026-10-11): kept off while the fight holds the screen.
+	# (Placed between the line's if and its else, it took the solo fight's
+	# start for its own else: a solo raid opened empty, 2026-10-12.)
+	if sea._chart_fx != null:
+		sea._chart_fx.visible = false
 	# Out from wherever she lay into open water: the fight's own patch of sea.
 	# Out through the Sea Gate into open water: the fight's own patch of sea
 	# (until the campaign's water is in the port, its fights are sailed out

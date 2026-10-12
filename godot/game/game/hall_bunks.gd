@@ -155,8 +155,9 @@ static func pass_on_next(h: CrewHall, f: Callable) -> void:
 # ── The deep's offer ──────────────────────────────────────────────────────────
 
 func _offer_card(m: Dictionary) -> Control:
-	# Flat on the night paper, a teal hairline for the deep (no glow).
-	var p: Pane = Kit.pane(null, { "radius": Kit.R_LARGE, "fill": [Paper.NIGHT_PAPER_HI], "border": [1, Color(LEVIATHAN, 0.5)], "pad": [16, 12, 16, 12], "keep": true, "night": true })
+	# Flat on the night paper, a plain hairline (no glow; the deep's teal is
+	# in its words, never the edge: coloured borders "look cheap").
+	var p: Pane = Kit.pane(null, { "radius": Kit.R_LARGE, "fill": [Paper.NIGHT_PAPER_HI], "border": [1, Color(Paper.NIGHT_INK, 0.22)], "pad": [16, 12, 16, 12], "keep": true, "night": true })
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	p.add_child(h)

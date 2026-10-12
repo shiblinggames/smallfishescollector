@@ -54,6 +54,7 @@ var _pick: Dictionary = {}
 var _pick_kind: String = ""
 var _body: VBoxContainer
 var _detail: VBoxContainer
+var _detail_scroll: ScrollContainer
 var _tabs: HBoxContainer
 var _head_note: Label
 var _status: Label
@@ -116,10 +117,21 @@ func _ready() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 10)
 	split.add_child(_body)
+	# The chosen hand scrolls on its own: a legendary's long ability, its
+	# skins, Name and Dismiss ran taller than the sheet and stretched the
+	# whole sheet (and the roster with it) off the bottom of the screen.
+	_detail_scroll = ScrollContainer.new()
+	_detail_scroll.custom_minimum_size = Vector2(360, 0)
+	_detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	UiTheme.night_scroll(_detail_scroll)
+	split.add_child(_detail_scroll)
+	var gutter: MarginContainer = MarginContainer.new()
+	gutter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gutter.add_theme_constant_override("margin_right", 14)
+	_detail_scroll.add_child(gutter)
 	_detail = VBoxContainer.new()
-	_detail.custom_minimum_size = Vector2(360, 0)
 	_detail.add_theme_constant_override("separation", 6)
-	split.add_child(_detail)
+	gutter.add_child(_detail)
 	Paper.night = false
 	_load()
 
@@ -252,10 +264,16 @@ func _build_room() -> void:
 		"book":
 			_book_room()
 		"bunks":
+			# In a scroll: with offers from the deep waiting, the room ran
+			# taller than the sheet and pushed it off the screen (2026-10-12).
+			var bs: ScrollContainer = ScrollContainer.new()
+			bs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			bs.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+			_body.add_child(bs)
 			var hb: HallBunks = HallBunks.new()
 			hb.hall = self
-			hb.size_flags_vertical = Control.SIZE_EXPAND_FILL
-			_body.add_child(hb)
+			hb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			bs.add_child(hb)
 		_:
 			_hall_room()
 	for sc: Node in _body.find_children("", "ScrollContainer", true, false):
@@ -1471,7 +1489,8 @@ func _card(c: Dictionary, kind: String) -> Control:
 func _draw_detail() -> void:
 	for c: Node in _detail.get_children():
 		c.queue_free()
-	_detail.visible = room != "hall" and room != "bunks"
+	_detail_scroll.visible = room != "hall" and room != "bunks"
+	_detail_scroll.scroll_vertical = 0
 	if _pick.is_empty():
 		Paper.text(_detail, "Press a skin to see it." if room == "trunk" else ("Press a crewmate to see them." if room == "book" else "Press a card to see the hand."), "note", Paper.ink_faint(), true)
 		return

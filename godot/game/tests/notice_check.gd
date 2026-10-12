@@ -59,6 +59,10 @@ func _init() -> void:
 	var board1: Array = Js.list(db.save.get("recruits")).map(func(r: Dictionary) -> float: return float(r["id"]))
 	check(board1.size() == 3 and not board1.any(func(id: float) -> bool: return board0.has(id)), "the board is replaced")
 	check(RulesApi.run(db, uid, "getCrewState", [])["board"].size() == 3, "the posted board is not taken down by today's free one")
+	# The Last Will casket above can hold a Proclamation too: none held first.
+	var held: Dictionary = Crew.notices_held(db.me(uid)).duplicate()
+	held.erase("captains_proclamation")
+	db.me(uid)["crew_notices"] = held
 	var none: Dictionary = RulesApi.run(db, uid, "postNotice", ["captains_proclamation"])
 	check(none.has("error"), "no Proclamation held, none posted")
 	print("  notices %s" % ("FAILED" if bad > 0 else "ok"))

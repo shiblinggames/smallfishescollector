@@ -36,19 +36,44 @@ static func _text_of(c: Control) -> String:
 	return ""
 
 
-static func _all(n: Node, out: Array) -> void:
+static func _all(n: Node, out: Array, world: bool = false) -> void:
 	for ch: Node in n.get_children():
 		if ch is Control and not (ch as Control).is_visible_in_tree():
 			continue
 		if ch is CanvasItem and not (ch as CanvasItem).visible:
 			continue
 		# Words on the water (under the sea's World, a Node2D) sail off the
-		# screen by design: only the menus and the HUD are checked.
-		if ch is Node2D:
+		# screen by design and are not checked; but a CanvasLayer anywhere
+		# (the Locker, the Crew Hall, every room hangs off the Sea, a Node2D,
+		# on a layer of its own) is the screen again. Skipping every Node2D's
+		# whole subtree hid all of those (2026-10-12: the Locker's Log ran off
+		# the right of the screen and the audit saw nothing).
+		if ch is CanvasLayer:
+			_all(ch, out, false)
 			continue
-		if ch is Label or ch is RichTextLabel or ch is Button:
+		if ch is Node2D:
+			_all(ch, out, true)
+			continue
+		if not world and (ch is Label or ch is RichTextLabel or ch is Button):
 			out.append(ch)
-		_all(ch, out)
+		_all(ch, out, world)
+
+
+## Every panel-like control on the screen (not the water): for PANEL, a
+## panel running off the screen.
+static func _panels(n: Node, out: Array, world: bool = false) -> void:
+	for ch: Node in n.get_children():
+		if ch is CanvasItem and not (ch as CanvasItem).visible:
+			continue
+		if ch is CanvasLayer:
+			_panels(ch, out, false)
+			continue
+		if ch is Node2D:
+			_panels(ch, out, true)
+			continue
+		if not world and ch is Control and (ch is PanelContainer or ch is Panel or ch is ScrollContainer or ch is GridContainer or ch is BoxContainer or ch is MarginContainer):
+			out.append(ch)
+		_panels(ch, out, world)
 
 
 ## The issues on the screen now (and SHIFT, against an earlier snapshot).
@@ -64,6 +89,27 @@ static func snapshot(root: Node) -> Dictionary:
 static func audit(root: Node, before: Dictionary, case_name: String) -> Array:
 	var issues: Array = []
 	var screen: Rect2 = root.get_viewport().get_visible_rect()
+	# PANEL: a panel or box running past the screen's edge (only the
+	# outermost of a run is named: its children are past it too).
+	var pans: Array = []
+	_panels(root, pans)
+	var flagged: Array = []
+	for pc: Control in pans:
+		if pc.modulate.a < 0.05 or _in_scroll(pc):
+			continue
+		var pr: Rect2 = pc.get_global_rect()
+		if pr.size.x < 40.0 or pr.size.y < 20.0:
+			continue
+		if screen.grow(4.0).encloses(pr):
+			continue
+		var inside_flagged: bool = false
+		for f: Control in flagged:
+			if f.is_ancestor_of(pc):
+				inside_flagged = true
+		if inside_flagged:
+			continue
+		flagged.append(pc)
+		issues.append("LAYOUT PANEL %s | %s | %s | runs off the screen (%s, screen %s)" % [case_name, str(pc.get_path()).replace("/root/", "").right(80), pc.get_class(), _r(pr), _r(screen)])
 	var out: Array = []
 	_all(root, out)
 	for c: Control in out:

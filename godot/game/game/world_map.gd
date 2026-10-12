@@ -174,8 +174,12 @@ func _build_chrome() -> void:
 	_progress.position = Vector2(28, 104)
 	_progress.custom_minimum_size = Vector2(250, 0)
 	add_child(_progress)
+	# The sheet as wide as its rows, too: a bay's "+220 Nav XP when whole"
+	# ran past a fixed 318 (2026-10-12), and the weather's sheet matches it.
 	_progress.resized.connect(func() -> void:
 		sheet.size.y = _progress.position.y + _progress.size.y + 14.0 - sheet.position.y
+		sheet.size.x = maxf(318.0, _progress.position.x + _progress.size.x + 14.0 - sheet.position.x)
+		wsheet.size.x = sheet.size.x
 		wsheet.position.y = sheet.position.y + sheet.size.y + 10.0)
 	_draw_progress()
 	# The layers, as ink stamps along the bottom left.
@@ -230,6 +234,9 @@ func _build_chrome() -> void:
 	hint.offset_right = 400
 	hint.offset_top = 26
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Over the chart's white land it was lost: a rim of the paper keeps it.
+	hint.add_theme_color_override("font_outline_color", Color(Paper.PAPER, 0.9))
+	hint.add_theme_constant_override("outline_size", 6)
 
 
 func _rebuild_layers(row: HBoxContainer) -> void:

@@ -237,8 +237,11 @@ func _paint() -> void:
 	_status_l.clip_text = true
 	var terms: Label = _label(_body, Vector2(pad, foot_y + 44), _terms(str(_st.get("tier", "normal")), tc), "karla", 500, 13, Dossier.SOFT)
 	terms.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Deferred: a label given its words before it wrapped keeps the whole
-	# line's width otherwise (it ran under the buttons).
+	# Its width now, then again deferred: a label given its words before it
+	# wrapped keeps the whole line's width otherwise (it ran under the
+	# buttons), and one sized only deferred kept the height it measured at
+	# no width at all (833px, down past the panel).
+	terms.size = Vector2(w - 520 - pad * 3.0, 0)
 	terms.set_deferred("size", Vector2(w - 520 - pad * 3.0, 0))
 	# THE COUNT: 3, 2, 1 where the status stood, on every screen alike.
 	var counting: bool = not Js.obj(_st.get("count")).is_empty()
