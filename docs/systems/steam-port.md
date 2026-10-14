@@ -2121,7 +2121,12 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   web's tables keep it, so the parity replay still runs. Done: node 32 (The Harbor Fleet:
   Admiral Ruse named, the Coffers the Finndicate's own, one galleon coming about, Kat, Laz and
   Doby; the Log line hooks the Finndicate's mission); The Cache Turns (quartermaster_turn)
-  CUT, its betrayal folded into The Ledger of Debts (coffers_ledger), next to write.
+  CUT, its betrayal folded into The Ledger of Debts (coffers_ledger). THE TRACKER (Kong,
+  2026-10-14): the Ledger's vault holds a log of every heading you've sailed, and the
+  Quartermaster ("the Don's Quartermaster") reveals that every free cache item carried his
+  tracker; his fight's Repossession is that tracker switching one of your items off (story
+  only, no new mechanic), a brass box on his counter; his Log line and Between Watches'
+  opening throw it over the side. Next: Between Watches (chapter_3_close) in full.
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works

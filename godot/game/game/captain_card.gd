@@ -118,5 +118,5 @@ func _now() -> Array:
 		items.append([str(af.get("kind", "")).capitalize(), "%d shot%s" % [int(Js.num(af.get("passes"))), "" if int(Js.num(af.get("passes"))) == 1 else "s"], "Your aim bar is interfered with for your next shots.", HARM])
 	var rp: Variant = s.get("repossessed")
 	if rp != null:
-		items.append(["Repossessed", "this fight", "The Quartermaster has taken back your %s." % Armory.item(str(rp)).get("name", "gear"), HARM])
+		items.append(["Repossessed", "this fight", "The Quartermaster has switched off your %s through his tracker." % Armory.item(str(rp)).get("name", "gear"), HARM])
 	return items

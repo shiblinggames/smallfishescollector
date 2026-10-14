@@ -541,7 +541,7 @@ func _enemy_enters() -> void:
 		notes.append("%s: takes %d%% less from a single shot" % [e0["drName"], int(round(float(e0["dr"]) * 100.0))])
 	var rp: Variant = b["seats"][me].get("repossessed")
 	if rp != null:
-		notes.append("%s: %s takes back your %s for this fight" % [e0["repossessName"], e0["name"], Armory.item(str(rp)).get("name", "gear")])
+		notes.append("%s: %s switches off your %s for this fight" % [e0["repossessName"], e0["name"], Armory.item(str(rp)).get("name", "gear")])
 	_log_line("  ·  ".join(PackedStringArray(notes)))
 	if tw != null:
 		var k2: int = 0
