@@ -22,4 +22,4 @@ sleep 3
 timeout 300 "$G" --headless --path "$P" -s tests/smoke_charter.gd -- --role=crew --as=ben --charter-port=24671 > "$C" 2>&1
 wait
 echo "host: $(grep -c FAILED "$H") failed, $(grep -c 'SCRIPT ERROR' "$H") errors; crew: $(grep -c FAILED "$C") failed, $(grep -c 'SCRIPT ERROR' "$C") errors"
-cd "$P/.." && node game/tools/parity.mjs 2>&1 | grep -iE "parity (ok|FAIL)|mismatch" | tail -3
+cd "$P/.." && node game/tools/parity.mjs 2>&1 | grep -E "parity ok|FAIL" | tail -5

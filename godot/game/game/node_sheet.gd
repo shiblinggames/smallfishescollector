@@ -594,7 +594,7 @@ func _gate() -> void:
 
 func _muster() -> void:
 	var rep: Dictionary = Campaign.muster_report(_n["muster"], Campaign.muster_party(sea.session.store, sea.session.uid))
-	Paper.text(_body, "THE CLERK'S LEDGER", "eyebrow", Paper.ink_soft())
+	Paper.text(_body, "KAT'S CHECKLIST", "eyebrow", Paper.ink_soft())
 	for row: Dictionary in rep["rows"]:
 		var h: HBoxContainer = HBoxContainer.new()
 		h.add_theme_constant_override("separation", 10)
@@ -607,15 +607,15 @@ func _muster() -> void:
 		if not (row["met"] as Array).is_empty():
 			Paper.text(v, ", ".join(PackedStringArray(row["met"])), "small", Paper.ink_soft(), true)
 	if rep["passed"]:
-		var b: Pane.PaneButton = Paper.primary("Stand for inspection", true)
+		var b: Pane.PaneButton = Paper.primary("Muster the crew", true)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_END
 		b.pressed.connect(func() -> void:
 			_act("standForMuster", [node_id], func(_r: Variant) -> void:
-				sea._hud.toast("The clerk closes his ledger. The line parts.")
+				sea._hud.toast("Kat nods. Everyone's ready.")
 				_close()))
 		_body.add_child(b)
 	else:
-		Paper.text(_body, "The clerk turns you back. Fix the party at the Gunwharf and come alongside again.", "small", Paper.red(), true)
+		Paper.text(_body, "Kat shakes her head. Sort out the crew at the Gunwharf and muster again.", "small", Paper.red(), true)
 
 
 func _class_pick() -> void:

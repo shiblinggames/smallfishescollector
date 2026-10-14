@@ -166,7 +166,7 @@ static func class_effects(picks: Variant) -> Dictionary:
 	return out
 
 
-## loadMusterParty: who the don's clerk counts (the raid seats the ship can
+## loadMusterParty: who Kat checks (the raid seats the ship can
 ## hold, none out on a trawl), as { name, level, classId }.
 static func muster_party(db: CaptainStore, uid: String) -> Array:
 	var p: Dictionary = db.profile(uid, "ship_tier, ship_classes, has_sixth_berth")
@@ -423,7 +423,7 @@ static func claim_choice(db: CaptainStore, uid: String, nid: String, item: Strin
 	return { "ok": true }
 
 
-## musterReport: the clerk's checklist over the raid party.
+## musterReport: Kat's checklist over the raid party.
 static func muster_report(m: Dictionary, party: Array) -> Dictionary:
 	var answers: Dictionary = { "anchor": ["brace"], "abyssal_tide": ["shield", "heal"], "mender": ["heal"], "snare": ["snare"], "leviathan": ["burst"], "blitz": ["burst"], "foresight": ["brace", "shield", "heal", "snare", "burst"] }
 	var label: Dictionary = { "brace": "Brace", "shield": "Shield", "snare": "Snare", "heal": "Heal", "burst": "Heavy Salvo" }
@@ -456,7 +456,8 @@ static func stand_muster(db: CaptainStore, uid: String, nid: String) -> Dictiona
 	var rep: Dictionary = muster_report(n["muster"], muster_party(db, uid))
 	if not rep["passed"]:
 		var missing: Array = (rep["rows"] as Array).filter(func(r: Dictionary) -> bool: return not r["ok"]).map(func(r: Dictionary) -> Variant: return r["label"])
-		return { "error": "The clerk shakes his head: %s." % "; ".join(PackedStringArray(missing)) }
+		# The port's muster is Kat's check (Kong, 2026-10-14); the web's clerk stays for the replay.
+		return { "error": ("The clerk shakes his head: %s." if Rules.web_only else "Kat shakes her head: %s.") % "; ".join(PackedStringArray(missing)) }
 	db.update_profile(uid, { "raid_node_progress": _with_clear(_prog(p), nid) })
 	return { "ok": true }
 
