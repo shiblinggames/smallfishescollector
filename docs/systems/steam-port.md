@@ -2132,6 +2132,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   before the blockade (a short scene, Kat's checklist on the sheet, her lines in place of the
   clerk's); the rules' refusal keeps the web's clerk under Rules.web_only for the replay.
   Sal Brackwater is a saltwater crocodile: "the Don's enforcer", never a fin.
+  SAL IS THE DON'S BODYGUARD (Kong, 2026-10-14): The Thing on the Bar became The Don's
+  Bodyguard (Mira knows him; he took down her crew on the Don's orders); The Crooked Ledger
+  became The Don's Orders (Sal's sea chest; Mira finds her crew's order; THE FINN PLANT: the
+  oldest orders signed with a single looped "F", which the crew takes for Finleone). The
+  Drowned Court: the six sharks are the Don's own flesh and blood; the Closer says the
+  Finndicate "borrows resources for a greater good". The Last Muster is Kat's second check.
+  Within Hail and the Throne in Kong's words: the Don's purpose is CONTROL ("order"), "my days
+  have always been numbered", "our mission proceeds no matter what"; his five phase lines
+  rewritten to match (port_rules raids.the_throne / _challenge carry the whole phases arrays,
+  since arrays replace on merge).
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works
