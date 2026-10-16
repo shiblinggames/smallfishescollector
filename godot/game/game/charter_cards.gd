@@ -82,7 +82,7 @@ static func portrait(look: Dictionary, box_px: Vector2) -> Control:
 	var sk: Skipper = Skipper.new()
 	sk.water = false
 	sk.box_scale = box_px.y / 190.0 * SS
-	sk.position = Vector2(box_px.x * 0.4, box_px.y * 0.5) * SS
+	sk.position = Vector2(box_px.x * 0.6, box_px.y * 0.5) * SS
 	sk.scale.x = -1.0
 	vp.add_child(sk)
 	sk.set_look(look if not look.is_empty() else { "color": "default" })

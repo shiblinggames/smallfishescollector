@@ -331,11 +331,15 @@ func _portrait(look: Dictionary, box_px: Vector2) -> Control:
 	var sk: Skipper = Skipper.new()
 	sk.water = false
 	sk.box_scale = box_px.y / 190.0 * SS
-	# Set to the left, so the rod and the hook on its line hang inside.
-	sk.position = Vector2(box_px.x * 0.4, box_px.y * 0.5) * SS
+	# Just the captain in their boat, centred (Kong, 2026-10-16: the rod threw
+	# the picture off centre), as the Charter's cards draw them.
+	sk.position = Vector2(box_px.x * 0.6, box_px.y * 0.5) * SS
 	sk.scale.x = -1.0
 	vp.add_child(sk)
-	sk.set_look(look)
+	var bare: Dictionary = look.duplicate()
+	for k: String in ["rodSlug", "reel", "hook"]:
+		bare.erase(k)
+	sk.set_look(bare)
 	var pic: TextureRect = TextureRect.new()
 	pic.texture = vp.get_texture()
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
