@@ -55,6 +55,10 @@ static func zoom_step(o: Sea, delta: float) -> void:
 ## THE WATER CLEARS FOR A FIGHT: see Sea._fight_alpha.
 static func fight_clear(o: Sea) -> void:
 	var sk: float = o._stage_k * o._stage_k * (3.0 - 2.0 * o._stage_k)
+	# A framing that only looks (the glide to the next mark) leaves the
+	# water as it is.
+	if o._stage_last.get("look", false) == true:
+		sk = 0.0
 	if sk <= 0.0 and o._fight_alpha.is_empty():
 		return
 	var keep: Array = [o._boat, o._wake, o._life, o._motes, o._xfog]

@@ -69,10 +69,36 @@ static func data() -> Dictionary:
 		if not web_only and FileAccess.file_exists("res://content/port_rules.json"):
 			_merge(_d, JsJson.parse(FileAccess.get_file_as_string("res://content/port_rules.json")))
 			_campaign_text(_d)
+			_the_don(_d)
 			_text_edits(_d)
 			_retire_nodes(_d)
 			SeaScale.apply(_d)
 	return _d
+
+
+## THE DON, CAPITALISED (2026-10-16: Kong's scenes write "the Don"; the older
+## cards and fight lines wrote "the don"): every "the don" in the campaign's
+## nodes and chapters and the raids' words becomes "the Don" ("don't" stays).
+static func _the_don(d: Dictionary) -> void:
+	var re: RegEx = RegEx.create_from_string("\\b([Tt])he don(?![a-z]|['’]t)")
+	var fix: Callable = func(v: String) -> String: return re.sub(v, "$1he Don", true)
+	for part: Variant in [Js.obj(d.get("campaign")).get("nodes"), Js.obj(d.get("campaign")).get("chapters"), d.get("raids")]:
+		_walk_text(part, fix)
+
+
+static func _walk_text(v: Variant, fix: Callable) -> void:
+	if v is Dictionary:
+		for k: Variant in v:
+			if v[k] is String:
+				v[k] = fix.call(v[k])
+			else:
+				_walk_text(v[k], fix)
+	elif v is Array:
+		for i: int in (v as Array).size():
+			if v[i] is String:
+				v[i] = fix.call(v[i])
+			else:
+				_walk_text(v[i], fix)
 
 
 ## THE CAMPAIGN'S WRITING, EDITED IN THE PORT (Kong, 2026-10-06: the web is

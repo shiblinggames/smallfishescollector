@@ -17,11 +17,48 @@ static func open_node(o: Sea, id: String) -> void:
 	var sheet: NodeSheet = NodeSheet.new()
 	sheet.sea = o
 	sheet.node_id = id
+	var before: String = o._campaign.next_id
 	sheet.done.connect(func() -> void:
 		o._campaign.refresh()
 		o._hud.refresh()
-		o.get_tree().create_timer(0.4).timeout.connect(o.celebrate_chapter))
+		glide_next(o, before, o.celebrate_chapter))
 	o._hold(sheet, o._hud_layer)
+
+
+## THE NEXT HEADING (Kong, 2026-10-16: a true main story): when the story's
+## next mark moves on, the camera glides out to it, names it ("Next"), and
+## comes back to her; then `then` (the chapter's title, if one is owed).
+static func glide_next(o: Sea, before: String, then: Callable) -> void:
+	# Whatever the stop handed out first (a legendary's card, the spoils) is
+	# read and closed before the camera moves.
+	await o.get_tree().create_timer(0.8).timeout
+	var waited: float = 0.0
+	while (o._hud.busy() or o.stage != null) and waited < 120.0:
+		await o.get_tree().create_timer(0.3).timeout
+		waited += 0.3
+	await o.get_tree().create_timer(0.5).timeout
+	var nid: String = o._campaign.next_id
+	var at: Variant = o._campaign.node_at(nid) if nid != "" else null
+	if nid == before or not (at is Vector2) or o.stage != null or o._hud.busy() or o.net != null:
+		then.call()
+		return
+	var off: Vector2 = (at as Vector2) - o._boat.position
+	if off.length() < 420.0:
+		then.call()
+		return
+	var z: float = 0.72
+	o.stage = { "zoom": z, "shift": Vector2(off.x, off.y * Chart.GROUND - 40.0) * z, "look": true }
+	await o.get_tree().create_timer(1.1).timeout
+	var card: TitleCard = TitleCard.new()
+	card.chapter = false
+	card.eyebrow = "NEXT"
+	card.title = str(Campaign.node(nid).get("label", ""))
+	card.hold = 1.6
+	o._hud_layer.add_child(card)
+	await card.finished
+	o.stage = null
+	await o.get_tree().create_timer(0.9).timeout
+	then.call()
 
 
 ## A new chapter's water opened: the parchment, once (markChapterUnlockSeen).
@@ -81,11 +118,12 @@ static func raid_stage(o: Sea, raid_id: String, node_id: String, coop: bool, my_
 	if mark != null:
 		st.mark = mark
 		st.dock = mark.dock()
+	var before: String = o._campaign.next_id
 	st.finished.connect(func(_won: bool) -> void:
 		o._campaign.refresh()
 		o._open_sea_gate()
 		o._hud.refresh()
-		o.get_tree().create_timer(0.4).timeout.connect(o.celebrate_chapter))
+		glide_next(o, before, o.celebrate_chapter))
 	o._hold(st, o._hud_layer)
 
 

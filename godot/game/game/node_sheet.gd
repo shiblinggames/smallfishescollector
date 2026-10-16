@@ -38,6 +38,9 @@ func _ready() -> void:
 	theme = UiTheme.make()
 	_n = Campaign.node(node_id)
 	_st = str(sea._campaign.status.get(node_id, "locked"))
+	# PREVIOUSLY (Kong, 2026-10-16): back to the campaign after a day or more
+	# away, the last stop you finished and its line in the Captain's Log first.
+	await _previously()
 	var has_scene: bool = not Js.list(_n.get("scene")).is_empty()
 	var t: String = str(_n["type"])
 	if has_scene and (t == "story" or t == "berth") and _st != "locked":
@@ -781,3 +784,26 @@ class DiceFace:
 		var s: String = str(_shown)
 		var sz: Vector2 = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 54)
 		draw_string(f, c + Vector2(-sz.x / 2.0, bounce + 19), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 54, Color(0.2, 0.12, 0.06) if _shown != 20 else Color(0.75, 0.5, 0.1))
+
+
+## The story so far, when it has been a while: the last stop cleared, its
+## Captain's Log line, over the water; any press goes on. Kept per captain.
+func _previously() -> void:
+	var key: String = "campaign_seen:%s" % sea.session.uid
+	var last: float = float(Prefs.get_value(key, 0.0))
+	var now: float = Time.get_unix_time_from_system()
+	Prefs.set_value(key, now)
+	if last <= 0.0 or now - last < 20.0 * 3600.0:
+		return
+	var done: Dictionary = {}
+	for n: Dictionary in Rules.data()["campaign"]["nodes"]:
+		if str(sea._campaign.status.get(n["id"], "")) == "cleared" and str(n.get("bridge", "")) != "":
+			done = n
+	if done.is_empty():
+		return
+	var card: TitleCard = TitleCard.new()
+	card.eyebrow = "PREVIOUSLY"
+	card.title = str(done.get("label", ""))
+	card.subtitle = str(done["bridge"])
+	add_child(card)
+	await card.finished

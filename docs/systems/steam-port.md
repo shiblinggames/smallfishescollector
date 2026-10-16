@@ -2212,6 +2212,19 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   (game/story_stage.gd, campaignText cinema "stage_<kind>"): Mira's schooner out of the
   haze, closing, and settling in beside you (The Deepest Water); Krust's brigantine out of
   the mist ahead, his face over it, a flare and coming about on "His crew spotted us!".
+  THE NEXT HEADING AND PREVIOUSLY (step 4): when a stop clears and the story's next mark moves
+  on, the camera glides out to it (a framing that only looks: Sea.stage "look", so the water
+  is not cleared), "NEXT" and its name over it, and back (SeaBattles.glide_next, after any
+  card the stop handed out is closed, not in a Charter); and opening the campaign after 20
+  hours or more away, PREVIOUSLY: the last stop cleared and its Captain's Log line
+  (NodeSheet._previously; per captain in Prefs).
+  THE CAMPAIGN AS ONE SCRIPT: godot/game/tools/campaign_script.mjs writes every word the
+  campaign shows, in order, as the port shows it, to docs/campaign-script.md (regenerate it
+  after any edit). A continuity read of it (2026-10-16) fixed: "the Don" capitalised as the
+  port loads (core/rules.gd _the_don), a few dropped words, the Quartermaster's cards (he
+  gave his gear away; he never sold it or ran a market), What Finn Left's card (no wreck),
+  One Last Ride's challenge (he is gone; five phases), Pete's challenge (six battles, not
+  "the same six"), Sal's Last Wall line.
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works

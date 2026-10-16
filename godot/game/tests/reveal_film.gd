@@ -88,5 +88,13 @@ func _init() -> void:
 	for f: int in 120:
 		await process_frame
 	root.get_texture().get_image().save_png("%s/99_after.png" % out)
+	# Anything the stop handed out, closed (as a player would), then the glide.
+	for k: int in 12:
+		for n: Node in sea._hud_layer.get_children():
+			if n.has_method("_go") and n.has_signal("finished"):
+				n.call("_go")
+		await create_timer(0.5).timeout
+		if k == 5:
+			root.get_texture().get_image().save_png("%s/99_glide.png" % out)
 	print("REVEAL done: stage ", sea.stage, " dark ", sea.cine_dark, " swell ", sea.cine_swell, " hud ", sea._hud.visible)
 	quit()
