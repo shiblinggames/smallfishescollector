@@ -429,11 +429,13 @@ var _wall_level: int = -1
 
 
 func _process(delta: float) -> void:
-	# The level wall follows her Fishing level (read once a level).
-	var lv: int = session.level()
+	# The level wall follows her Fishing level and Finn's story (read when
+	# either moves).
+	var done: Array = Js.list(session.profile().get("finn_quests_done"))
+	var lv: int = session.level() * 1000 + done.size()
 	if lv != _wall_level:
 		_wall_level = lv
-		_boat.level_wall = Chart.level_wall(lv)
+		_boat.level_wall = Chart.level_wall(session.level(), done)
 	var input: Vector2 = Vector2.ZERO if _hud.busy() else Input.get_vector("sail_left", "sail_right", "sail_up", "sail_down")
 	# The currents, the kelp and the sails rest while the rod is out or a panel
 	# is up (the web's hush).

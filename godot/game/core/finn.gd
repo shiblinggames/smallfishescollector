@@ -139,6 +139,41 @@ static func pending_quest(done: Array) -> Dictionary:
 	return {}
 
 
+## THE STORY OPENS THE WATER (Kong, 2026-10-16: "some of RuneScape's quests
+## block areas, to keep the level in line with where they generally are in the
+## story"): a water needs its Fishing level AND the Long Cast's chapter before
+## the one fished in it (Open Waters: Chapter I; the Deep: II; the Abyss: III;
+## the Ancient Deep: IV, and the Quartermaster as before). Each chapter is
+## fished in the water it already has, so nobody is stuck. "" when open, else
+## the line that says what is missing. Parity (the web) knows only the level.
+const WATER_NAMES: Dictionary = { "shallows": "The Shallows", "open_waters": "Open Waters", "deep": "The Deep", "abyss": "The Abyss", "ancient_deep": "The Ancient Deep" }
+
+
+static func water_lock(zone: String, level: int, done: Array) -> String:
+	var name: String = str(WATER_NAMES.get(zone, zone))
+	var need: int = int(Js.num(Js.obj(Js.obj(Rules.data().get("zones")).get("minLevel")).get(zone)))
+	if level < need:
+		return "%s opens at Fishing %d." % [name, need]
+	if Rules.web_only:
+		return ""
+	var prev: Dictionary = {}
+	for ch: Dictionary in chapters():
+		if ch["band"] == zone:
+			break
+		prev = ch
+	if not prev.is_empty() and not chapter_complete(str(prev["id"]), done):
+		return "Finn has more to teach you before %s. Finish %s." % [name, prev["title"]]
+	return ""
+
+
+## Every job of the chapter handed back.
+static func chapter_complete(chapter_id: String, done: Array) -> bool:
+	for q: Dictionary in chapter_quests(chapter_id):
+		if not done.has(q["id"]):
+			return false
+	return true
+
+
 static func chapter_quests(chapter_id: String) -> Array:
 	for ch: Dictionary in chapters():
 		if ch["id"] == chapter_id:

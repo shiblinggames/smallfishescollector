@@ -2266,6 +2266,21 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   Fishing 30." with a low knock (SeaPorts.held_at_bay, the shut bays' note). South only: the
   reef route north is never walled. A boat already past it sails free, so she can come home.
   A course into locked water is dropped at the rim. Test: shot.gd levelwall.
+- THE STORY OPENS THE WATER (Kong, 2026-10-16: "some of RuneScape's quests block areas, to keep
+  the level in line with where they generally are in the story"). A water needs its Fishing
+  level AND the Long Cast chapter before the one fished in it: Open Waters 15 + Chapter I, the
+  Deep 30 + II, the Abyss 50 + III, the Ancient Deep 75 + IV (and the Quartermaster, as
+  before). Each chapter is fished in the water it already has, so nobody is stuck. ONE rule,
+  Finn.water_lock(zone, level, done) ("" open, else the line), used by the cast (core/fishing.gd),
+  the boat's wall (its line says what is missing: "Finn has more to teach you before Open
+  Waters. Finish The Hand on the Rod."), the cast button ("Finn's story first"), the compass
+  ("Finn's story" under the next water), trawls (the crew fish only where the story has taken
+  you) and the Homestead portal. A chapter closed with its water's level reached: "Open Waters
+  is open to you now." Parity (web_only) keeps the web's level-only rule. Tests: finn_check.
+- FINN'S WORDS, KONG'S (2026-10-16, job by job): port_rules finnText laid over a job or story
+  beat by id (core/rules.gd _finn_text); docs/finn-script.md is the read-through
+  (tools/finn_script.mjs). Job 4's riddle is the Common Carp (common, about one catch in seven;
+  the Walleye was about one in fifty), its clue in his own words (clueInGive); Job 8 is 25 fish.
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works

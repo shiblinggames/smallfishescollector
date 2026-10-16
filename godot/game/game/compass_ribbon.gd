@@ -217,8 +217,8 @@ func _gather() -> Array:
 			var wj: Dictionary = Chart.WATERS[j2]
 			var edge: float = float(wj["inner"]) + 120.0 if step > 0 else float(wj["outer"]) - 120.0
 			var need: int = int(Js.num(mins.get(wj["id"])))
-			var locked: bool = need > lvl
-			roles.append(_mark("water:" + str(wj["id"]), str(wj["name"]), dir * edge, DIM if locked else Color(0.62, 0.82, 0.98), ("Fishing %d" % need) if locked else ""))
+			var locked: bool = Finn.water_lock(str(wj["id"]), lvl, Js.list(sea.session.profile().get("finn_quests_done"))) != ""
+			roles.append(_mark("water:" + str(wj["id"]), str(wj["name"]), dir * edge, DIM if locked else Color(0.62, 0.82, 0.98), (("Fishing %d" % need) if need > lvl else "Finn's story") if locked else ""))
 		for p2: Dictionary in ports:
 			roles.append(p2)
 	# Drop what is already on the screen (an arrow to something you can see is

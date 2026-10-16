@@ -61,6 +61,8 @@ func _init() -> void:
 	check(Trawls.collect(db, uid, "shallows").has("error"), "collected once")
 	check((Trawls.state(db, uid)["freeCrew"] as Array).size() == 2, "both hands free again")
 	p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[49])
+	# Finn's first chapter done: the story has opened Open Waters.
+	p["finn_quests_done"] = Finn.chapter_quests("the_hand").map(func(q: Dictionary) -> String: return q["id"])
 	p["expedition_xp"] = 1.0e9
 	Trawls.deploy(db, uid, "shallows", ids[0])
 	check(Trawls.deploy(db, uid, "shallows", ids[1]).has("error"), "one trawl to a water")

@@ -1056,9 +1056,9 @@ func _update_action() -> void:
 			else:
 				var need: float = float((Rules.data()["zones"]["minLevel"] as Dictionary).get(water["id"], 1.0))
 				var p: Dictionary = session.profile()
-				if session.level() < need:
+				if Finn.water_lock(str(water["id"]), session.level(), Js.list(p.get("finn_quests_done"))) != "":
 					_action.disabled = true
-					_action.text = "Needs Fishing %d" % int(need)
+					_action.text = ("Needs Fishing %d" % int(need)) if session.level() < need else "Finn's story first"
 				elif session.store.hold_count(session.uid) >= float(Rules.fish_hold(Js.num(p.get("fish_hold_tier")))["capacity"]):
 					_action.disabled = true
 					_action.text = "Hold Full"

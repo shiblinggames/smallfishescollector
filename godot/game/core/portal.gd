@@ -57,6 +57,9 @@ static func buy_tier(db: CaptainStore, uid: String) -> Dictionary:
 		var need: int = int(Js.num((Rules.data()["zones"]["minLevel"] as Dictionary).get(next["band"])))
 		if Rules.level_from_xp(Js.num(prof.get("fishing_xp"))) < need:
 			return { "error": "Needs Fishing %d" % need }
+		var lock: String = Finn.water_lock(str(next["band"]), 999, Js.list(prof.get("finn_quests_done")))
+		if lock != "":
+			return { "error": lock }
 	var cost: float = float(next["cost"])
 	if Js.num(prof.get("doubloons")) < cost:
 		return { "error": "That stage costs %s ⟡." % Js.thousands(cost) }

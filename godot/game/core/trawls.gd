@@ -206,7 +206,7 @@ static func state(db: CaptainStore, uid: String) -> Dictionary:
 	var anc: bool = _ancient_open(db, uid, p)
 	for z: Dictionary in ZONES:
 		zones.append({ "key": z["key"], "label": z["label"], "minLevel": z["minLevel"], "seaDays": int(z["seaDays"]),
-			"unlocked": fishing >= int(z["minLevel"]) and (z["key"] != "ancient_deep" or anc), "trawl": by_zone.get(z["key"]) })
+			"unlocked": fishing >= int(z["minLevel"]) and (z["key"] != "ancient_deep" or anc) and Finn.water_lock(str(z["key"]), 999, Js.list(p.get("finn_quests_done"))) == "", "trawl": by_zone.get(z["key"]) })
 	return { "fishingLevel": fishing, "navLevel": nav, "unlockedSlots": unlocked_slots(fishing, nav), "nextSlot": next_slot(fishing, nav), "zones": zones, "freeCrew": free }
 
 
@@ -222,6 +222,10 @@ static func deploy(db: CaptainStore, uid: String, key: String, crew_id: float) -
 		return { "error": "Reach Fishing Level %d to trawl the %s." % [int(z["minLevel"]), z["label"]] }
 	if key == "ancient_deep" and not _ancient_open(db, uid, p):
 		return { "error": "Clear Chapter 3 (defeat the Quartermaster) to trawl the Ancient Deep." }
+	# The crew fish only where the story has taken you (Finn.water_lock).
+	var lock: String = Finn.water_lock(key, 999, Js.list(p.get("finn_quests_done")))
+	if lock != "":
+		return { "error": lock }
 	if active.size() >= unlocked_slots(fishing, nav):
 		return { "error": "No free trawl slot." }
 	if active.any(func(t: Dictionary) -> bool: return t["zone"] == key):

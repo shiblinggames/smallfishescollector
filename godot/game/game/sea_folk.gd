@@ -298,6 +298,13 @@ static func open_finn(o: Sea) -> void:
 		# A chapter closed: the sea round her answers (game/finn_moment.gd).
 		if moment[0] > 0:
 			FinnMoment.play(o._world, o._boat.position, o._field, moment[0], o._boat.z_index + 1)
+			# The story has opened the next water (Finn.water_lock), if the
+			# level has too.
+			var chs: Array = Finn.chapters()
+			if moment[0] < chs.size():
+				var band: String = str((chs[moment[0]] as Dictionary)["band"])
+				if Finn.water_lock(band, o.session.level(), Js.list(o.session.profile().get("finn_quests_done"))) == "":
+					o._hud.toast("%s is open to you now." % Finn.WATER_NAMES.get(band, band), "good")
 		finn_refresh(o)
 		o._hud.after_story.call_deferred())
 	o._hold(sc, o._hud_layer)

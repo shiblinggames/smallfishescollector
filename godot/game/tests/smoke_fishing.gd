@@ -81,6 +81,8 @@ func _init() -> void:
 	var p: Dictionary = sea.session.profile()
 	p["fishing_xp"] = float((Rules.data()["xpTable"] as Array)[89])
 	p["has_ancient_deep_access"] = true
+	# Finn's first four chapters done, so the story has opened the old water.
+	p["finn_quests_done"] = Finn.quests().filter(func(q: Dictionary) -> bool: return q["band"] != "ancient_deep").map(func(q: Dictionary) -> String: return q["id"])
 	p["fish_hold_tier"] = 8.0
 	hud._level_seen = sea.session.level()
 	sea.session.save["bait"]["luminous"] = 60.0

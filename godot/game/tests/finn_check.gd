@@ -39,7 +39,14 @@ func _init() -> void:
 	check(ids.find("p1") == ids.find("q3") + 1, "p1 follows q3")
 	var p1: Dictionary = Finn.quest_by_id("p1")
 	check(p1.has("hint") and not str(p1["hint"]).to_lower().contains("walleye"), "the fish he describes is not named (%s)" % str(p1.get("hint", "")))
-	check(str(p1["give"]).ends_with("\""), "he says the description")
+	check(str(p1["give"]).contains("40 years"), "he says the description (in his own words)")
+	# The story opens the water (Finn.water_lock).
+	var ch1: Array = Finn.chapter_quests("the_hand").map(func(q: Dictionary) -> String: return q["id"])
+	check(Finn.water_lock("shallows", 1, []) == "", "the Shallows are open from the start")
+	check(Finn.water_lock("open_waters", 14, ch1).contains("Fishing 15"), "Open Waters wants its level first")
+	check(Finn.water_lock("open_waters", 40, []).contains("Finish The Hand on the Rod"), "and Finn's first chapter")
+	check(Finn.water_lock("open_waters", 15, ch1) == "", "both, and it is open")
+	check(Finn.water_lock("deep", 90, ch1).contains("Past the Shelf"), "the Deep waits on Chapter II")
 	# Work the whole ladder.
 	var prof: Dictionary = db.me(uid)
 	prof["fishing_xp"] = float(Rules.data()["xpTable"][98])
