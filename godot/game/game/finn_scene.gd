@@ -10,7 +10,7 @@ extends "res://game/talk_modal.gd"
 ##
 ## Three ways in. Nothing open: he speaks (speakToFinn), and if that set you a
 ## job its slip slides up for you to take; taking it stamps it and it flies up
-## to the story line under the level bar. A job open and not done: where you
+## to the story tracker in the top left. A job open and not done: where you
 ## are with it, the slip showing how far. A job done: the slip with "Hand it
 ## over"; the wax seal is pressed, the XP pours into the level bar, and he
 ## tells you the next piece of the story, with the next slip after it.
@@ -26,7 +26,7 @@ signal chapter_done(number: int)
 signal changed
 ## A job was handed back: the HUD pours `xp` into the level bar from `from`.
 signal paid(xp: float, from: Vector2)
-## A job was taken: the slip flies to the story line from `from`.
+## A job was taken: the slip flies to the story tracker (top left) from `from`.
 signal taken(from: Vector2)
 
 const GOLD: Color = Color(1.0, 0.8, 0.3)
@@ -208,7 +208,7 @@ func _offer(q: Dictionary) -> void:
 		taken.emit(_slip.get_global_rect().get_center())
 		var tw: Tween = _slip.create_tween().set_parallel()
 		tw.tween_property(_slip, "scale", Vector2(0.25, 0.25), 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-		tw.tween_property(_slip, "global_position", Vector2(get_viewport_rect().size.x / 2.0 - 50.0, 70.0), 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		tw.tween_property(_slip, "global_position", Vector2(40.0, 150.0), 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 		tw.tween_property(_slip, "modulate:a", 0.0, 0.45).set_delay(0.15)
 		await tw.finished
 		changed.emit()

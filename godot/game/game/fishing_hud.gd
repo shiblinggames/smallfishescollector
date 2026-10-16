@@ -45,7 +45,7 @@ const TEAL: Color = Kit.CAST
 ## The top-centre stack (spec 1.6): the level bar at 12-52, the compass under
 ## it, the story line, then ONE lane for the cues, the hotspot and the course,
 ## with the toasts stacked under whatever it holds.
-const LANE_Y: float = 176.0
+const LANE_Y: float = 136.0
 const LANE_W: float = 760.0
 const TOAST_W: float = 600.0
 ## At most this many toasts read at once; an older one leaves early.
@@ -219,12 +219,6 @@ func _ready() -> void:
 	_place(_xp, Vector2(0.5, 0.0), Vector2(-320, 12), Vector2(640, 40))
 	add_child(_xp)
 	_xp.pressed.connect(open_guide)
-	# The story line under it (The Long Cast). Finn is on the compass ribbon
-	# (game/compass_ribbon.gd).
-	_story = StoryLine.new()
-	_place(_story, Vector2(0.5, 0.0), Vector2(-StoryLine.W / 2.0, 136), Vector2(StoryLine.W, 30))
-	add_child(_story)
-	_story.pressed.connect(func() -> void: open_journal("story"))
 	var purse_row: HBoxContainer = HBoxContainer.new()
 	purse_row.add_theme_constant_override("separation", 10)
 	purse_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -270,6 +264,15 @@ func _ready() -> void:
 	_auto.add_theme_constant_override("icon_max_width", 16)
 	_auto.pressed.connect(_toggle_auto)
 	tl.add_child(_auto)
+	# The story's tracker under them (The Long Cast; game/story_line.gd).
+	# Finn himself is on the compass ribbon (game/compass_ribbon.gd).
+	var gap: Control = Control.new()
+	gap.custom_minimum_size = Vector2(0, 6)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tl.add_child(gap)
+	_story = StoryLine.new()
+	tl.add_child(_story)
+	_story.pressed.connect(func() -> void: open_journal("story"))
 	_auto_on = session.profile().get("auto_fishing_on") == true
 
 	var tr: VBoxContainer = _box(Vector2(-20, 14), true, 520)

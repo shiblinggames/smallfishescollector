@@ -2254,8 +2254,9 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
 - THE TOP OF THE SEA, QUIETER (Kong, 2026-10-16: "the top looks incredibly busy"). The
   compass names ONE place at a time, the mark nearest where the bow points (plus a pinned
   mark and the tick under the pointer); every other mark is a bare tick, still pressable to
-  pin. The story line is one small line, "Ch I · the job · 0 of 8", soft ink over a hairline
-  bar (gold only when Finn is waiting), moved up under the compass, the lane with it. A
+  pin. The story line left the centre for a TRACKER IN THE TOP LEFT under the name, purse and
+  Auto ("still too busy"): "THE LONG CAST · CH I" over the job, its count beside a hairline
+  bar (gold only when Finn is waiting); a taken slip and the catch motes fly there. A
   hotspot's full banner shows for SPOT_BANNER_S (6s) on arrival, then folds into a chip by
   the clock ("Scattered Shoal · 6m", its effect on hover).
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and

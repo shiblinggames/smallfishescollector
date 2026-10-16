@@ -289,10 +289,6 @@ func _toast_step(delta: float) -> void:
 		_toasts.offset_bottom = bottom
 	else:
 		var y: float = h._lane.position.y + h._lane.get_combined_minimum_size().y + (6.0 if h._lane.get_combined_minimum_size().y > 0.0 else 0.0)
-		# Never under the story line (Finn's chapter banner) when it has
-		# grown past its row.
-		if h._story != null and h._story.visible and h._story.modulate.a > 0.1:
-			y = maxf(y, h._story.position.y + maxf(h._story.size.y, h._story.get_combined_minimum_size().y) + 6.0)
 		_toasts.grow_vertical = Control.GROW_DIRECTION_END
 		_toasts.offset_top = y
 		_toasts.offset_bottom = y
