@@ -81,6 +81,8 @@ var _title: Label
 var _done: Array = []
 var _t: float = 0.0
 var _glow: float = 0.0
+## The painting up now (the epilogue's places).
+var _art: TextureRect
 var _calm: bool = false
 
 
@@ -116,6 +118,9 @@ func cue_line(_i: int, line: Dictionary) -> void:
 	# (the layer only exists once the scene is up).
 	if kind == "quiet" and _dark == null and under != null:
 		_spread_dark(true)
+	# A line's painting (the epilogue's): the place it speaks of, over the sea.
+	if line.get("art") != null:
+		_vignette(str(line["art"]))
 	var c: String = str(line.get("cue", ""))
 	if c == "" or c in _done:
 		return
@@ -438,7 +443,7 @@ func _title_in(words: String) -> void:
 func finish() -> void:
 	var tw: Tween = create_tween().set_parallel()
 	tw.tween_property(self, "modulate:a", 0.0, 0.8)
-	for n: CanvasItem in [_dark, _title, _ink]:
+	for n: CanvasItem in [_dark, _title, _ink, _art]:
 		if n != null and is_instance_valid(n):
 			n.queue_free()
 	sea.stage = null
@@ -776,3 +781,27 @@ func _treasure() -> void:
 		var far: Vector2 = _home + Vector2(cos(a) * 900.0, sin(a) * 500.0)
 		fx.motes(_home, far, GOLD, 6, "spark")
 		await _wait(0.18)
+
+
+## THE EPILOGUE'S PLACES: a painting over the sea, cross-faded from the last,
+## drawing slowly in while its line is read.
+func _vignette(path: String) -> void:
+	if under == null:
+		return
+	var old: TextureRect = _art
+	_art = TextureRect.new()
+	_art.texture = Skipper.tex(path.trim_prefix("/"))
+	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art.modulate.a = 0.0
+	under.add_child(_art)
+	_art.pivot_offset = get_viewport_rect().size / 2.0
+	var tw: Tween = _art.create_tween().set_parallel()
+	tw.tween_property(_art, "modulate:a", 1.0, 1.4).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_art, "scale", Vector2(1.07, 1.07), 12.0).from(Vector2.ONE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if old != null and is_instance_valid(old):
+		var ot: Tween = old.create_tween()
+		ot.tween_property(old, "modulate:a", 0.0, 1.4).set_delay(0.3)
+		ot.tween_callback(old.queue_free)

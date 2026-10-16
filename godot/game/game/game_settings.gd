@@ -15,7 +15,11 @@ const DEFAULTS: Dictionary = {
 	"vol_master": 0.9, "vol_music": 0.75, "vol_sfx": 0.9, "vol_amb": 0.8, "quiet_unfocused": true,
 	"window_mode": "windowed", "window_size": "1600x900", "vsync": true, "fps_cap": 0, "show_fps": false,
 	"rumble": true, "reduce_flash": false,
+	"story_speed": "normal", "story_auto": false, "story_voices": true,
 }
+## The story's words: how fast they type (a multiple of the house cadence;
+## instant shows each line whole).
+const STORY_SPEEDS: Dictionary = { "slow": 0.7, "normal": 1.0, "fast": 1.8, "instant": 1000.0 }
 const SIZES: Array = ["1280x720", "1600x900", "1920x1080", "2560x1440"]
 const CAPS: Array = [0, 30, 60, 120, 144, 240]
 

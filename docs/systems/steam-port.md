@@ -2171,6 +2171,33 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   the music with it); the Finndicate's hoard going out across the water in gold; EPILOGUE
   with the camera drawn wide. Finn's fight is One Last Ride (no pre-fight: the reveal is its
   setup), and Spoils of the Hand is What Finn Left (his own gear, a farming drop).
+- A TRUE MAIN STORY CAMPAIGN (Kong, 2026-10-16: "I want it to feel like a true main story
+  campaign"; "ok lets go start"). Steps 1 and 2 of the plan:
+  THE SCENE PLAYER (every story scene): a history of the lines read so far (H, or the
+  History button; H, Esc or a click closes it); Settings > Play gains Story text speed
+  (slow, normal, fast, instant: GameSettings.STORY_SPEEDS on the house cadence), Story plays
+  on its own (each line moves on after 1.2s plus 35ms a character) and Character voices (a
+  soft blip every third letter, made in code, each speaker their own pitch: Sound.VOICES);
+  the speaker leans a touch toward the one they talk to, bobs a couple of pixels while
+  speaking, and bumps on a line with an exclamation.
+  TITLES OVER THE WATER (game/title_card.gd): a new chapter of the campaign is announced in a
+  letterbox, "Chapter II complete" alone first, then its numeral, its name set wide in cream
+  Cinzel settling in, a rule and its line (the parchment ChapterCard stays for Finn's Long
+  Cast); and every raid boss is named as their fight begins, what they are over their name
+  on a dark band (port_rules bossTitles, a raid id, its challenge sharing it).
+  THE WORDS ON A FADE (Kong, 2026-10-16: the rounded box with its coloured strip "look very
+  AI-generated"): no box; a dark fade rises from the foot of the screen, the speaker's name
+  in cream Cinzel over the words, the two in a column between the marks. THE BUSTS SMALLER
+  ("zoomed in way too much"): 0.44 of the screen high (was 0.6), a close-up 1.2 (was
+  1.55), the marks 230 out from the words (was 150).
+  NEW SCENE ART (Kie.ai, house style, widescreen 1920x1072; the web's backdrops are tall
+  and the port only ever showed their middle): guard-line (The Don's Bodyguard),
+  deck-muster (both of Kat's musters), orders-chest (The Don's Orders), laid over the web's
+  in port_rules campaign.backdrops; and the epilogue's five places (epilogue-harbor,
+  -settlement, -charts, -bounty, -sunset), a line's `art` in the Long Quiet cross-fading
+  each over the sea with a slow push-in (FinnReveal._vignette). Places, never faces: no
+  character's likeness to drift off model. Prompts: the nano-banana-2 skill's
+  prompts/scene-*.json.
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works

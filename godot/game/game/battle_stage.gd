@@ -119,6 +119,8 @@ var _handled: String = ""
 var _pumping: bool = false
 var _gone: bool = false
 var _spoke: bool = false
+## The boss's name card has been shown (once a fight).
+var _carded: bool = false
 var _plan_until: float = 0.0
 ## The plan's whole wait when it began (for the draining line).
 var _plan_len: float = 0.0
@@ -934,6 +936,18 @@ func _pre_fight_words() -> void:
 		return
 	var lines: Array = Js.list(_raid.get("preFightDialogue"))
 	var f: Dictionary = Battle.fight_at(_raid, int(b["fight"]))
+	# THE BOSS'S NAME (TitleCard): once, as their fight begins, before any
+	# words; port_rules bossTitles says what they are.
+	if f["boss"] and not _carded and not autoplay:
+		_carded = true
+		var what: String = str(Js.obj(Rules.data().get("bossTitles")).get(raid_id.trim_suffix("_challenge"), ""))
+		if what != "":
+			var card: TitleCard = TitleCard.new()
+			card.chapter = false
+			card.eyebrow = what.to_upper()
+			card.title = str(Js.obj(_raid["enemies"][_raid["bossId"]]).get("name", ""))
+			add_child(card)
+			await card.finished
 	if lines.is_empty() or not f["boss"] or _spoke:
 		return
 	_spoke = true

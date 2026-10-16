@@ -67,9 +67,9 @@ func _init() -> void:
 			var l: Dictionary = sc._lines[i]
 			var cue: String = str(l.get("cue", ""))
 			await create_timer(1.6 if cue != "" else 0.4).timeout
-			if cue != "" or l.has("choice"):
+			if cue != "" or l.has("choice") or l.has("art"):
 				shot_n += 1
-				var name: String = "%02d_%s.png" % [shot_n, cue if cue != "" else "choice"]
+				var name: String = "%02d_%s.png" % [shot_n, cue if cue != "" else ("art" if l.has("art") else "choice")]
 				root.get_texture().get_image().save_png("%s/%s" % [out, name])
 				print("REVEAL shot ", name, "  line ", i + 1)
 			await create_timer(maxf(0.0, READ_S - 1.6)).timeout

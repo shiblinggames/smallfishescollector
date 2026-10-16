@@ -177,6 +177,9 @@ func _play(list: Control) -> void:
 	_toggle(list, "Controller rumble", "", bool(GameSettings.value("rumble")), func(v: bool) -> void: GameSettings.set_value("rumble", v))
 	_toggle(list, "Reduce flashes", "Softer bursts, lightning and summon flashes in fights.", bool(GameSettings.value("reduce_flash")), func(v: bool) -> void: GameSettings.set_value("reduce_flash", v))
 	_toggle(list, "Full combat log open in fights", "The whole log down the right edge (L in a fight).", bool(Prefs.get_value("combat_log_open", false)), func(v: bool) -> void: Prefs.set_value("combat_log_open", v))
+	_choice(list, "Story text speed", "How fast the story's words type out.", [["slow", "Slow"], ["normal", "Normal"], ["fast", "Fast"], ["instant", "Instant"]], GameSettings.value("story_speed"), func(v: Variant) -> void: GameSettings.set_value("story_speed", v))
+	_toggle(list, "Story plays on its own", "Each line moves on by itself once you have had time to read it.", bool(GameSettings.value("story_auto")), func(v: bool) -> void: GameSettings.set_value("story_auto", v))
+	_toggle(list, "Character voices", "A soft sound under each speaker's words as they type.", bool(GameSettings.value("story_voices")), func(v: bool) -> void: GameSettings.set_value("story_voices", v))
 
 
 const KEYS: Array = [

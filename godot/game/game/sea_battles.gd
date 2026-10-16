@@ -30,10 +30,14 @@ static func celebrate_chapter(o: Sea) -> void:
 	if ch.is_empty() or o._hud.busy():
 		return
 	var prev: Dictionary = Campaign.chapters()[int(ch["number"]) - 2]
-	var card: ChapterCard = ChapterCard.new()
-	card.chapter = ch
-	card.sparks = true
-	card.eyebrow = "CHAPTER %s COMPLETE  ·  NEW CHAPTER UNLOCKED" % str(prev.get("romanNumeral", ""))
+	# A title over the water, the way the finale's is (TitleCard): what has
+	# closed, then the new chapter's name.
+	var card: TitleCard = TitleCard.new()
+	card.prelude = "CHAPTER %s COMPLETE" % str(prev.get("romanNumeral", ""))
+	var num: String = str(ch.get("romanNumeral", ""))
+	card.eyebrow = ("CHAPTER %s" % num) if num != "" else "THE FINALE"
+	card.title = str(ch.get("title", ""))
+	card.subtitle = str(ch.get("subtitle", ""))
 	card.finished.connect(func() -> void:
 		o.session.act("markChapterUnlockSeen", [ch["id"]])
 		o.session.persist()

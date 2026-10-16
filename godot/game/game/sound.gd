@@ -455,3 +455,20 @@ static func drain_note(i: int) -> void:
 static func boom() -> void:
 	_play_made("boom", func() -> AudioStreamWAV:
 		return _render([[38.0, 0.0, 0.6, 0.01, 2.6, "sine"], [57.0, 0.0, 0.3, 0.01, 1.8, "sine"], [0.0, 0.0, 0.35, 0.01, 1.2, "noise"]], 2.8), 1.3)
+
+
+# ── The story's voices (StoryScene): a soft blip under a speaker's words ─────
+
+## Each speaker's pitch (Hz); anyone else speaks at the middle.
+const VOICES: Dictionary = {
+	"Kat": 520.0, "Mira": 440.0, "Mako": 300.0, "Dole": 380.0, "Laz": 240.0, "Doby": 170.0,
+	"Finn": 330.0, "The Angler": 330.0, "Don Finleone": 130.0, "The Quartermaster": 260.0,
+	"The Closer": 200.0, "Barnacle Pete": 210.0,
+}
+
+## One blip of a speaker's voice; v (0 to 2) picks one of three close notes so
+## a line is not one tone over and over.
+static func voice(speaker: String, v: int) -> void:
+	var f: float = float(VOICES.get(speaker, 300.0)) * [1.0, 1.12, 0.94][clampi(v, 0, 2)]
+	_play_made("voice%d" % int(f), func() -> AudioStreamWAV:
+		return _render([[f, 0.0, 0.09, 0.004, 0.06, "triangle"], [f * 2.0, 0.0, 0.025, 0.004, 0.04, "sine"]], 0.08), 0.5)
