@@ -29,6 +29,10 @@ function merge(a, b) {
 }
 
 const finn = merge(structuredClone(rules.finn), port.finn)
+// Kong's edits (port_rules finnText, core/rules.gd _finn_text): laid over the
+// job or story beat with that id.
+for (const list of ['quests', 'portJobs', 'beats'])
+  for (const row of finn[list] || []) if ((port.finnText || {})[row.id]) merge(row, port.finnText[row.id])
 const ancient = merge(structuredClone(rules.finnAncientBeats || {}), port.finnAncientBeats)
 
 // The ladder as core/finn.gd quests() lays it: each port job after the job it names.

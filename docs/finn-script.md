@@ -11,19 +11,16 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 ### Job 1: Land 8 fish in the Shallows  `q1`
 
 **First, the story** `e1`:
-- Easy, now. Reel it in slow.  _(holds 350ms)_
-- I've been watching that line of yours the better part of an hour. A line never lies about the hand on the far end of it.
-- Finn. There's not a current on this whole coast I haven't read, and I've watched a hundred anglers strut down this dock and wash back up it empty.
-- Yours sits different in the water. _Promise_, some would call it. Cheap word.  _(holds 300ms)_
-- Let's see what the deep makes of you.
+- Ok, looks like we have a new captain on the waters.
+- Name's Finn. I've been fishing these waters for years.
+- You're not gonna get rich in the Shallows, trust me. But you gotta start somewhere.
+- A job you say? Let's see what you're made of...
 
-**Gives it:** Nothing clever. Go and pull eight out of the water and come back to me. I want to watch how you hold the rod, not what you catch with it.
+**Gives it:** Hmm...why don't you try getting me 8 catches from the Shallows. Make sure you got enough bait...and try and hit those perfect catches!
 
-**Not yet:** Eight. You are not at eight. Off you go.
+**Not yet:** Not quite there yet, captain. Eight is what I need.
 
-**Done:** Eight. And not one of them fought you the same way twice. I noticed.
-
-**Too soon** (this job is next, but your level is not there yet): Go and fish. Come back when you have done some of it.
+**Done:** Well well...so you did it. I knew you would.
 
 ### Job 2: Land 4 perfect catches in the Shallows  `q2`
 

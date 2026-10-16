@@ -69,6 +69,7 @@ static func data() -> Dictionary:
 		if not web_only and FileAccess.file_exists("res://content/port_rules.json"):
 			_merge(_d, JsJson.parse(FileAccess.get_file_as_string("res://content/port_rules.json")))
 			_campaign_text(_d)
+			_finn_text(_d)
 			_the_don(_d)
 			_text_edits(_d)
 			_retire_nodes(_d)
@@ -114,6 +115,22 @@ static func _campaign_text(d: Dictionary) -> void:
 	for n: Dictionary in Js.list(Js.obj(d.get("campaign")).get("nodes")):
 		if edits.has(n["id"]):
 			_merge(n, edits[n["id"]])
+
+
+## FINN'S WORDS, EDITED IN THE PORT (Kong, 2026-10-16: the fishing side's
+## lines rewritten a job at a time; docs/finn-script.md is the read-through).
+## port_rules finnText { id: fields } is laid over the job (finn.quests or
+## finn.portJobs: give, waiting, done, gated, hint, label) or the story beat
+## (finn.beats: lines) with that id. NOT content/rules.json (parity).
+static func _finn_text(d: Dictionary) -> void:
+	var edits: Dictionary = Js.obj(d.get("finnText"))
+	if edits.is_empty():
+		return
+	var f: Dictionary = Js.obj(d.get("finn"))
+	for list: String in ["quests", "portJobs", "beats"]:
+		for row: Variant in Js.list(f.get(list)):
+			if row is Dictionary and edits.has((row as Dictionary).get("id")):
+				_merge(row, edits[(row as Dictionary)["id"]])
 
 
 ## THE WEB'S WORDING WITHOUT ITS EM-DASHES (the house rule): port_rules
