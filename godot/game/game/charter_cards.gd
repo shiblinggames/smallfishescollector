@@ -63,6 +63,8 @@ static func _t(parent: Node, t: String, role: String, col: Color, wrap: bool = f
 static func portrait(look: Dictionary, box_px: Vector2) -> Control:
 	var holder: Control = Control.new()
 	holder.custom_minimum_size = box_px
+	holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var wash: Panel = Panel.new()
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
@@ -81,7 +83,7 @@ static func portrait(look: Dictionary, box_px: Vector2) -> Control:
 	holder.add_child(vp)
 	var sk: Skipper = Skipper.new()
 	sk.water = false
-	sk.box_scale = box_px.y / 190.0 * SS
+	sk.box_scale = box_px.y / 140.0 * SS
 	sk.position = Vector2(box_px.x * 0.6, box_px.y * 0.5) * SS
 	sk.scale.x = -1.0
 	vp.add_child(sk)

@@ -313,6 +313,9 @@ func _creator(v: VBoxContainer, heading: String, go_label: String, on_go: Callab
 func _portrait(look: Dictionary, box_px: Vector2) -> Control:
 	var holder: Control = Control.new()
 	holder.custom_minimum_size = box_px
+	# Never stretched by its column (stretched, the picture squashed and sat
+	# off centre).
+	holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var wash: Control = Control.new()
 	wash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -330,7 +333,7 @@ func _portrait(look: Dictionary, box_px: Vector2) -> Control:
 	holder.add_child(vp)
 	var sk: Skipper = Skipper.new()
 	sk.water = false
-	sk.box_scale = box_px.y / 190.0 * SS
+	sk.box_scale = box_px.y / 140.0 * SS
 	# Just the captain in their boat, centred (Kong, 2026-10-16: the rod threw
 	# the picture off centre), as the Charter's cards draw them.
 	sk.position = Vector2(box_px.x * 0.6, box_px.y * 0.5) * SS
@@ -400,9 +403,9 @@ func _charters(v: VBoxContainer) -> void:
 			var m: VBoxContainer = VBoxContainer.new()
 			m.add_theme_constant_override("separation", 0)
 			# A fixed column: the confirm below a face never stretches it.
-			m.custom_minimum_size = Vector2(88, 0)
+			m.custom_minimum_size = Vector2(112, 0)
 			crew.add_child(m)
-			m.add_child(_portrait(looks[i] if i < looks.size() else { "color": "default" }, Vector2(78, 60)))
+			m.add_child(_portrait(looks[i] if i < looks.size() else { "color": "default" }, Vector2(104, 80)))
 			var nl: Label = Kit.text(m, names[i], "small", Kit.PAPER_INK)
 			nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			# The founder can free a crewmate's berth (asks once).
@@ -434,9 +437,11 @@ func _charters(v: VBoxContainer) -> void:
 		# A sailed Charter's crew is fixed: no open berths it can never fill.
 		for i: int in range(names.size(), 0 if c["sailed"] else Charter.BERTHS):
 			var e: VBoxContainer = VBoxContainer.new()
+			e.custom_minimum_size = Vector2(112, 0)
 			crew.add_child(e)
-			var slot: Pane = Kit.pane(e, { "radius": 30, "fill": [Color(Kit.PAPER_INK, 0.05)], "border": [1, Color(Kit.PAPER_INK, 0.18)], "pad": 0, "paper": true })
-			slot.custom_minimum_size = Vector2(60, 60)
+			var slot: Pane = Kit.pane(e, { "radius": 40, "fill": [Color(Kit.PAPER_INK, 0.05)], "border": [1, Color(Kit.PAPER_INK, 0.18)], "pad": 0, "paper": true })
+			slot.custom_minimum_size = Vector2(80, 80)
+			slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			var el: Label = Kit.text(e, "Open berth", "note", Kit.PAPER_INK_SOFT)
 			el.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		Kit.text(col, "At sea  ·  crew fixed at sailing" if c["sailed"] else "In harbor, the crew still gathering", "note", Kit.ink(SEA_DYE) if c["sailed"] else Paper.MONEY)
