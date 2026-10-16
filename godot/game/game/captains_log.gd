@@ -230,7 +230,7 @@ func _build_story() -> void:
 	var st: Dictionary = Journey.story(store, uid)
 	Paper.text(_body, "Every stop on the campaign you have put behind you. What Finn has told you on the dock is kept in the Journal.", "note", Paper.INK_SOFT, true)
 	var done: Array = st["done"]
-	_eyebrow("The Sunken Hand  ·  %d of %d stops" % [done.size(), st["total"]])
+	_eyebrow("The Finndicate  ·  %d of %d stops" % [done.size(), st["total"]])
 	if done.is_empty():
 		Paper.text(_body, "The campaign water waits past the fog. Nothing cleared yet.", "note", Paper.INK_SOFT, true)
 	for d: Dictionary in done:
