@@ -37,7 +37,7 @@ const chapters = rules.campaign.chapters
 const L = []
 const say = (s = '') => L.push(s)
 // The port capitalises "the Don" as it loads (core/rules.gd _the_don); so does this.
-const clean = s => String(s ?? '').replace(/\*/g, '_').replace(/([Tt])he don(?![a-z]|['’]t)/g, '$1he Don')
+const clean = s => String(s ?? '').replace(/\*/g, '_').replace(/\b([Tt])he don(?![a-z]|['’]t)/g, '$1he Don')
 
 say('# Seas the Booty: the campaign, start to finish')
 say()

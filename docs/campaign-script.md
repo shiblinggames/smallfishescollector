@@ -669,7 +669,7 @@ _Follow the coin to its vault, and learn who you have been buying from._
 
 ## Chapter IV: The Last Fathom
 
-_The deepest water there is, and the don who owns it. Nothing waits past this._
+_The deepest water there is, and the Don who owns it. Nothing waits past this._
 
 ### The Deepest Water  `throne_heading` · story
 
@@ -695,13 +695,13 @@ _(Played on the live sea: stage_mira.)_
 - _She lets her sail settle in beside yours and joins the party._
 - _Mira joins the party. She is now recruitable from the Crew Hall._
 
-**Card once read:** The heading is set past the last sounding on any chart. For the deepest water there is, and the don who rules it. The final chapter has begun.
+**Card once read:** The heading is set past the last sounding on any chart. For the deepest water there is, and the Don who rules it. The final chapter has begun.
 
 **Captain's Log:** The heading is set for the Don's own water, and Mira sails with you. So does the Quartermaster's seized stock.
 
 ### The Powder Hold  `throne_locks` · puzzle
 
-**Chart card:** The don's water doesn't forgive a loose hold. Every powder crate stows on its mark before the blockade, or the first broadside does the stowing for you.
+**Chart card:** The Don's water doesn't forgive a loose hold. Every powder crate stows on its mark before the blockade, or the first broadside does the stowing for you.
 
 **Card:** Three holds of powder crates, and every crate has a marked square it must sit on before the blockade. Crates shove, they never pull, so a crate pushed into a corner stays there. Stow all three holds within the move budget; run out of moves and the hold resets.
 
@@ -781,7 +781,7 @@ _(Played on the live sea: stage_mira.)_
 
 **Chart card:** The Don's guard line, and the one who holds it: Sal Brackwater, the Don's bodyguard. Every hull rides behind a cold-light barrier, every magazine runs four deep, and his line fights dirtier than any market ever did.
 
-**Card:** The don's escort fleet, and it does not fight like anything you have met. / Every hull rides behind a barrier, so your opening shots buy nothing but broken plating. Their magazines run four deep, and a ship that has been firing all round is never as empty as you would like. And they fight dirty: nets for your rudder, chain-shot for your guns, cracker rounds for your seams, and a gag order for your crew. / At the center of the line, Sal Brackwater waits.
+**Card:** The Don's escort fleet, and it does not fight like anything you have met. / Every hull rides behind a barrier, so your opening shots buy nothing but broken plating. Their magazines run four deep, and a ship that has been firing all round is never as empty as you would like. And they fight dirty: nets for your rudder, chain-shot for your guns, cracker rounds for your seams, and a gag order for your crew. / At the center of the line, Sal Brackwater waits.
 
 **The fight:** The Blockade. Boss: Sal Brackwater (The Don's Bodyguard).
 
@@ -801,7 +801,7 @@ _(Played on the live sea: stage_mira.)_
 - **Sal Brackwater:** I've been looking forward to destroying you lot.
 
 **His line at each phase:**
-- The Death Roll: The don said bring him your colors. He never said in one piece.
+- The Death Roll: The Don said bring him your colors. He never said in one piece.
 - The Last Wall: You want the Don? Then come through me. Nothing you carry gets past me.
 
 **Captain's Log:** The Don's bodyguard goes under, and for the first time nothing stands between you and the Don.
@@ -852,11 +852,11 @@ _(Played on the live sea: stage_mira.)_
 
 ### The Throne Gates  `throne_gates` · puzzle
 
-**Chart card:** The don's gate is one great lock: iron bars over iron bars, and a single gold bolt that only runs when every tumbler stands clear. Nobody knocks.
+**Chart card:** The Don's gate is one great lock: iron bars over iron bars, and a single gold bolt that only runs when every tumbler stands clear. Nobody knocks.
 
 **Card:** Three tumblers, each a lattice of iron bars over one gold bolt. Bars slide along their grooves, never sideways, and the bolt only runs when its whole row stands clear to the edge. Throw all three within the slide budget; run out and the tumbler resets to its first set.
 
-**Captain's Log:** The last tumbler throws and the gates swing on silence. Past them: the deepest water there is, and the don sitting in it.
+**Captain's Log:** The last tumbler throws and the gates swing on silence. Past them: the deepest water there is, and the Don sitting in it.
 
 ### The Drowned Court  `the_drowned_court` · story
 
@@ -948,7 +948,7 @@ _(Played on the live sea: stage_mira.)_
 
 **Chart card:** The court rides at anchor and the Don sits still at the center of it, done talking. Every hull here carries a trick you haven't been hit with yet. And the Don carries all of them.
 
-**Card:** The don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed. Burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the center, and he doesn't fight to win. He fights for control.
+**Card:** The Don's own court, and every hull in it fights with a new kind of dirty. Watch their cannonball pips: a FULL, glowing battery means an ULTIMATE is primed. Burn their charges down, shield, or brace before it empties into you. And their specials strike your AIM BAR itself: false gold you must not lock, plated locks that take two taps, squalls that gust your needle mid-sweep. Don Finleone waits at the center, and he doesn't fight to win. He fights for control.
 
 **The fight:** The Throne. Boss: Don Finleone (Head of the Finndicate).
 
@@ -974,7 +974,7 @@ _(Played on the live sea: stage_mira.)_
 
 **Chart card:** The court reconvenes, and this time the Don skips the pleasantries.
 
-**Card:** The Throne again, meaner in every seat. Thicker barriers, heavier ultimates, the same aim-bar tricks with less patience between them. And the don rises twice as angry. The chase rewards roll richer.
+**Card:** The Throne again, meaner in every seat. Thicker barriers, heavier ultimates, the same aim-bar tricks with less patience between them. And the Don rises twice as angry. The chase rewards roll richer.
 
 **The fight:** Challenge: The Throne. Boss: Don Finleone (Head of the Finndicate).
 
@@ -1017,7 +1017,7 @@ _(Played on the live sea: stage_mira.)_
 
 ## One Last Ride
 
-_The don was never the top of it. Something has been waiting on you since the first cast._
+_The Don was never the top of it. Something has been waiting on you since the first cast._
 
 ### The Finndicate Lives On  `the_hand_that_sharpens` · story
 
