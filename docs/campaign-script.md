@@ -75,17 +75,17 @@ _A coast full of pirates, and a thread that runs to somewhere bigger._
 - _You find Pete's strongbox. But there's no treasure inside. Just... paperwork?_
 - _Cut sheets. Courier routes. Years of accounting._
 - _One word is stamped on every page: the Finndicate._
-- **Barnacle Pete:** You think I keep the coin? Not a doubloon stays with me.
+- _A note in Pete's own scrawl is pinned inside the lid: You think I keep the coin? Not a doubloon stays with me._
 - **Kat:** Hmm... Pete was nothing but a pawn. He works for someone else. No wonder he plundered so much and had so little to show for it.
 - **Doby:** The Finndicate. I've heard the name. They control the outer seas... but they're mostly involved in commercial business. Why would Pete involve himself...
 - _The pages say the same thing over and over again. Funds needed for purchases, but no reason behind them._
 - _Under the ledgers there is a sealed letter. No name, but two initials: C.K._
 - _The route is mostly burned away, but you make out a path out past the Bilge Strait._
-- _Whoever C.K. is, the Finndicate trusts them with the cargo. Seems like many small captains like Barnacle Pete are shipping their plunder to him._
+- _Whoever C.K. is, the Finndicate trusts him with the cargo. Seems like many small captains like Barnacle Pete are shipping their plunder to him._
 - _You notice that someone's been trailing you for a while now... you've felt their presence ever since you came into Pete's quarters._
 - **Mako:** Hmm... the Bilge Strait huh? Most captains wouldn't sail through there just based on a hunch. Good thing neither of us is the average captain.
 - **Mako:** Name's Mako. Common enemy means we're partners. I've been trying to lock down Pete for a while now. Seems like we had a common goal. Muster a crew and my name's on the table.
-- _Mako joins the campaign. He is now also recruitable as a crew for your ship._
+- _Mako joins the party. He is now recruitable from the Crew Hall._
 
 **Card once read:** Pete's strongbox held no treasure, just ledgers naming the Finndicate and a sealed letter marked C.K., with a route running out past the Bilge Strait.
 
@@ -121,10 +121,10 @@ _A coast full of pirates, and a thread that runs to somewhere bigger._
 
 - _Past the strait, someone has made a counter out of a wrecked hull and a barrel, and is waiting behind it._
 - **The Quartermaster:** Two things on the barrel, captain. You take one.
-- **The Quartermaster:** I don't haggle and I don't repeat myself.
+- **The Quartermaster:** It's free. Don't ask why. And I don't repeat myself.
 - **The Quartermaster:** Everyone who crosses that strait ends up at my counter sooner or later. You'll be back.
 
-**Captain's Log:** The Quartermaster sells a lot less than he lets on. The cold water ahead answers to one captain, and the wax on Pete's letter finally has a name behind it.
+**Captain's Log:** The Quartermaster gives away more than he lets on. The cold water ahead answers to one captain, and the wax on Pete's letter finally has a name behind it.
 
 ### The Name on the Wax  `krust_reveal` · story
 
@@ -228,7 +228,7 @@ _The shadow you've been pulling at finally has a name._
 - **Dole:** I had a hunch. But I've confirmed it now that you all took down Krust. I was able to match the heading to where the shipments would go to.
 - _Dole sets a map down facing you._
 - **Dole:** I'd be happy to help out. The northern seas aren't for the blind.
-- _Dole joins the party. You are now able to recruit him as well._
+- _Dole joins the party. He is now recruitable from the Crew Hall._
 
 **Card once read:** Krust's hold held no plunder, only survey gear. The Finndicate has been funding one chartmaker with everything it steals, and Dole matched the heading to where the shipments go.
 
@@ -403,7 +403,7 @@ _The shadow you've been pulling at finally has a name._
 - **Tollmaster Spet:** You're a fool then. Our battles are done with numbers.
 - **Kat:** Let's show Spet who's putting up the real numbers.
 
-**Captain's Log:** Spet goes down and the Gullet drains dry. Three Finndicate captains on the seabed, a set of books nobody was ever meant to audit, and past here the cold water answers to a don even Spet would not name.
+**Captain's Log:** Spet goes down and the Gullet drains dry. Four Finndicate captains on the seabed, a set of books nobody was ever meant to audit, and past here the cold water answers to a don even Spet would not name.
 
 ### Challenge: The Tollmaster's Cut  `gullet_raid_challenge` · raid
 
@@ -437,7 +437,7 @@ _The shadow you've been pulling at finally has a name._
 
 ### Captain's Choice  `chapter_2_class` · class_pick
 
-**Chart card:** Three Finndicate captains on the seabed and the Gullet drained dry. Time to decide what your name stands for where the coin sleeps.
+**Chart card:** Four Finndicate captains on the seabed and the Gullet drained dry. Time to decide what your name stands for where the coin sleeps.
 
 **Card:** You read the Cartographer's seas, cracked the Gullet's cipher, and put its collector under. Pick a class for the northeastern water ahead. Once it's chosen it stays with you for every raid from here on, stacking with the captain you already are.
 
@@ -466,7 +466,7 @@ _Follow the coin to its vault, and learn who you have been buying from._
 - **Kat:** We did for you.
 - **Dole:** ...
 - **Laz:** Trust me or not, having eavesdropped on their merchant ships, I know my way around the harbor a bit now. I'm sure I'd be a valuable resource for your team.
-- _Laz joins the party. He is now recruitable in your crew rolls._
+- _Laz joins the party. He is now recruitable from the Crew Hall._
 
 **Card once read:** Spet's manifests led you to the Coffers, the exchange where the Finndicate's coin is tracked and divided. Laz found you there: they ruined his family business, then closed his account and left him in this water. The way in is a blockade or a bribe.
 
@@ -583,7 +583,7 @@ _Follow the coin to its vault, and learn who you have been buying from._
 
 - _The bars grind back. There's no gold inside. Just paper: shelf after shelf of the Finndicate's books, and one chained open on a stand in the middle._
 - _It's not a ledger. It's a log. Your log. Every heading you've sailed since the coast, in someone else's hand._
-- _The Shrouds. The Gullet. The harbor gate. Each one written down the same hour you got there._
+- _The reef coast. The Gullet. The harbor gate. Each one written down the same hour you got there._
 - **Dole:** We've been tracked.
 - **Kat:** Hmm...thought we were always looking behind our backs.
 - _A voice behind you. You've heard it at every cache since the coast._
@@ -679,7 +679,7 @@ _The deepest water there is, and the Don who owns it. Nothing waits past this._
 
 _(Played on the live sea: stage_mira.)_
 
-- _The Coffers burn low behind you, and the sea ahead simply runs out of chart...we're in the Don's quarters now._
+- _The Coffers burn low behind you, and the sea ahead simply runs out of chart...you're in the Don's quarters now._
 - **Doby:** The seas are not friendly here...that's for sure.
 - **Kat:** Nothing is friendly at these depths.
 - _You aren't the only one sailing in these waters though. A distant figure approaches._
@@ -738,12 +738,12 @@ _(Played on the live sea: stage_mira.)_
 
 **Before the boss round:**
 - _The gun-deck is exactly as you left it, down to the lantern oil. The counter is still stocked. The keeper is still behind it, and you can see the shutters through him._
-- **The Quartermaster's Ghost:** Dead men keep better books than living ones. Everything you left on my counter, everything you melted down since. I have it all, and I have _all the time there is_.
+- **The Quartermaster's Ghost:** The drowned keep better books than the living. Everything you left on my counter, everything you melted down since. I have it all, and I have _all the time there is_.
 - **Mako:** Then you'll not mind us taking it back off you. Twice, if it comes to that.
 - **The Quartermaster's Ghost:** _They always come back._ That is the one thing I could ever count on.
 
 **His line at each phase:**
-- The Plating: Sink me? Lad, I have been at the bottom for years. Try taking something off me instead.
+- The Plating: Sink me? Lad, you already did. Try taking something off me instead.
 - The Powder: You left the fire-shot on my counter. I have had a long time to think about where to put it.
 - The Glass: Every captain I ever armed, I watched sink. I always did keep the good glass back.
 
@@ -836,7 +836,7 @@ _(Played on the live sea: stage_mira.)_
 - **Dole:** Sink this merchant. Take that harbor. Clear this crew. He kept every single one.
 - **Mira:** ...this one's mine. My crew. My ship. Signed by the Don himself.
 - **Kat:** I'm sorry, Mira.
-- **Mira:** Don't be. Now I know exactly who to thank.
+- **Mira:** Don't be. Now I've seen it in his own hand.
 - **Dole:** Hmm. Not all of these are in the Don's hand.
 - _The oldest orders are written differently. Each one signed with a single letter, looped small at the bottom: F._
 - **Laz:** F for Finleone?
@@ -848,7 +848,7 @@ _(Played on the live sea: stage_mira.)_
 
 **Card once read:** Sal's sea chest held every order the Don ever gave him, Mira's crew among them. The oldest were signed with a single F. One last lock stands between you and the throne.
 
-**Captain's Log:** Sal's orders are read and Mira has her answer. One last lock, and then the Don's throne.
+**Captain's Log:** Sal's orders are read, Mira's crew among them, signed by the Don. One last lock, and then the Don's throne.
 
 ### The Throne Gates  `throne_gates` · puzzle
 
@@ -956,7 +956,7 @@ _(Played on the live sea: stage_mira.)_
 - _Past the thrown gates the water goes still and black, and the Don's flagship sits at anchor in the middle of it._
 - **Don Finleone:** You've done well. But let it go down in the history books that this is your last stop.
 - **Mira:** We're rewriting history as we speak. The Finndicate falls today.
-- **Dole:** Why do you call yourself the Don? And then sign everything with an "F".
+- **Dole:** Why do you call yourself the Don? And then sign your oldest orders with an "F".
 - **Don Finleone:** As if you didn't know me as Don Finleone.
 - **Doby:** It's not quite right to go by multiple names like that.
 - **Don Finleone:** You speak as if you know any better. There's nothing you can do at this point. Our mission proceeds no matter what! And you fools don't know what you've gotten yourself into.
@@ -990,7 +990,7 @@ _(Played on the live sea: stage_mira.)_
 - **Don Finleone:** You think you've won...you think the Finndicate falls with me. No...the Finndicate lives on...
 - _The Don sinks for the first and last time. Generations of drowned debts sink to the bottom with him._
 - _Then, out past the wreck, where the Don's water spills over into the true deep, the black surface stirs. Another shark...no...another sailor tracking the consequences of your actions?_
-- _Was the Don bluffing when he said he was not the last? Surely not...who could be above Don Finleone, the leader of the Finndicate?_
+- _Was the Don bluffing when he said the Finndicate lives on? Surely not...who could be above Don Finleone, the leader of the Finndicate?_
 - **Mira:** Captain. Tell me you saw that too...
 - _The court settles to the seabed, and for the first time in a very long time, there is nothing ahead to point at. So the crew takes the longest watch of all. Together._
 - **Doby:** We've defeated the Finndicate...but I feel like I didn't get all the answers I wanted.
@@ -1043,7 +1043,7 @@ _(Played on the live sea: finn_reveal.)_
 - **Finn:** My campaign in the northern seas was one to control all trade. To funnel all resources to boost my own capabilities. For my own goal. I am Finn. The Finndicate runs through me.
 - **Mira:** Finn...he's the "F" in the letters. Don Finleone was never the one...
 - **Finn:** I knew I had to track you all as soon as you settled into the seas. Watching your growth as a fisher...as a navigator...I knew you had the ultimate potential to get me what I wanted.
-- **Finn:** And now you have them. You proved me right. You caught the 6 ancients...the legendary creatures that are known to give you almost unlimited power. Power that you have no idea how to use.
+- **Finn:** And now you have them. You proved me right. You caught the six ancients...the legendary creatures that are known to give you almost unlimited power. Power that you have no idea how to use.
 - **Finn:** I rerouted every shipment. Every resource. Every plunder. To give me the tools, the capabilities, to find and catch these ancients. But I knew that you would be led right to them instead. I just had to keep tabs on you. And make sure you never escaped my sight.
 - **Doby:** ...
 - **Finn:** I deserve to rule these seas. I built an empire. I've tried so hard, yet the ancients never showed up for me. But when I saw you...the potential you had from the first day.
@@ -1161,7 +1161,7 @@ _(Played on the live sea: finn_quiet.)_
 
 **Card once read:** Finn is gone and the Finndicate with him. The crew took what it had stolen and gave it back, then each went their own way.
 
-**Captain's Log:** Finn is gone, the giants are home, and what the Finndicate took is going back to the people it was taken from.
+**Captain's Log:** Finn is gone, the giants are home, and what the Finndicate took is going back to those it was taken from.
 
 ### What Finn Left  `spoils_of_the_hand` · spoils
 
