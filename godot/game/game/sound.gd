@@ -16,6 +16,8 @@ const MUSIC_DB: float = -6.0
 const FADE_S: float = 3.0
 
 static var _me: Sound = null
+## A cinematic holds the music (FinnReveal): the hour's changes wait.
+static var _held: bool = false
 
 var _sfx: Array[AudioStreamPlayer] = []
 var _dial: AudioStreamPlayer
@@ -109,7 +111,7 @@ static func dial_stop() -> void:
 
 ## Follow the sea's hour. The first call starts the music, fading in.
 static func music_for(phase: String) -> void:
-	if _me == null:
+	if _me == null or _held:
 		return
 	var file: String = MUSIC.get(phase, MUSIC["day"])
 	if file == _me._track:
@@ -393,3 +395,63 @@ static func fanfare() -> void:
 		v.append([2093.0, 0.42, 0.035, 0.04, 1.2, "sine"])
 		v.append([130.8, 0.4, 0.12, 0.02, 1.0, "sine"])
 		return _render(v, 2.0), 1.2)
+
+
+# ── A cinematic's hold on the music (FinnReveal) ────────────────────────────
+
+## The music to k of its level over secs (0 is silence), held there: the
+## sea's hour does not change the track until music_release.
+static func music_hush(k: float, secs: float = 1.5) -> void:
+	if _me == null:
+		return
+	_held = true
+	var p: AudioStreamPlayer = _me._music[_me._music_on]
+	_me.create_tween().tween_property(p, "volume_db", MUSIC_DB + linear_to_db(maxf(0.0001, k)), secs)
+
+
+## A track of the hour's set (day, dusk, night) at k of the level, held.
+static func music_track(phase: String, k: float = 1.0) -> void:
+	if _me == null:
+		return
+	_held = false
+	_me._track = ""
+	music_for(phase)
+	_held = true
+	_me.create_tween().tween_property(_me._music[_me._music_on], "volume_db", MUSIC_DB + linear_to_db(maxf(0.0001, k)), FADE_S)
+
+
+## Let go: the level back, and the hour picks its track again.
+static func music_release() -> void:
+	if _me == null:
+		return
+	_held = false
+	_me._track = ""
+	_me.create_tween().tween_property(_me._music[_me._music_on], "volume_db", MUSIC_DB, FADE_S)
+
+
+## One low knock, felt more than heard.
+static func knock() -> void:
+	_play_made("knock", func() -> AudioStreamWAV:
+		return _render([[52.0, 0.0, 0.5, 0.004, 0.9, "sine"], [78.0, 0.0, 0.18, 0.004, 0.5, "sine"], [0.0, 0.0, 0.12, 0.002, 0.08, "noise"]], 1.0), 1.2)
+
+
+## The giants coming up: a thin, cold shimmer.
+static func shimmer() -> void:
+	_play_made("shimmer", func() -> AudioStreamWAV:
+		var v: Array = []
+		for i: int in 6:
+			v.append([1318.0 + 220.0 * i, 0.12 * i, 0.03, 0.2, 1.4, "sine"])
+		return _render(v, 2.2), 0.9)
+
+
+## One giant pouring into him: a low note, each lower than the last.
+static func drain_note(i: int) -> void:
+	var f: float = [196.0, 174.6, 155.6, 146.8, 130.8, 110.0][clampi(i, 0, 5)]
+	_play_made("drain%d" % i, func() -> AudioStreamWAV:
+		return _render([[f, 0.0, 0.22, 0.05, 1.6, "triangle"], [f * 0.5, 0.0, 0.2, 0.08, 1.8, "sine"], [f * 1.5, 0.05, 0.05, 0.1, 1.0, "sine"]], 2.0), 1.0)
+
+
+## The flash: a deep boom with a long tail.
+static func boom() -> void:
+	_play_made("boom", func() -> AudioStreamWAV:
+		return _render([[38.0, 0.0, 0.6, 0.01, 2.6, "sine"], [57.0, 0.0, 0.3, 0.01, 1.8, "sine"], [0.0, 0.0, 0.35, 0.01, 1.2, "noise"]], 2.8), 1.3)

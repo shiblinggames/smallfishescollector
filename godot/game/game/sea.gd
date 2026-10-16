@@ -188,6 +188,12 @@ var _lead: Vector2 = Vector2.ZERO
 var _sail_k: float = 0.0
 var _ship_k: float = 0.0
 var punch: float = 0.0
+## A cinematic's hold on the sea (FinnReveal): the darkness (-1 is the
+## clock's own) and how much of the swell runs (1 all of it, 0 glass).
+var cine_dark: float = -1.0
+var cine_swell: float = 1.0
+## ...and its fair sky: no rain, cloud, fog or storm while it plays.
+var cine_clear: bool = false
 var fight_zoom: float = 1.0
 var punch_at: Vector2 = Vector2.ZERO
 var _zoom_base: float = 1.0
@@ -437,7 +443,7 @@ func _process(delta: float) -> void:
 
 	var now: float = Clock.now_ms()
 	var clock: Dictionary = SeaClock.at(now)
-	var dark: float = clock["darkness"]
+	var dark: float = clock["darkness"] if cine_dark < 0.0 else cine_dark
 	var stops: Array[Color] = Chart.sea_at(cam_world, dark)
 	SeaAtmos.chapter(self, delta, cam_world)
 	SeaAtmos.theme(self, delta, stops)

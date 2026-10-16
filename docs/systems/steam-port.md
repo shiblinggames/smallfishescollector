@@ -2142,6 +2142,25 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   have always been numbered", "our mission proceeds no matter what"; his five phase lines
   rewritten to match (port_rules raids.the_throne / _challenge carry the whole phases arrays,
   since arrays replace on merge).
+  THE REVEAL PLAYS ON THE SEA (Kong, 2026-10-16: "Juice it up ... This is literally the
+  climactic reveal", then "do it on the actual sea"). The Finndicate Lives On (renamed from
+  The Hand That Sharpens It; Kong's 58 lines) carries campaignText cinema "finn_reveal":
+  NodeSheet plays its StoryScene in stage_mode (no backdrop or dim, a letterbox, the busts
+  stepping out while the narrator speaks) over game/finn_reveal.gd on the live water, each
+  line's `cue` starting a moment: the morning comes up and the rain clears (Sea.cine_dark,
+  cine_clear), his boat out of the haze with its back to you, coming about (lean, dip and
+  flip) to a music cut and one low knock, the F in wet ink growing into FINNDICATE with FINN
+  in gold, the six giants (their own art, in the order caught) rising out of your hold and
+  circling him, draining into him one at a time to a falling note each and going grey, the
+  swell laid to glass (Sea.cine_swell), the light in him and the cracks, a flash and his
+  true shape (finn_final, lit by its own light) with the dark spreading out from him across
+  the sea, the camera drawing back, rings on the water, ONE LAST RIDE. A line's `choice`
+  ("Join him" / "Never", on Finn's "Join me") waits for an answer; either goes on. The
+  camera uses the fights' framing (Sea.stage), so the water clears around the two boats.
+  Sound holds the music (music_hush, music_track, music_release) and makes the knock, the
+  shimmer, the drain notes and the boom in code. tests/reveal_film.gd plays it through at a
+  reading pace and saves a picture at each cue. The scene player now also changes a
+  speaker's portrait mid-scene (Finn after he changes).
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works

@@ -71,7 +71,7 @@ static func theme(o: Sea, delta: float, stops: Array[Color]) -> void:
 ## low and golden the light is, lift: the colour that undoes the night for
 ## light and lettering }.
 static func light(o: Sea, delta: float, now: float, clock: Dictionary, at: Vector2) -> Dictionary:
-	var dark: float = clock["darkness"]
+	var dark: float = clock["darkness"] if o.cine_dark < 0.0 else o.cine_dark
 	# The sun's (or the moon's) place in the sky: where the light comes from,
 	# how high, and how low and golden the sun is (SeaClock.sky).
 	var sky: Dictionary = SeaClock.sky(now)
@@ -91,7 +91,7 @@ static func light(o: Sea, delta: float, now: float, clock: Dictionary, at: Vecto
 	o._water.set_shader_parameter("u_shadow", shadow_k)
 	Skipper.sun(-toward * lerpf(30.0, 5.0, elev), shadow_k)
 	o._water.set_shader_parameter("u_rush", clampf(o._boat.velocity.length() / Boat.MAX_SPEED, 0.0, 1.0) * 0.6)
-	o._water.set_shader_parameter("u_swell", lerpf(1.0, float(o._ch_look.get("swell", 1.0)), o._ch_k))
+	o._water.set_shader_parameter("u_swell", lerpf(1.0, float(o._ch_look.get("swell", 1.0)), o._ch_k) * o.cine_swell)
 	o._water.set_shader_parameter("u_lantern", dark)
 
 	# Night on the solid world: dim and cool it, and let the lights pool.
@@ -260,7 +260,8 @@ static func weather(o: Sea, delta: float, now: float, at: Vector2, dark: float) 
 		if o._ch_look.get("storm", false):
 			power = lerpf(power, 1.0, o._ch_k)
 	# Recording a film (tests/shot.gd, FILM_CLEAR): a fair sky.
-	if OS.get_environment("FILM_CLEAR") != "":
+	# A cinematic's still sea (FinnReveal) the same.
+	if OS.get_environment("FILM_CLEAR") != "" or o.cine_clear:
 		rain = 0.0
 		cloud = 0.0
 		fog_amt = 0.0
@@ -274,7 +275,7 @@ static func weather(o: Sea, delta: float, now: float, at: Vector2, dark: float) 
 		wind *= 1.0 - o._theme_k
 	o._storm = lerpf(o._storm, cloud, 1.0 - exp(-delta * 0.55))
 	# A bay written as a standing storm strikes however light its rain.
-	var storm_floor: float = 0.6 * o._ch_k if o._ch_k > 0.0 and o._ch_look.get("storm", false) else 0.0
+	var storm_floor: float = 0.6 * o._ch_k if o._ch_k > 0.0 and o._ch_look.get("storm", false) and not o.cine_clear else 0.0
 	o._squall.step(delta, rain, power, o.get_viewport_rect().size, storm_floor)
 	# The rain, spray and fog sit above the world's night: they take it
 	# themselves, and a bay's fog its own colour.
@@ -292,7 +293,7 @@ static func weather(o: Sea, delta: float, now: float, at: Vector2, dark: float) 
 		var vp2: Vector2 = o.get_viewport_rect().size
 		var half2: Vector2 = Vector2(vp2.x / 2.0 / o._camera.zoom.x, vp2.y / 2.0 / o._camera.zoom.x / Chart.GROUND)
 		# A dive's own water, or a film's fair sky, sets the sea's front aside.
-		var front: Dictionary = f if o._theme_k < 0.5 and OS.get_environment("FILM_CLEAR") == "" else {}
+		var front: Dictionary = f if o._theme_k < 0.5 and OS.get_environment("FILM_CLEAR") == "" and not o.cine_clear else {}
 		o._wfx.step(delta, o._squall.rain, o._storm, front, now, at, half2, o._chart == null)
 	o._boat.storm = o._storm
 	o._boat.weather_speed = float(fx["speed"])

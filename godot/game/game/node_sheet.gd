@@ -58,8 +58,23 @@ func _play(intro: bool) -> void:
 	sc.cta = "Go on" if intro else str(Js.obj(_n.get("detail")).get("ctaLabel", "Log it"))
 	if _st == "cleared" and not intro:
 		sc.cta = "Close"
+	# THE REVEAL ON THE WATER (FinnReveal): played on the live sea, the
+	# stage following each line's cue.
+	var reveal: FinnReveal = null
+	if str(_n.get("cinema", "")) == "finn_reveal" and not intro:
+		sc.stage_mode = true
+		reveal = FinnReveal.new()
+		reveal.sea = sea
+		sea._world.add_child(reveal)
+		# Before the scene is added: its first line comes up as it is.
+		sc.line_shown.connect(func(i: int, l: Dictionary) -> void:
+			reveal.under = sc.under
+			reveal.over = sc.over
+			reveal.cue_line(i, l))
 	add_child(sc)
 	var read: bool = await sc.finished
+	if reveal != null:
+		reveal.finish()
 	if intro:
 		_open_sheet()
 		return

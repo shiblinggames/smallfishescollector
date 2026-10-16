@@ -16,6 +16,9 @@ extends Control
 ## then writes the read), false when it was skipped or closed.
 
 signal finished(read: bool)
+## Each line as it comes up (a cinematic on the water starts its moment on
+## the line's `cue`; see FinnReveal).
+signal line_shown(i: int, line: Dictionary)
 
 const GOLD: Color = Color(1.0, 0.82, 0.38)
 
@@ -27,6 +30,14 @@ var cta: String = "Log it"
 ## Played over a fight on the water: no backdrop of its own, the sea shows
 ## through under the vignette.
 var over_water: bool = false
+## A cinematic on the live sea (FinnReveal): no backdrop and no dim over the
+## water, a letterbox, the busts out of the way while the narrator speaks,
+## and inserts left to the stage. `under` is the layer under the busts and
+## the words where the stage draws on the screen.
+var stage_mode: bool = false
+var under: Control
+## Over the busts, under the words (the stage's lettering: the F, the title).
+var over: Control
 
 var _lines: Array = []
 var _i: int = -1
@@ -52,6 +63,9 @@ var _wait: float = 0.0
 var _clock: float = 0.0
 var _shake: float = 0.0
 var _gone: bool = false
+## A line with `choice` waits on one of its answers (either goes on).
+var _choosing: bool = false
+var _choices: HBoxContainer
 
 
 func _ready() -> void:
@@ -63,6 +77,8 @@ func _ready() -> void:
 		_accent = Color(str(node["sceneAccent"]))
 	var base: ColorRect = ColorRect.new()
 	base.color = Color("#07090d") if not over_water else Color(0.02, 0.03, 0.05, 0.35)
+	if stage_mode:
+		base.color = Color(0, 0, 0, 0)
 	base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(base)
@@ -75,6 +91,22 @@ func _ready() -> void:
 	sh.shader = _vignette()
 	_shade.material = sh
 	add_child(_shade)
+	under = Control.new()
+	under.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	under.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(under)
+	if stage_mode:
+		_shade.modulate.a = 0.55
+		for top: bool in [true, false]:
+			var bar: ColorRect = ColorRect.new()
+			bar.color = Color(0, 0, 0, 0.9)
+			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE if top else Control.PRESET_BOTTOM_WIDE)
+			if top:
+				bar.offset_bottom = 64
+			else:
+				bar.offset_top = -64
+			add_child(bar)
 	for k: int in 2:
 		var b: TextureRect = TextureRect.new()
 		b.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -87,13 +119,15 @@ func _ready() -> void:
 	_insert.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_insert.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_insert)
+	over = _insert
 	_build_plate()
 	_flash = ColorRect.new()
 	_flash.color = Color(1, 1, 1, 0)
 	_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_flash)
-	_set_backdrop(str(Js.obj(Rules.data()["campaign"].get("backdrops")).get(node.get("id"), "")), true)
+	if not stage_mode:
+		_set_backdrop(str(Js.obj(Rules.data()["campaign"].get("backdrops")).get(node.get("id"), "")), true)
 	modulate.a = 0.0
 	create_tween().tween_property(self, "modulate:a", 1.0, 0.45)
 	resized.connect(_layout)
@@ -264,12 +298,13 @@ func _next() -> void:
 	if _i >= _lines.size():
 		return
 	var l: Dictionary = _lines[_i]
-	if l.get("backdrop") != null:
+	if l.get("backdrop") != null and not stage_mode:
 		_set_backdrop(str(l["backdrop"]), false)
 	_wait = float(l.get("pause", 0.0)) / 1000.0
 	var speaker: Variant = l.get("speaker")
 	_name.text = str(speaker).to_upper() if speaker != null else ""
 	_stage(l)
+	line_shown.emit(_i, l)
 	var raw: String = str(l.get("text", ""))
 	var shown: String = _bb(raw)
 	_text.text = ("[i]%s[/i]" % shown) if speaker == null else shown
@@ -301,6 +336,10 @@ func _bb(s: String) -> String:
 func _line_done() -> void:
 	_typing = false
 	_text.visible_characters = -1
+	var ch: Array = Js.list((_lines[_i] as Dictionary).get("choice"))
+	if not ch.is_empty() and _choices == null:
+		_ask(ch)
+		return
 	if _i >= _lines.size() - 1:
 		_cta.visible = true
 		_cta.grab_focus.call_deferred()
@@ -336,7 +375,7 @@ func _process(delta: float) -> void:
 
 
 func _press() -> void:
-	if _gone:
+	if _gone or _choosing:
 		return
 	if _typing:
 		_wait = 0.0
@@ -357,6 +396,10 @@ func _unhandled_input(e: InputEvent) -> void:
 	if not (e is InputEventKey) or not (e as InputEventKey).pressed or (e as InputEventKey).echo:
 		return
 	var k: Key = (e as InputEventKey).keycode
+	if _choosing and k in [KEY_1, KEY_2, KEY_KP_1, KEY_KP_2]:
+		get_viewport().set_input_as_handled()
+		_answer()
+		return
 	if k in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]:
 		get_viewport().set_input_as_handled()
 		if not _typing and _i >= _lines.size() - 1:
@@ -410,6 +453,11 @@ func _stage(l: Dictionary) -> void:
 	for c: Node in _insert.get_children():
 		c.queue_free()
 	var ins: Variant = l.get("insert")
+	if stage_mode and (l.get("portrait", "") == "" or ins is Dictionary):
+		# The narrator over the water: the busts step out so the sea is seen.
+		for b: TextureRect in _busts:
+			create_tween().tween_property(b, "modulate:a", 0.0, 0.3)
+		return
 	if ins is Dictionary:
 		for b: TextureRect in _busts:
 			create_tween().tween_property(b, "modulate:a", 0.0, 0.25)
@@ -542,3 +590,33 @@ class InsertArt:
 				for k: int in 12:
 					var a: float = TAU * k / 12.0
 					draw_line(Vector2.from_angle(a) * 130, Vector2.from_angle(a) * 165, Color(accent, 0.6), 3.0)
+
+
+## The line's answers, as buttons over its plate (1 and 2 on the keys).
+## Every answer goes on: the crew answer for the captain either way.
+func _ask(ch: Array) -> void:
+	_choosing = true
+	_hint.text = ""
+	_choices = HBoxContainer.new()
+	_choices.add_theme_constant_override("separation", 14)
+	_choices.alignment = BoxContainer.ALIGNMENT_END
+	_plate.add_child(_choices)
+	for k: int in ch.size():
+		var b: Pane.PaneButton = Kit.button("%s  %d" % [str(ch[k]), k + 1], "primary" if k == ch.size() - 1 else "secondary", "large", _accent)
+		b.pressed.connect(_answer)
+		_choices.add_child(b)
+	_choices.position = Vector2(_plate.size.x - _choices.get_combined_minimum_size().x - 30, _plate.size.y - 62)
+	(_choices.get_child(_choices.get_child_count() - 1) as Control).grab_focus.call_deferred()
+
+
+func _answer() -> void:
+	if not _choosing:
+		return
+	_choosing = false
+	Sound.plip()
+	_choices.queue_free()
+	_choices = null
+	if _i < _lines.size() - 1:
+		_next()
+	else:
+		_end(true)
