@@ -91,15 +91,15 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 ### Job 7: Land 3 in the Shallows at dawn or dusk  `p2` _(port)_
 
 **First, the story** `e20`:
-- Hooked something down there, once. Held it a full thirty seconds.  _(holds 300ms)_
-- Then the line went slack. Slow. Gentle. Like the deep was handing it back on _purpose_.
-- Like it knew whose hands were on the rod, and decided no.  _(holds 400ms)_
+- Have you gotten any crates yet? Those are always fun to pull up out the water.
+- I've collected thousands over the years.
+- You can get some of the coolest items from them...
 
-**Gives it:** The light goes low and gold twice a day, and the water changes when it does. Three fish in that light, here in the Shallows.
+**Gives it:** The days go by so quickly. Catch me 3 fish in the Shallows at dawn or dusk...some may call it golden hour.
 
-**Not yet:** Dawn or dusk. Three. The light comes round again soon enough.
+**Not yet:** Make sure you're catching it at the right time...not seeing you did that yet.
 
-**Done:** Three in the gold light. Now you have seen what I mean about the water changing.
+**Done:** Isn't it just the most beautiful time to reel these in? Great work.
 
 ### Job 8: Land 30 fish in the Shallows  `q23`
 
