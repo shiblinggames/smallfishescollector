@@ -445,7 +445,16 @@ func _stage(l: Dictionary) -> void:
 		var tw: Tween = create_tween().set_parallel()
 		tw.tween_property(b, "position:x", home, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_property(b, "modulate:a", 1.0, 0.35)
+	elif str(_slots[slot].get("face", face)) != face:
+		# The same speaker with a new portrait (Finn after he changes, and back):
+		# the picture changes where they stand. It kept the first one before.
+		var b2: TextureRect = _busts[slot]
+		b2.texture = Skipper.tex(face.trim_prefix("/"))
+		_fit(slot)
+		b2.modulate.a = 0.0
+		create_tween().tween_property(b2, "modulate:a", 1.0, 0.35)
 	_slots[slot]["at"] = _i
+	_slots[slot]["face"] = face
 	var ghost: bool = l.get("ghost", false) == true
 	for k: int in 2:
 		_light(k, k == slot, ghost and k == slot, l.get("closeup", false) == true and k == slot)
