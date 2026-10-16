@@ -112,6 +112,18 @@ static func widen(d: float) -> void:
 
 
 ## The water this point is in, or {} on no fishing water.
+## THE LEVEL WALL (Kong, 2026-10-16: sailing into water you cannot fish
+## was allowed): the radius where the first water above `level` begins, and
+## its line; { r: INF } when every water is open.
+static func level_wall(level: int) -> Dictionary:
+	var mins: Dictionary = Js.obj(Js.obj(Rules.data().get("zones")).get("minLevel"))
+	for w: Dictionary in WATERS:
+		var need: int = int(Js.num(mins.get(w["id"])))
+		if need > level:
+			return { "r": float(w["inner"]), "line": "%s opens at Fishing %d." % [w["name"], need] }
+	return { "r": INF, "line": "" }
+
+
 static func water_at(p: Vector2) -> Dictionary:
 	if p.y <= 0:
 		return {}

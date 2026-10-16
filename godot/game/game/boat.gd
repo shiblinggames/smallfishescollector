@@ -66,6 +66,11 @@ signal surged
 signal held_at_gate
 ## Held on a shut bay's rim; the line says which, and what opens it.
 signal held_at_bay(line: String)
+## The level wall (Chart.level_wall, set by the sea): the fishing waters past
+## r are above her Fishing level, so the hull stops at their rim, sliding
+## along it. Only on the fishing side (south); a boat already past it (a level
+## lost, an old save) sails free, so she can always come home.
+var level_wall: Dictionary = { "r": INF, "line": "" }
 var _lane: String = ""
 var _in_lane: bool = false
 var _kelp_keep: float = 1.0
@@ -364,6 +369,15 @@ func steer(input: Vector2, delta: float) -> void:
 			velocity += (shut["out"] as Vector2) * inward
 		target = null
 		held_at_bay.emit(str(shut["line"]))
+	var wall_r: float = float(level_wall["r"])
+	if next.y > 0.0 and position.length() < wall_r and next.length() >= wall_r:
+		var out: Vector2 = next.normalized()
+		next = out * (wall_r - 2.0)
+		var outward: float = velocity.dot(out)
+		if outward > 0.0:
+			velocity -= out * outward
+		target = null
+		held_at_bay.emit(str(level_wall["line"]))
 	position = next
 	var speed: float = velocity.length()
 	# How she sits: rougher further out, heeling into a turn (away from its

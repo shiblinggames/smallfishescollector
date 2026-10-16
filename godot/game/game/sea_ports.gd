@@ -308,13 +308,15 @@ static func held_at_gate(o: Sea) -> void:
 	o._hud.toast("She sails with nobody aboard. Seat your raid party at the Gunwharf before you go out.")
 
 
-## Held on a shut bay's rim: the helm says which, and what opens it.
+## Held on a shut bay's rim, or the level wall: the helm says which, and
+## what opens it.
 static func held_at_bay(o: Sea, line: String) -> void:
 	var now: float = Time.get_ticks_msec() / 1000.0
 	if now - o._bay_note_t < 4.0:
 		return
 	o._bay_note_t = now
 	Rumble.tap(12)
+	Sound.knock()
 	o._hud.toast(line)
 
 

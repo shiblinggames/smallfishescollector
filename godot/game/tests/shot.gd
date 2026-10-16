@@ -23,7 +23,7 @@ func _init() -> void:
 	var out: String = args[0] if args.size() > 0 else "user://shot.png"
 	var night: bool = args.has("night")
 	var what: String = "dial"
-	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "tavern", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive", "log", "trailer", "ending"]:
+	for w: String in ["dial", "card", "crate", "golden", "level", "look", "loadout", "hold", "almanac", "giants", "boss", "slain", "finn", "rankup", "dock", "ashore", "market", "tackle", "rods", "shelf", "buyer", "title", "crew", "purse", "vote", "shipyard", "yardport", "hotspot", "isle", "landed", "wanderers", "peddler", "runner", "regular", "talk", "crest", "portal", "portalsheet", "deadportal", "wake", "still", "waiting", "bloom", "front", "frontedge", "levels", "achievements", "clue", "arch", "anchorage", "worldchart", "crewhall", "crewroster", "crewhalltier", "crossing", "cloud", "digsite", "current", "kelp", "bottle", "chart", "chartzoom", "course", "wheel", "waitrest", "titlenew", "stow", "crates", "crateopen", "fight", "film", "boattab", "orders", "trawls", "voyages", "bounties", "forge", "homestead", "tavern", "baitpick", "angler", "journal", "chaptercard", "den", "parlor", "crewtrunk", "skinreveal", "finnmoment", "crewbunks", "chartroom", "battle", "coop", "ready", "campaign", "puzzle", "dive", "log", "trailer", "ending", "levelwall"]:
 		if args.has(w):
 			what = w
 	var cycle: float = SeaClock.CYCLE_MS
@@ -624,6 +624,17 @@ func _init() -> void:
 			a.kind = { "slain": "slain", "finn": "finn", "rankup": "rank_up" }[what]
 			a.data = { "id": 146.0, "name": "Mosasaurus", "count": 3, "total": 6, "beat": (Rules.data()["finnAncientBeats"] as Dictionary)["146"], "from": 2.0, "to": 3.0 }
 			hud.add_child(a)
+		"levelwall":
+			# The level wall: a low captain sailing out at the next water's rim
+			# is held there (prints where she ended and where the wall is).
+			var wl: Dictionary = Chart.level_wall(sea.session.level())
+			var r0: float = float(wl["r"]) - 300.0
+			sea._boat.position = Vector2(0, r0)
+			sea._boat.heading = PI / 2.0
+			sea._boat.target = Vector2(0, r0 + 3000.0)
+			for f: int in 300:
+				await process_frame
+			print("LEVELWALL level=%d wall=%s at=%.0f line=%s" % [sea.session.level(), wl["r"], sea._boat.position.length(), wl["line"]])
 		"loadout":
 			hud._open_loadout()
 			for f: int in 70:

@@ -2259,6 +2259,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   bar (gold only when Finn is waiting); a taken slip and the catch motes fly there. A
   hotspot's full banner shows for SPOT_BANNER_S (6s) on arrival, then folds into a chip by
   the clock ("Scattered Shoal · 6m", its effect on hover).
+- THE LEVEL WALL, BACK (Kong, 2026-10-16: "im not stopped from going into fishing areas where
+  I don't have the fishing level for?"; the web had it, the port never did). The hull stops
+  at the rim of the first water above her Fishing level and slides along it (Chart.level_wall,
+  Boat.level_wall, set by the sea when the level changes); the helm says "The Deep opens at
+  Fishing 30." with a low knock (SeaPorts.held_at_bay, the shut bays' note). South only: the
+  reef route north is never walled. A boat already past it sails free, so she can come home.
+  A course into locked water is dropped at the rim. Test: shot.gd levelwall.
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works
