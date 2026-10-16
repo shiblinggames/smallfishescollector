@@ -78,15 +78,15 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 ### Job 6: Land 3 perfect catches in a row in the Shallows  `q22`
 
 **First, the story** `e15`:
-- A hundred anglers I've watched come down this dock. You're the hundred and first.
-- The rest were all noise. You're quieter. Steadier.  _(holds 300ms)_
-- The water doesn't seem to mind you. I've learned to pay mind when it doesn't.
+- The Chart Room is interesting.
+- Used to just be a place where you charted maps. Now it seems like it appeals to the younger generation.
+- I've charted this whole sea. I always have the need to know where everything is.
 
-**Gives it:** Three without a miss. It is the smallest run worth calling a run, and you will be surprised how it goes wrong.
+**Gives it:** Let's really test your skill. Land 3 perfect catches in a row. And then come back to me.
 
-**Not yet:** In a row. One miss and it starts again.
+**Not yet:** Not quite there, yet. Keep practicing.
 
-**Done:** Three straight. Do that ten more times and it stops being luck.
+**Done:** Your skills are growing. That's what I'm talking about.
 
 ### Job 7: Land 3 in the Shallows at dawn or dusk  `p2` _(port)_
 
