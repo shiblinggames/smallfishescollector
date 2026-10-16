@@ -45,7 +45,7 @@ const TEAL: Color = Kit.CAST
 ## The top-centre stack (spec 1.6): the level bar at 12-52, the compass under
 ## it, the story line, then ONE lane for the cues, the hotspot and the course,
 ## with the toasts stacked under whatever it holds.
-const LANE_Y: float = 216.0
+const LANE_Y: float = 176.0
 const LANE_W: float = 760.0
 const TOAST_W: float = 600.0
 ## At most this many toasts read at once; an older one leaves early.
@@ -82,6 +82,11 @@ var _spot_name: Label
 var _spot_left: Label
 var _spot_effect: Label
 var _spot: Dictionary = {}
+## The hotspot after its first few seconds: a chip by the clock, not a block
+## in the lane (Kong, 2026-10-16: the top was "incredibly busy").
+var _spot_pill: Pane
+var _spot_chip: Label
+const SPOT_BANNER_S: float = 6.0
 var _ledger_btn: Button
 var _chest_btn: Button
 var _where: Label
@@ -217,7 +222,7 @@ func _ready() -> void:
 	# The story line under it (The Long Cast). Finn is on the compass ribbon
 	# (game/compass_ribbon.gd).
 	_story = StoryLine.new()
-	_place(_story, Vector2(0.5, 0.0), Vector2(-StoryLine.W / 2.0, 160), Vector2(StoryLine.W, 52))
+	_place(_story, Vector2(0.5, 0.0), Vector2(-StoryLine.W / 2.0, 136), Vector2(StoryLine.W, 30))
 	add_child(_story)
 	_story.pressed.connect(func() -> void: open_journal("story"))
 	var purse_row: HBoxContainer = HBoxContainer.new()
@@ -304,6 +309,13 @@ func _ready() -> void:
 	chart.pressed.connect(func() -> void: chart_pressed.emit())
 	clock_row.add_child(chart)
 	clock_row.move_child(chart, 0)
+	# The hotspot, once its arrival has been read: a small chip by the clock
+	# (its effect on hover).
+	_spot_pill = Kit.pane(clock_row, Kit.water_pill())
+	_spot_pill.mouse_filter = Control.MOUSE_FILTER_STOP
+	_spot_pill.visible = false
+	_spot_chip = Kit.text(_spot_pill, "", "label", Kit.SEA_GOLD)
+	_spot_chip.add_theme_font_size_override("font_size", 12)
 	var clock_pill: Pane = Kit.pane(clock_row, Kit.water_pill())
 	clock_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var clock_in: HBoxContainer = HBoxContainer.new()
@@ -836,7 +848,24 @@ func set_spot(h: Dictionary) -> void:
 			_spot_name.text = def["tiers"][tier - 1][0]
 			_spot_effect.text = def["tiers"][tier - 1][1]
 			_spot_badge.visible = true
+			_spot_pill.visible = false
+			_spot_pill.tooltip_text = _spot_effect.text
 			Motion.rise_word(_spot_badge)
+			var key: Variant = h.get("key")
+			get_tree().create_timer(SPOT_BANNER_S).timeout.connect(func() -> void:
+				if _spot.get("key") != key or not _spot_badge.visible or _spot_badge.has_meta("_going"):
+					return
+				_spot_badge.set_meta("_going", true)
+				var tw0: Tween = Motion.note_out(_spot_badge, false)
+				if tw0 != null:
+					tw0.tween_callback(func() -> void: _spot_badge.remove_meta("_going"))
+				else:
+					_spot_badge.visible = false
+					_spot_badge.remove_meta("_going")
+				_spot_pill.visible = true
+				Motion.rise_word(_spot_pill))
+		elif _spot_pill.visible:
+			_spot_pill.visible = false
 		elif _spot_badge.visible and not _spot_badge.has_meta("_going"):
 			_spot_badge.set_meta("_going", true)
 			var tw: Tween = Motion.note_out(_spot_badge, false)
@@ -846,10 +875,9 @@ func set_spot(h: Dictionary) -> void:
 				_spot_badge.visible = false
 				_spot_badge.remove_meta("_going")
 	if not h.is_empty():
-		if _spot_badge.has_meta("_going"):
-			_spot_badge.remove_meta("_going")
 		var left: int = maxi(0, int((float(h["endsAt"]) - Clock.now_ms()) / 1000.0))
 		_spot_left.text = ("%dm left" % ceili(left / 60.0)) if left >= 60 else ("%ds" % left)
+		_spot_chip.text = "%s  ·  %s" % [_spot_name.text, ("%dm" % ceili(left / 60.0)) if left >= 60 else ("%ds" % left)]
 
 
 ## THE COURSE CHIP: {label, eta, autopilot}, or {} for none. Built once and

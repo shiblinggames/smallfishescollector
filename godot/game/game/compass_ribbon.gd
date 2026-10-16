@@ -26,6 +26,11 @@ extends Control
 ## Up to SLOTS role marks. A time is at the hull's full speed, so it shortens
 ## with a faster ship.
 ##
+## ONE NAME AT A TIME (Kong, 2026-10-16: the top "looks incredibly busy"):
+## every mark is a tick on the line, and only one is named under it, the one
+## nearest where the bow points; a pinned mark and the tick under the pointer
+## are named too. Names no longer pile on each other.
+##
 ## PRESS A MARK TO PIN IT (press again to let go): it stays lit, and a dotted
 ## road runs on the water toward it until you arrive. It never steers for you
 ## (the web's sail-to-mark was removed on purpose).
@@ -346,13 +351,26 @@ func _draw() -> void:
 	_bow = _bow + wrapf(heading - _bow, -PI, PI) * minf(1.0, get_process_delta_time() * 8.0)
 	var bx0: float = wrapf(_bow - up, -PI, PI) / SPAN * half
 	draw_colored_polygon(PackedVector2Array([c + Vector2(bx0 - 5, 8), c + Vector2(bx0 + 5, 8), c + Vector2(bx0, 2)]), Color(INK, 0.85 * a))
-	# The marks, nearest the bow drawn last; labels that would collide stack.
+	# The marks: every one a tick; named, only the one nearest the bow, a pin
+	# and the one under the pointer.
 	var placed: Array = []
 	var rows: Array = []
+	var mouse: Vector2 = get_local_mouse_position() - c
+	var near_id: String = ""
+	var near_d: float = INF
+	var hover_id: String = ""
+	var hover_d: float = 14.0
 	for m: Dictionary in _marks:
 		var v: Vector2 = _at(m) - sea._boat.position
 		var rel2: float = wrapf(bearing(v) - up, -PI, PI)
 		var x2: float = clampf(rel2 / SPAN, -1.0, 1.0) * (half - 6.0)
+		var off: float = absf(wrapf(bearing(v) - _bow, -PI, PI))
+		if off < near_d:
+			near_d = off
+			near_id = m["id"]
+		if mouse.y > -14.0 and mouse.y < 40.0 and absf(mouse.x - x2) < hover_d:
+			hover_d = absf(mouse.x - x2)
+			hover_id = m["id"]
 		rows.append([absf(rel2), m, x2, v.length()])
 	rows.sort_custom(func(p: Array, q: Array) -> bool: return float(p[0]) > float(q[0]))
 	for r: Array in rows:
@@ -361,6 +379,11 @@ func _draw() -> void:
 		var pin: bool = m2["id"] == pinned
 		var col: Color = m2["col"]
 		var k: float = a
+		var named: bool = pin or m2["id"] == near_id or m2["id"] == hover_id
+		if not named:
+			draw_line(c + Vector2(x3, -5), c + Vector2(x3, 5), Color(col, 0.8 * k), 2.0)
+			_hits.append([Rect2(c + Vector2(x3 - 9, -12), Vector2(18, 30)), m2["id"]])
+			continue
 		var name: String = str(m2["name"])
 		var line2: String = _time(float(r[3]))
 		if str(m2["sub"]) != "":

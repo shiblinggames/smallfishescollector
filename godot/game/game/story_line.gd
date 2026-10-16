@@ -11,6 +11,10 @@ extends Control
 ## line turns gold: "Back to Finn". With no job open it says what is waiting
 ## (gold when he has something for you; quiet when the next chapter waits on
 ## your level). Pressing it opens the Journal at the story.
+##
+## Quiet (Kong, 2026-10-16: the top was "incredibly busy"): one small line,
+## "Ch I  ·  the job  ·  0 of 8", in soft ink over a hairline bar; gold only
+## when Finn is waiting on you.
 
 signal pressed
 
@@ -41,18 +45,18 @@ func _ready() -> void:
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	add_child(col)
-	_eyebrow = Kit.lift(Kit.text(col, "", "eyebrow", GOLD))
-	_eyebrow.add_theme_font_size_override("font_size", 10)
-	_eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var row: HBoxContainer = HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(row)
+	# The chapter as a short lead-in on the same line ("Ch I").
+	_eyebrow = Kit.lift(Kit.text(row, "", "label", Color(Kit.INK, 0.55)))
+	_eyebrow.add_theme_font_size_override("font_size", 13)
 	_text = Kit.lift(Kit.text(row, "", "label", Kit.INK))
-	_text.add_theme_font_size_override("font_size", 15)
-	_count = Kit.lift(Kit.text(row, "", "label", GOLD))
-	_count.add_theme_font_size_override("font_size", 15)
+	_text.add_theme_font_size_override("font_size", 13)
+	_count = Kit.lift(Kit.text(row, "", "label", Color(Kit.INK, 0.7)))
+	_count.add_theme_font_size_override("font_size", 13)
 	visible = false
 
 
@@ -75,7 +79,7 @@ func apply(st: Dictionary) -> void:
 		var qv: Dictionary = q
 		var def: Dictionary = Finn.quest_by_id(qv["id"])
 		var ch: Dictionary = JobSlip.chapter_of(def)
-		_eyebrow.text = "THE LONG CAST  ·  CHAPTER %s" % str(ch.get("romanNumeral", ""))
+		_eyebrow.text = "Ch %s  ·" % str(ch.get("romanNumeral", ""))
 		var have: float = float(qv["have"])
 		var target: float = float(qv["target"])
 		var fresh: bool = qv["id"] != _id
@@ -99,8 +103,8 @@ func apply(st: Dictionary) -> void:
 			_text.text = str(qv["label"])
 			_text.add_theme_color_override("font_color", Kit.INK)
 			# Short: the job's words already say "in a row" or "raise".
-			_count.text = "" if def.get("type") == "catch_ancient" else "%d of %d" % [mini(int(have), int(target)), int(target)]
-			_count.add_theme_color_override("font_color", GOLD)
+			_count.text = "" if def.get("type") == "catch_ancient" else "·  %d of %d" % [mini(int(have), int(target)), int(target)]
+			_count.add_theme_color_override("font_color", Color(Kit.INK, 0.7))
 			var to: float = clampf(have / maxf(1.0, target), 0.0, 1.0)
 			if grew:
 				_tick(have, target)
@@ -118,7 +122,7 @@ func apply(st: Dictionary) -> void:
 	var nxt: Dictionary = Finn.next_quest(done, level)
 	if not nxt.is_empty():
 		var ch2: Dictionary = JobSlip.chapter_of(nxt)
-		_eyebrow.text = "THE LONG CAST  ·  CHAPTER %s" % str(ch2.get("romanNumeral", ""))
+		_eyebrow.text = "Ch %s  ·" % str(ch2.get("romanNumeral", ""))
 		_text.text = "Finn has work for you"
 		_text.add_theme_color_override("font_color", GOLD)
 		_count.text = ""
@@ -126,7 +130,7 @@ func apply(st: Dictionary) -> void:
 		return
 	var wait: Dictionary = Finn.waiting_on(done, level)
 	if not wait.is_empty():
-		_eyebrow.text = "THE LONG CAST  ·  CHAPTER %s" % str(wait["romanNumeral"])
+		_eyebrow.text = ""
 		_text.text = "Chapter %s opens at Fishing %d" % [str(wait["romanNumeral"]), int(wait["minLevel"])]
 		_text.add_theme_color_override("font_color", Color(Kit.INK, 0.7))
 		_count.text = ""
@@ -143,7 +147,7 @@ func _tick(have: float, target: float) -> void:
 	Sound.job_tick(int(round(12.0 * clampf(have / maxf(1.0, target), 0.0, 1.0))))
 	_bump = 1.0
 	if target - have == 1.0:
-		_count.text = "One more"
+		_count.text = "·  One more"
 
 
 ## A gold mote from the boat (the middle of the screen) arcing up into the
@@ -159,7 +163,7 @@ func _mote() -> void:
 	m.modulate = Color(1, 1, 1, 0.0)
 	host.add_child(m)
 	var from: Vector2 = host.get_viewport_rect().size / 2.0 - Vector2(13, 40)
-	var to: Vector2 = global_position - host.global_position + Vector2(size.x / 2.0 - 13.0, 30.0)
+	var to: Vector2 = global_position - host.global_position + Vector2(size.x / 2.0 - 13.0, 10.0)
 	var fly: Callable = func(u: float) -> void:
 		var e: float = u * u * (3.0 - 2.0 * u)
 		var p: Vector2 = from.lerp(to, e)
@@ -198,12 +202,12 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if not _show_bar:
 		return
-	var w: float = 260.0
-	var y: float = 42.0
+	var w: float = 200.0
+	var y: float = 22.0
 	var x0: float = (size.x - w) / 2.0
-	draw_rect(Rect2(x0, y, w, 4), Color(0, 0, 0, 0.35))
-	var c: Color = GOLD.lerp(Color(1.0, 0.92, 0.6), 0.5 + 0.5 * sin(_t * 3.0)) if _ready_state else GOLD
-	draw_rect(Rect2(x0, y, w * _fill, 4), c)
+	draw_rect(Rect2(x0, y, w, 2), Color(0, 0, 0, 0.3))
+	var c: Color = GOLD.lerp(Color(1.0, 0.92, 0.6), 0.5 + 0.5 * sin(_t * 3.0)) if _ready_state else Color(GOLD, 0.75)
+	draw_rect(Rect2(x0, y, w * _fill, 2), c)
 	if _seal_k > 0.0:
 		# The wax seal, pressed on at the bar's end: it drops from large.
 		var s: float = lerpf(2.6, 1.0, _seal_k)
