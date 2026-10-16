@@ -25,17 +25,14 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 ### Job 2: Land 4 perfect catches in the Shallows  `q2`
 
 **First, the story** `e3`:
-- Back already.  _(holds 300ms)_
-- Didn't take you for the stubborn kind. Good. The water eats the other kind alive.
-- Quick hands. I'll grant you that much, and not one word more.
+- Already ready for some more? An eager fisher, aren't ya?
+- You've got quick hands. But quick hands don't mean anything without the right equipment. Make sure you're always getting the best gear to help with your catches.
 
-**Gives it:** Anybody can land a fish. Land four PERFECT and I will start paying attention properly.
+**Gives it:** I'll tell you this much...anyone can land a fish in the Shallows. Let me see you land four perfect catches.
 
-**Not yet:** Four perfect. Not four fish. There is a difference and it is the entire difference.
+**Not yet:** Still needing those 4 perfects...
 
-**Done:** Four clean ones. Most anglers manage that by accident once a season.
-
-**Too soon** (this job is next, but your level is not there yet): Not yet. Get some water under you first.
+**Done:** Four perfect catches. Can't get 4 of these by accident, well done.
 
 ### Job 3: Land 15 fish in the Shallows  `q3`
 
@@ -51,8 +48,6 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 
 **Done:** Fifteen. You have stopped thinking about the shallows, which means they are finished with you.
 
-**Too soon** (this job is next, but your level is not there yet): Start where everybody starts.
-
 ### Job 4: Land the fish he describes, in the Shallows  `p1` _(port)_
 
 **First, the story** `e8`:
@@ -66,8 +61,6 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 **Not yet:** Not that one. Think about what I said.
 
 **Done:** That is the one. You knew it from a few words, which means you have been paying attention.
-
-**Too soon** (this job is next, but your level is not there yet): Go and fish first.
 
 ### Job 5: Land 2 uncommon or better in the Shallows  `q21`
 
@@ -83,8 +76,6 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 
 **Done:** Two. You have started seeing what is actually down there rather than what you expected.
 
-**Too soon** (this job is next, but your level is not there yet): Go and fish first.
-
 ### Job 6: Land 3 perfect catches in a row in the Shallows  `q22`
 
 **First, the story** `e15`:
@@ -97,8 +88,6 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 **Not yet:** In a row. One miss and it starts again.
 
 **Done:** Three straight. Do that ten more times and it stops being luck.
-
-**Too soon** (this job is next, but your level is not there yet): Not yet.
 
 ### Job 7: Land 3 in the Shallows at dawn or dusk  `p2` _(port)_
 
@@ -113,8 +102,6 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 
 **Done:** Three in the gold light. Now you have seen what I mean about the water changing.
 
-**Too soon** (this job is next, but your level is not there yet): Not yet.
-
 ### Job 8: Land 30 fish in the Shallows  `q23`
 
 **First, the story** `e25`:
@@ -127,8 +114,6 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 **Not yet:** Thirty. You are not close and that is fine.
 
 **Done:** Thirty. That is the part nobody puts in the stories and it is most of the work.
-
-**Too soon** (this job is next, but your level is not there yet): Go and fish.
 
 ## Chapter II: Past the Shelf
 
@@ -161,8 +146,6 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Done:** Five straight. I have watched a hundred anglers try that and I am not exaggerating the number.
 
-**Too soon** (this job is next, but your level is not there yet): Come back when you have grown into it.
-
 ### Job 11: Land 4 from a shoal in Open Waters  `p3` _(port)_
 
 **First, the story** `e35`:
@@ -176,8 +159,6 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Done:** Four out of a shoal. You watched the gulls. Good.
 
-**Too soon** (this job is next, but your level is not there yet): Come back when you are rated for this water.
-
 ### Job 12: Land 3 rare or better in Open Waters  `q6`
 
 **First, the story** `e37`:
@@ -190,8 +171,6 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 **Not yet:** Rare, I said. Common fish are just weather.
 
 **Done:** Three. The water is making up its mind about you, and I do not think it is going the way I expected.
-
-**Too soon** (this job is next, but your level is not there yet): Not at your level. The water does not hand those to beginners.
 
 ### Job 13: Land 10 perfect catches in Open Waters  `q24`
 
@@ -207,8 +186,6 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Done:** Ten. They are becoming the normal ones.
 
-**Too soon** (this job is next, but your level is not there yet): Come back when you are rated for this water.
-
 ### Job 14: Land 3 in Open Waters in a storm  `p4` _(port)_
 
 **First, the story** `w1`:
@@ -220,8 +197,6 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 **Not yet:** In a storm. A squall, a gale, anything with rain in it. Wait for the weather.
 
 **Done:** Three in the weather. You stayed out. I noticed that too.
-
-**Too soon** (this job is next, but your level is not there yet): Not until you can work it.
 
 ### Job 15: Land 25 fish in Open Waters  `q25`
 
@@ -235,8 +210,6 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Done:** Twenty five. You know that water now, which is different from having been there.
 
-**Too soon** (this job is next, but your level is not there yet): Not until you can work it.
-
 ### Job 16: Land 60 fish in Open Waters  `q26`
 
 **First, the story** `w5`:
@@ -248,8 +221,6 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 **Not yet:** Sixty. Keep at it.
 
 **Done:** Sixty. Most captains stop somewhere in the forties and never notice they stopped.
-
-**Too soon** (this job is next, but your level is not there yet): Later.
 
 ## Chapter III: The Long Sail
 
@@ -283,8 +254,6 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Done:** Twenty. You have stopped counting them, have you not. That is when it starts working.
 
-**Too soon** (this job is next, but your level is not there yet): Later. You are not deep enough into this.
-
 ### Job 19: Land the fish he describes, in the Deep  `p5` _(port)_
 
 **First, the story** `w12`:
@@ -297,8 +266,6 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 **Not yet:** Not that one. Read it again.
 
 **Done:** That is it. Your Log is doing you more good than most captains let theirs.
-
-**Too soon** (this job is next, but your level is not there yet): The Deep first.
 
 ### Job 20: Land 8 perfect catches in a row in the Deep  `q9`
 
@@ -313,8 +280,6 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Done:** Eight straight. I want to be sour about that and I find I am not.
 
-**Too soon** (this job is next, but your level is not there yet): Not yet. Ask me again when the deep water knows your name.
-
 ### Job 21: Land 4 rare or better in the Deep  `q27`
 
 **First, the story** `w18`:
@@ -328,8 +293,6 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Done:** Four. The deep gives them up more readily to somebody it has decided about.
 
-**Too soon** (this job is next, but your level is not there yet): The Deep first.
-
 ### Job 22: Land a trophy-size fish in the Deep  `p6` _(port)_
 
 **First, the story** `w20`:
@@ -341,8 +304,6 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 **Not yet:** Trophy size. The ordinary ones do not count, however pleased they look.
 
 **Done:** Now that is a fish worth writing down. I would have told everyone at the dock.
-
-**Too soon** (this job is next, but your level is not there yet): Not yet.
 
 ### Job 23: Land 25 fish in the Deep  `q28`
 
@@ -356,8 +317,6 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Done:** Twenty five. You have spent more hours down there this month than I have this year.
 
-**Too soon** (this job is next, but your level is not there yet): Not yet.
-
 ### Job 24: Land 100 fish in the Deep  `q29`
 
 **First, the story** `w25`:
@@ -369,8 +328,6 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 **Not yet:** A hundred. Chip at it.
 
 **Done:** A hundred. There is nothing clever about it and it is still the hardest thing I have asked you for.
-
-**Too soon** (this job is next, but your level is not there yet): Later.
 
 ## Chapter IV: Where It Stops Being Blue
 
@@ -403,8 +360,6 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **Done:** Five, in the dark, in the darkest water there is. You are braver than I was.
 
-**Too soon** (this job is next, but your level is not there yet): Not at your level.
-
 ### Job 27: Land 5 epic or better in the Abyss  `q11`
 
 **First, the story** `w33`:
@@ -418,8 +373,6 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **Done:** Five. It has decided, then.
 
-**Too soon** (this job is next, but your level is not there yet): Those do not come to captains at your level. Go on.
-
 ### Job 28: Land 12 perfect catches in a row in the Abyss  `q12`
 
 **First, the story** `w36`:
@@ -431,8 +384,6 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 **Not yet:** Twelve in a row. Take a season over it if you need to. I have waited longer.
 
 **Done:** Twelve. Straight. I have run out of things to test and I am not sure what I do now.
-
-**Too soon** (this job is next, but your level is not there yet): Not yet. That one is for somebody further along than you.
 
 ### Job 29: Land 40 perfect catches in the Abyss  `q30`
 
@@ -447,8 +398,6 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **Done:** Forty. I have stopped being able to tell when you are trying.
 
-**Too soon** (this job is next, but your level is not there yet): Not at your level.
-
 ### Job 30: Land 3 in the Abyss in fog  `p8` _(port)_
 
 **Gives it:** When the fog rolls over the Abyss you cannot see your own line. Three fish, in that.
@@ -456,8 +405,6 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 **Not yet:** In fog. Wait for it to roll in.
 
 **Done:** Three in the fog. You fished by feel. That is the whole thing, really.
-
-**Too soon** (this job is next, but your level is not there yet): The black water is not open to you.
 
 ### Job 31: Land 22 fish in the Abyss  `q31`
 
@@ -467,8 +414,6 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **Done:** Twenty two. You go down there the way other people go to the market.
 
-**Too soon** (this job is next, but your level is not there yet): The black water is not open to you.
-
 ### Job 32: Land 2 legendary fish in the Abyss  `q32`
 
 **Gives it:** Two legendaries, before we go anywhere near the old water. I need to know you can do it on demand.
@@ -476,8 +421,6 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 **Not yet:** Legendary. Two of them. The water decides, but it decides about you differently now.
 
 **Done:** Two. On demand. That is the last thing I needed to know and I already knew it.
-
-**Too soon** (this job is next, but your level is not there yet): Not yet.
 
 ## Chapter V: The Six
 
@@ -501,8 +444,6 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Three. You make the impossible look like a Tuesday, and I have stopped pretending that does not sting.
 
-**Too soon** (this job is next, but your level is not there yet): Not yet. Those are the far end of it.
-
 ### Job 35: Raise the Plesiosaurus  `q15`
 
 **Gives it:** The first of the six. A long neck and a longer memory, and it comes up slow, like it is deciding about you. And you will not manage it on worms, so listen. They rise for a shine: a Golden Lure will raise one, a Luminous will do it slower, and nothing else on your boat will do it at all. Forty years I stood at the lip of that water with the wrong thing on my line.
@@ -510,8 +451,6 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 **Not yet:** The Plesiosaurus. Golden Lure, old water, and patience. It is down there.
 
 **Done:** You are holding one. An actual one of the six. I am going to need a moment and I would rather you did not watch.
-
-**Too soon** (this job is next, but your level is not there yet): Not until the old water opens to you.
 
 ### Job 36: Raise the Dunkleosteus  `q16`
 
@@ -521,8 +460,6 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Two. You have landed two of them and I have landed none, and I find I am not as sour about that as I expected to be.
 
-**Too soon** (this job is next, but your level is not there yet): Not yet.
-
 ### Job 37: Raise the Mosasaurus  `q17`
 
 **Gives it:** Third. The one that hunts the dark on purpose rather than living in it. Do not fight it early, it is stronger at the start than it is at the end.
@@ -530,8 +467,6 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 **Not yet:** The Mosasaurus. It is out there and it is in no hurry.
 
 **Done:** Three. Half the set. Nobody in the history of this harbor has been halfway.
-
-**Too soon** (this job is next, but your level is not there yet): Not yet.
 
 ### Job 38: Raise the Basilosaurus  `q18`
 
@@ -541,8 +476,6 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Four. I have started telling people about you, which is not a thing I do.
 
-**Too soon** (this job is next, but your level is not there yet): Not yet.
-
 ### Job 39: Raise the Shastasaurus  `q19`
 
 **Gives it:** Fifth. The biggest of them that is not the last one, and the one I got closest to. Thirty seconds I held it. Then the water handed it back.
@@ -551,8 +484,6 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Five. Five of six. There is one left and we both know which, and I have not been able to say its name out loud in years.
 
-**Too soon** (this job is next, but your level is not there yet): Not yet.
-
 ### Job 40: Raise the Megalodon  `q20`
 
 **Gives it:** The last one. It does not surface for anybody holding fewer than five, which is why no living captain has ever seen it and why I never will. It is yours. Go.
@@ -560,8 +491,6 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 **Not yet:** The Megalodon. It is waiting on you now, not the other way round.
 
 **Done:** All six. By one pair of hands, in one lifetime, and I watched it happen. ...Sit down. I need to tell you something, and you are not going to like where it starts.
-
-**Too soon** (this job is next, but your level is not there yet): Not yet. But it is going to be you.
 
 ## Every job
 
