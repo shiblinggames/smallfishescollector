@@ -37,16 +37,16 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 ### Job 3: Land 15 fish in the Shallows  `q3`
 
 **First, the story** `e5`:
-- There's water past the edge of every chart you own. _Old_ water.  _(holds 350ms)_
-- The fish down there would take your finest trophy for a minnow and swim off still hungry.
-- Most anglers swear it isn't real. Easier than admitting it's simply out of their reach.
-- Take the bet. Let's find out if it's out of yours.
+- The mainland is beautiful isn't it? So many hard workers keeping everything running.
+- Be sure to check out the Tavern to hear all the gossip around.
+- I don't gossip...I've got far more important things to do.
+- Life's more than just doubloons, but doesn't hurt to have more am I right? Gotta keep the market happy.
 
-**Gives it:** Fifteen out of the shallow water. It is not hard and it is not meant to be. It is meant to be a habit.
+**Gives it:** Next one's a grind, my good friend. I'd like to see you catch 15 in the Shallows. No better practice than catching a bunch.
 
-**Not yet:** The Shallows. Fifteen. You have been elsewhere, have you not.
+**Not yet:** Not seeing 15 here, buddy. Let's see you hit 15 first.
 
-**Done:** Fifteen. You have stopped thinking about the shallows, which means they are finished with you.
+**Done:** One...two...three...15. That looks right.
 
 ### Job 4: Land the fish he describes, in the Shallows  `p1` _(port)_
 
