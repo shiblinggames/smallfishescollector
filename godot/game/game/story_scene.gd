@@ -65,6 +65,13 @@ var _shake: float = 0.0
 var _gone: bool = false
 ## A line with `choice` waits on one of its answers (either goes on).
 var _choosing: bool = false
+## The living painting: time on this backdrop, the way the camera drifts
+## across it, and where each line settles the frame.
+var _shot_t: float = 0.0
+var _pan: Vector2 = Vector2.ZERO
+var _nudge: Vector2 = Vector2.ZERO
+var _nudge_to: Vector2 = Vector2.ZERO
+var _air: Control
 var _choices: HBoxContainer
 ## The lines read so far, for the history (H).
 var _log: Control
@@ -95,6 +102,13 @@ func _ready() -> void:
 	add_child(base)
 	_back = _backdrop_rect()
 	_back_next = _backdrop_rect()
+	# The air over the painting: mist drifting low, faint shafts of light and
+	# motes (not over the live sea, which has its own).
+	if not stage_mode and not over_water:
+		_air = Air.new()
+		_air.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_air.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_air)
 	_shade = ColorRect.new()
 	_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -347,6 +361,7 @@ func _next() -> void:
 	_name.text = str(speaker) if speaker != null else ""
 	_stage(l)
 	line_shown.emit(_i, l)
+	_nudge_to = Vector2(randf_range(-12.0, 12.0), randf_range(-6.0, 6.0))
 	var raw: String = str(l.get("text", ""))
 	var shown: String = _bb(raw)
 	_text.text = ("[i]%s[/i]" % shown) if speaker == null else shown
@@ -397,11 +412,17 @@ func _line_done() -> void:
 
 func _process(delta: float) -> void:
 	_clock += delta
-	# The backdrop drifts, slow, the way a camera breathes.
+	# A LIVING PAINTING (Kong, 2026-10-16): the camera pushes slowly in on each
+	# place, drifting one way across it, and settles a touch differently on
+	# every line, the way a shot is held, never still.
+	_shot_t += delta
+	var u: float = clampf(_shot_t / 45.0, 0.0, 1.0)
+	var e: float = u * u * (3.0 - 2.0 * u)
+	_nudge = _nudge.lerp(_nudge_to, 1.0 - exp(-delta * 0.9))
 	for r: TextureRect in [_back, _back_next]:
 		r.pivot_offset = r.size / 2.0
-		r.scale = Vector2.ONE * (1.06 + 0.02 * sin(_clock * 0.07))
-		r.position = Vector2(sin(_clock * 0.05) * 14.0, cos(_clock * 0.04) * 8.0)
+		r.scale = Vector2.ONE * (1.04 + 0.08 * e)
+		r.position = _pan * 34.0 * e + _nudge
 	_breathe()
 	if _auto_wait >= 0.0 and not _choosing and _log == null:
 		_auto_wait -= delta
@@ -495,6 +516,10 @@ func _set_backdrop(path: String, now: bool) -> void:
 			_back.modulate.a = 0.0
 		return
 	_back_path = path
+	# A new place: a new shot, drifting its own way (the same each time).
+	_shot_t = 0.0
+	var hsh: int = hash(path)
+	_pan = Vector2.from_angle(float(hsh % 628) / 100.0) * Vector2(1.0, 0.5)
 	# The port's widescreen painting of the same place, where there is one
 	# (port_art/scenes/w-*.jpg; the web's are tall and showed only a band).
 	var wide: String = path.get_base_dir() + "/w-" + path.get_file()
@@ -769,3 +794,59 @@ func _toggle_log() -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 			_toggle_log())
 	sc.set_deferred("scroll_vertical", 100000)
+
+
+## THE AIR OVER A PAINTING: a slow mist low across it, a few faint shafts of
+## light from above, and motes drifting up through them. All drawn, all faint.
+class Air:
+	extends Control
+	var _motes: Array = []
+	var _t: float = 0.0
+	var _mist: ColorRect
+
+	func _ready() -> void:
+		_mist = ColorRect.new()
+		_mist.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_mist.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var m: ShaderMaterial = ShaderMaterial.new()
+		var sh: Shader = Shader.new()
+		sh.code = """
+shader_type canvas_item;
+float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float n(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
+}
+void fragment() {
+	vec2 uv = UV * vec2(3.0, 2.0);
+	float t = TIME * 0.03;
+	float f = n(uv + vec2(t, 0.0)) * 0.6 + n(uv * 2.1 - vec2(t * 1.7, t * 0.4)) * 0.4;
+	float low = smoothstep(0.35, 0.95, UV.y);
+	float mist = smoothstep(0.45, 0.85, f) * low * 0.16;
+	// Shafts from the top, leaning, breathing slowly.
+	float x = UV.x + UV.y * 0.35;
+	float shaft = pow(max(0.0, sin(x * 9.0 + 1.3) * sin(x * 3.7 + TIME * 0.05)), 6.0);
+	shaft *= (1.0 - smoothstep(0.0, 0.8, UV.y)) * (0.5 + 0.5 * sin(TIME * 0.21)) * 0.05;
+	COLOR = vec4(vec3(0.92, 0.94, 1.0), mist + shaft);
+}
+"""
+		m.shader = sh
+		_mist.material = m
+		add_child(_mist)
+		for k: int in 34:
+			_motes.append([randf(), randf(), randf_range(0.004, 0.012), randf_range(1.2, 2.8), randf_range(0.08, 0.22), randf() * TAU])
+
+	func _process(delta: float) -> void:
+		_t += delta
+		for mo: Array in _motes:
+			mo[1] = float(mo[1]) - float(mo[2]) * delta
+			mo[0] = float(mo[0]) + sin(_t * 0.4 + float(mo[5])) * 0.0006
+			if float(mo[1]) < -0.02:
+				mo[1] = 1.02
+				mo[0] = randf()
+		queue_redraw()
+
+	func _draw() -> void:
+		for mo: Array in _motes:
+			var a: float = float(mo[4]) * (0.6 + 0.4 * sin(_t * 1.3 + float(mo[5])))
+			draw_circle(Vector2(float(mo[0]) * size.x, float(mo[1]) * size.y), float(mo[3]), Color(1.0, 0.95, 0.85, a))

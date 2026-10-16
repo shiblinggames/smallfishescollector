@@ -2203,6 +2203,15 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   w-<name>.jpg (own names so setup.mjs's copy of the web's never fights them), every node
   pointed at its w- version in port_rules campaign.backdrops, and the StoryScene prefers a
   w- version of any backdrop a line switches to. Prompts: nano-banana-2 prompts/wide-*.json.
+  LIVING PAINTINGS AND TWO BEATS ON THE SEA (Kong, 2026-10-16, taking the recommendation over
+  staging six scenes on the water, which would have hidden the new paintings): every story
+  scene's backdrop is a held shot, a slow one-way push-in over 45s drifting its own way (the
+  same each time for a place), the frame settling a touch differently on each line, and an
+  air over it (StoryScene.Air: low mist and faint light shafts in a shader, motes drifting
+  up), never over the live sea. The live sea kept for what happens ON the water
+  (game/story_stage.gd, campaignText cinema "stage_<kind>"): Mira's schooner out of the
+  haze, closing, and settling in beside you (The Deepest Water); Krust's brigantine out of
+  the mist ahead, his face over it, a flare and coming about on "His crew spotted us!".
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works
