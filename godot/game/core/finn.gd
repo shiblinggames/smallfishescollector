@@ -51,7 +51,9 @@ static func _dress(e: Dictionary) -> Dictionary:
 		if not f.is_empty():
 			var said: String = Clues.veil(str(f.get("fun_fact") if f.get("fun_fact") != null else f.get("description", "")).strip_edges(), str(f["name"]))
 			q["hint"] = said
-			q["give"] = "%s \"%s\"" % [q["give"], said]
+			# clueInGive: Kong's own words already say it (finnText).
+			if q.get("clueInGive") != true:
+				q["give"] = "%s \"%s\"" % [q["give"], said]
 	return q
 
 

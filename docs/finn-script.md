@@ -51,16 +51,15 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 ### Job 4: Land the fish he describes, in the Shallows  `p1` _(port)_
 
 **First, the story** `e8`:
-- The Ancient Deep.  _(holds 500ms)_
-- Past your trench, past your abyss, where the water turns to ink and the seafloor forgets to stop falling.
-- Six things worth the pulling live down there. Six. Not five. Not seven.  _(holds 300ms)_
-- Funny, the numbers a captain finds himself counting in the dark.
+- Have you checked out the Den on the Mainland yet?
+- I haven't seen too many people make it out better than before they went in...but maybe you'll be different.
+- Money's no issue for me anymore. But I get the appeal.
 
-**Gives it:** I am thinking of one fish. I will not tell you its name, only what it is like. Bring it up.
+**Gives it:** This next job's a bit trickier...I need a fish here in the Shallows...I forgot what it's called. All I know is that it "can live over 40 years and remember the location of its food sources." Maybe you've already caught one? Guess you gotta check your log.
 
-**Not yet:** Not that one. Think about what I said.
+**Not yet:** Nah not that one. Try again.
 
-**Done:** That is the one. You knew it from a few words, which means you have been paying attention.
+**Done:** That's it! The Common Carp. Did it feel common?
 
 ### Job 5: Land 2 uncommon or better in the Shallows  `q21`
 
