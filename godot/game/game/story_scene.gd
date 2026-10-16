@@ -495,6 +495,11 @@ func _set_backdrop(path: String, now: bool) -> void:
 			_back.modulate.a = 0.0
 		return
 	_back_path = path
+	# The port's widescreen painting of the same place, where there is one
+	# (port_art/scenes/w-*.jpg; the web's are tall and showed only a band).
+	var wide: String = path.get_base_dir() + "/w-" + path.get_file()
+	if ResourceLoader.exists("res://art" + wide):
+		path = wide
 	var tex: Texture2D = Skipper.tex(path.trim_prefix("/"))
 	if now:
 		_back.texture = tex
