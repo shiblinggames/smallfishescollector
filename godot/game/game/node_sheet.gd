@@ -61,10 +61,12 @@ func _play(intro: bool) -> void:
 	# THE REVEAL ON THE WATER (FinnReveal): played on the live sea, the
 	# stage following each line's cue.
 	var reveal: FinnReveal = null
-	if str(_n.get("cinema", "")) == "finn_reveal" and not intro:
+	var cinema: String = str(_n.get("cinema", ""))
+	if cinema in ["finn_reveal", "finn_quiet"] and not intro:
 		sc.stage_mode = true
 		reveal = FinnReveal.new()
 		reveal.sea = sea
+		reveal.kind = "quiet" if cinema == "finn_quiet" else "reveal"
 		sea._world.add_child(reveal)
 		# Before the scene is added: its first line comes up as it is.
 		sc.line_shown.connect(func(i: int, l: Dictionary) -> void:

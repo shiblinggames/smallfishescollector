@@ -4,13 +4,16 @@ extends SceneTree
 ## the sea, reads every line at a reading pace (answering the choice), and
 ## saves a picture a little after each cue's line comes up. Needs a window.
 ##
-##   godot --path godot/game -s tests/reveal_film.gd -- <out folder>
+##   godot --path godot/game -s tests/reveal_film.gd -- <out folder> [node]
+## node: the_hand_that_sharpens (the reveal, the default) or the_long_quiet.
 
 const READ_S: float = 2.2
 
 
 func _init() -> void:
-	var out: String = OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else "user://reveal_film"
+	var args: PackedStringArray = OS.get_cmdline_user_args()
+	var out: String = args[0] if args.size() > 0 else "user://reveal_film"
+	var nid: String = args[1] if args.size() > 1 else "the_hand_that_sharpens"
 	DirAccess.make_dir_recursive_absolute(out)
 	Captains.dir_override = "user://reveal_captains"
 	DirAccess.make_dir_recursive_absolute(Captains.dir_override)
@@ -27,7 +30,7 @@ func _init() -> void:
 	p["expedition_xp"] = 9.0e7
 	var cleared: Array = []
 	for n: Dictionary in Rules.data()["campaign"]["nodes"]:
-		if n["id"] == "the_hand_that_sharpens":
+		if n["id"] == nid:
 			break
 		cleared.append(n["id"])
 	p["raid_node_progress"] = { "cleared": cleared }
@@ -35,13 +38,13 @@ func _init() -> void:
 	for f: int in 30:
 		await process_frame
 	# Where a captain is when it opens: at its mark on the northern water.
-	var at: Variant = sea._campaign.node_at("the_hand_that_sharpens")
+	var at: Variant = sea._campaign.node_at(nid)
 	if at is Vector2:
 		sea._boat.position = (at as Vector2) + Vector2(-320, 220)
 		sea._boat.velocity = Vector2.ZERO
 	for f: int in 90:
 		await process_frame
-	sea.open_node("the_hand_that_sharpens")
+	sea.open_node(nid)
 	var sc: StoryScene = null
 	for f: int in 60:
 		await process_frame

@@ -27,6 +27,19 @@ extends Node2D
 ##   pull      the camera draws back: how small you are beside him
 ##   recede    the water pulls back from him in rings
 ##   title     ONE LAST RIDE, set the way the title screen sets the game's name
+## THE LONG QUIET (kind "quiet", the same stage; Kong: "match it to the
+## cinematic style of the finn node") opens where the fight left him, his
+## true shape lit on black glass water, and runs the reveal backwards:
+##   fading      the light in him going out
+##   release     the six pour back out of him, circle once, and sink home one
+##               at a time, a rising note each
+##   dissolve    what is left of him goes up, grey, and the wind takes it
+##   boat_ghost  the little boat on the water, grey, and him in it
+##   fade        thinner; gone: the boat goes under, the sea closes over it
+##   dawn        the morning comes back across the sea, the swell with it, the
+##               music back
+##   treasure    the Finndicate's hoard going out across the water in gold
+##   epilogue    EPILOGUE, the camera drawn wide
 ## Effects are particles and drawn shapes (FxSheet's rule); the giants and his
 ## final shape are their own paintings, as set pieces on the water.
 ## Lives in the sea's World (squashed by Chart.GROUND); finish() puts the sea back.
@@ -37,8 +50,13 @@ const FINN_AT: Vector2 = Vector2(380.0, -40.0)
 const GHOST: Color = Color(0.72, 0.9, 1.0)
 const DRAINED: Color = Color(0.5, 0.52, 0.56)
 const GOLD: Color = Color(1.0, 0.8, 0.35)
+## The morning after: soft blue water and a warm low light (over the bay's own).
+const DAWN_THEME: Dictionary = { "sea": [Color8(24, 58, 80), Color8(52, 104, 126), Color8(120, 168, 172)], "light": Color(1.0, 0.9, 0.76), "dim": 0.0 }
+const NIGHT_THEME: Dictionary = { "sea": [Color8(10, 8, 22), Color8(26, 18, 44), Color8(52, 36, 78)], "light": Color(0.55, 0.48, 0.72), "dim": 0.2 }
 
 var sea: Sea
+## "reveal" (The Finndicate Lives On) or "quiet" (The Long Quiet).
+var kind: String = "reveal"
 ## The plate's screen-space layers: under the busts (the dark, the flash)
 ## and over them (the F, the title); StoryScene.under and .over.
 var under: Control
@@ -88,10 +106,16 @@ func _ready() -> void:
 	sea.cine_dark = float(SeaClock.at(Clock.now_ms())["darkness"])
 	sea.cine_clear = true
 	_frame(Vector2(FINN_AT.x * 0.5, FINN_AT.y * 0.5), 1.0)
+	if kind == "quiet":
+		_quiet_open()
 
 
 ## Line i's cue, if it has one (StoryScene.line_shown).
 func cue_line(_i: int, line: Dictionary) -> void:
+	# The Long Quiet opens in the dark: it covers the sea from the first line
+	# (the layer only exists once the scene is up).
+	if kind == "quiet" and _dark == null and under != null:
+		_spread_dark(true)
 	var c: String = str(line.get("cue", ""))
 	if c == "" or c in _done:
 		return
@@ -130,7 +154,27 @@ func cue_line(_i: int, line: Dictionary) -> void:
 		"recede":
 			_recede()
 		"title":
-			_title_in()
+			_title_in("ONE LAST RIDE")
+		"fading":
+			_fading()
+		"release":
+			_release()
+		"dissolve":
+			_dissolve()
+		"boat_ghost":
+			_boat_ghost()
+		"fade":
+			if _finn != null:
+				_finn.create_tween().tween_property(_finn, "modulate:a", 0.35, 1.6)
+		"gone":
+			_gone()
+		"dawn":
+			_dawn()
+		"treasure":
+			_treasure()
+		"epilogue":
+			_frame(Vector2(FINN_AT.x * 0.3, -120.0), 0.5)
+			_title_in("EPILOGUE")
 
 
 # ── The camera ──────────────────────────────────────────────────────────────
@@ -197,21 +241,7 @@ func _rise() -> void:
 	var ids: Array = _order()
 	Sound.shimmer()
 	for k: int in ids.size():
-		var sp: Dictionary = sea.session.store.species(float(ids[k]))
-		var g: Sprite2D = Sprite2D.new()
-		g.texture = Skipper.tex("fish/%s" % ResultCard.fish_art_path(str(sp.get("name", ""))).get_file())
-		var tex_w: float = float(g.texture.get_width()) if g.texture != null else 400.0
-		var w: float = 150.0
-		g.scale = Vector2(w / tex_w, w / tex_w / GROUND)
-		g.modulate = Color(GHOST, 0.0)
-		var m: CanvasItemMaterial = CanvasItemMaterial.new()
-		m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		g.material = m
-		g.position = _home + Vector2(randf_range(-20, 20), -10.0)
-		g.set_meta("lift", 0.0)
-		g.set_meta("drained", false)
-		add_child(g)
-		_ghosts.append(g)
+		var g: Sprite2D = _ghost(float(ids[k]), _home + Vector2(randf_range(-20, 20), -10.0))
 		# Up out of the hold, one after another, hanging over your deck.
 		var up: Vector2 = _home + Vector2(-120.0 + 48.0 * k, -150.0 - 18.0 * (k % 2))
 		var tw: Tween = g.create_tween().set_parallel()
@@ -311,9 +341,26 @@ func _go_dark() -> void:
 	# His true shape, where the little boat was.
 	if _finn != null:
 		_finn.visible = false
+	_true_shape()
+	_lamp.create_tween().tween_property(_lamp, "energy", 1.4, 1.6).set_delay(0.3)
+	var t2: Tween = _final.create_tween().set_parallel()
+	t2.tween_property(_final, "modulate", Color(1, 1, 1, 1), 1.2).set_delay(0.15)
+	t2.tween_property(_final, "position", _spot + Vector2(0, 0), 1.4)
+	# Back as he rises, to take in the size of him.
+	_frame(Vector2(FINN_AT.x * 0.7, FINN_AT.y * 0.7 - 160.0), 0.82)
+	sea._field.ring(_spot, 420.0, 3.0, 0.6)
+	_spread_dark()
+	create_tween().tween_property(sea, "cine_dark", 0.95, 3.6).set_delay(0.5)
+	sea.water_theme = NIGHT_THEME
+	await _wait(1.6)
+	Sound.music_track("night", 0.55)
+
+
+## His true shape on the water (unseen; the caller brings it in), lit by its
+## own light so the dark never takes him.
+func _true_shape() -> void:
 	_final = Sprite2D.new()
 	_final.texture = Skipper.tex("finn_final.png")
-	var tw0: float = float(_final.texture.get_width()) if _final.texture != null else 500.0
 	var h: float = 560.0
 	var s: float = h / (float(_final.texture.get_height()) if _final.texture != null else 600.0)
 	_final.scale = Vector2(s, s / GROUND)
@@ -329,14 +376,10 @@ func _go_dark() -> void:
 	_lamp.energy = 0.0
 	_lamp.position = _spot + Vector2(0, -300)
 	add_child(_lamp)
-	_lamp.create_tween().tween_property(_lamp, "energy", 1.4, 1.6).set_delay(0.3)
-	var t2: Tween = _final.create_tween().set_parallel()
-	t2.tween_property(_final, "modulate", Color(1, 1, 1, 1), 1.2).set_delay(0.15)
-	t2.tween_property(_final, "position", _spot + Vector2(0, 0), 1.4)
-	# Back as he rises, to take in the size of him.
-	_frame(Vector2(FINN_AT.x * 0.7, FINN_AT.y * 0.7 - 160.0), 0.82)
-	sea._field.ring(_spot, 420.0, 3.0, 0.6)
-	# The dark, out from him across the sea.
+
+
+## The dark, out from him across the sea (now: already everywhere).
+func _spread_dark(now: bool = false) -> void:
 	if under != null:
 		_dark = ColorRect.new()
 		_dark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -347,12 +390,11 @@ func _go_dark() -> void:
 		_dark.material = mat
 		under.add_child(_dark)
 		under.move_child(_dark, 0)
-		var dt: Tween = _dark.create_tween()
-		dt.tween_method(func(r: float) -> void: mat.set_shader_parameter("u_r", r), 0.0, 2.2, 3.4).set_delay(0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	create_tween().tween_property(sea, "cine_dark", 0.95, 3.6).set_delay(0.5)
-	sea.water_theme = { "sea": [Color8(10, 8, 22), Color8(26, 18, 44), Color8(52, 36, 78)], "light": Color(0.55, 0.48, 0.72), "dim": 0.2 }
-	await _wait(1.6)
-	Sound.music_track("night", 0.55)
+		if now:
+			mat.set_shader_parameter("u_r", 2.2)
+		else:
+			var dt: Tween = _dark.create_tween()
+			dt.tween_method(func(r: float) -> void: mat.set_shader_parameter("u_r", r), 0.0, 2.2, 3.4).set_delay(0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 
 func _recede() -> void:
@@ -361,11 +403,13 @@ func _recede() -> void:
 		await _wait(0.5)
 
 
-func _title_in() -> void:
+func _title_in(words: String) -> void:
 	if over == null:
 		return
+	if _title != null and is_instance_valid(_title):
+		_title.queue_free()
 	_title = Label.new()
-	_title.text = "ONE LAST RIDE"
+	_title.text = words
 	_title.add_theme_font_override("font", Kit.font("cinzel", 800))
 	_title.add_theme_font_size_override("font_size", 64)
 	_title.add_theme_color_override("font_color", BattleLook.CREAM)
@@ -594,3 +638,141 @@ class InkWord:
 				draw_string(f, Vector2(x + 3, c.y + 4 - (1.0 - u) * 14.0), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.5 * u))
 				draw_string(f, Vector2(x, c.y - (1.0 - u) * 14.0), ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(col, col.a * u))
 			x += f.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+
+
+## A giant as a pale ghost on the water (added, unseen).
+func _ghost(id: float, at: Vector2) -> Sprite2D:
+	var sp: Dictionary = sea.session.store.species(id)
+	var g: Sprite2D = Sprite2D.new()
+	g.texture = Skipper.tex("fish/%s" % ResultCard.fish_art_path(str(sp.get("name", ""))).get_file())
+	var tex_w: float = float(g.texture.get_width()) if g.texture != null else 400.0
+	var w: float = 150.0
+	g.scale = Vector2(w / tex_w, w / tex_w / GROUND)
+	g.modulate = Color(GHOST, 0.0)
+	var m: CanvasItemMaterial = CanvasItemMaterial.new()
+	m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	g.material = m
+	g.position = at
+	add_child(g)
+	_ghosts.append(g)
+	return g
+
+
+# ── The Long Quiet ─────────────────────────────────────────────────────────
+
+## Where the fight left him: his true shape, lit, on black glass water.
+func _quiet_open() -> void:
+	sea.cine_dark = 0.95
+	sea.cine_swell = 0.04
+	sea.water_theme = NIGHT_THEME
+	_true_shape()
+	_final.modulate = Color(1, 1, 1, 0.0)
+	_final.create_tween().tween_property(_final, "modulate:a", 1.0, 1.4)
+	_lamp.energy = 1.2
+	Sound.music_track("night", 0.3)
+	_frame(Vector2(FINN_AT.x * 0.7, FINN_AT.y * 0.7 - 160.0), 0.82)
+
+
+func _fading() -> void:
+	if _final == null:
+		return
+	var tw: Tween = _final.create_tween().set_parallel()
+	tw.tween_property(_final, "modulate", Color(0.7, 0.66, 0.8, 1.0), 2.0)
+	tw.tween_property(_lamp, "energy", 0.5, 2.0)
+	for k: int in 3:
+		fx.rise(_spot + Vector2(randf_range(-60, 60), -120.0 - 80.0 * k), Color(0.8, 0.7, 1.0), 5)
+
+
+## The six pour back out of him, circle once, and sink home one at a time.
+func _release() -> void:
+	var ids: Array = _order()
+	for k: int in ids.size():
+		var g: Sprite2D = _ghost(float(ids[k]), _spot + Vector2(0, -160))
+		g.modulate = Color(DRAINED, 0.0)
+		g.create_tween().tween_property(g, "modulate", Color(GHOST, 0.85), 1.2).set_delay(0.2 * k)
+		g.set_meta("glide", 0.0)
+		g.create_tween().tween_method(func(u: float) -> void: g.set_meta("glide", u), 0.0, 1.0, 1.6).set_delay(0.2 * k).set_trans(Tween.TRANS_SINE)
+		fx.motes(_spot + Vector2(0, -60), _spot + Vector2(cos(TAU * k / 6.0) * 220.0, sin(TAU * k / 6.0) * 120.0), GHOST, 8, "spark")
+	_ring_r = 260.0
+	_ring_on = true
+	Sound.shimmer()
+	await _wait(3.4)
+	# Home: down into the water, one after another.
+	for k: int in _ghosts.size():
+		var g: Sprite2D = _ghosts[k]
+		if not is_instance_valid(g):
+			continue
+		var tw: Tween = g.create_tween().set_parallel()
+		tw.tween_property(g, "modulate:a", 0.0, 1.1)
+		tw.tween_property(g, "scale", g.scale * Vector2(1.0, 0.4), 1.1)
+		sea._field.ring(g.position, 90.0, 2.2, 0.35)
+		Sound.drain_note(5 - k)
+		await _wait(0.55)
+
+
+func _dissolve() -> void:
+	if _final == null:
+		return
+	var tw: Tween = _final.create_tween().set_parallel()
+	tw.tween_property(_final, "modulate", Color(0.6, 0.6, 0.64, 0.0), 2.6)
+	tw.tween_property(_final, "position", _spot + Vector2(40, -90), 2.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.tween_property(_lamp, "energy", 0.0, 2.0)
+	# The night lifts a little with him gone: enough to see what is left.
+	create_tween().tween_property(sea, "cine_dark", 0.6, 3.0)
+	Sound.whoosh()
+	for k: int in 6:
+		fx.rise(_spot + Vector2(randf_range(-80, 80), -60.0 - 70.0 * k), Color(0.75, 0.75, 0.78), 6)
+		await _wait(0.3)
+
+
+func _boat_ghost() -> void:
+	_finn = RevealHull.new()
+	_finn.spot = _spot
+	_finn.facing = 1.0 if FINN_AT.x > 0.0 else -1.0
+	_finn.modulate = Color(0.86, 0.88, 0.95, 0.0)
+	add_child(_finn)
+	_finn.create_tween().tween_property(_finn, "modulate:a", 0.85, 1.8)
+	# A pale light of his own, the last of it.
+	var l: PointLight2D = PointLight2D.new()
+	l.texture = Glow.radial(256, Color(0.8, 0.85, 1.0), true)
+	l.texture_scale = 2.6
+	l.color = Color(0.8, 0.86, 1.0)
+	l.energy = 0.0
+	l.position = Vector2(0, -60)
+	_finn.add_child(l)
+	l.create_tween().tween_property(l, "energy", 1.1, 1.8)
+	_frame(Vector2(FINN_AT.x * 0.75, FINN_AT.y * 0.75), 1.4)
+
+
+func _gone() -> void:
+	if _finn == null:
+		return
+	_finn.set_process(false)
+	var tw: Tween = _finn.create_tween().set_parallel()
+	tw.tween_property(_finn, "modulate:a", 0.0, 1.8)
+	tw.tween_property(_finn, "position:y", _spot.y + 26.0, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	sea._field.ring(_spot, 160.0, 3.0, 0.5)
+	Sound.knock()
+
+
+## The morning comes back across the sea.
+func _dawn() -> void:
+	sea.water_theme = DAWN_THEME
+	var tw: Tween = create_tween().set_parallel()
+	tw.tween_property(sea, "cine_dark", 0.0, 6.0).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(sea, "cine_swell", 1.0, 7.0).set_trans(Tween.TRANS_SINE)
+	if _dark != null and is_instance_valid(_dark):
+		var mat: ShaderMaterial = _dark.material
+		tw.tween_method(func(r: float) -> void: mat.set_shader_parameter("u_r", r), 2.2, 0.0, 5.0).set_trans(Tween.TRANS_SINE)
+	Sound.music_track("dawn", 0.7)
+	_frame(Vector2(FINN_AT.x * 0.4, FINN_AT.y * 0.4), 1.0)
+
+
+## The Finndicate's hoard, going back out across the water in gold.
+func _treasure() -> void:
+	Sound.chest(true)
+	for k: int in 8:
+		var a: float = TAU * k / 8.0
+		var far: Vector2 = _home + Vector2(cos(a) * 900.0, sin(a) * 500.0)
+		fx.motes(_home, far, GOLD, 6, "spark")
+		await _wait(0.18)

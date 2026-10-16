@@ -2161,6 +2161,16 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   shimmer, the drain notes and the boom in code. tests/reveal_film.gd plays it through at a
   reading pace and saves a picture at each cue. The scene player now also changes a
   speaker's portrait mid-scene (Finn after he changes).
+  THE LONG QUIET PLAYS ON THE SEA TOO (Kong, 2026-10-16: "match it to the cinematic style
+  of the finn node"; his 41 lines and an epilogue): campaignText cinema "finn_quiet", the
+  same FinnReveal stage with kind "quiet", running the reveal backwards: it opens in the
+  dark, his true shape lit on glass water; the light going out of him; the six pouring back
+  out, circling once and sinking home one at a time, a rising note each; what is left of
+  him going up grey on the wind; the little grey boat with its own pale light, fading, then
+  going under; the morning coming back (DAWN_THEME over the bay's own colour, the swell and
+  the music with it); the Finndicate's hoard going out across the water in gold; EPILOGUE
+  with the camera drawn wide. Finn's fight is One Last Ride (no pre-fight: the reveal is its
+  setup), and Spoils of the Hand is What Finn Left (his own gear, a farming drop).
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works
