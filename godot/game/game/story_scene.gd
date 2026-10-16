@@ -19,6 +19,14 @@ signal finished(read: bool)
 ## Each line as it comes up (a cinematic on the water starts its moment on
 ## the line's `cue`; see FinnReveal).
 signal line_shown(i: int, line: Dictionary)
+## READ TOGETHER (a co-op raid's boss words, RaidTable scene): a press asks to
+## move on (pressed) and Esc votes to skip (skip_voted); the line moves when
+## the table says (follow), and `marks` shows who is ready.
+signal pressed(i: int)
+signal skip_voted
+var together: bool = false
+var _marks: HBoxContainer
+var _asked: int = -1
 
 const GOLD: Color = Color(1.0, 0.82, 0.38)
 
@@ -237,13 +245,24 @@ void fragment() {
 	_cta = Kit.button(cta, "primary", "large", _accent)
 	_plate.add_child(_cta)
 	_cta.visible = false
-	_cta.pressed.connect(func() -> void: _end(true))
+	_cta.pressed.connect(func() -> void:
+		if together:
+			_press()
+		else:
+			_end(true))
 	_skip = Button.new()
 	_skip.text = "Skip  Esc"
 	_skip.flat = true
 	_skip.add_theme_color_override("font_color", Color(0.9, 0.86, 0.78, 0.6))
-	_skip.visible = allow_skip
-	_skip.pressed.connect(func() -> void: _end(false))
+	_skip.visible = allow_skip or together
+	if together:
+		_skip.text = "Vote to skip  Esc"
+	_skip.pressed.connect(func() -> void:
+		if together:
+			_skip.text = "Voted to skip"
+			skip_voted.emit()
+		else:
+			_end(false))
 	add_child(_skip)
 	# THE HISTORY (H): every line read so far, to look back over.
 	_log_btn = Button.new()
@@ -454,6 +473,16 @@ func _press() -> void:
 	if _log != null:
 		_toggle_log()
 		return
+	if together:
+		if _typing:
+			_wait = 0.0
+			_line_done()
+		elif _asked != _i:
+			_asked = _i
+			Sound.plip()
+			_hint.text = "Waiting on the crew"
+			pressed.emit(_i)
+		return
 	if _typing:
 		_wait = 0.0
 		_line_done()
@@ -485,6 +514,8 @@ func _unhandled_input(e: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		if _log != null:
 			_toggle_log()
+		elif together:
+			_press()
 		elif not _typing and _i >= _lines.size() - 1:
 			_end(true)
 		else:
@@ -492,6 +523,10 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif k == KEY_ESCAPE and _log != null:
 		get_viewport().set_input_as_handled()
 		_toggle_log()
+	elif k == KEY_ESCAPE and together:
+		get_viewport().set_input_as_handled()
+		_skip.text = "Voted to skip"
+		skip_voted.emit()
 	elif k == KEY_ESCAPE and allow_skip:
 		get_viewport().set_input_as_handled()
 		_end(false)
@@ -850,3 +885,33 @@ void fragment() {
 		for mo: Array in _motes:
 			var a: float = float(mo[4]) * (0.6 + 0.4 * sin(_t * 1.3 + float(mo[5])))
 			draw_circle(Vector2(float(mo[0]) * size.x, float(mo[1]) * size.y), float(mo[3]), Color(1.0, 0.95, 0.85, a))
+
+
+## READ TOGETHER: show the line the crew is on (n), or end once they are past
+## the last; `who` is [[avatar texture, ready], ...] for the marks.
+func follow(n: int, who: Array) -> void:
+	if _gone:
+		return
+	if n >= _lines.size():
+		_end(true)
+		return
+	while _i < n:
+		_next()
+	if _marks == null:
+		_marks = HBoxContainer.new()
+		_marks.add_theme_constant_override("separation", 6)
+		_marks.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_plate.add_child(_marks)
+	for c: Node in _marks.get_children():
+		c.queue_free()
+	for w: Array in who:
+		var t: TextureRect = TextureRect.new()
+		t.texture = w[0]
+		t.custom_minimum_size = Vector2(38, 38)
+		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		t.modulate = Color(1, 1, 1, 1) if w[1] else Color(0.55, 0.55, 0.6, 0.55)
+		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_marks.add_child(t)
+	# Beside the "waiting" line, in from the right, clear of the busts.
+	_marks.position = Vector2(_hint.position.x - 44.0 * who.size() - 12.0, _hint.position.y - 12.0)

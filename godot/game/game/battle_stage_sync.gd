@@ -175,6 +175,7 @@ static func _notes(bs: BattleStage, st: Dictionary) -> void:
 ## Every state the table sends: each phase is handled once, in order.
 static func _pump(bs: BattleStage, st: Dictionary) -> void:
 	bs._latest = st
+	bs._scene_follow(st)
 	if not bs._gone:
 		_notes(bs, st)
 	var wt: String = "%s:%s:%s" % [st.get("phase", ""), str(st.get("seq", "")), str(Js.obj(st.get("draft")).get("turn", ""))]

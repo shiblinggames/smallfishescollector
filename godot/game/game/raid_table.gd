@@ -112,6 +112,12 @@ func handle(key: String, s: Session, args: Array) -> Dictionary:
 			return _out(key)
 		"reading":
 			return _reading(key, payload == true)
+		"scene_open":
+			return _scene_open(int(Js.num(payload)))
+		"scene_press":
+			return _scene_press(key, int(Js.num(payload)))
+		"scene_skip":
+			return _scene_skip(key)
 		"seen":
 			return _seen(key)
 	return { "error": "There is no such order." }
@@ -133,6 +139,81 @@ func _reading(key: String, yes: bool) -> Dictionary:
 		_r["reading"].erase(key)
 	_push()
 	return { "ok": true }
+
+
+## THE BOSS'S WORDS, READ TOGETHER (Kong, 2026-10-16: "do all parties watch
+## the same scene together?" and the recommendation taken): one shared line
+## for the whole line of captains. A line moves on once every captain in the
+## fight has pressed, or SCENE_WAIT seconds after the first press, so nobody
+## holds the crew; Esc is a vote to skip, and it skips once everyone votes.
+## state.scene: { fight, n (the line shown), of (lines), ready {}, skip {},
+## wait (seconds left after a first press, -1 none) }.
+const SCENE_WAIT: float = 8.0
+
+
+func _scene_open(of: int) -> Dictionary:
+	var f: int = int(Js.num(Js.obj(_r.get("b")).get("fight")))
+	var sc: Dictionary = Js.obj(_r.get("scene"))
+	if not sc.is_empty() and int(Js.num(sc.get("fight"))) == f:
+		return { "ok": true }
+	_r["scene"] = { "fight": f, "n": 0, "of": of, "ready": {}, "skip": {}, "wait": -1.0 }
+	_push()
+	return { "ok": true }
+
+
+## The captains a shared line waits on: in the fight and not dropped away.
+func _scene_crew() -> Array:
+	var away: Dictionary = Js.obj(_r.get("dropped"))
+	var out: Array = []
+	for s: Dictionary in Js.list(Js.obj(_r.get("b")).get("seats")):
+		if not away.has(s.get("key")) and not s.get("fled", false):
+			out.append(str(s.get("key")))
+	return out
+
+
+func _scene_press(key: String, n: int) -> Dictionary:
+	var sc: Dictionary = Js.obj(_r.get("scene"))
+	if sc.is_empty() or n != int(sc["n"]) or int(sc["n"]) >= int(sc["of"]):
+		return { "ok": true }
+	sc["ready"][key] = true
+	if float(sc["wait"]) < 0.0:
+		sc["wait"] = SCENE_WAIT
+	if _scene_crew().all(func(k: String) -> bool: return sc["ready"].has(k)):
+		_scene_next()
+	_push()
+	return { "ok": true }
+
+
+func _scene_skip(key: String) -> Dictionary:
+	var sc: Dictionary = Js.obj(_r.get("scene"))
+	if sc.is_empty():
+		return { "ok": true }
+	sc["skip"][key] = true
+	if _scene_crew().all(func(k: String) -> bool: return sc["skip"].has(k)):
+		sc["n"] = sc["of"]
+		sc["wait"] = -1.0
+	_push()
+	return { "ok": true }
+
+
+func _scene_next() -> void:
+	var sc: Dictionary = _r["scene"]
+	sc["n"] = int(sc["n"]) + 1
+	sc["ready"] = {}
+	sc["wait"] = -1.0
+
+
+func _process(delta: float) -> void:
+	super(delta)
+	if not hosting():
+		return
+	var sc: Dictionary = Js.obj(_r.get("scene"))
+	if sc.is_empty() or float(sc.get("wait", -1.0)) < 0.0:
+		return
+	sc["wait"] = float(sc["wait"]) - delta
+	if float(sc["wait"]) <= 0.0:
+		_scene_next()
+		_push()
 
 
 ## May this captain take on that raid? Their own map must have reached it.

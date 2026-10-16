@@ -2225,6 +2225,14 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   gave his gear away; he never sold it or ran a market), What Finn Left's card (no wreck),
   One Last Ride's challenge (he is gone; five phases), Pete's challenge (six battles, not
   "the same six"), Sal's Last Wall line.
+- THE BOSS'S WORDS, READ TOGETHER (Kong, 2026-10-16: "do all parties watch the same scene
+  together?", taking the recommendation): in a co-op raid the pre-boss scene is one shared
+  line for the whole crew (RaidTable state.scene, run on the founder's game). A line moves on
+  once every captain in the fight has pressed, or SCENE_WAIT (8s) after the first press so
+  nobody holds the crew; each captain's avatar lights on the plate once they have pressed
+  ("Waiting on the crew"); Esc or "Vote to skip" is a vote, and it skips once everyone has
+  voted (no captain skips past a crewmate's first read). StoryScene.together/follow;
+  BattleStage._scene_follow; tests in raid_table_check. Solo, the scene is as before.
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works

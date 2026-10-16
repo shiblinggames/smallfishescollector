@@ -108,6 +108,25 @@ func _init() -> void:
 	check(t.state["phase"] == "muster" and not Js.obj(t.state.get("count")).is_empty(), "a second in, still counting")
 	t._process(RaidTable.COUNT)
 	check(t.state["phase"] == "playing" and (t.state["b"]["seats"] as Array).size() == 2 and not t.state.has("count"), "the line forms with two ships when it runs out")
+	# THE BOSS'S WORDS READ TOGETHER (2026-10-16): one shared line; it moves
+	# when both have pressed, or SCENE_WAIT after the first press; Esc is a
+	# vote, and it skips once both vote.
+	await c.run(a, "raidTable", ["scene_open", 3])
+	check(Js.num(Js.obj(t.state.get("scene")).get("n")) == 0.0, "the shared scene opens on its first line")
+	await c.run(a, "raidTable", ["scene_press", 0])
+	check(Js.num(Js.obj(t.state.get("scene")).get("n")) == 0.0 and Js.obj(Js.obj(t.state.get("scene")).get("ready")).has("anna-key"), "one press marks Anna ready and waits for Ben")
+	await c.run(b, "raidTable", ["scene_press", 0])
+	check(Js.num(Js.obj(t.state.get("scene")).get("n")) == 1.0, "both pressed: the next line, for everyone")
+	await c.run(a, "raidTable", ["scene_press", 1])
+	t._r["scene"]["wait"] = 0.01
+	t._process(0.02)
+	check(Js.num(Js.obj(t.state.get("scene")).get("n")) == 2.0, "nobody holds the crew: the line moves on after the wait")
+	await c.run(b, "raidTable", ["scene_open", 3])
+	check(Js.num(Js.obj(t.state.get("scene")).get("n")) == 2.0, "opening it again does not start it over")
+	await c.run(a, "raidTable", ["scene_skip", true])
+	check(Js.num(Js.obj(t.state.get("scene")).get("n")) == 2.0, "one vote does not skip")
+	await c.run(b, "raidTable", ["scene_skip", true])
+	check(Js.num(Js.obj(t.state.get("scene")).get("n")) == 3.0, "both vote: the scene is skipped for everyone")
 	# The rest of the checks sail at once.
 	t.count_secs = 0.0
 

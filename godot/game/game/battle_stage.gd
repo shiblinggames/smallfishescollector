@@ -121,6 +121,8 @@ var _gone: bool = false
 var _spoke: bool = false
 ## The boss's name card has been shown (once a fight).
 var _carded: bool = false
+## The boss's words while they are read together (StoryScene.together).
+var _scene_sc: StoryScene = null
 var _plan_until: float = 0.0
 ## The plan's whole wait when it began (for the draining line).
 var _plan_len: float = 0.0
@@ -968,7 +970,17 @@ func _pre_fight_words() -> void:
 	sc.over_water = true
 	sc.allow_skip = sea.session.store.clear_count(sea.session.uid, raid_id) > 0
 	sc.cta = "To the guns"
+	# Together: one shared line for the whole crew (RaidTable scene).
+	if table != null:
+		sc.together = true
+		sc.allow_skip = false
+		sc.pressed.connect(func(i: int) -> void: BattleStageSync._act(self, ["scene_press", i]))
+		sc.skip_voted.connect(func() -> void: BattleStageSync._act(self, ["scene_skip", true]))
+		_scene_sc = sc
 	add_child(sc)
+	if table != null:
+		BattleStageSync._act(self, ["scene_open", scene.size()])
+		_scene_follow(_latest)
 	# Together: the others see "Ben is reading", not "choosing", until it closes.
 	if table != null:
 		BattleStageSync._act(self, ["reading", true])
@@ -976,6 +988,7 @@ func _pre_fight_words() -> void:
 		await _wait(0.5)
 		sc._end(true)
 	await sc.finished
+	_scene_sc = null
 	if table != null and is_inside_tree():
 		BattleStageSync._act(self, ["reading", false])
 
@@ -1193,3 +1206,21 @@ func _stamp(tier: String, first: bool, line: String = "") -> void:
 
 func _water_theme(dn: Dictionary) -> Dictionary:
 	return BattleStageDive._water_theme(self, dn)
+
+
+## The crew's shared line (RaidTable scene) on this screen: the line they are
+## on, and each captain's avatar lit once they have pressed.
+func _scene_follow(st: Dictionary) -> void:
+	if _scene_sc == null or not is_instance_valid(_scene_sc):
+		return
+	var sc: Dictionary = Js.obj(st.get("scene"))
+	if sc.is_empty() or int(Js.num(sc.get("fight"))) != int(Js.num(b.get("fight"))):
+		return
+	var away: Dictionary = Js.obj(st.get("dropped"))
+	var who: Array = []
+	for i: int in (b["seats"] as Array).size():
+		var s: Dictionary = b["seats"][i]
+		if away.has(s.get("key")) or s.get("fled", false):
+			continue
+		who.append([_face(i), Js.obj(sc.get("ready")).has(s.get("key"))])
+	_scene_sc.follow(int(Js.num(sc.get("n"))), who)
