@@ -55,7 +55,7 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 - I haven't seen too many people make it out better than before they went in...but maybe you'll be different.
 - Money's no issue for me anymore. But I get the appeal.
 
-**Gives it:** This next job's a bit trickier...I need a fish here in the Shallows...I forgot what it's called. All I know is that it "can live over 40 years and remember the location of its food sources." Maybe you've already caught one? Guess you gotta check your log.
+**Gives it:** This next job's a bit trickier...I need a fish here in the Shallows...I forgot what it's called. All I know is that it "can live over 40 years and remember the location of its food sources." Maybe you've caught one before? Check your log, then bring me a fresh one.
 
 **Not yet:** Nah not that one. Try again.
 
@@ -64,16 +64,16 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 ### Job 5: Land 2 uncommon or better in the Shallows  `q21`
 
 **First, the story** `e12`:
-- I've stood at the lip of that deep more nights than I would ever admit to you.  _(holds 300ms)_
-- Dropped a line straight down into the black. Every time, nothing. Like the water just hands it back up, polite as you please.
-- Some doors only open for the right grip.  _(holds 350ms)_
-- Mine has never once been it.
+- When I'm done with a long day of fishing, sometimes I'll go to the Parlor.
+- You get humbled there. So many things to know about the sea.
+- Even for someone as experienced as myself.
+- All this to say...there's so much more to explore out there. Be sure you're checking out everything on your map. We didn't get free maps back in the day.
 
-**Gives it:** Two that are not the usual. The shallow water has better in it than people think, they just stop looking.
+**Gives it:** Even the Shallows has some uncommon fish. Go and catch me two uncommon or rarer fish.
 
-**Not yet:** Uncommon or better. Look properly.
+**Not yet:** These don't fit the bill...try again, captain.
 
-**Done:** Two. You have started seeing what is actually down there rather than what you expected.
+**Done:** That's what I'm talking about. These will sell for a pretty penny...well for the Shallows at least.
 
 ### Job 6: Land 3 perfect catches in a row in the Shallows  `q22`
 
