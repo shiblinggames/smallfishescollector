@@ -288,6 +288,13 @@ static func seal(wax: bool) -> void:
 		return _render(v, 1.4), 1.3)
 
 
+## A PAGE (the Long Cast's paper, 2026-10-16): a soft brush of paper as a
+## sheet is laid down or a card unfolds; two breaths of hushed noise.
+static func page() -> void:
+	_play_made("page", func() -> AudioStreamWAV:
+		return _render([[0.0, 0.0, 0.045, 0.05, 0.22, "noise"], [0.0, 0.11, 0.03, 0.04, 0.26, "noise"], [190.0, 0.0, 0.02, 0.02, 0.12, "sine"]], 0.5), 0.7)
+
+
 ## A catch that counts toward Finn's job: a small pluck, a semitone higher
 ## for each step nearer done (step 0 to 12), so the last few climb.
 static func job_tick(step: int) -> void:

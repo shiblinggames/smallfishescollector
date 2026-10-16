@@ -4,6 +4,10 @@ extends "res://game/talk_modal.gd"
 ## story, Kong 2026-10-02: The Long Cast). His face, his words typed out a line
 ## at a time, and the job as a slip of paper (game/job_slip.gd).
 ##
+## The sea stays bright behind him, only out of focus; his painted face, his
+## voice under the words, the card unfolding like a note (2026-10-16: the
+## fishing story kept cosy and its own, never the expedition's dark stage).
+##
 ## Three ways in. Nothing open: he speaks (speakToFinn), and if that set you a
 ## job its slip slides up for you to take; taking it stamps it and it flies up
 ## to the story line under the level bar. A job open and not done: where you
@@ -37,7 +41,7 @@ var _then: Callable = Callable()
 
 func _ready() -> void:
 	_accent = GOLD
-	var center: CenterContainer = _build_shell()
+	var center: CenterContainer = _build_shell(true)
 	var outer: VBoxContainer = VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 16)
 	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -47,8 +51,9 @@ func _ready() -> void:
 	var done_n: float = float(Js.list(st.get("questsDone")).size())
 	var tier: int = Finn.standing_tier(Finn.standing(Js.num(st.get("encounters")), done_n))
 	_build_head(col, { "characterColor": fa["characterColor"], "hat": fa.get("equippedHat"), "bg": fa["bgColor"], "ring": fa["borderColor"], "mirrored": fa.get("mirrored", true) },
-		"The Angler  ·  %s" % str(Finn.d()["standingName"][tier]), "Finn")
+		"The Angler  ·  %s" % str(Finn.d()["standingName"][tier]), "Finn", Skipper.tex("finn_portrait.png"))
 	_build_say(col, 112)
+	_line.voice = "Finn"
 	_line.done.connect(_line_done)
 	_build_choices(col)
 
@@ -58,10 +63,20 @@ func _ready() -> void:
 	# Room kept for it, so the card does not jump when it comes and goes.
 	_slip_box.custom_minimum_size = Vector2(0, 190)
 	outer.add_child(_slip_box)
-	# The card was readied inside add_child (this is the scene's own _ready),
-	# so its ready signal has already gone: start the entrance here.
-	Kit.modal_in(_card)
+	# The card unfolds like a note handed across (laid out first, so it opens
+	# from its own top edge); then he speaks.
+	_card.modulate.a = 0.0
+	_unfold.call_deferred()
 	_open.call_deferred()
+
+
+func _unfold() -> void:
+	_card.pivot_offset = Vector2(_card.size.x / 2.0, 0.0)
+	_card.scale = Vector2(1.0, 0.86)
+	Sound.page()
+	var tw: Tween = _card.create_tween().set_parallel()
+	tw.tween_property(_card, "modulate:a", 1.0, 0.3)
+	tw.tween_property(_card, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
 func _open() -> void:
@@ -158,12 +173,13 @@ func _farewell() -> void:
 
 # ── The slip ───────────────────────────────────────────────────────────────────
 
-func _put_slip(job: Dictionary, have: float) -> JobSlip:
+func _put_slip(job: Dictionary, have: float, signing: bool = false) -> JobSlip:
 	if _slip != null:
 		_slip.queue_free()
 	_slip = JobSlip.new()
 	_slip.job = job
 	_slip.have = have
+	_slip.signing = signing
 	_slip_box.add_child(_slip)
 	_slip.modulate.a = 0.0
 	_slip.position.y += 40.0
@@ -181,7 +197,7 @@ func _offer(q: Dictionary) -> void:
 	var first: Array = Finn.chapter_quests(str(ch.get("id", "")))
 	if not first.is_empty() and (first[0] as Dictionary)["id"] == def.get("id"):
 		await _chapter(ch, false)
-	_put_slip(q, 0.0)
+	_put_slip(q, 0.0, true)
 	Sound.plip()
 	_clear_choices()
 	_choice("Take the job", "It goes up under your level bar", true, func() -> void:

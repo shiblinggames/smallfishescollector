@@ -2233,6 +2233,24 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   ("Waiting on the crew"); Esc or "Vote to skip" is a vote, and it skips once everyone has
   voted (no captain skips past a crewmate's first read). StoryScene.together/follow;
   BattleStage._scene_follow; tests in raid_table_check. Solo, the scene is as before.
+- THE LONG CAST GIVEN LIFE, KEPT ITS OWN (Kong, 2026-10-16: the two campaigns should feel
+  like two different games until the finale, so the fishing story stays sunny and cosy and
+  never borrows the expedition's dark stage, titles or letterbox). FINN'S TALKS: his painted
+  portrait (finn_portrait.png) in the head instead of the small avatar, his voice blipping
+  under his typed words (TypedLine.voice, the Character voices setting), the card unfolding
+  like a note handed across with a soft page sound, and the sea behind NOT dimmed but kept
+  bright and out of focus (game/fx/soft_sea.gdshader; talk_modal _build_shell(soft)).
+  THE CHAPTER CARD: a small ink-and-watercolour sketch of that chapter's water soaks into the
+  top of the parchment from its middle (port_art/longcast/<band>.jpg, multiplied onto the
+  paper, edges feathered: game/fx/wash_bloom.gdshader), the numeral is inked across left to
+  right (game/fx/ink_wipe.gdshader), the rule is a pen stroke drawn out, Sound.page as the
+  sheet lands; a lighter dim behind. THE ANCIENT DEEP'S FINN MOMENT: no more Finn floating
+  on a dark screen; he and the giant you landed sit side by side on a warm golden sea
+  (port_art/longcast/w-ancient-triumph.jpg), each with a soft light behind and a slow bob,
+  his words typed on a slip of paper across the foot with his voice. THE JOB SLIP: his
+  handwritten signature at the foot (port_art/longcast/finn_signature.png), the pen going
+  across it when a new job is offered. Art: Kie.ai, prompts long-cast-*.json,
+  ancient-triumph2.json and finn-signature.json in the nano-banana-2 skill.
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works

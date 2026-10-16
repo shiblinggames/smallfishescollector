@@ -12,6 +12,11 @@ const PUNCT_MS: float = 190.0
 const COMMA_MS: float = 80.0
 
 var typing: bool = false
+## Whose voice blips under the words as they type (Sound.voice), every third
+## letter and never on a space or a stop; "" types in silence. The story
+## voices setting turns it off, as in StoryScene.
+var voice: String = ""
+var _voice_v: int = 0
 var _at: PackedFloat32Array = PackedFloat32Array()
 var _t: float = 0.0
 
@@ -53,10 +58,23 @@ func _process(delta: float) -> void:
 		return
 	_t += delta * 1000.0
 	var n: int = visible_characters
+	var from: int = n
 	while n < _at.size() and _at[n] <= _t:
 		n += 1
+	if voice != "" and n > from:
+		_speak(from, n)
 	visible_characters = n
 	if n >= _at.size():
 		visible_characters = -1
 		typing = false
 		done.emit()
+
+
+func _speak(from: int, to: int) -> void:
+	var fire: bool = false
+	for k: int in range(from, to):
+		if k % 3 == 0 and text[k] != " " and not ".,!?".contains(text[k]):
+			fire = true
+	if fire and bool(GameSettings.value("story_voices")):
+		_voice_v = (_voice_v + 1 + randi() % 2) % 3
+		Sound.voice(voice, _voice_v)

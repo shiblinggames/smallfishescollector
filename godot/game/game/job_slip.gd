@@ -12,6 +12,9 @@ const SEAL: Color = Color(0.62, 0.13, 0.1)
 ## The job (a FinnQuestView, or a job def with no progress yet).
 var job: Dictionary = {}
 var have: float = 0.0
+## A job just set: his signature writes itself in at the foot as the slip
+## arrives (a job you already hold shows it signed).
+var signing: bool = false
 var _card: Pane
 var _stamp: Control
 var _bar: Control
@@ -68,14 +71,43 @@ func _ready() -> void:
 		_bar.draw_rect(Rect2(r.position, Vector2(r.size.x * _fill, r.size.y)), Color(0.72, 0.52, 0.1, 0.9))
 		_bar.draw_rect(r, Color(Paper.INK, 0.35), false, 1.0))
 	col.add_child(_bar)
-	var sig: Label = Kit.text(col, "Finn", "title", Color(0.16, 0.2, 0.32, 0.85))
-	sig.add_theme_font_override("font", Kit.italic())
-	sig.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_sign(col)
 	# The stamp, waiting off the paper until it is pressed.
 	_stamp = Control.new()
 	_stamp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stamp.visible = false
 	add_child(_stamp)
+
+
+## His name at the foot in his own hand (port_art/longcast/finn_signature.png,
+## 2026-10-16), the pen going across it when the job is new.
+func _sign(col: VBoxContainer) -> void:
+	var t: Texture2D = Skipper.tex("longcast/finn_signature.png")
+	if t == null:
+		var l: Label = Kit.text(col, "Finn", "title", Color(0.16, 0.2, 0.32, 0.85))
+		l.add_theme_font_override("font", Kit.italic())
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		return
+	var sig: TextureRect = TextureRect.new()
+	sig.texture = t
+	sig.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sig.stretch_mode = TextureRect.STRETCH_SCALE
+	var h: float = 50.0
+	sig.custom_minimum_size = Vector2(h * t.get_width() / float(t.get_height()), h)
+	sig.size_flags_horizontal = Control.SIZE_SHRINK_END
+	sig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sig.rotation = deg_to_rad(-3.0)
+	col.add_child(sig)
+	if not signing:
+		return
+	var m: ShaderMaterial = ShaderMaterial.new()
+	m.shader = load("res://game/fx/ink_wipe.gdshader")
+	m.set_shader_parameter("box", sig.custom_minimum_size)
+	m.set_shader_parameter("progress", 0.0)
+	sig.material = m
+	var tw: Tween = create_tween()
+	tw.tween_interval(0.45)
+	tw.tween_method(func(v: float) -> void: m.set_shader_parameter("progress", v), 0.0, 1.0, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 static func chapter_of(q: Dictionary) -> Dictionary:

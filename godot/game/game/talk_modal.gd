@@ -27,11 +27,18 @@ var _asked: Dictionary = {}
 
 ## The full-screen layer and its scrim (a tap on it goes to _tap_outside);
 ## the centring box the card goes in, at whatever depth the scene wants it.
-func _build_shell() -> CenterContainer:
+## soft: the sea is not dimmed but kept bright and out of focus behind
+## (game/fx/soft_sea.gdshader; Finn, 2026-10-16).
+func _build_shell(soft: bool = false) -> CenterContainer:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	theme = UiTheme.make()
 	var shade: ColorRect = Kit.scrim(self)
+	if soft:
+		var m: ShaderMaterial = ShaderMaterial.new()
+		m.shader = load("res://game/fx/soft_sea.gdshader")
+		shade.material = m
+		shade.color = Color.WHITE
 	shade.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			_tap_outside())
@@ -56,14 +63,25 @@ func _build_card(parent: Control, min_size: Vector2) -> VBoxContainer:
 
 ## Who: their face, the eyebrow over their name, and the close button. The
 ## eyebrow comes back (a regular's role is rewritten as the tier moves).
-func _build_head(col: VBoxContainer, face: Dictionary, eyebrow: String, title: String) -> Label:
+## portrait: a painting in place of the avatar, frameless (Finn in his boat).
+func _build_head(col: VBoxContainer, face: Dictionary, eyebrow: String, title: String, portrait: Texture2D = null) -> Label:
 	var head: HBoxContainer = HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	col.add_child(head)
-	var av: Avatar = Avatar.new()
-	av.face = face
-	av.px = 58.0
-	head.add_child(av)
+	if portrait != null:
+		var pic: TextureRect = TextureRect.new()
+		pic.texture = portrait
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.custom_minimum_size = Vector2(170, 117)
+		pic.flip_h = bool(face.get("mirrored", false))
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		head.add_child(pic)
+	else:
+		var av: Avatar = Avatar.new()
+		av.face = face
+		av.px = 58.0
+		head.add_child(av)
 	var who: VBoxContainer = VBoxContainer.new()
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	who.alignment = BoxContainer.ALIGNMENT_CENTER

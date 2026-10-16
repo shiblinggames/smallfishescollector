@@ -6,7 +6,8 @@ extends Control
 ##   slain     a giant's first landing: letterbox, rings, the giant rising, its
 ##             name and the count of the six ("The Apex Falls" for Megalodon,
 ##             "The Wall Is Complete" at six); closes itself after 2.9s (3.4s)
-##   finn      Finn's words for that giant, a line at a time
+##   finn      Finn's words for that giant, a line at a time, he and the giant
+##             side by side on a warm golden sea, his words on paper
 ##   rank_up   a released giant brought back on a perfect: its new rank and frame
 ##   capstone  all six mastered: the wall lights in gold, then the pet it pays
 
@@ -31,6 +32,9 @@ var _at: PackedFloat32Array = PackedFloat32Array()
 var _text: Label
 var _col: VBoxContainer
 var _closable: bool = false
+## What rides the swell in the Finn scene (a slow bob, each its own phase).
+var _bob: Array[TextureRect] = []
+var _voice_v: int = 0
 
 
 func _ready() -> void:
@@ -109,41 +113,94 @@ func _slain() -> void:
 # ── Finn ───────────────────────────────────────────────────────────────────────
 
 func _finn() -> void:
+	# A warm golden sea (port_art/longcast), Finn on the left facing the giant
+	# you landed on the right, each with a soft warm light behind, and his words
+	# typed on a slip of paper across the foot: the fishing story's own
+	# register, sunlit, never the expedition's dark stage (2026-10-16).
 	var bg: TextureRect = TextureRect.new()
-	bg.texture = Skipper.tex("scenes/last-fathom.jpg")
+	bg.texture = Skipper.tex("longcast/w-ancient-triumph.jpg")
+	if bg.texture == null:
+		bg.texture = Skipper.tex("scenes/last-fathom.jpg")
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	bg.modulate = Color(1.0, 1.0, 1.0)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
 	move_child(bg, 0)
-	# Finn, facing the captain (his avatar is mirrored on the web too).
-	var finn: TextureRect = TextureRect.new()
-	finn.texture = Skipper.tex("finn_portrait.png")
-	finn.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	finn.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	bg.modulate.a = 0.0
+	create_tween().tween_property(bg, "modulate:a", 1.0, 0.5)
+	Sound.page()
+	var finn: TextureRect = _figure(Skipper.tex("finn_portrait.png"), Rect2(size.x * 0.06, size.y * 0.24, size.x * 0.34, size.y * 0.43), -50.0, 0.25)
 	finn.flip_h = (Rules.data()["finnAvatar"] as Dictionary).get("mirrored", true)
-	finn.size = Vector2(440, 320)
-	finn.position = Vector2(size.x * 0.1, size.y * 0.5 - 200.0)
-	finn.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(finn)
+	_bob.append(finn)
+	var giant: Texture2D = Skipper.tex("fish/%s" % ResultCard.fish_art_path(str(data.get("name", ""))).get_file()) if data.has("name") else null
+	if giant != null:
+		_bob.append(_figure(giant, Rect2(size.x * 0.46, size.y * 0.08, size.x * 0.48, size.y * 0.54), 50.0, 0.45))
+	# The paper his words go on.
+	var slip: Control = Control.new()
+	slip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slip.size = Vector2(minf(980.0, size.x - 120.0), 196.0)
+	slip.position = Vector2((size.x - slip.size.x) / 2.0, size.y - slip.size.y - 44.0)
+	add_child(slip)
+	Paper.sheet(slip, 8.0, 0.8)
+	var m: MarginContainer = MarginContainer.new()
+	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side: String in ["left", "right"]:
+		m.add_theme_constant_override("margin_" + side, 34)
+	m.add_theme_constant_override("margin_top", 20)
+	m.add_theme_constant_override("margin_bottom", 16)
+	slip.add_child(m)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 6)
+	m.add_child(col)
 	var beat: Dictionary = data["beat"]
 	_lines = beat["lines"]
-	var accent: Color = Color(beat.get("accent", "#c8a060"))
-	_col.alignment = BoxContainer.ALIGNMENT_END
-	_col.offset_left = size.x * 0.42
-	_col.offset_right = -60
-	_col.offset_bottom = -90
-	var plate: Label = _label("FINN", 14, accent)
-	plate.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_text = _label("", 24, Color("#f2ecdd"), false, true)
-	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_text.size_flags_horizontal = Control.SIZE_FILL
-	_text.custom_minimum_size = Vector2(minf(640.0, size.x * 0.5), 0)
-	var hint: Label = _label("Press to continue", 12, Color(1, 1, 1, 0.45), false)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	Paper.text(col, "FINN", "eyebrow", Paper.RED)
+	_text = Paper.text(col, "", "body", Paper.INK, true)
+	_text.add_theme_font_override("font", Kit.italic())
+	_text.add_theme_font_size_override("font_size", 21)
+	_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var hint: Label = Paper.text(col, "Press to continue", "small", Paper.INK_FAINT)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var y0: float = slip.position.y
+	slip.position.y += 40.0
+	slip.modulate.a = 0.0
+	var tw: Tween = create_tween().set_parallel()
+	tw.tween_property(slip, "modulate:a", 1.0, 0.4).set_delay(0.6)
+	tw.tween_property(slip, "position:y", y0, 0.55).set_delay(0.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	_start_line(0)
+	# His first words wait for the paper.
+	_line_t = -1.0
+
+
+## Art set on the golden sea in `r`, a warm light behind it, arriving from
+## `dx` to the side after `delay`.
+func _figure(t: Texture2D, r: Rect2, dx: float, delay: float) -> TextureRect:
+	var glow: TextureRect = TextureRect.new()
+	glow.texture = Glow.radial(256, Color(1.0, 0.9, 0.62), true)
+	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glow.size = r.size * 1.3
+	glow.position = r.position - r.size * 0.15
+	glow.modulate.a = 0.0
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(glow)
+	var f: TextureRect = TextureRect.new()
+	f.texture = t
+	f.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	f.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	f.size = r.size
+	f.position = r.position + Vector2(dx, 0.0)
+	f.modulate.a = 0.0
+	f.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	f.set_meta("y", r.position.y)
+	add_child(f)
+	var tw: Tween = create_tween().set_parallel()
+	tw.tween_property(glow, "modulate:a", 0.55, 0.8).set_delay(delay)
+	tw.tween_property(f, "modulate:a", 1.0, 0.5).set_delay(delay)
+	tw.tween_property(f, "position:x", r.position.x, 0.7).set_delay(delay).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	return f
 
 
 ## Emphasis in the lines is *starred*; drawn plain, the stars dropped.
@@ -255,14 +312,24 @@ func _process(delta: float) -> void:
 		_line_t += delta
 		var line: String = _plain(String((_lines[_line_i] as Dictionary)["text"]))
 		var ms: float = (_line_t - Js.num((_lines[_line_i] as Dictionary).get("pause")) / 1000.0) * 1000.0
+		var from: int = _typed
 		while _typed < _at.size() and _at[_typed] <= ms:
 			_typed += 1
+		for k: int in range(from, _typed):
+			if k % 3 == 0 and line[k] != " " and not ".,!?".contains(line[k]) and bool(GameSettings.value("story_voices")):
+				_voice_v = (_voice_v + 1 + randi() % 2) % 3
+				Sound.voice("Finn", _voice_v)
+				break
 		_text.text = line.substr(0, _typed)
+	for i: int in _bob.size():
+		_bob[i].position.y = float(_bob[i].get_meta("y")) + sin(_t * (0.9 + 0.25 * i) + i * 1.7) * 5.0
 	queue_redraw()
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.01, 0.03, 0.92) if kind != "finn" else Color(0, 0, 0, 0.35))
+	if kind == "finn":
+		return
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.01, 0.03, 0.92))
 	if kind == "slain" or kind == "rank_up":
 		var bars: float = size.y * 0.13 * clampf(_t / 0.5, 0.0, 1.0)
 		draw_rect(Rect2(0, 0, size.x, bars), Color.BLACK)

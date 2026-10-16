@@ -632,7 +632,7 @@ func _ceremony(r: Dictionary) -> void:
 		scenes.append(["slain", { "id": fish["id"], "name": fish["name"], "count": count, "total": 6 }])
 		var beat: Variant = (Rules.data()["finnAncientBeats"] as Dictionary).get(Js.key(fish["id"]))
 		if beat != null:
-			scenes.append(["finn", { "beat": beat }])
+			scenes.append(["finn", { "beat": beat, "name": fish["name"] }])
 	if r.get("vigilRankUp") != null:
 		scenes.append(["rank_up", { "name": fish["name"], "from": (r["vigilRankUp"] as Dictionary)["from"], "to": (r["vigilRankUp"] as Dictionary)["to"] }])
 	if r.get("vigilPetGranted") == true:
