@@ -101,18 +101,18 @@ _Opens at Fishing 1. Somebody has started watching how you fish, and will not sa
 
 **Done:** Isn't it just the most beautiful time to reel these in? Great work.
 
-### Job 8: Land 30 fish in the Shallows  `q23`
+### Job 8: Land 25 fish in the Shallows  `q23`
 
 **First, the story** `e25`:
-- All six trophies. Landed by a single pair of hands.  _(holds 300ms)_
-- You've any notion what that's worth? What a thing like that would _open_?
-- ...course you don't. Keep fishing. You will.
+- You're starting to outgrow these waters...
+- Are you talking to the others out there as well?
+- I'm not about making friends...but I will say cozying up to certain individuals has its benefits.
 
-**Gives it:** Thirty. Any water, any fish. There is no trick to this one, I want the hours in your hands.
+**Gives it:** Your final task in the Shallows...catch me 25 fish. Should be easy peasy for you now.
 
-**Not yet:** Thirty. You are not close and that is fine.
+**Not yet:** That's not quite 25. Keep 'em coming.
 
-**Done:** Thirty. That is the part nobody puts in the stories and it is most of the work.
+**Done:** That's it. My my, how far you've come!
 
 ## Chapter II: Past the Shelf
 
