@@ -2281,6 +2281,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   beat by id (core/rules.gd _finn_text); docs/finn-script.md is the read-through
   (tools/finn_script.mjs). Job 4's riddle is the Common Carp (common, about one catch in seven;
   the Walleye was about one in fifty), its clue in his own words (clueInGive); Job 8 is 25 fish.
+- THE STORY WAITS FOR ITS JOB (Kong, 2026-10-16): when the next job is above her level, a
+  hand-in (or a hail) gives only that job's "gated" line and keeps the story beat back
+  (Finn._next_rung); the beat plays when the job can go with it, so a chapter's opening
+  speech lands when the water is really hers. Parity keeps the web's order.
 - CAPTAIN'S CHOICE, REWORKED INTO CLASSES (Kong, 2026-10-06: "really hone in on classes and
   special abilities vs ... boring damage and health multipliers"; every number his).
   core/captain_class.gd. Chapter I's choice is a CLASS: a passive and an ORDER. An order works

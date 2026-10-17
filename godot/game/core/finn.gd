@@ -378,6 +378,15 @@ static func state(db: CaptainStore, uid: String) -> Variant:
 ## One rung: the next unheard beat and the next unset job, together.
 static func _next_rung(db: CaptainStore, uid: String, row: Dictionary) -> Dictionary:
 	var seen: Array = Js.list(row.get("finn_seen_beats"))
+	# THE STORY WAITS FOR ITS JOB (Kong, 2026-10-16): when the next job is
+	# still above her level, he says only that (its "gated" line) and keeps
+	# the story back, so the beat and its job always arrive together and a
+	# chapter's opening speech lands when the water is really hers.
+	var done0: Array = Js.list(row.get("finn_quests_done"))
+	if not Rules.web_only and next_quest(done0, Rules.level_from_xp(Js.num(row.get("fishing_xp")))).is_empty():
+		var waiting: Dictionary = pending_quest(done0)
+		if not waiting.is_empty():
+			return { "lines": [waiting["gated"]] if str(waiting.get("gated", "")) != "" else [], "seen": seen, "quest": null }
 	var beat: Dictionary = next_beat(seen)
 	var lines: Array = []
 	if not beat.is_empty():

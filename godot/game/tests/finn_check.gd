@@ -47,6 +47,12 @@ func _init() -> void:
 	check(Finn.water_lock("open_waters", 40, []).contains("Finish The Hand on the Rod"), "and Finn's first chapter")
 	check(Finn.water_lock("open_waters", 15, ch1) == "", "both, and it is open")
 	check(Finn.water_lock("deep", 90, ch1).contains("Past the Shelf"), "the Deep waits on Chapter II")
+	# The story waits for its job: Chapter I done below Fishing 15, he says
+	# only the gated line and keeps the beat back.
+	var row: Dictionary = { "finn_quests_done": ch1, "fishing_xp": 0.0, "finn_seen_beats": [] }
+	var rung: Dictionary = Finn._next_rung(db, uid, row)
+	check(rung["quest"] == null and (rung["lines"] as Array).size() == 1 and str(rung["lines"][0]) == str(Finn.quest_by_id("q4")["gated"]), "below the level: only the gated line (%s)" % str(rung["lines"]))
+	check((rung["seen"] as Array).is_empty(), "and the story kept back")
 	# Work the whole ladder.
 	var prof: Dictionary = db.me(uid)
 	prof["fishing_xp"] = float(Rules.data()["xpTable"][98])
