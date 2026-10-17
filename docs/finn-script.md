@@ -121,17 +121,17 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 ### Job 9: Land 10 fish in Open Waters  `q4`
 
 **First, the story** `e30`:
-- Some waters take more than they ever give back.
-- The Ancient Deep takes _everything_. Everything but the worthy.  _(holds 350ms)_
-- So be worthy. And be quick about it. I've done enough waiting for one lifetime.
+- Ready for the next zone are we?
+- The Open Waters...home to more fish.
+- The deeper you go, the more difficult the catch. But you'll be racking up experience and doubloons faster too.
 
-**Gives it:** The Shallows have taught you everything they are going to. Take ten out of Open Waters and stop wading.
+**Gives it:** We're no longer in the Shallows, baby. Let's see you land 10 fish in the new Open Waters.
 
-**Not yet:** Open Waters. Past the shelf. You have not been out there enough.
+**Not yet:** Didn't see you catch 10 fish in the Open Waters yet. Come back when you have.
 
-**Done:** Ten, out where the bottom stops being a suggestion. Good.
+**Done:** How did that feel? Isn't it a great feeling getting out further into the sea?
 
-**Too soon** (this job is next, but your level is not there yet): Open Waters is the next thing and you are not rated for it yet. Go and get levelled.
+**Too soon** (this job is next, but your level is not there yet): Not ready for the Open Waters just yet, captain.
 
 ### Job 10: Land 5 perfect catches in a row in Open Waters  `q5`
 
