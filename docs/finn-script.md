@@ -133,17 +133,17 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Too soon** (this job is next, but your level is not there yet): Not ready for the Open Waters just yet, captain.
 
-### Job 10: Land 5 perfect catches in a row in Open Waters  `q5`
+### Job 10: Land 4 perfect catches in a row in Open Waters  `q5`
 
 **First, the story** `e32`:
-- Long enough at this trade, you quit hooking. You start _listening_.  _(holds 300ms)_
-- The water tells you what's coming up the line. Tells you exactly what it is, if you shut your mouth and let it.
+- Have you started filling in your log? I'd say it's worthwhile to try...
+- Make sure you're checking out the tackle shop for new rods. Each rod has its own unique effect. But the best rods...you'll have to discover those yourself.
 
-**Gives it:** Five in a row. Not five in a day, five without a single miss between them. That is a hand, not a habit.
+**Gives it:** Skill check! Let's see you catch 4 perfect catches in a row in the Open Waters.
 
-**Not yet:** In a ROW. One miss and you start again. That is what makes it worth asking for.
+**Not yet:** Didn't see the 4 catches in a row there yet, buddy. Let me know once you got it.
 
-**Done:** Five straight. I have watched a hundred anglers try that and I am not exaggerating the number.
+**Done:** Four straight perfects. That is something to celebrate!
 
 ### Job 11: Land 4 from a shoal in Open Waters  `p3` _(port)_
 
