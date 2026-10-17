@@ -161,15 +161,15 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 ### Job 12: Land 3 rare or better in Open Waters  `q6`
 
 **First, the story** `e37`:
-- There's a steadiness in you, under all that mess. That's the rare part.
-- That's the part I've been looking f...  _(holds 250ms)_
-- ...the part worth _beating_. Forget I said it. Cast.
+- Even out in the Open Waters, there's a lot to discover.
+- Have you gone north through the Anchorage yet?
+- Me? I prefer the quiet and calm in the southern seas. Fishing is more my cup of tea. Although, back in the day, I went on quite a few expeditions myself.
 
-**Gives it:** Three rare ones. The water decides who gets those, and I want to see whether it has decided about you.
+**Gives it:** Catch me three rare fish or better in the Open Waters.
 
-**Not yet:** Rare, I said. Common fish are just weather.
+**Not yet:** Not rare enough...come back when you've got them.
 
-**Done:** Three. The water is making up its mind about you, and I do not think it is going the way I expected.
+**Done:** Great catches! You're turning out to be quite the angler, if I do say so myself.
 
 ### Job 13: Land 10 perfect catches in Open Waters  `q24`
 
