@@ -145,7 +145,7 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Done:** Four straight perfects. That is something to celebrate!
 
-### Job 11: Land 4 from a shoal in Open Waters  `p3` _(port)_
+### Job 11: Land the fish he describes, in Open Waters  `p3` _(port)_
 
 **First, the story** `e35`:
 - Have you touched the Ancient Deep yet? Truly touched it. Not paddled the shallows of it.  _(holds 350ms)_
