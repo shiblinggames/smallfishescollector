@@ -148,15 +148,15 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 ### Job 11: Land the fish he describes, in Open Waters  `p3` _(port)_
 
 **First, the story** `e35`:
-- Have you touched the Ancient Deep yet? Truly touched it. Not paddled the shallows of it.  _(holds 350ms)_
-- ...no. You haven't.  _(holds 300ms)_
-- I'd know. I always know. Take the bet, then. Off with you.
+- These waters have a charm to them.
+- Although...the deeper you go, the longer you'll wait for your catch usually.
+- Better bait will always help with getting those fish to bite more easily though.
 
-**Gives it:** Out past the shelf the fish gather in shoals, and the gulls give them away. Find one and take four out of it.
+**Gives it:** I forget the name again...get me a fish in these Open Waters...ugh what are they called again...all I know is they can't stop swimming or they'll suffocate, since they breathe only by moving forward through the water.
 
-**Not yet:** A shoal, in Open Waters. Look for the birds.
+**Not yet:** Nope...not one of those...
 
-**Done:** Four out of a shoal. You watched the gulls. Good.
+**Done:** That's the one. The Atlantic Mackerel! You're sure good at following directions.
 
 ### Job 12: Land 3 rare or better in Open Waters  `q6`
 
