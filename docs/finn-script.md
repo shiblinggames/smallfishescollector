@@ -174,16 +174,16 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 ### Job 13: Land 10 perfect catches in Open Waters  `q24`
 
 **First, the story** `e39`:
-- You're the closest anyone has ever come. Closer than you would believe.
-- Pull up all six, and we'll both finally see what they're good for.
-- ..._we_.  _(holds 350ms)_
-- Slip of an old tongue. Cast your line.
+- Your shipyard gives you a ton of upgrades for your boats.
+- Make sure you upgrade often. Don't let your doubloon earnings go to waste.
+- I like a speedy boat. But having a big fish hold to catch more fish is always good too.
+- Trust me...there's some biiiig fish out there.
 
-**Gives it:** Ten clean. Not in a row, just ten. I want to see whether the good ones are becoming the normal ones.
+**Gives it:** Let's see if you can get 10 perfect catches in the Open Waters.
 
-**Not yet:** Ten perfect. Take as long as you like.
+**Not yet:** Not quite there yet. Come back when you've hit 10.
 
-**Done:** Ten. They are becoming the normal ones.
+**Done:** Perfects are becoming your new normal. Very nice!
 
 ### Job 14: Land 3 in Open Waters in a storm  `p4` _(port)_
 
