@@ -90,6 +90,18 @@ func _work(db: CaptainStore, uid: String, q: Dictionary, sea: Sea) -> void:
 			_land(db, uid, _other_species(db, q))
 			check(not Finn.state(db, uid)["quest"]["done"], "%s: the wrong fish does not count" % q["id"])
 			_land(db, uid, float(q["speciesId"]))
+		"catch_distinct":
+			var kinds: Array = []
+			for f: Dictionary in db.save["species"]:
+				if f["habitat"] == q["zone"] and kinds.size() < int(target):
+					kinds.append(float(f["id"]))
+			Finn.on_catch(db, uid, { "fish": { "habitat": q["zone"], "id": kinds[0] } })
+			Finn.on_catch(db, uid, { "fish": { "habitat": q["zone"], "id": kinds[0] } })
+			check(Finn.state(db, uid)["quest"]["have"] == 1.0, "%s: the same kind twice counts once" % q["id"])
+			Finn.on_catch(db, uid, { "fish": { "habitat": "shallows", "id": 1.0 } })
+			check(Finn.state(db, uid)["quest"]["have"] == 1.0, "%s: another water does not count" % q["id"])
+			for id: float in kinds:
+				Finn.on_catch(db, uid, { "fish": { "habitat": q["zone"], "id": id } })
 		"catch_condition", "catch_hotspot", "catch_trophy":
 			# A catch in the water, not under the condition: nothing. (At a
 			# moment the condition is not on: the weather follows the clock.)

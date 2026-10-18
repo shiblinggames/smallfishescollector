@@ -197,7 +197,7 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Done:** Now that's what I'm talking about.
 
-### Job 15: Land 25 fish in Open Waters  `q25`
+### Job 15: Land 5 different kinds of fish in Open Waters  `q25`
 
 **First, the story** `w3`:
 - Twice now. _Twice._  _(holds 350ms)_
@@ -209,7 +209,7 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Done:** Twenty five. You know that water now, which is different from having been there.
 
-### Job 16: Land 60 fish in Open Waters  `q26`
+### Job 16: Land a trophy-size fish in Open Waters  `q26`
 
 **First, the story** `w5`:
 - Five times. Maybe you're not completely useless after all.  _(holds 250ms)_

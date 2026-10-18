@@ -108,6 +108,17 @@ static func on_catch(db: CaptainStore, uid: String, out: Dictionary) -> void:
 		tally[k] = Js.num(tally.get(k)) + 1.0
 	if not keys.is_empty():
 		db.update_profile(uid, { "finn_tally": tally })
+	# DIFFERENT KINDS (Kong, 2026-10-18: variety, not volume): the kinds landed
+	# in the job's water since he asked, kept on the job itself.
+	var open: Variant = prof.get("finn_quest")
+	if open is Dictionary and fish.has("id"):
+		var oq: Dictionary = quest_by_id((open as Dictionary).get("id"))
+		if oq.get("type") == "catch_distinct" and str(oq.get("zone", "")) == zone:
+			var kinds: Array = Js.list((open as Dictionary).get("kinds"))
+			if not Js.includes(kinds, fish["id"]):
+				var o2: Dictionary = (open as Dictionary).duplicate()
+				o2["kinds"] = kinds + [float(fish["id"])]
+				db.update_profile(uid, { "finn_quest": o2 })
 
 
 static func chapters() -> Array:
@@ -333,6 +344,8 @@ static func progress(db: CaptainStore, uid: String, q: Dictionary, stored: Dicti
 			return 1.0 if q.get("ancientId") != null and Js.includes(wall, q["ancientId"]) else 0.0
 		"catch_species":
 			return _lifetime_of(db, float(q["speciesId"])) - Js.num(stored.get("spec0"))
+		"catch_distinct":
+			return float(Js.list(stored.get("kinds")).size())
 		"catch_condition", "catch_hotspot", "catch_trophy":
 			return Js.num(Js.obj(db.me(uid).get("finn_tally")).get(tally_key(q))) - Js.num(stored.get("tally0"))
 	return 0.0
