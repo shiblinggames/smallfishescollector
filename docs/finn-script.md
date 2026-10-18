@@ -185,17 +185,17 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **Done:** Perfects are becoming your new normal. Very nice!
 
-### Job 14: Land 3 in Open Waters in a storm  `p4` _(port)_
+### Job 14: Land an epic or better in Open Waters  `p4` _(port)_
 
 **First, the story** `w1`:
-- Hmph. Beginner's luck.  _(holds 250ms)_
-- Don't go framing it.
+- You'll catch certain fish better at different times in the day.
+- It's never fun sailing in a storm...but fishing in the storm might also help you catch certain types of fish.
 
-**Gives it:** Most captains run for home when the weather turns. Some fish come up for it. Three from Open Waters, in a storm.
+**Gives it:** There are rare fish...then there are epic fish. Go and catch me an epic or rarer fish in the Open Waters.
 
-**Not yet:** In a storm. A squall, a gale, anything with rain in it. Wait for the weather.
+**Not yet:** Not epic enough, captain.
 
-**Done:** Three in the weather. You stayed out. I noticed that too.
+**Done:** Now that's what I'm talking about.
 
 ### Job 15: Land 25 fish in Open Waters  `q25`
 
