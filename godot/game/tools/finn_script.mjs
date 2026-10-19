@@ -67,6 +67,7 @@ say()
 const beats = finn.beats
 
 let n = 0
+let prevLevel = 1
 for (const ch of finn.chapters) {
   say(`## Chapter ${ch.romanNumeral}: ${clean(ch.title)}`)
   say()
@@ -86,7 +87,10 @@ for (const ch of finn.chapters) {
     if (q.hint) say(`**His description (on the slip):** "${clean(q.hint)}"`), say()
     if (q.waiting) say(`**Not yet:** ${clean(q.waiting)}`), say()
     if (q.done) say(`**Done:** ${clean(q.done)}`), say()
-    if (q.gated) say(`**Too soon** (this job is next, but your level is not there yet): ${clean(q.gated)}`), say()
+    // Only a job that needs more than the one before it can ever be too soon
+    // (the first of each chapter).
+    if (q.gated && q.minLevel > prevLevel) say(`**Too soon** (this job is next, but your level is not there yet): ${clean(q.gated)}`), say()
+    prevLevel = q.minLevel
   }
 }
 const late = beats.slice(n)

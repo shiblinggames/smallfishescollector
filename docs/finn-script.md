@@ -200,14 +200,15 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 ### Job 15: Land 5 different kinds of fish in Open Waters  `q25`
 
 **First, the story** `w3`:
-- Twice now. _Twice._  _(holds 350ms)_
-- ...all right. The water didn't hand you that. You took it. Try not to waste a thing you're willing to take.
+- New crew show up each day.
+- Me? I've got a bit of a crew over the years. You start getting to know who you wanna keep close.
+- The more crew you got, the more things you can do with them. Send them on trawls, send them on voyages. They'll help you with any of your expedition goals up in the northern seas.
 
-**Gives it:** Twenty five out of the middle water. Long job. Do it around everything else you are doing.
+**Gives it:** Catch me 5 different kinds of fish in the Open Waters.
 
-**Not yet:** Open Waters. Twenty five. It adds up faster than you think.
+**Not yet:** You haven't caught me 5 unique ones yet.
 
-**Done:** Twenty five. You know that water now, which is different from having been there.
+**Done:** There's certainly variety in these waters isn't there? Get that log filled up!
 
 ### Job 16: Land a trophy-size fish in Open Waters  `q26`
 
