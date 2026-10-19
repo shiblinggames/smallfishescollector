@@ -201,7 +201,7 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 
 **First, the story** `w3`:
 - New crew show up each day.
-- Me? I've got a bit of a crew over the years. You start getting to know who you wanna keep close.
+- Me? I've amassed quite a few crew over the years...just humbly fishing in the southern seas now. You start getting to know who you wanna keep close.
 - The more crew you got, the more things you can do with them. Send them on trawls, send them on voyages. They'll help you with any of your expedition goals up in the northern seas.
 
 **Gives it:** Catch me 5 different kinds of fish in the Open Waters.
