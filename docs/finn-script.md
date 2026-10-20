@@ -296,7 +296,7 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 ### Job 22: Land 2 epic or better in the Deep  `p6` _(port)_
 
 **First, the story** `w20`:
-- The World Chart is incredible...technology these days. Back in my day I had to use something called Mapquest.
+- The World Chart is incredible...technology these days. Back in my day I had to use something called a paper map.
 - Be sure to utilize it to see what you've explored and how much of the Seas you haven't discovered yet. It contains a ton of useful information...if I had this information back in the day I would've conquered the world already. Just kidding, I'm just a humble fisherman trying to retire, that's all.
 
 **Gives it:** Go and catch me 2 epic or rarer fish in the Deep.
