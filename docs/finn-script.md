@@ -213,14 +213,14 @@ _Opens at Fishing 15. The shallow water is finished with you. He says that like 
 ### Job 16: Land a trophy-size fish in Open Waters  `q26`
 
 **First, the story** `w5`:
-- Five times. Maybe you're not completely useless after all.  _(holds 250ms)_
-- Don't let it swell your head. There's a whole ocean left, and most of it's meaner than me.
+- My log is filled out...almost. How far along are you?
+- So many fish in the sea. Have you seen a gol- oh no, I'm getting ahead of myself.
 
-**Gives it:** Sixty, anywhere. I am not testing your nerve with this one, I am testing whether you keep going.
+**Gives it:** Every fish has a range of sizes as well. I'm looking for a trophy catch. You'll know when you get one.
 
-**Not yet:** Sixty. Keep at it.
+**Not yet:** That's not a trophy, I'll tell you that much.
 
-**Done:** Sixty. Most captains stop somewhere in the forties and never notice they stopped.
+**Done:** There it is! A trophy catch, and you get the nice trophy badge in your log. Win-win.
 
 ## Chapter III: The Long Sail
 
