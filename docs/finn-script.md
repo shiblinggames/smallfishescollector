@@ -267,18 +267,18 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Done:** A Turbot! Is it pronounced turboat, or tur-bought? Who gets to name these things anyway?
 
-### Job 20: Land 8 perfect catches in a row in the Deep  `q9`
+### Job 20: Land 5 perfect catches in a row in the Deep  `q9`
 
 **First, the story** `w15`:
-- Where do _I_ come from? Ha.
-- Nowhere you'll find inked on any chart you own.  _(holds 300ms)_
-- And we'll be keeping it that way.
+- Oh you wanted to learn more about me?
+- Let's just say I started a career in fishing...got good at the business.
+- I'm not retired, per se. I'm just out here looking for more.
 
-**Gives it:** Eight in a row. I could not do six on my best day and I have had a great many days.
+**Gives it:** Alright...you're no fishing noob anymore, that's for sure. Time for a little challenge, let's see you hit 5 perfects in a row in the Deep.
 
-**Not yet:** Eight, unbroken. It is meant to be hard. That is the whole of the request.
+**Not yet:** Can't hit the 5 perfects? Try upgrading your gear. Reels slow down the needle...hint hint.
 
-**Done:** Eight straight. I want to be sour about that and I find I am not.
+**Done:** Respect is earned, not given. And you almost have mine.
 
 ### Job 21: Land 4 rare or better in the Deep  `q27`
 
