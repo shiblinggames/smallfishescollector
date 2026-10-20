@@ -283,15 +283,15 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 ### Job 21: Land 4 rare or better in the Deep  `q27`
 
 **First, the story** `w18`:
-- Two anglers walk into a tavern. One of them catches a fish. The other one's me.
-- ...you laughed.  _(holds 300ms)_
-- Good. I was starting to worry about you.
+- Gets annoying going to sell back to the market when you're all the way out in the Deep huh?
+- You've got options though...you can find a nearby buyer. They're available in all waters, no matter how deep. You just gotta find them. Then you can go right back to fishing.
+- Otherwise, as your fishing level increases, you might learn a few tricks to get instant doubloons from your catches.
 
-**Gives it:** Four rare, out of deep water. They are down there in numbers the shallows never see.
+**Gives it:** Catch me 4 rare or better fish in the Deep.
 
-**Not yet:** Rare or better. Four of them.
+**Not yet:** That's...not it.
 
-**Done:** Four. The deep gives them up more readily to somebody it has decided about.
+**Done:** Yup. That'll do it. Now go sell these for a boatload of doubloons.
 
 ### Job 22: Land a trophy-size fish in the Deep  `p6` _(port)_
 
