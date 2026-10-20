@@ -241,18 +241,18 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Too soon** (this job is next, but your level is not there yet): You're not ready for the Deep just yet...maybe go out and level up a bit more.
 
-### Job 18: Land 20 perfect catches in the Deep  `q8`
+### Job 18: Land 12 perfect catches in the Deep  `q8`
 
 **First, the story** `w10`:
-- Patience, and a steady hand. That's the whole trade, start to finish.
-- Took me half a lifetime to learn it.  _(holds 300ms)_
-- You're picking it up fast. Almost _unfairly_ fast.
+- It's nice to manage a crew huh? How many crewmates do you have now?
+- Me...? Can't disclose how many I have...but I was a top tier captain I'll tell you that much.
+- This ol' fishing boat is not my only ride.
 
-**Gives it:** Twenty perfect. Take your time. I am not going anywhere and neither, apparently, are you.
+**Gives it:** You're getting good at this fishing thing. Get me 12 perfect catches in the Deep.
 
-**Not yet:** Twenty clean. You are not there yet and there is no hurry.
+**Not yet:** That's not 12 perfect catches just yet. Come back when you've hit 12 right in the gold.
 
-**Done:** Twenty. You have stopped counting them, have you not. That is when it starts working.
+**Done:** Twelve perfect ones! Feeling that dopamine from hitting it so often yet?
 
 ### Job 19: Land the fish he describes, in the Deep  `p5` _(port)_
 
