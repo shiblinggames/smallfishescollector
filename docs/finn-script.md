@@ -257,15 +257,15 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 ### Job 19: Land the fish he describes, in the Deep  `p5` _(port)_
 
 **First, the story** `w12`:
-- Where'd you learn to read water like that? You don't move like some inland kid who wandered down to the docks.
-- ...no. Don't answer.  _(holds 300ms)_
-- I'd rather wonder.
+- Have you caught a current yet? Pretty fun to ride those...they're like highways for boats out here.
+- Don't get caught in kelp though. Hate that stuff.
+- Trust me, once you get a max speed boat riding on a current out here, you'll understand the thrill.
 
-**Gives it:** Another one I will only describe. It lives in the Deep.
+**Gives it:** I'm thinking of this fish...it can shift the color of its skin to vanish against the sandy seabed. Can you get me that? I don't remember what it's called. But it's in the Deep for sure.
 
-**Not yet:** Not that one. Read it again.
+**Not yet:** No...not that one.
 
-**Done:** That is it. Your Log is doing you more good than most captains let theirs.
+**Done:** A Turbot! Is it pronounced turboat, or tur-bought? Who gets to name these things anyway?
 
 ### Job 20: Land 8 perfect catches in a row in the Deep  `q9`
 
