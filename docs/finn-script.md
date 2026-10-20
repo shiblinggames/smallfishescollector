@@ -229,17 +229,17 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 ### Job 17: Land 12 fish in the Deep  `q7`
 
 **First, the story** `w8`:
-- You're getting faster. I've noticed.  _(holds 250ms)_
-- I notice everything. It's cost me more sleep than I'd care to say.
-- Most folk can't take me twice. You've done it eight.
+- Looks like you're ready for the Deep, captain.
+- More fish...more difficult catches. But more money and rewards too.
+- I've made too much to know how to spend. But I know you've been eyeing some new upgrades haven't you?
 
-**Gives it:** The Deep. Twelve of them. It is a long sail and that is deliberate, I want to see if you come back.
+**Gives it:** Get me 12 fish in the Deep.
 
-**Not yet:** The Deep. Past the abyss talk, before the black. Twelve.
+**Not yet:** Not quite there yet. Come back when you've gotten 12 fish from The Deep.
 
-**Done:** Twelve, and you came back up. That second part is the one I was watching.
+**Done:** Twelve deep fish, nice! I've always liked Deep Fish pizza. No, I'm kidding of course. That would be cannibalism.
 
-**Too soon** (this job is next, but your level is not there yet): The Deep is the next water and it is not open to you yet. Go and earn it.
+**Too soon** (this job is next, but your level is not there yet): You're not ready for the Deep just yet...maybe go out and level up a bit more.
 
 ### Job 18: Land 20 perfect catches in the Deep  `q8`
 
