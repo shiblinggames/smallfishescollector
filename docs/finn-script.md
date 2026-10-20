@@ -293,17 +293,17 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Done:** Yup. That'll do it. Now go sell these for a boatload of doubloons.
 
-### Job 22: Land a trophy-size fish in the Deep  `p6` _(port)_
+### Job 22: Land 2 epic or better in the Deep  `p6` _(port)_
 
 **First, the story** `w20`:
-- Patient on the entry. _Mean_ on the pull. That's how a body fishes the deep, if the deep allows it.
-- And I'm starting to think it just might allow _you_.
+- The World Chart is incredible...technology these days. Back in my day I had to use something called Mapquest.
+- Be sure to utilize it to see what you've explored and how much of the Seas you haven't discovered yet. It contains a ton of useful information...if I had this information back in the day I would've conquered the world already. Just kidding, I'm just a humble fisherman trying to retire, that's all.
 
-**Gives it:** One fish. Not any fish: one so big it gets written down. The Deep has them if you are patient.
+**Gives it:** Go and catch me 2 epic or rarer fish in the Deep.
 
-**Not yet:** Trophy size. The ordinary ones do not count, however pleased they look.
+**Not yet:** These are not rare enough. Try again.
 
-**Done:** Now that is a fish worth writing down. I would have told everyone at the dock.
+**Done:** Now these are some epic looking fish. How much more epic can we get?
 
 ### Job 23: Land 25 fish in the Deep  `q28`
 
