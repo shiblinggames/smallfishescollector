@@ -320,14 +320,15 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 ### Job 24: Land a legendary in the Deep  `q29`
 
 **First, the story** `w25`:
-- The deep has taken things off me I don't put into words.  _(holds 350ms)_
-- Leave it where it lies. Take the work, or don't.
+- Make sure to keep track of your fishing orders...for a little extra doubloons.
+- As you level up your fishing, your fishing guide will show you what new skills you learn.
+- It's always good to collect achievements and badges as well. No one likes a show off...unless you can back it up.
 
-**Gives it:** A hundred. Anywhere, anything. Nobody has ever asked you for a number like that and meant it kindly.
+**Gives it:** It's about time...go and catch me a legendary fish from the Deep. This could take a while...or maybe you'll be lucky.
 
-**Not yet:** A hundred. Chip at it.
+**Not yet:** That's not a legendary fish, that's for sure.
 
-**Done:** A hundred. There is nothing clever about it and it is still the hardest thing I have asked you for.
+**Done:** Incredible. A legendary fish of the deep. What else could exist out there?
 
 ## Chapter IV: Where It Stops Being Blue
 
