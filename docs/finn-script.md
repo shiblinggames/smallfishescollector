@@ -308,14 +308,14 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 ### Job 23: Land 6 different kinds of fish in the Deep  `q28`
 
 **First, the story** `w22`:
-- I gave that deep ten years. Ten years of cold mornings, a slack line, and silence.  _(holds 350ms)_
-- You might wring more out of it in a single season than I got from every one of them.
+- Have you seen the hotspots in the water? They'll move around every 10 minutes or so...it's always worth looking out for them.
+- Shoals give faster bites. Trenches give rarer fish. Flotsams give more crates. There's something for everyone.
 
-**Gives it:** Twenty five out of the Deep. That is a lot of sailing and I am aware of it.
+**Gives it:** Go catch me 6 different types of fish from the Deep.
 
-**Not yet:** The Deep. Twenty five. It is a long one on purpose.
+**Not yet:** That's not quite 6 different fish yet, captain.
 
-**Done:** Twenty five. You have spent more hours down there this month than I have this year.
+**Done:** Excellent! Six unique fish...and so many more out there.
 
 ### Job 24: Land a legendary in the Deep  `q29`
 
