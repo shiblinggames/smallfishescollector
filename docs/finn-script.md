@@ -305,7 +305,7 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Done:** Now these are some epic looking fish. How much more epic can we get?
 
-### Job 23: Land 25 fish in the Deep  `q28`
+### Job 23: Land 6 different kinds of fish in the Deep  `q28`
 
 **First, the story** `w22`:
 - I gave that deep ten years. Ten years of cold mornings, a slack line, and silence.  _(holds 350ms)_
@@ -317,7 +317,7 @@ _Opens at Fishing 30. Deep water, and the first thing he asks for that he could 
 
 **Done:** Twenty five. You have spent more hours down there this month than I have this year.
 
-### Job 24: Land 100 fish in the Deep  `q29`
+### Job 24: Land a legendary in the Deep  `q29`
 
 **First, the story** `w25`:
 - The deep has taken things off me I don't put into words.  _(holds 350ms)_
