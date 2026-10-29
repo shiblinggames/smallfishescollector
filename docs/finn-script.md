@@ -337,16 +337,17 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 ### Job 25: Land 10 fish in the Abyss  `q10`
 
 **First, the story** `w28`:
-- That look you get, locking onto a perfect. Like the water slows itself down just for you.  _(holds 300ms)_
-- I've only ever seen it on the kind of angler who can go where I can't.
+- Have you been working on your Homestead?
+- Prices are high these days, I know. Back in my day, we could get an island home for way cheaper. But hey once you own one, there's a lot of benefits.
+- I recommend looking into activating a portal, especially now that you can fish far away into the Deep.
 
-**Gives it:** The Abyss. Ten. Everything down there has teeth or lights or both, and none of it has ever been polite to me.
+**Gives it:** It's time to make it out into the Abyss. Get ready for some more challenging catches...but also for the doubloons to start rolling in. Go and see what it's all about. Catch me 10 of any fish from the Abyss.
 
-**Not yet:** The Abyss. Where it stops being blue. Ten of them.
+**Not yet:** Not done yet, captain. Come back when you've caught 10.
 
-**Done:** Ten out of the black. You did that in the time it takes most captains to work up to looking at it.
+**Done:** Ten...out of the Abyss. Incredible. Now, nothing is too far out for you.
 
-**Too soon** (this job is next, but your level is not there yet): The black water. Not at your level, and I am not sending you down there to prove me wrong.
+**Too soon** (this job is next, but your level is not there yet): I'd train a little harder before attempting the Abyss. Maybe come back when you're a higher fishing level.
 
 ### Job 26: Land 5 in the Abyss by night  `p7` _(port)_
 
