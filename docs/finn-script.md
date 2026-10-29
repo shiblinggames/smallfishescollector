@@ -349,18 +349,17 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **Too soon** (this job is next, but your level is not there yet): I'd train a little harder before attempting the Abyss. Maybe come back when you're a higher fishing level.
 
-### Job 26: Land 5 in the Abyss by night  `p7` _(port)_
+### Job 26: Land 8 in the Abyss by night  `p7` _(port)_
 
 **First, the story** `w30`:
-- Thirty jobs. Most anglers don't last thirty _casts_.  _(holds 300ms)_
-- ...I won't call you my equal. But I'll quit calling you 'kid.'  _(holds 250ms)_
-- Spend that sparingly. I don't hand it out twice.
+- Have you looked into the Auto Caster? Yeah, it automates your casting. Not too useful on its own, but you can upgrade it if you venture out into the northern seas.
+- Speaking of the northern seas...how's it been up there? I haven't ventured off in far too long. I miss the days where I was able to build and upgrade my own warship.
 
-**Gives it:** The Abyss is dark enough by day. Go down there at night and bring up five.
+**Gives it:** Back to the Abyss we go. Something about fishing out there in the dark. Catch me 8 fish in the nighttime.
 
-**Not yet:** By night. Five. The water will still be there when the sun goes.
+**Not yet:** I don't think you've caught 8 fish at night in the Abyss just yet.
 
-**Done:** Five, in the dark, in the darkest water there is. You are braver than I was.
+**Done:** You did it. Your skills grow with each assignment. I can't believe how quickly you've picked up fishing.
 
 ### Job 27: Land 5 epic or better in the Abyss  `q11`
 
