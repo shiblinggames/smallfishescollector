@@ -29,6 +29,8 @@ function merge(a, b) {
 }
 
 const finn = merge(structuredClone(rules.finn), port.finn)
+// The port's new story (core/rules.gd _finn_text): finn.extraBeats follow the web's.
+finn.beats = [...finn.beats, ...(finn.extraBeats || [])]
 // Kong's edits (port_rules finnText, core/rules.gd _finn_text): laid over the
 // job or story beat with that id.
 for (const list of ['quests', 'portJobs', 'beats'])

@@ -123,10 +123,17 @@ static func _campaign_text(d: Dictionary) -> void:
 ## finn.portJobs: give, waiting, done, gated, hint, label) or the story beat
 ## (finn.beats: lines) with that id. NOT content/rules.json (parity).
 static func _finn_text(d: Dictionary) -> void:
+	var f: Dictionary = Js.obj(d.get("finn"))
+	# NEW STORY (Kong, 2026-11-02): the port's ladder is 40 jobs and the web
+	# wrote 29 beats; port_rules finn.extraBeats ({ id, lines }) follow them in
+	# order, so the 30th beat leads into the 30th job.
+	var extra: Array = Js.list(f.get("extraBeats"))
+	if not extra.is_empty():
+		f["beats"] = Js.list(f.get("beats")) + extra
+		f.erase("extraBeats")
 	var edits: Dictionary = Js.obj(d.get("finnText"))
 	if edits.is_empty():
 		return
-	var f: Dictionary = Js.obj(d.get("finn"))
 	for list: String in ["quests", "portJobs", "beats"]:
 		for row: Variant in Js.list(f.get(list)):
 			if row is Dictionary and edits.has((row as Dictionary).get("id")):
