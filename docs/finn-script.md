@@ -374,17 +374,18 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **Done:** You're catching some rare fish in some deep, deep waters. Good work captain.
 
-### Job 28: Land 12 perfect catches in a row in the Abyss  `q12`
+### Job 28: Land 8 perfect catches in a row in the Abyss  `q12`
 
 **First, the story** `w36`:
-- All these years working this dock. Waiting for the right line to come walking up it.  _(holds 350ms)_
-- Didn't quite believe it ever truly would.
+- The sea has given and taken away from me.
+- I've learned so many things just from exploring the open seas. How to fish. How to fight.
+- Now I'm just looking at who the next talent can be. It's safe to say...you've caught my attention so far. Keep going at it and you're going to make it big out here.
 
-**Gives it:** Twelve without a miss. There is nothing left I can ask you for that is harder than this and still fair.
+**Gives it:** Now then...after giving you all those compliments, let's see you really prove it. Land 8 perfect catches in a row in the Abyss. That's right...we're on a different level now.
 
-**Not yet:** Twelve in a row. Take a season over it if you need to. I have waited longer.
+**Not yet:** Not yet, good captain. I'm gonna need 8 perfects in a row from you in the Abyss.
 
-**Done:** Twelve. Straight. I have run out of things to test and I am not sure what I do now.
+**Done:** I'm no longer surprised. You're increasingly proving yourself worthy of carrying the torch.
 
 ### Job 29: Land 40 perfect catches in the Abyss  `q30`
 
