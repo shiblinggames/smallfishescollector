@@ -364,15 +364,15 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 ### Job 27: Land 5 epic or better in the Abyss  `q11`
 
 **First, the story** `w33`:
-- Trick to the deep zones: don't pull at the bite. Pull at the _breath_ right after it.
-- A fish has to recover. Hit it in the recovery and it can't run.  _(holds 300ms)_
-- ...not that I told you anything.
+- Treasure and doubloons were all I chased back in the day. Now I long for something more.
+- Maybe you've seen some bottles out at sea. Follow them...and you could get rewarded greatly.
+- I speak from experience. Lots of experience.
 
-**Gives it:** Five of the real ones. Not rare. The ones the water only hands over when it has decided something about the hand on the rod.
+**Gives it:** Catch me 5 epic or rarer fish from the Abyss. Getting harder and harder isn't it?
 
-**Not yet:** Epic or better. If you are not sure whether it counted, it did not.
+**Not yet:** Not quite. Come back when you have 5 epic or rarer fish from the Abyss.
 
-**Done:** Five. It has decided, then.
+**Done:** You're catching some rare fish in some deep, deep waters. Good work captain.
 
 ### Job 28: Land 12 perfect catches in a row in the Abyss  `q12`
 
