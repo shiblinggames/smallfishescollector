@@ -387,18 +387,17 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **Done:** I'm no longer surprised. You're increasingly proving yourself worthy of carrying the torch.
 
-### Job 29: Land 40 perfect catches in the Abyss  `q30`
+### Job 29: Land 6 different kinds of fish in the Abyss  `q30`
 
 **First, the story** `w40`:
-- Forty. You've taken everything I can teach you from up here on the dock.
-- The rest, only the deep can teach. So go down and take it.  _(holds 400ms)_
-- ...for the both of us.
+- How long has it been since you've upgraded your gear? Make sure to keep the upgrades coming, now that you're a seasoned fisher. It'll only help you become better.
+- You've only scratched the surface of what powerful rods there are out there. Keep exploring...keep talking to others...that's the only way to get the best of the best.
 
-**Gives it:** Forty clean ones. At this point I am not testing anything. I just want to watch you do it forty times.
+**Gives it:** Catch me 6 different kinds of fish from the Abyss.
 
-**Not yet:** Forty perfect. No hurry on this one at all.
+**Not yet:** Six different ones.
 
-**Done:** Forty. I have stopped being able to tell when you are trying.
+**Done:** 1...2....3...yeah I trust you at this point. Good work.
 
 ### Job 30: Land 3 in the Abyss in fog  `p8` _(port)_
 
