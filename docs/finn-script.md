@@ -432,11 +432,11 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 - Some fish only come out in certain weather. Knowing what's coming lets you be in the right place before everyone else.
 - There's water past the Abyss, captain. Older than anything you've fished. I've been waiting a long time for someone to be ready for it.
 
-**Gives it:** One more test before I can tell you about the oldest water. A legendary, out of the Abyss.
+**Gives it:** The Abyss is full of legendary fish...go ahead and catch me one of them.
 
-**Not yet:** A legendary from the Abyss. You know you can do it.
+**Not yet:** Not quite legendary. Try again.
 
-**Done:** That's it. You're ready. ...I think I'm the one who isn't.
+**Done:** I haven't met a more capable fisher in all my years...the world is about to be your oyster.
 
 ## Chapter V: The Six
 
