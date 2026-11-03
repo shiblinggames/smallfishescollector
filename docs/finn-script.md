@@ -416,7 +416,7 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **First, the story** `s31`:
 - Have you met any of the wanderers out at sea? Different faces every day.
-- Peddlers sell bait cheaper than the shop. Further out, the tinkers sell it in bigger bundles. And if your hold is full and you're far from home, a salter will buy the whole thing off you.
+- Some of them sell bait cheaper than the shop. The further out you go, the bigger the bundles get.
 - Six deals a day, then word gets around. I learned that the hard way.
 
 **Gives it:** Remember that trophy you brought me from Open Waters? Let's see one from the Abyss. Bring me a fish worth bragging about.
