@@ -399,29 +399,44 @@ _Opens at Fishing 50. Everything down here has teeth or lights or both, and none
 
 **Done:** 1...2....3...yeah I trust you at this point. Good work.
 
-### Job 30: Land 3 in the Abyss in fog  `p8` _(port)_
+### Job 30: Land the fish he describes, in the Abyss  `p8` _(port)_
 
-**Gives it:** When the fog rolls over the Abyss you cannot see your own line. Three fish, in that.
+**First, the story** `s30`:
+- Ever pulled your boat up onto one of those little islands out there? Most captains sail right past them.
+- Some have a chest stashed away. Doubloons, and sometimes the stones you'll need for that portal of yours.
+- Others have notes left behind by whoever got there first. Read them. I may have left one or two myself...a long time ago.
 
-**Not yet:** In fog. Wait for it to roll in.
+**Gives it:** Here's a riddle for you. There's a fish in the Abyss that carries its own lantern...but it shines red, and nothing else down there can see red. It hunts in the dark with a light only it can see. Bring me one.
 
-**Done:** Three in the fog. You fished by feel. That is the whole thing, really.
+**Not yet:** Still hunting? Think about the red light, captain.
 
-### Job 31: Land 22 fish in the Abyss  `q31`
+**Done:** The Stoplight Loosejaw. Clever little thing, isn't it? I used to wish I had one of those lights on my ship.
 
-**Gives it:** Twenty two out of the black. Most captains never manage two. Take your lantern and your patience.
+### Job 31: Land a trophy-size fish in the Abyss  `q31`
 
-**Not yet:** The Abyss. Twenty two of them.
+**First, the story** `s31`:
+- Have you met any of the wanderers out at sea? Different faces every day.
+- Peddlers sell bait cheaper than the shop. Further out, the tinkers sell it in bigger bundles. And if your hold is full and you're far from home, a salter will buy the whole thing off you.
+- Six deals a day, then word gets around. I learned that the hard way.
 
-**Done:** Twenty two. You go down there the way other people go to the market.
+**Gives it:** Remember that trophy you brought me from Open Waters? Let's see one from the Abyss. Bring me a fish worth bragging about.
 
-### Job 32: Land 2 legendary fish in the Abyss  `q32`
+**Not yet:** That one's not big enough, captain. Keep at it.
 
-**Gives it:** Two legendaries, before we go anywhere near the old water. I need to know you can do it on demand.
+**Done:** Now THAT is a fish. Hang it somewhere everyone can see it.
 
-**Not yet:** Legendary. Two of them. The water decides, but it decides about you differently now.
+### Job 32: Land a legendary in the Abyss  `q32`
 
-**Done:** Two. On demand. That is the last thing I needed to know and I already knew it.
+**First, the story** `s32`:
+- Do you keep an eye on the weather chart? With enough time at sea you start reading the sky two storms ahead.
+- Some fish only come out in certain weather. Knowing what's coming lets you be in the right place before everyone else.
+- There's water past the Abyss, captain. Older than anything you've fished. I've been waiting a long time for someone to be ready for it.
+
+**Gives it:** One more test before I can tell you about the oldest water. A legendary, out of the Abyss.
+
+**Not yet:** A legendary from the Abyss. You know you can do it.
+
+**Done:** That's it. You're ready. ...I think I'm the one who isn't.
 
 ## Chapter V: The Six
 
