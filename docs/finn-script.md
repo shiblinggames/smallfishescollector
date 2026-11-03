@@ -444,69 +444,107 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 ### Job 33: Land 8 fish in the Ancient Deep  `q13`
 
-**Gives it:** The old water. Eight ordinary fish out of it, to start. I have told you what is down there and I have told you my line comes back empty. Yours will not.
+**First, the story** `s33`:
+- Forty years I've been fishing these waters. Forty years and I never once pulled anything out of the oldest one.
+- Fish bite slow down there. Real slow. Bring your best bait and plenty of it, and don't let the waiting get to you.
+- And keep an eye out for the crates. Even the crates down there are ancient.
 
-**Not yet:** The oldest water on your chart. Eight. I would go with you if it would do any good.
+**Gives it:** This is it, captain. The Ancient Deep. Catch me 8 fish out of the oldest water there is. I've stood at the edge of it more times than I can count...and my line always came back empty.
 
-**Done:** Eight out of the Ancient Deep. Do you understand that I have never held one of those? Not one.
+**Not yet:** Eight from the Ancient Deep. Take your time down there.
 
-**Too soon** (this job is next, but your level is not there yet): The old water is not open to you yet. I have waited forty years. I can wait for you.
+**Done:** Eight. Out of the Ancient Deep. I've never even held one of those, you know that?
 
-### Job 34: Land 3 legendary fish in the Ancient Deep  `q14`
+**Too soon** (this job is next, but your level is not there yet): The Ancient Deep isn't ready for you yet. Keep fishing. I've waited this long, I can wait a little longer.
 
-**Gives it:** Three legendaries. Not because I doubt you. Because I want to watch it happen and this is the only way I get to.
+### Job 34: Land a legendary in the Ancient Deep  `q14`
 
-**Not yet:** Legendary. The water gives those to almost nobody. It will give them to you.
+**First, the story** `s34`:
+- Whatever's waiting at the bottom of the Ancient Deep won't come up for worms. It wants a shine.
+- A Golden Lure or a Luminous Lure. Your crew can bring them back from voyages, you can earn them from expeditions and bounties, or you can buy them with Fathoms in the Locker.
+- Save them up, captain. You're going to need them.
 
-**Done:** Three. You make the impossible look like a Tuesday, and I have stopped pretending that does not sting.
+**Gives it:** Now a legendary from the Ancient Deep. Not because I doubt you...I just want to see it happen.
+
+**Not yet:** A legendary from the Ancient Deep. It'll come.
+
+**Done:** There it is. You make the impossible look easy. I'd be lying if I said that doesn't sting a little.
 
 ### Job 35: Raise the Plesiosaurus  `q15`
 
-**Gives it:** The first of the six. A long neck and a longer memory, and it comes up slow, like it is deciding about you. And you will not manage it on worms, so listen. They rise for a shine: a Golden Lure will raise one, a Luminous will do it slower, and nothing else on your boat will do it at all. Forty years I stood at the lip of that water with the wrong thing on my line.
+**First, the story** `s35`:
+- Did I ever tell you why I stopped sailing north?
+- ...Another time. It's a long story, and you've got fishing to do.
 
-**Not yet:** The Plesiosaurus. Golden Lure, old water, and patience. It is down there.
+**Gives it:** There are six of them down there. Six giants older than any chart. The first is the Plesiosaurus. Remember what I said...a Golden or Luminous Lure on your line, or it won't even look at you.
 
-**Done:** You are holding one. An actual one of the six. I am going to need a moment and I would rather you did not watch.
+**Not yet:** The Plesiosaurus. Lure on, Ancient Deep, and patience.
+
+**Done:** You're holding one. One of the six. ...Give me a moment, captain.
 
 ### Job 36: Raise the Dunkleosteus  `q16`
 
-**Gives it:** Second. This one is armor plate and a bite that never needed teeth. Same lure, same water. It will not come up politely.
+**First, the story** `s36`:
+- Have you tried sailing in a Charter with your friends? You can fish the same waters together.
+- I used to have a crew that would follow me anywhere. The sea's a lot less lonely with good company.
+- Don't make the mistake I did. Hold on to the ones who sail with you.
 
-**Not yet:** The Dunkleosteus. Keep the shine on your line.
+**Gives it:** Second one. The Dunkleosteus. Armor plate and a bite that never needed teeth. Same lure, same water. It won't come up easy.
 
-**Done:** Two. You have landed two of them and I have landed none, and I find I am not as sour about that as I expected to be.
+**Not yet:** The Dunkleosteus. Keep that lure on.
+
+**Done:** Two of the six. You've landed two and I've landed none...and somehow I'm not even sour about it.
 
 ### Job 37: Raise the Mosasaurus  `q17`
 
-**Gives it:** Third. The one that hunts the dark on purpose rather than living in it. Do not fight it early, it is stronger at the start than it is at the end.
+**First, the story** `s37`:
+- People in the harbor have started asking about you. Who's the captain pulling giants out of the old water?
+- I tell them you're a friend of mine. I hope that's alright.
 
-**Not yet:** The Mosasaurus. It is out there and it is in no hurry.
+**Gives it:** The third. The Mosasaurus. It hunts the dark on purpose. Bring it to me.
 
-**Done:** Three. Half the set. Nobody in the history of this harbor has been halfway.
+**Not yet:** The Mosasaurus is out there. It's in no hurry, and neither are you.
+
+**Done:** Three. Halfway there. Nobody in this harbor has ever made it halfway.
 
 ### Job 38: Raise the Basilosaurus  `q18`
 
-**Gives it:** Fourth. Longest thing in the old water and the quietest. You will feel it before the line does.
+**First, the story** `s38`:
+- I keep a list, you know. Every captain I've ever tried to teach.
+- Most of them stopped at the Abyss. A few made it to the edge of the old water.
+- None of them made it this far. You're the last name on that list, and I think you'll be the last one I ever need.
+
+**Gives it:** Fourth. The Basilosaurus. The longest thing in the old water, and the quietest. You'll feel it before your line does.
 
 **Not yet:** The Basilosaurus. Long, slow, and worth the wait.
 
-**Done:** Four. I have started telling people about you, which is not a thing I do.
+**Done:** Four. I've started telling people about you. I don't usually do that.
 
 ### Job 39: Raise the Shastasaurus  `q19`
 
-**Gives it:** Fifth. The biggest of them that is not the last one, and the one I got closest to. Thirty seconds I held it. Then the water handed it back.
+**First, the story** `s39`:
+- I wasn't always a fisherman, captain. Before all this I chased other things. Bigger things.
+- I was good at it, too. Maybe too good.
+- Fishing was supposed to be the quiet part of my life. Funny how it turned out to be the part I can't let go of.
 
-**Not yet:** The Shastasaurus. The one I nearly had. Go and finish what I could not.
+**Gives it:** Fifth. The Shastasaurus. This is the one I got closest to. Thirty seconds I had it on my line...then the water took it back. Go finish what I couldn't.
 
-**Done:** Five. Five of six. There is one left and we both know which, and I have not been able to say its name out loud in years.
+**Not yet:** The Shastasaurus. The one I nearly had.
+
+**Done:** Five of six. There's one left, and we both know which one it is.
 
 ### Job 40: Raise the Megalodon  `q20`
 
-**Gives it:** The last one. It does not surface for anybody holding fewer than five, which is why no living captain has ever seen it and why I never will. It is yours. Go.
+**First, the story** `s40`:
+- Whatever happens after this one...I want you to know I meant every word I ever told you on this dock.
+- Every tip. Every job. All of it.
+- Now go on. Before I say something I can't take back.
 
-**Not yet:** The Megalodon. It is waiting on you now, not the other way round.
+**Gives it:** The last one. The Megalodon. It won't rise for anyone who hasn't landed the other five. That's why no living captain has ever seen it. It's yours, captain. Go.
 
-**Done:** All six. By one pair of hands, in one lifetime, and I watched it happen. ...Sit down. I need to tell you something, and you are not going to like where it starts.
+**Not yet:** The Megalodon. It's waiting on you now.
+
+**Done:** All six. By one pair of hands, and I got to watch it happen. ...Sit down, captain. There's something I need to tell you, and you're not going to like where it starts.
 
 ## Every job
 
