@@ -2277,6 +2277,11 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   ("Finn's story" under the next water), trawls (the crew fish only where the story has taken
   you) and the Homestead portal. A chapter closed with its water's level reached: "Open Waters
   is open to you now." Parity (web_only) keeps the web's level-only rule. Tests: finn_check.
+- THE STORY RAISES THE GIANTS (Kong, 2026-11-06): a giant rises for a lure only once Finn has
+  asked for it (its job open or handed back; Finn.giants_asked, read by the Ancient Deep roll in
+  core/fishing_rules.gd). The roll already took them in his order (Plesiosaurus first, Megalodon
+  after the other five); before, a lure could raise one during "8 fish" and its job then handed
+  in on the spot. Giants already landed are kept. Parity keeps the web's rule.
 - FINN'S WORDS, KONG'S (2026-10-16, job by job): port_rules finnText laid over a job or story
   beat by id (core/rules.gd _finn_text); docs/finn-script.md is the read-through
   (tools/finn_script.mjs). Job 4's riddle is the Common Carp (common, about one catch in seven;

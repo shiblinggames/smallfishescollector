@@ -211,6 +211,10 @@ static func _roll_cast(i: Dictionary) -> Dictionary:
 					break
 			if next_in_order != null:
 				break
+		# Only a giant Finn has asked for (Finn.giants_asked; null: no gate).
+		var asked: Variant = i.get("giantsAsked")
+		if next_in_order != null and asked is Array and not Js.includes(asked, (next_in_order as Dictionary)["id"]):
+			next_in_order = null
 		if i["alwaysAncientTrophy"] and trophy_pool.size() > 0:
 			if next_in_order != null:
 				fish = next_in_order

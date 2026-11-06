@@ -35,7 +35,7 @@ static func cast_line(db: CaptainStore, uid: String, bait_type: String, habitat:
 	# Which patch of water this is, if any: derived from the clock, never trusted.
 	var spot: Dictionary = Hotspots.at_point(float(at["x"]), float(at["y"]), Clock.now_ms()) if at is Dictionary else {}
 	var hs: Dictionary = Hotspots.effect(spot.get("kind"), int(spot.get("tier", 1)))
-	var profile: Dictionary = db.profile(uid, "rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels, is_premium, premium_expires_at, is_admin, finn_quests_done")
+	var profile: Dictionary = db.profile(uid, "rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, ancient_vigil, active_event, catch_pending, pending_cast, fishing_renown_alloc, has_ancient_deep_access, current_perfect_streak, equipped_special_2, has_anglers_patience, anglers_patience_xp, borrowed_jaw_xp, equipped_raid_items, finn_spoil_free, finn_spoil_paid, pending_reroll, lifetime_species, line_tier, prestige_levels, is_premium, premium_expires_at, is_admin, finn_quests_done, finn_quest")
 
 	settle_deferred_species_credit(db, uid, profile)
 
@@ -110,6 +110,7 @@ static func cast_line(db: CaptainStore, uid: String, bait_type: String, habitat:
 		"eventRarityBonus": event_rarity_bonus,
 		"stale": live if (live_shot and (live as Dictionary)["habitat"] != habitat) else null,
 		"alwaysAncientTrophy": false,
+		"giantsAsked": Finn.giants_asked(profile.get("finn_quest"), Js.list(profile.get("finn_quests_done"))),
 	})
 	if roll.has("error"):
 		return { "error": roll["error"] }

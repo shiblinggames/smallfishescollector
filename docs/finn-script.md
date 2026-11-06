@@ -445,17 +445,19 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 ### Job 33: Land 8 fish in the Ancient Deep  `q13`
 
 **First, the story** `s33`:
-- Forty years I've been fishing these waters. Forty years and I never once pulled anything out of the oldest one.
-- Fish bite slow down there. Real slow. Bring your best bait and plenty of it, and don't let the waiting get to you.
-- And keep an eye out for the crates. Even the crates down there are ancient.
+- Captain I have to confess something...there is something beyond the Abyss. You've reached a level of fishing where you can finally explore something beyond the deepest parts. I call it the Ancient Deep.
+- Most captains never make it out there. I am one of the only few to have even seen these waters.
+- Bring your best bait. The creatures out here are slow to bite. But any catch you get from here will be worth something.
+- I've heard that the greatest treasure awaits out here. I'm hoping you can find some with me.
+- Welcome to the Ancient Deep.
 
-**Gives it:** This is it, captain. The Ancient Deep. Catch me 8 fish out of the oldest water there is. I've stood at the edge of it more times than I can count...and my line always came back empty.
+**Gives it:** Alright...let's see what you can get in the Ancient Deep. Catch 8 fish in those waters for me.
 
-**Not yet:** Eight from the Ancient Deep. Take your time down there.
+**Not yet:** You didn't get the 8 yet. Come back when you've caught 8.
 
-**Done:** Eight. Out of the Ancient Deep. I've never even held one of those, you know that?
+**Done:** How did it feel catching 8 from the deepest waters? They're slow aren't they. But now you know you're in the big leagues.
 
-**Too soon** (this job is next, but your level is not there yet): The Ancient Deep isn't ready for you yet. Keep fishing. I've waited this long, I can wait a little longer.
+**Too soon** (this job is next, but your level is not there yet): You're not yet ready for deeper waters. Trust me. At your rate you'll get there eventually, but you're gonna have to get better at fishing first.
 
 ### Job 34: Land a legendary in the Ancient Deep  `q14`
 

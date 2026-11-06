@@ -177,6 +177,24 @@ static func water_lock(zone: String, level: int, done: Array) -> String:
 	return ""
 
 
+## THE STORY RAISES THE GIANTS (Kong, 2026-11-06): a giant rises for a lure
+## only once Finn has asked for it (its job is open or handed back), so each
+## one lands as his moment, in his order. Giants already landed are kept.
+## The ids he has asked for, or null under parity (the web had no such gate).
+static func giants_asked(open: Variant, done: Array) -> Variant:
+	if Rules.web_only:
+		return null
+	var out: Array = []
+	var ids: Array = done.duplicate()
+	if open is Dictionary:
+		ids.append((open as Dictionary).get("id"))
+	for id: Variant in ids:
+		var q: Dictionary = quest_by_id(id)
+		if q.get("type") == "catch_ancient" and q.get("ancientId") != null:
+			out.append(float(q["ancientId"]))
+	return out
+
+
 ## Every job of the chapter handed back.
 static func chapter_complete(chapter_id: String, done: Array) -> bool:
 	for q: Dictionary in chapter_quests(chapter_id):

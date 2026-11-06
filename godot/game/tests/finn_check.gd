@@ -47,6 +47,10 @@ func _init() -> void:
 	check(Finn.water_lock("open_waters", 40, []).contains("Finish The Hand on the Rod"), "and Finn's first chapter")
 	check(Finn.water_lock("open_waters", 15, ch1) == "", "both, and it is open")
 	check(Finn.water_lock("deep", 90, ch1).contains("Past the Shelf"), "the Deep waits on Chapter II")
+	# The story raises the giants: only the ones he has asked for.
+	check((Finn.giants_asked(null, ch1) as Array).is_empty(), "no giant before he asks")
+	check(Finn.giants_asked({ "id": "q15" }, ch1) == [144.0], "his open job asks for the Plesiosaurus")
+	check(Finn.giants_asked({ "id": "q17" }, ["q15", "q16"]) == [144.0, 145.0, 146.0], "and the ones handed back stay asked")
 	# The story waits for its job: Chapter I done below Fishing 15, he says
 	# only the gated line and keeps the beat back.
 	var row: Dictionary = { "finn_quests_done": ch1, "fishing_xp": 0.0, "finn_seen_beats": [] }
