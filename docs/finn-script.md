@@ -459,18 +459,18 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Too soon** (this job is next, but your level is not there yet): You're not yet ready for deeper waters. Trust me. At your rate you'll get there eventually, but you're gonna have to get better at fishing first.
 
-### Job 34: Land a legendary in the Ancient Deep  `q14`
+### Job 34: Land the fish he describes, in the Ancient Deep  `q14`
 
 **First, the story** `s34`:
 - Whatever's waiting at the bottom of the Ancient Deep won't come up for worms. It wants a shine.
 - A Golden Lure or a Luminous Lure. Your crew can bring them back from voyages, you can earn them from expeditions and bounties, or you can buy them with Fathoms in the Locker.
 - Save them up, captain. You're going to need them.
 
-**Gives it:** Now a legendary from the Ancient Deep. Not because I doubt you...I just want to see it happen.
+**Gives it:** I've got a riddle for you. There's something down in the Ancient Deep that carries its home on its back...a shell that has barely changed in 500 million years. Older than anything you've ever caught. Bring me one.
 
-**Not yet:** A legendary from the Ancient Deep. It'll come.
+**Not yet:** Not that one. Think older, captain. Much older.
 
-**Done:** There it is. You make the impossible look easy. I'd be lying if I said that doesn't sting a little.
+**Done:** A Chambered Nautilus. Five hundred million years, and here it is in your hands. Makes you feel small, doesn't it?
 
 ### Job 35: Raise the Plesiosaurus  `q15`
 

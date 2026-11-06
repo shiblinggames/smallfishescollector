@@ -70,6 +70,14 @@ func _init() -> void:
 				break
 		var q: Dictionary = Finn.quest_by_id(st["quest"]["id"])
 		check(not st["quest"]["done"], "%s starts not done" % q["id"])
+		# A rarity job needs a fish of that rarity that can rise before its
+		# giant is asked for (the Ancient Deep's only legendaries are giants).
+		if q["type"] == "catch_rarity":
+			var any: bool = false
+			for f: Dictionary in db.save["species"]:
+				if f["habitat"] == q.get("zone") and float(f["bite_rarity"]) >= float(q["minRarity"]) and Js.num(f.get("sell_value")) > 0.0:
+					any = true
+			check(any, "%s asks for a rarity its water can give" % q["id"])
 		_work(db, uid, q, sea)
 		st = Finn.state(db, uid)
 		check(st["quest"]["done"], "%s is done once worked (%s)" % [q["id"], str(st["quest"]["progressText"])])
