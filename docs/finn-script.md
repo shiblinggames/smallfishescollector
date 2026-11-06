@@ -462,15 +462,16 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 ### Job 34: Land the fish he describes, in the Ancient Deep  `q14`
 
 **First, the story** `s34`:
-- Whatever's waiting at the bottom of the Ancient Deep won't come up for worms. It wants a shine.
-- A Golden Lure or a Luminous Lure. Your crew can bring them back from voyages, you can earn them from expeditions and bounties, or you can buy them with Fathoms in the Locker.
-- Save them up, captain. You're going to need them.
+- What else do I know about the Ancient Deep? Besides the fact that it's ancient and deep?
+- You're the first I'm telling this, but legends say that there are legendary ancient fish that exist in these waters. But these are all just rumors.
+- Have I seen them? Hmm...can't say that I've seen them. But I feel their presence...
+- But if I ever do see one...I'll let you know.
 
-**Gives it:** I've got a riddle for you. There's something down in the Ancient Deep that carries its home on its back...a shell that has barely changed in 500 million years. Older than anything you've ever caught. Bring me one.
+**Gives it:** There’s something down in the Ancient Deep that carries its home on its back...a shell that has barely changed in 500 million years. I forget its name...but yeah bring me one.
 
-**Not yet:** Not that one. Think older, captain. Much older.
+**Not yet:** Not that one. Try again.
 
-**Done:** A Chambered Nautilus. Five hundred million years, and here it is in your hands. Makes you feel small, doesn't it?
+**Done:** A Chambered Nautilus. Five hundred million years, and here it is in your hands. Makes you feel small, doesn’t it?
 
 ### Job 35: Raise the Plesiosaurus  `q15`
 
