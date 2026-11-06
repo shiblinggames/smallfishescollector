@@ -490,15 +490,16 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 ### Job 36: Raise the second ancient  `q16`
 
 **First, the story** `s36`:
-- Have you tried sailing in a Charter with your friends? You can fish the same waters together.
-- I used to have a crew that would follow me anywhere. The sea's a lot less lonely with good company.
-- Don't make the mistake I did. Hold on to the ones who sail with you.
+- The Plesiosaurus catch has opened the doors to the other legendary creatures...
+- I still can't believe you caught that.
+- I hate to admit this, but I kept it from you before. There's another ancient one that lives in the Ancient Deep. This one is bulky and has skin that's like a plate of armor.
+- I don't know how you'll be able to land this one. But if there's anyone that can, it's you.
 
-**Gives it:** Second one. The Dunkleosteus. Armor plate and a bite that never needed teeth. Same lure, same water. It won't come up easy.
+**Gives it:** Go and find me that ancient fish...remember to use the right type of bait. Give it time...these creatures don't bite easily.
 
-**Not yet:** The Dunkleosteus. Keep that lure on.
+**Not yet:** Haven't caught it yet huh? Keep trying...I've waited years to even see them.
 
-**Done:** Two of the six. You've landed two and I've landed none...and somehow I'm not even sour about it.
+**Done:** A Dunkleosteus?! This is the stuff of legends. I can't believe my own eyes. You've caught two ancients now...you don't understand how many years I've waited for this. Even with all the resources in the world, I couldn't imagine anyone getting this lucky...but I have to attribute some of this to your skills as a fisher.
 
 ### Job 37: Raise the third ancient  `q17`
 
