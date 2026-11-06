@@ -949,3 +949,11 @@ static func buy_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary
 
 static func toggle_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary:
 	return GauntletLocker.toggle_upgrade(db, uid, id)
+
+
+static func buy_lure(db: CaptainStore, uid: String, bait_type: String) -> Dictionary:
+	return GauntletLocker.buy_lure(db, uid, bait_type)
+
+
+static func lures_for_sale() -> Array:
+	return GauntletLocker.lures_for_sale()

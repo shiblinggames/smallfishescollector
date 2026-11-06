@@ -2281,7 +2281,13 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   asked for it (its job open or handed back; Finn.giants_asked, read by the Ancient Deep roll in
   core/fishing_rules.gd). The roll already took them in his order (Plesiosaurus first, Megalodon
   after the other five); before, a lure could raise one during "8 fish" and its job then handed
-  in on the spot. Giants already landed are kept. Parity keeps the web's rule.
+  in on the spot. Giants already landed are kept. Parity keeps the web's rule. The giant jobs
+  do not name the giant ("Raise the ancient he saw", "the second ancient"... "the last"); its
+  name comes with the catch.
+- LURES IN DAVY'S LOCKER (Kong, 2026-11-06): the web's buyBaitWithFathoms, ported
+  (Gauntlet.buy_lure, act "buyBaitWithFathoms"): 5 Luminous for 12 Fathoms, 5 Golden for 20,
+  as often as you like, under the Locker's upgrades. The tackle room already said so; Finn's
+  Job 35 story says lures come from "voyages or gauntlets".
 - FINN'S WORDS, KONG'S (2026-10-16, job by job): port_rules finnText laid over a job or story
   beat by id (core/rules.gd _finn_text); docs/finn-script.md is the read-through
   (tools/finn_script.mjs). Job 4's riddle is the Common Carp (common, about one catch in seven;

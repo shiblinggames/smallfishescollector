@@ -487,7 +487,7 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** A Plesiosaurus...by the fishing gods. I can't believe you caught it. It exists. Hold onto this trophy tight...they can't be sold. Do you feel powerful having caught such a legendary being? I still can't believe what I'm witnessing.
 
-### Job 36: Raise the Dunkleosteus  `q16`
+### Job 36: Raise the second ancient  `q16`
 
 **First, the story** `s36`:
 - Have you tried sailing in a Charter with your friends? You can fish the same waters together.
@@ -500,7 +500,7 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Two of the six. You've landed two and I've landed none...and somehow I'm not even sour about it.
 
-### Job 37: Raise the Mosasaurus  `q17`
+### Job 37: Raise the third ancient  `q17`
 
 **First, the story** `s37`:
 - People in the harbor have started asking about you. Who's the captain pulling giants out of the old water?
@@ -512,7 +512,7 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Three. Halfway there. Nobody in this harbor has ever made it halfway.
 
-### Job 38: Raise the Basilosaurus  `q18`
+### Job 38: Raise the fourth ancient  `q18`
 
 **First, the story** `s38`:
 - I keep a list, you know. Every captain I've ever tried to teach.
@@ -525,7 +525,7 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Four. I've started telling people about you. I don't usually do that.
 
-### Job 39: Raise the Shastasaurus  `q19`
+### Job 39: Raise the fifth ancient  `q19`
 
 **First, the story** `s39`:
 - I wasn't always a fisherman, captain. Before all this I chased other things. Bigger things.
@@ -538,7 +538,7 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Five of six. There's one left, and we both know which one it is.
 
-### Job 40: Raise the Megalodon  `q20`
+### Job 40: Raise the last ancient  `q20`
 
 **First, the story** `s40`:
 - Whatever happens after this one...I want you to know I meant every word I ever told you on this dock.

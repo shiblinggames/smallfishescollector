@@ -601,4 +601,32 @@ class DiveLocker:
 			bt.custom_minimum_size = Vector2(130, 40)
 			bt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			line.add_child(bt)
+		# Lures, bought with Fathoms as often as you like (Gauntlet.buy_lure).
+		var lures: Array = Gauntlet.lures_for_sale()
+		if variant == "davy" and not lures.is_empty():
+			Kit.text(_list, "Lures  ·  the finest bait in the sea, a bundle at a time", "heading", Dossier.WARN)
+			for b: Dictionary in lures:
+				var line: HBoxContainer = HBoxContainer.new()
+				line.add_theme_constant_override("separation", 10)
+				_list.add_child(line)
+				var words: VBoxContainer = VBoxContainer.new()
+				words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				line.add_child(words)
+				var held: float = Js.num((sea.session.save["bait"] as Dictionary).get(b["type"]))
+				Kit.text(words, "%d %s  ·  %d in your hold" % [int(b["fathomBundle"]), b["name"], int(held)], "body_strong", Dossier.INK)
+				Kit.text(words, str(b.get("hint", "")), "small", Dossier.SOFT, true)
+				var cost: float = Js.num(b["fathomCost"])
+				var t: String = str(b["type"])
+				var bt: Button = Kit.button("%s Fathoms" % Js.thousands(cost), "primary", "small")
+				bt.disabled = fathoms < cost
+				bt.pressed.connect(func() -> void:
+					var r: Variant = await sea.session.act("buyBaitWithFathoms", [t])
+					if r is Dictionary and (r as Dictionary).has("error"):
+						sea._hud.toast(str(r["error"]))
+					else:
+						Sound.chest(true)
+					_fill())
+				bt.custom_minimum_size = Vector2(130, 40)
+				bt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				line.add_child(bt)
 		Pane.set_night(_list, true)

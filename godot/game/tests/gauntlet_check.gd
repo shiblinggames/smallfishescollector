@@ -169,6 +169,14 @@ func _init() -> void:
 	var me: Session = Session.new(fresh["save"], fresh["carried"])
 	Dice.install(Dice.Mulberry32.new(7))
 	_strong(me, true)
+	# Lures in the Locker, for Fathoms (Gauntlet.buy_lure).
+	me.profile()["gauntlet_fathoms"] = 25.0
+	var gold0: float = Js.num((me.save["bait"] as Dictionary).get("golden"))
+	check(not Gauntlet.buy_lure(me.store, me.uid, "golden").has("error"), "a bundle of Golden Lures is bought")
+	check(Js.num(me.profile().get("gauntlet_fathoms")) == 5.0 and Js.num((me.save["bait"] as Dictionary).get("golden")) == gold0 + 5.0, "20 Fathoms for 5 of them")
+	check(Gauntlet.buy_lure(me.store, me.uid, "luminous").get("error") == "Not enough Fathoms.", "not without the Fathoms")
+	check(Gauntlet.buy_lure(me.store, me.uid, "worm").has("error"), "and only lures are sold")
+	me.profile()["gauntlet_fathoms"] = 0.0
 	var t: GauntletTable = GauntletTable.new()
 	t.solo = me
 	root.add_child(t)

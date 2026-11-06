@@ -159,6 +159,28 @@ static func buy_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary
 	return { "ok": true }
 
 
+## buyBaitWithFathoms (Kong, 2026-11-06: the lures are bought in the Locker,
+## as the tackle room and Finn say): a bundle of a lure marked with a Fathoms
+## price (rules baits fathomCost / fathomBundle), as often as you like. The
+## spend is the guard, before the lures are handed over.
+static func buy_lure(db: CaptainStore, uid: String, bait_type: String) -> Dictionary:
+	var b: Dictionary = Rules.bait(bait_type)
+	var cost: float = Js.num(b.get("fathomCost"))
+	var bundle: float = Js.num(b.get("fathomBundle"))
+	if b.get("type") != bait_type or cost <= 0.0 or bundle <= 0.0:
+		return { "error": "That lure is not for sale here." }
+	if Js.num(db.me(uid).get("gauntlet_fathoms")) < cost:
+		return { "error": "Not enough Fathoms." }
+	db.bump_stat(uid, "gauntlet_fathoms", -cost)
+	db.add_bait(uid, bait_type, bundle)
+	return { "ok": true, "added": bundle, "baitType": bait_type }
+
+
+## The lures the Locker sells, in the bait table's order.
+static func lures_for_sale() -> Array:
+	return (Rules.data()["baits"] as Array).filter(func(b: Dictionary) -> bool: return Js.num(b.get("fathomCost")) > 0.0 and Js.num(b.get("fathomBundle")) > 0.0)
+
+
 ## A Run Upgrade switched off (or on) for the next dives.
 static func toggle_upgrade(db: CaptainStore, uid: String, id: String) -> Dictionary:
 	var u: Dictionary = upgrade_def(id)

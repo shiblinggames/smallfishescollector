@@ -580,7 +580,7 @@ func _bait() -> void:
 			hint.add_theme_font_override("font", Kit.italic())
 		var cost: float = float(b["shopCost"])
 		if cost <= 0.0:
-			var how: String = "Voyages, or buy with Fathoms in the Locker" if Js.includes(b["acquisition"], "fathoms") else "Earned from voyages"
+			var how: String = "Voyages, or buy with Fathoms in Davy's Locker" if Js.includes(b["acquisition"], "fathoms") else "Earned from voyages"
 			Kit.text(v, how, "small", SUB, true).custom_minimum_size = Vector2(0, 0)
 			continue
 		# Locked behind a Fishing level (the port's rules).
