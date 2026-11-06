@@ -473,17 +473,19 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** A Chambered Nautilus. Five hundred million years, and here it is in your hands. Makes you feel small, doesn’t it?
 
-### Job 35: Raise the Plesiosaurus  `q15`
+### Job 35: Raise the ancient he saw  `q15`
 
 **First, the story** `s35`:
-- Did I ever tell you why I stopped sailing north?
-- ...Another time. It's a long story, and you've got fishing to do.
+- Captain...stop everything. I saw one. It exists. I swear. A long neck, rising out the water. And slipped under as soon as I approached.
+- I've been out here since morning and haven't seen it again. I know it's there.
+- Your usual bait isn't enough for something this old. You'll need to find special bait through voyages or gauntlets to be able to lure this one in.
+- It's gonna be difficult to pull in, but I know with everything you've learned so far you have the best chance.
 
-**Gives it:** There are six of them down there. Six giants older than any chart. The first is the Plesiosaurus. Remember what I said...a Golden or Luminous Lure on your line, or it won't even look at you.
+**Gives it:** I need you to bring it up, captain. I don't know what it is, but it's an ancient creature that dwells in these waters.
 
-**Not yet:** The Plesiosaurus. Lure on, Ancient Deep, and patience.
+**Not yet:** Nope...trust me...you'll know when you've got it.
 
-**Done:** You're holding one. One of the six. ...Give me a moment, captain.
+**Done:** A Plesiosaurus...by the fishing gods. I can't believe you caught it. It exists. Hold onto this trophy tight...they can't be sold. Do you feel powerful having caught such a legendary being? I still can't believe what I'm witnessing.
 
 ### Job 36: Raise the Dunkleosteus  `q16`
 
