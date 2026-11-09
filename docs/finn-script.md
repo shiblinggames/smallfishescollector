@@ -487,9 +487,22 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** A Plesiosaurus...by the fishing gods. I can't believe you caught it. It exists. Hold onto this trophy tight...they can't be sold. Do you feel powerful having caught such a legendary being? I still can't believe what I'm witnessing.
 
-### Job 36: Raise the second ancient  `q16`
+### Job 36: Land 5 perfect catches in a row in the Ancient Deep  `p9` _(port)_
 
 **First, the story** `s36`:
+- Have you tried sailing in a Charter with your friends? You can fish the same waters together.
+- I used to have a crew that would follow me anywhere. The sea's a lot less lonely with good company.
+- Don't make the mistake I did. Hold on to the ones who sail with you.
+
+**Gives it:** Let's take a breather from the ancients. Show me 5 perfect catches in a row in the Ancient Deep.
+
+**Not yet:** Five in a row, captain. No misses.
+
+**Done:** Five straight in the oldest water there is. Steady hands.
+
+### Job 37: Raise the second ancient  `q16`
+
+**First, the story** `s37`:
 - The Plesiosaurus catch has opened the doors to the other legendary creatures...
 - I still can't believe you caught that.
 - I hate to admit this, but I kept it from you before. There's another ancient one that lives in the Ancient Deep. This one is bulky and has skin that's like a plate of armor.
@@ -501,11 +514,24 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** A Dunkleosteus?! This is the stuff of legends. I can't believe my own eyes. You've caught two ancients now...you don't understand how many years I've waited for this. Even with all the resources in the world, I couldn't imagine anyone getting this lucky...but I have to attribute some of this to your skills as a fisher.
 
-### Job 37: Raise the third ancient  `q17`
+### Job 38: Land the fish he describes, in the Ancient Deep  `p10` _(port)_
 
-**First, the story** `s37`:
-- People in the harbor have started asking about you. Who's the captain pulling giants out of the old water?
-- I tell them you're a friend of mine. I hope that's alright.
+**First, the story** `s38`:
+- Did I ever tell you why I stopped sailing north?
+- ...Another time. It's a long story, and you've got fishing to do.
+
+**Gives it:** There's a fish down there that hunts with a glowing lure of its own...and its teeth are see-through, so nothing blocks the light. Bring me one.
+
+**Not yet:** Not that one. Think about the glow.
+
+**Done:** A Black Dragonfish. Even the fish down there know a good lure when they see one.
+
+### Job 39: Raise the third ancient  `q17`
+
+**First, the story** `s39`:
+- Two ancients. I keep saying it out loud just to make sure it's real.
+- There's another one, captain. Older sailors used to whisper about it. A hunter. Jaws so big it could swallow a shark whole...and it doesn't live in the dark like the others. It hunts in it.
+- If the last one was armor, this one is teeth.
 
 **Gives it:** The third. The Mosasaurus. It hunts the dark on purpose. Bring it to me.
 
@@ -513,9 +539,21 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Three. Halfway there. Nobody in this harbor has ever made it halfway.
 
-### Job 38: Raise the fourth ancient  `q18`
+### Job 40: Land 3 epic or better in the Ancient Deep  `p11` _(port)_
 
-**First, the story** `s38`:
+**First, the story** `s40`:
+- People in the harbor have started asking about you. Who's the captain pulling giants out of the old water?
+- I tell them you're a friend of mine. I hope that's alright.
+
+**Gives it:** Bring me 3 epic or rarer fish from the Ancient Deep.
+
+**Not yet:** Three epic or better. Keep going.
+
+**Done:** Three more epics. You make it look easy.
+
+### Job 41: Raise the fourth ancient  `q18`
+
+**First, the story** `s41`:
 - I keep a list, you know. Every captain I've ever tried to teach.
 - Most of them stopped at the Abyss. A few made it to the edge of the old water.
 - None of them made it this far. You're the last name on that list, and I think you'll be the last one I ever need.
@@ -526,12 +564,24 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Four. I've started telling people about you. I don't usually do that.
 
-### Job 39: Raise the fifth ancient  `q19`
+### Job 42: Land 6 different kinds of fish in the Ancient Deep  `p12` _(port)_
 
-**First, the story** `s39`:
+**First, the story** `s42`:
 - I wasn't always a fisherman, captain. Before all this I chased other things. Bigger things.
 - I was good at it, too. Maybe too good.
 - Fishing was supposed to be the quiet part of my life. Funny how it turned out to be the part I can't let go of.
+
+**Gives it:** Catch me 6 different kinds of fish from the Ancient Deep.
+
+**Not yet:** Six different ones.
+
+**Done:** Six kinds out of the oldest water. You know it better than I do now.
+
+### Job 43: Raise the fifth ancient  `q19`
+
+**First, the story** `s43`:
+- There's one more I've heard about, captain. Bigger than anything you've pulled up so far.
+- Some say it's the biggest thing in the old water. Except for one.
 
 **Gives it:** Fifth. The Shastasaurus. This is the one I got closest to. Thirty seconds I had it on my line...then the water took it back. Go finish what I couldn't.
 
@@ -539,9 +589,9 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** Five of six. There's one left, and we both know which one it is.
 
-### Job 40: Raise the last ancient  `q20`
+### Job 44: Raise the last ancient  `q20`
 
-**First, the story** `s40`:
+**First, the story** `s44`:
 - Whatever happens after this one...I want you to know I meant every word I ever told you on this dock.
 - Every tip. Every job. All of it.
 - Now go on. Before I say something I can't take back.

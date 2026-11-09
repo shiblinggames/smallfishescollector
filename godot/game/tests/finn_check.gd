@@ -34,7 +34,7 @@ func _init() -> void:
 	var db: CaptainStore = sea.session.store
 	var uid: String = sea.session.uid
 	var ladder: Array = Finn.quests()
-	check(ladder.size() == 40, "the ladder is the web's 32 and the port's 8 (%d)" % ladder.size())
+	check(ladder.size() == 44, "the ladder is the web's 32 and the port's 12 (%d)" % ladder.size())
 	var ids: Array = ladder.map(func(q: Dictionary) -> String: return q["id"])
 	check(ids.find("p1") == ids.find("q3") + 1, "p1 follows q3")
 	var p1: Dictionary = Finn.quest_by_id("p1")
@@ -84,7 +84,7 @@ func _init() -> void:
 		var t: Dictionary = Finn.turn_in(db, uid)
 		check(not t.has("error"), "%s hands in (%s)" % [q["id"], str(t.get("error", ""))])
 		handed += 1
-	check(handed == 40, "every job handed in (%d)" % handed)
+	check(handed == 44, "every job handed in (%d)" % handed)
 	print("  finn check: %s (%d jobs)" % ["ok" if bad == 0 else "%d FAILED" % bad, handed])
 	quit(0 if bad == 0 else 1)
 

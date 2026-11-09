@@ -2283,7 +2283,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   after the other five); before, a lure could raise one during "8 fish" and its job then handed
   in on the spot. Giants already landed are kept. Parity keeps the web's rule. The giant jobs
   do not name the giant ("Raise the ancient he saw", "the second ancient"... "the last"); its
-  name comes with the catch.
+  name comes with the catch. A BREATHER between each pair of giants (Kong, 2026-11-09: not
+  ancient after ancient): port jobs p9 (5 perfects in a row), p10 (the Black Dragonfish riddle),
+  p11 (3 epic or better), p12 (6 kinds), all in the Ancient Deep, after giants 1 to 4; the
+  Shastasaurus leads straight into the Megalodon. The ladder is 44 jobs and 44 stories.
 - LURES IN DAVY'S LOCKER (Kong, 2026-11-06): the web's buyBaitWithFathoms, ported
   (Gauntlet.buy_lure, act "buyBaitWithFathoms"): 5 Luminous for 12 Fathoms, 5 Golden for 20,
   as often as you like, under the Locker's upgrades. The tackle room already said so; Finn's
