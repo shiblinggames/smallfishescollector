@@ -490,15 +490,15 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 ### Job 36: Land a perfect catch in the Ancient Deep  `p9` _(port)_
 
 **First, the story** `s36`:
-- Have you tried sailing in a Charter with your friends? You can fish the same waters together.
-- I used to have a crew that would follow me anywhere. The sea's a lot less lonely with good company.
-- Don't make the mistake I did. Hold on to the ones who sail with you.
+- Still can't believe you caught that Ancient. A Plesiosaurus is crazy...think about it. Like what? I've sailed for years and just recently spotted them. And you just get in here and catch one?
+- There's more captain. I know there's more out there. Legend says each one caught is a trophy.
+- We have to keep looking!
 
-**Gives it:** Let's take a breather from the ancients. Show me one perfect catch in the Ancient Deep. Every stage of the fight.
+**Gives it:** Calm seas out there today captain...I think we need to keep looking for those Ancients. But for now you gotta keep your skills sharp. Go perfect catch a fish in the Ancient Deep. This is a little tougher because you have to hit both stages. But I know your ability by now.
 
-**Not yet:** Perfect on every stage, captain.
+**Not yet:** A perfect in the Ancient Deep. You can do it.
 
-**Done:** Perfect from start to finish in the oldest water there is. Steady hands.
+**Done:** Knew this wouldn't be tough for you. Let's keep hunting.
 
 ### Job 37: Raise the second ancient  `q16`
 
