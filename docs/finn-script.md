@@ -516,14 +516,15 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 ### Job 38: Land the fish he describes, in the Ancient Deep  `p10` _(port)_
 
 **First, the story** `s38`:
-- Did I ever tell you why I stopped sailing north?
-- ...Another time. It's a long story, and you've got fishing to do.
+- That Dunkleosteus was a hard catch wasn't it?
+- Make sure you're keeping your gear upgraded. I've funneled many resources to getting the right gear for catching these legends...trust me it'll make things easier.
+- The best gear isn't necessarily in the shops...just FYI.
 
-**Gives it:** There's a fish down there that hunts with a glowing lure of its own...and its teeth are see-through, so nothing blocks the light. Bring me one.
+**Gives it:** There's another fish in the Ancient Deep...I don't remember what it's called but it hunts with a glowing lure of its own. Its teeth are see-through...that's all I know. Please go and get one for me.
 
-**Not yet:** Not that one. Think about the glow.
+**Not yet:** Not that one. Try again.
 
-**Done:** A Black Dragonfish. Even the fish down there know a good lure when they see one.
+**Done:** A Black Dragonfish. That's it! Only in the Ancient Deep can you get one of these suckers. Now to keep searching for more ancients...
 
 ### Job 39: Raise the third ancient  `q17`
 
