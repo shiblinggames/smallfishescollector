@@ -503,10 +503,9 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 ### Job 37: Raise the second ancient  `q16`
 
 **First, the story** `s37`:
-- The Plesiosaurus catch has opened the doors to the other legendary creatures...
-- I still can't believe you caught that.
-- I hate to admit this, but I kept it from you before. There's another ancient one that lives in the Ancient Deep. This one is bulky and has skin that's like a plate of armor.
-- I don't know how you'll be able to land this one. But if there's anyone that can, it's you.
+- The Plesiosaurus catch must've opened the doors to the other legendary creatures...I've spotted another.
+- I hate to admit this, but I kept it from you before. I've known at least a few more ancients than one that lives in these waters. The one I just saw is bulky and has skin that's like a plate of armor.
+- I don't know how you'll be able to land this one. But if there's anyone that can, it's you captain.
 
 **Gives it:** Go and find me that ancient fish...remember to use the right type of bait. Give it time...these creatures don't bite easily.
 
