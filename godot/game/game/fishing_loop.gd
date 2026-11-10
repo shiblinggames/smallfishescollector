@@ -148,7 +148,7 @@ func _start_fight() -> void:
 	_boss = {
 		"name": fish["name"], "mechanic": mechanic, "cfg": cfg, "stage": 1,
 		"shrink": float(cfg.get("perfectShrinkStart", 0.0)), "mult": 1.0,
-		"giant": Js.num(fish.get("sell_value")) == 0.0,
+		"giant": Js.num(fish.get("sell_value")) == 0.0, "allPerfect": true,
 	}
 
 
@@ -279,9 +279,16 @@ func _on_struck(raw: String, _angle: float) -> void:
 		Fx.pill(h, "Second Wind", h._dial.position + Vector2(h._dial.size.x / 2.0, -24.0), Kit.INK, Kit.a(Kit.TEAL, 0.22), Kit.a(Kit.TEAL, 0.6), 1.2)
 		h._dial.respin()
 		return
+	# A fight is a perfect only when every stage was (Kong, 2026-11-09).
+	if not _boss.is_empty() and landed and result != "perfect" and _boss["allPerfect"]:
+		_boss["allPerfect"] = false
+		if int(_boss["stage"]) < int(_boss["cfg"]["phases"]):
+			h.toast("Not a perfect stage. It can still land, but not as a perfect.")
 	if not _boss.is_empty() and landed and int(_boss["stage"]) < int(_boss["cfg"]["phases"]):
 		await _next_phase(result)
 		return
+	if not _boss.is_empty() and result == "perfect" and not _boss["allPerfect"]:
+		result = "catch"
 	if not _boss.is_empty():
 		h._status.text = ""
 		h._dots.text = ""

@@ -487,18 +487,18 @@ _Opens at Fishing 75. Six things worth the pulling, one at a time, and a name he
 
 **Done:** A Plesiosaurus...by the fishing gods. I can't believe you caught it. It exists. Hold onto this trophy tight...they can't be sold. Do you feel powerful having caught such a legendary being? I still can't believe what I'm witnessing.
 
-### Job 36: Land 5 perfect catches in a row in the Ancient Deep  `p9` _(port)_
+### Job 36: Land a perfect catch in the Ancient Deep  `p9` _(port)_
 
 **First, the story** `s36`:
 - Have you tried sailing in a Charter with your friends? You can fish the same waters together.
 - I used to have a crew that would follow me anywhere. The sea's a lot less lonely with good company.
 - Don't make the mistake I did. Hold on to the ones who sail with you.
 
-**Gives it:** Let's take a breather from the ancients. Show me 5 perfect catches in a row in the Ancient Deep.
+**Gives it:** Let's take a breather from the ancients. Show me one perfect catch in the Ancient Deep. Every stage of the fight.
 
-**Not yet:** Five in a row, captain. No misses.
+**Not yet:** Perfect on every stage, captain.
 
-**Done:** Five straight in the oldest water there is. Steady hands.
+**Done:** Perfect from start to finish in the oldest water there is. Steady hands.
 
 ### Job 37: Raise the second ancient  `q16`
 

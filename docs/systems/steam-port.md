@@ -2277,6 +2277,10 @@ build passes it. Weighed and accepted: the rewrite is months before multiplayer 
   ("Finn's story" under the next water), trawls (the crew fish only where the story has taken
   you) and the Homestead portal. A chapter closed with its water's level reached: "Open Waters
   is open to you now." Parity (web_only) keeps the web's level-only rule. Tests: finn_check.
+- AN ANCIENT DEEP PERFECT IS PERFECT ON EVERY STAGE (Kong, 2026-11-09): the web scored a
+  fight by its last stage alone. Now one non-perfect stage (a toast says so) lands the fish as
+  a catch (game/fishing_loop.gd `allPerfect`). This also means a Vigil rank needs every stage perfect.
+  Finn's breather after the first giant (p9) asks for one such perfect.
 - THE STORY RAISES THE GIANTS (Kong, 2026-11-06): a giant rises for a lure only once Finn has
   asked for it (its job open or handed back; Finn.giants_asked, read by the Ancient Deep roll in
   core/fishing_rules.gd). The roll already took them in his order (Plesiosaurus first, Megalodon
